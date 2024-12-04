@@ -8,6 +8,16 @@
         <h1 class="text-3xl font-bold mb-4">Cotizador - Fideicomiso</h1>
     </div>
     <form method="post" class="bg-white p-6 rounded-lg shadow-md">
+        {% if resultado %}
+        <div class="flex items-center p-4 mb-4 text-sm rounded-lg bg-green-100 dark:bg-green-200">
+            <svg class="flex-shrink-0 w-5 h-5 mr-3 text-green-700 dark:text-green-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m0 0a9 9 0 11-6.364-2.636A9 9 0 0112 21a9 9 0 010-18z"></path>
+            </svg>
+            <span class="font-medium text-green-700 dark:text-green-800">
+            ¡Cálculo generado con éxito!
+            </span>
+          </div>
+        {% endif %}
         {% csrf_token %}
 
          <!-- Datos generales Section -->
@@ -64,6 +74,8 @@
           <!-- Datos del vehiculo -->
           <div class="flex-1 p-4 border rounded-lg mb-5">
             <h1 class="text-lg font-bold mb-5">Datos del Vehículo</h1>
+            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" onclick="openModalAbono()">Calcular Abono</button>
+
             <!-- Form Elements -->
             <div class="flex space-x-4">
                 <!-- Nested Fields -->
@@ -354,7 +366,48 @@
        </form>
     
    
+    <!-- Modal Abono-->
+      <!-- Button to open the modal -->
+   
+    <!-- Modal -->
+    <div id="abonoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h2 class="text-xl font-bold mb-4">Calcular Abono</h2>
+            <div class="mb-4">
+               
+                <label for="totalValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Total del Auto</label>
+                <input type="number" id="totalValue" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <!--add a select with two options Porcentaje and Monto-->
+                <label for="abonoType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Abono</label>
+                <select id="abonoType" class="w-full p-2 border rounded">
+                    <option value="-">-</option>
+                    <option value="percentage">Porcentaje (%)</option>
+                    <option value="amount">Monto</option>
+                </select>
 
+            </div>
+            <div class="mb-4">
+                <label for="percentage" class="block text-sm font-medium text-gray-700 mb-1">Porcentaje (%)</label>
+                <input type="number" id="percentage" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                <input type="number" id="amount" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="calculateAbono()">Calcular</button>
+            </div>
+            <div class="mb-4">
+                <label for="montoFinanciado" class="block text-sm font-medium text-gray-700 mb-1">Monto Financiado</label>
+                <input type="number" id="montoFinanciado" class="w-full p-2 border rounded" readonly>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="closeModalAbono()">Cerrar</button>
+            </div>
+        </div>
+    </div>
     <!-- Modal Patrono-->
     <div id="patronoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -431,7 +484,48 @@
             const marcaField = document.getElementById('id_marcaAuto');
             const lineaField = document.getElementById('lineasAutos');
             const hiddenLineaField = document.getElementById('id_lineaAuto');
-        
+
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const totalValueInput = document.getElementById('totalValue');
+
+            const abonoTypeInput = document.getElementById('abonoType');
+            const montoAbonoInput = document.getElementById('amount');
+            const percentageAbonoInput = document.getElementById('percentage');
+
+           
+            if (totalValueInput) {
+                totalValueInput.addEventListener('input', function() {
+                    const id_valorAuto = document.getElementById('id_valorAuto');
+                    const montoAbono = document.getElementById('amount')
+                    id_valorAuto.value = totalValueInput.value;
+                    if(abonoTypeInput.value == 'percentage'){
+                        
+                    }else if(abonoTypeInput.value == 'amount'){
+                        document.getElementById('montoFinanciado').value = totalValueInput.value - montoAbono.value;
+                    }else{
+                        document.getElementById('montoFinanciado').value = 0;
+                    }
+                });
+            }
+
+                    
+
+            if(abonoTypeInput){
+                abonoTypeInput.addEventListener('change', function() {
+                    if (abonoTypeInput.value == 'percentage') {
+                        document.getElementById('percentage').parentElement.style.display = 'block';
+                        document.getElementById('amount').value = 0;
+                        document.getElementById('amount').parentElement.style.display = 'none';
+                        document.getElementById('percentage').value = 0;
+                        document.getElementById('montoFinanciado').value = 0;
+                    } else {
+                        document.getElementById('percentage').value = 0;
+                        document.getElementById('percentage').parentElement.style.display = 'none';
+                        document.getElementById('amount').parentElement.style.display = 'block';
+                        document.getElementById('montoFinanciado').value = 0;
+                    }
+                });
+            }
             lineaField.addEventListener('change', function() {
                 hiddenLineaField.value = this.value;
             });
@@ -503,6 +597,8 @@
             if (cantidadPagosSeguroInput) {
                 cantidadPagosSeguroInput.addEventListener('change', calculateMontoMensualSeguro);
             }
+
+            
             
             /*
             if (financiaSeguroCheckbox) {
@@ -635,5 +731,45 @@
         function closeModalVendedor() {
             document.getElementById('vendedorModal').classList.add('hidden');
         }
+
+        function openModalAbono() {
+            document.getElementById('abonoModal').classList.remove('hidden');
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const totalValue = document.getElementById('totalValue');
+
+            document.getElementById('percentage').parentElement.style.display = 'none';
+            document.getElementById('amount').parentElement.style.display = 'none';
+            
+            console.log("Valor total del auto:", totalValue.value, "Valor del auto:", id_valorAuto);
+            totalValue.value = id_valorAuto;
+        }
+    
+        function closeModalAbono() {
+            document.getElementById('abonoModal').classList.add('hidden');
+        }
+    
+        function calculateAbono() {
+            const totalValue = parseFloat(document.getElementById('totalValue').value) || 0;
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const percentage = parseFloat(document.getElementById('percentage').value) || 0;
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const abonoType = document.getElementById('abonoType').value;
+    
+            let abono = 0;
+
+            if (abonoType == 'percentage') {
+                abono = totalValue * (percentage / 100);
+                document.getElementById('montoFinanciado').value = totalValue - abono;
+            } else {
+                abono = amount;
+                document.getElementById('montoFinanciado').value = totalValue - abono;
+            }
+            
+            document.getElementById('id_montoPrestamo').value = document.getElementById('montoFinanciado').value;
+
+            
+        }
+
+
     </script>
     {% endblock %}
