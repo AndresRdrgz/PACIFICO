@@ -11,56 +11,124 @@ from django.http import HttpResponse
 from openpyxl import load_workbook
 import os
 from django.conf import settings
+from django.http import JsonResponse
+import json
+from pathlib import Path
+
+
+
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+def convert_decimal_to_float(data):
+    for key, value in data.items():
+        if isinstance(value, Decimal):
+            data[key] = float(value)
+    return data
+
+
+def get_lineas(request):
+    try:
+        marca = request.GET.get('marca')
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        with open(BASE_DIR / 'static/insumos/autos.json') as f:
+            choices_data = json.load(f)
+        lineas = [item['LINEA'] for item in choices_data if item['MARCA'] == marca]
+        return JsonResponse({'lineas': lineas})
+    except Exception as e:
+        logger.error("Error in get_lineas: %s", e)
+        return JsonResponse({'error': 'An error occurred while processing your request.'}, status=500)
+
 #@login_required
 def generate_report(request):
+    # Retrieve the result from the session
+    resultado = request.session.get('resultado')
+    print(resultado)
+    
+    if not resultado:
+        return HttpResponse("No data found.", status=404)
+    
     # Path to the static Excel file
-    excel_path = os.path.join(settings.BASE_DIR, 'static', 'consultaFideicomiso.xlsx')
+    excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaFideicomiso.xlsx')
 
     if not os.path.exists(excel_path):
         return HttpResponse("File not found.", status=404)
+    
     # Load the workbook and select the active sheet
     workbook = load_workbook(excel_path)
     sheet = workbook.active
+    
     # Select the sheet with name "COTIZADOR LEASING"
     if "COTIZADOR LEASING" in workbook.sheetnames:
         sheet = workbook["COTIZADOR LEASING"]
     else:
         return HttpResponse("Sheet not found.", status=404)
+    
+    # Example: Write the resultado data to the Excel sheet
+    sheet['C10'] = resultado['nombreCliente']
+    sheet['G10'] = resultado['cedulaCliente']
+    sheet['H10'] = resultado['tipoDocumento']
+    sheet['J10'] = resultado['edad']
+    sheet['I10'] = resultado['sexo']
+    sheet['k10'] = resultado['apcScore']
+    sheet['l10'] = resultado['apcPI']
+    #parametros de la cotizacion
+    sheet['F14'] = resultado['cotPlazoPago']
+    sheet['G14'] = resultado['r_deseada']
+    sheet['C14'] = resultado['valorAuto']
+    sheet['L14'] = resultado['calcMontoTimbres']
+    sheet['i15'] = 'SI APLICA'
+    sheet['J15'] = resultado['tasaBruta']
+    #sheet['H14'] = resultado['cashback']
 
-    # Example values calculated in fideicomiso_view
-    edad = 30
-    sexo = 'Masculino'
-    monto_prestamo = 100000
-    tasa_interes = 0.10
-    comision_cierre = 0.02
-    plazo_pago = 12
-    patrono = 'Patrono Example'
-    sucursal = 13
-    periocidad = 1
-    forma_pago = 4
-    aseguradora = 'Aseguradora Example'
-    r_deseada = 0.05
-    comision_vendedor = 0.03
-    financia_seguro = True
-    meses_financia_seguro = 12
-    monto_anual_seguro = 1200
-    monto_mensual_seguro = 100
+    #DETALLES DE LA COTIZACION
+    sheet['E21'] = resultado['cotMontoPrestamo']
+    sheet['E23'] = resultado['calcMontoNotaria']
+    sheet['E24'] = resultado['promoPublicidad']
+    sheet['e29'] = resultado['calcComiCierreFinal']
+    sheet['e31'] = resultado['auxMonto2']
+    sheet['E39'] = resultado['wrkMontoLetra'] - resultado['montoMensualSeguro']
+    sheet['e42'] = resultado['montoMensualSeguro']
+    sheet['E44'] = resultado['wrkMontoLetra']
 
-    # Fill in the cells with the calculated values
-    sheet['I10'] = sexo
+    sheet['E46'] = resultado['tablaTotalPagos']
 
-    # Ensure the media directory exists
-    if not os.path.exists(settings.MEDIA_ROOT):
-        os.makedirs(settings.MEDIA_ROOT)
+    #DATOS DEL VENDEDOR
+    sheet['j18'] = resultado['vendedor']
+    sheet['j20'] = resultado['comisionVendedor']
 
+    #DATOS DEL VEHICULO
+    sheet['j23'] = resultado['marcaAuto']
+    sheet['j24'] = resultado['lineaAuto']
+    sheet['j25'] = resultado['yearAuto']
+    sheet['j30'] = resultado['montoMensualSeguro']
+    sheet['j31'] = resultado['montoanualSeguro']
+    sheet['j26'] = resultado['transmision']
+    sheet['j27'] = resultado['nuevoAuto']
+    sheet['j28'] = resultado['kilometrajeAuto']
+
+    #motivo consulta
+    sheet['H42'] = resultado['observaciones']
+
+    #DATOS DEL DEudor
+    sheet['E49']=resultado['tiempoServicio']
+    sheet['J49']=resultado['ingresos']
+    sheet['E50']=resultado['nombreEmpresa'] 
+    sheet['J50']=resultado['referenciasAPC']
+    sheet['e51']=resultado['cartera']
+    sheet['J51']=resultado['licencia']
+    sheet['E52']=resultado['posicion']
+    sheet['E53']=resultado['perfilUniversitario']
+
+
+    
+    
+    
     # Save the workbook to a temporary file
-    temp_file = os.path.join(settings.MEDIA_ROOT, 'temp_report.xlsx')
+    temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
     workbook.save(temp_file)
-
+    
     # Serve the file as a response
     with open(temp_file, 'rb') as f:
         response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -83,6 +151,7 @@ def login_view(request):
             messages.error(request, 'Invalid username or password')
     return render(request, 'registration/login.html')
 
+
 #@login_required
 def fideicomiso_view(request):
     resultado = None
@@ -93,6 +162,7 @@ def fideicomiso_view(request):
                 # Extract form data
                 edad = form.cleaned_data['edad']
                 sexo = form.cleaned_data['sexo']
+                nombreCliente = form.cleaned_data['nombreCliente']
                 cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
                 calcTasaInteres = 10 / 100
                 calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
@@ -148,6 +218,52 @@ def fideicomiso_view(request):
                 }
                 print('params', params)
                 resultado = generarFideicomiso2(params)
+                print("--------finalizado---------")
+                print(form.cleaned_data)
+                #deserialize fechaCalculo in resultado
+                resultado['fechaCalculo'] = resultado['fechaCalculo'].strftime('%Y-%m-%d')
+                resultado['cotFechaInicioPago'] = resultado['cotFechaInicioPago'].strftime('%Y-%m-%d')
+                resultado['calcFechaPromeCK'] = resultado['calcFechaPromeCK'].strftime('%Y-%m-%d')
+
+                #PASE DE CAMPOS
+                resultado['sexo'] = sexo
+                resultado['nombreCliente'] = form.cleaned_data['nombreCliente'] if form.cleaned_data['nombreCliente'] is not None else "-"
+                resultado['cedulaCliente'] = form.cleaned_data['cedulaCliente'] if form.cleaned_data['cedulaCliente'] is not None else "-"
+                
+                resultado['tipoDocumento'] = form.cleaned_data['tipoDocumento'] if form.cleaned_data['tipoDocumento'] is not None else "-"
+                resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else "-"
+                resultado['apcPI'] = form.cleaned_data['apcPI'] / 100 if form.cleaned_data['apcPI'] is not None else 0
+                resultado['valorAuto'] = form.cleaned_data['valorAuto'] if form.cleaned_data['valorAuto'] is not None else 0
+                resultado['cotPlazoPago'] = auxPlazoPago if auxPlazoPago is not None else 0
+                resultado['vendedor'] = form.cleaned_data['vendedor'] if form.cleaned_data['vendedor'] is not None else "-"
+                #DATOS DEL AUTO
+                resultado['marcaAuto'] = form.cleaned_data['marcaAuto'] if form.cleaned_data['marcaAuto'] is not None else "-"
+                resultado['lineaAuto'] = form.cleaned_data['lineaAuto'] if form.cleaned_data['lineaAuto'] is not None else "-"
+                resultado['yearAuto'] = form.cleaned_data['yearAuto'] if form.cleaned_data['yearAuto'] is not None else "-"
+                resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
+                resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
+                resultado['promoPublicidad'] = 50  # Assuming this is a fixed value
+                resultado['transmision'] = form.cleaned_data['transmisionAuto'] if form.cleaned_data['transmisionAuto'] is not None else "-"
+                resultado['nuevoAuto'] = form.cleaned_data['nuevoAuto'] if form.cleaned_data['nuevoAuto'] is not None else "-"
+                resultado['kilometrajeAuto'] = form.cleaned_data['kilometrajeAuto'] if form.cleaned_data['kilometrajeAuto'] is not None else 0
+                resultado['observaciones'] = form.cleaned_data['observaciones'] if form.cleaned_data['observaciones'] is not None else "-"
+
+                #Datos del deudor
+                resultado['tiempoServicio'] = form.cleaned_data['tiempoServicio'] if form.cleaned_data['tiempoServicio'] is not None else "-"
+                resultado['ingresos'] = form.cleaned_data['ingresos'] if form.cleaned_data['ingresos'] is not None else "-"
+                resultado['nombreEmpresa'] = form.cleaned_data['nombreEmpresa'] if form.cleaned_data['nombreEmpresa'] is not None else "-"
+                resultado['referenciasAPC'] = form.cleaned_data['referenciasAPC'] if form.cleaned_data['referenciasAPC'] is not None else "-"
+                resultado['cartera'] = form.cleaned_data['cartera'] if form.cleaned_data['cartera'] is not None else "-"
+                resultado['licencia'] = form.cleaned_data['licencia'] if form.cleaned_data['licencia'] is not None else "-"
+                resultado['posicion'] = form.cleaned_data['posicion'] if form.cleaned_data['posicion'] is not None else "-"
+                resultado['perfilUniversitario'] = form.cleaned_data['perfilUniversitario'] if form.cleaned_data['perfilUniversitario'] is not None else "-"
+
+
+                
+                # Convert Decimal fields to floats
+                resultado = convert_decimal_to_float(resultado)
+                request.session['resultado'] = resultado
+              
             except Exception as e:
                 logger.error("Error in fideicomiso_view: %s", e)
                 messages.error(request, 'An error occurred while processing your request.')
@@ -157,3 +273,4 @@ def fideicomiso_view(request):
         form = FideicomisoForm()
     
     return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
+    

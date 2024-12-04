@@ -31,6 +31,10 @@ class Cotizacion(models.Model):
         ('MASCULINO', 'Masculino'),
         ('FEMENINO', 'Femenino'),
     ]
+    LICENCIA_OPCIONES = [
+        ('NO', 'No'),
+        ('SI', 'Si'),
+    ]
      
     #Datos del cliente
     nombreCliente = models.CharField(max_length=100, null=True)
@@ -59,4 +63,16 @@ class Cotizacion(models.Model):
     montoanualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     montoMensualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     cantPagosSeguro = models.IntegerField(null=True,default=12)
+    # DATOS DEL AUTO
+    #DATOS DE LA CONSULTA
+    observaciones = models.TextField(null=True, blank=True)
+    #DETALLES DEL DEUDOR
+    tiempoServicio = models.CharField(max_length=255, null=True)
+    ingresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    nombreEmpresa = models.CharField(max_length=255, null=True)
+    referenciasAPC = models.CharField(max_length=255, null=True)
+    cartera = models.CharField(max_length=255, null=True)
+    licencia = models.CharField(max_length=10, choices=LICENCIA_OPCIONES, default='SI')
+    posicion = models.CharField(max_length=255, null=True)
+    perfilUniversitario = models.CharField(max_length=255, null=True)
 
