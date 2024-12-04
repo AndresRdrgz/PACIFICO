@@ -1,9 +1,11 @@
 import json
 from datetime import datetime, timedelta
+import os
 
 def checkDiaHabil(fechaCalculo):
     # Load the JSON data
-    json_file_path = '/Users/andresrdrgz_/Documents/PACIFICO/financiera/pacifico/fideicomiso/calendario.json'
+    json_file_path = os.path.join(os.path.dirname(__file__), 'calendario.json')
+   #json_file_path = '/Users/andresrdrgz_/Documents/PACIFICO/financiera/pacifico/fideicomiso/calendario.json'
     with open(json_file_path, 'r') as file:
         data = [json.loads(line) for line in file]
 
