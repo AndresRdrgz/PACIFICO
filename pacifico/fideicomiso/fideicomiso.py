@@ -389,7 +389,8 @@ def rutinaCalculo(params):
     #determinar monto amortizar
     aux_l, aux_z, aux_x, calcComiCierre,tasaBruta,tasaReal = determinar_monto_amortizar(cotMontoPrestamo, calcMontoNotaria, calcComiCierre, "PREST AUTO",codigoSeguro,edad,calcNetoCancelacion)
     #print("aux_l: ",aux_l," aux_z: ",aux_z," aux_x: ",aux_x," calcComiCierre: ",calcComiCierre)
-
+    params['calcComiCierreFinal'] = calcComiCierre
+    params['tasaBruta'] = tasaBruta
     calcMonto2 = aux_x
     params['auxMonto2'] = calcMonto2
 
