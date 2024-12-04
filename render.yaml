@@ -1,0 +1,22 @@
+databases:
+  - name: pacifico
+    plan: free
+    databaseName: pacifico
+    user: pacifico
+
+services:
+  - type: web
+    plan: free
+    name: pacifico
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "python -m gunicorn pacifico.asgi:application -k uvicorn.workers.UvicornWorker"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pacifico
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
