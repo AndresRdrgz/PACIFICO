@@ -53,6 +53,7 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
     aux_h = 0
     aux_j = 0
     aux_k = 0
+    print('tasabruta',tasa_bruta)
     aux_c = tasa_bruta
     aux_d = aux_notaria_gasto
     aux_m = 0

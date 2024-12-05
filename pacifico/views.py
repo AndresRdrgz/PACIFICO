@@ -113,6 +113,7 @@ def generate_report(request):
     sheet['H42'] = resultado['observaciones']
 
     #DATOS DEL DEudor
+    sheet['e77'] = resultado['salarioBaseMensual']
     sheet['E49']=resultado['tiempoServicio']
     sheet['J49']=resultado['ingresos']
     sheet['E50']=resultado['nombreEmpresa'] 
@@ -121,6 +122,63 @@ def generate_report(request):
     sheet['J51']=resultado['licencia']
     sheet['E52']=resultado['posicion']
     sheet['E53']=resultado['perfilUniversitario']
+
+    #DESCUENTO DIRECTO
+    sheet['E87'] = resultado['siacapMonto']
+    sheet['e88'] = resultado['praaMonto']
+    sheet['e89'] = resultado['dirOtrosMonto1']
+    sheet['e90'] = resultado['dirOtrosMonto2']
+    sheet['C89'] = resultado['dirOtros1']
+    sheet['C90'] = resultado['dirOtros2']
+    if resultado['siacapDcto'] == True:
+        sheet['F87'] = 'SI'
+    else:
+        sheet['F87'] = 'NO'
+    if resultado['praaDcto'] == True:
+        sheet['F88'] = 'SI'
+    else:
+        sheet['F88'] = 'NO'
+    if resultado['dirOtrosDcto1'] == True:
+        sheet['F89'] = 'SI'
+    else:
+        sheet['F89'] = 'NO'
+    if resultado['dirOtrosDcto2'] == True:
+        sheet['F90'] = 'SI'
+    else:
+        sheet['F90'] = 'NO'
+    #pagos voluntarios
+    sheet['H87'] = resultado['pagoVoluntario1']
+    sheet['J87'] = resultado['pagoVoluntarioMonto1']
+    sheet['H88'] = resultado['pagoVoluntario2']
+    sheet['J88'] = resultado['pagoVoluntarioMonto2']
+    sheet['H89'] = resultado['pagoVoluntario3']
+    sheet['J89'] = resultado['pagoVoluntarioMonto3']
+    sheet['H90'] = resultado['pagoVoluntario4']
+    sheet['J90'] = resultado['pagoVoluntarioMonto4']
+
+    #PARSE TRUE TO SI AND FALSE TO NO
+    if resultado['pagoVoluntarioDcto1'] == True:
+        sheet['K87'] = 'SI'
+    else:
+        sheet['K87'] = 'NO'
+    if resultado['pagoVoluntarioDcto2'] == True:
+        sheet['K88'] = 'SI'
+    else:
+        sheet['K88'] = 'NO'
+    if resultado['pagoVoluntarioDcto3'] == True:
+        sheet['K89'] = 'SI'
+    else:
+        sheet['K89'] = 'NO'
+
+    if resultado['pagoVoluntarioDcto4'] == True:
+        sheet['K90'] = 'SI'
+    else:
+        sheet['K90'] = 'NO'
+
+
+
+    
+
 
 
     
@@ -218,7 +276,7 @@ def fideicomiso_view(request):
                     'cantPagosSeguro': cantPagosSeguro
 
                 }
-                print('params', params)
+                print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso2(params)
                 print("--------finalizado---------")
                 print(form.cleaned_data)
@@ -272,6 +330,35 @@ def fideicomiso_view(request):
                 resultado['bonosDcto'] = form.cleaned_data['bonosDcto'] if form.cleaned_data['bonosDcto'] is not None else 0
                 resultado['otrosMonto'] = form.cleaned_data['otrosMonto'] if form.cleaned_data['otrosMonto'] is not None else 0
                 resultado['otrosDcto'] = form.cleaned_data['otrosDcto'] if form.cleaned_data['otrosDcto'] is not None else 0
+
+                #DESCUENTO DIRECTO
+                resultado['siacapMonto'] = form.cleaned_data['siacapMonto'] if form.cleaned_data['siacapMonto'] is not None else 0
+                resultado['siacapDcto'] = form.cleaned_data['siacapDcto'] if form.cleaned_data['siacapDcto'] is not None else False
+                resultado['praaMonto'] = form.cleaned_data['praaMonto'] if form.cleaned_data['praaMonto'] is not None else 0
+                resultado['praaDcto'] = form.cleaned_data['praaDcto'] if form.cleaned_data['praaDcto'] is not None else False
+                resultado['dirOtrosMonto1'] = form.cleaned_data['dirOtrosMonto1'] if form.cleaned_data['dirOtrosMonto1'] is not None else 0
+                resultado['dirOtros1'] = form.cleaned_data['dirOtros1'] if form.cleaned_data['dirOtros1'] is not None else "-"
+                resultado['dirOtrosDcto1'] = form.cleaned_data['dirOtrosDcto1'] if form.cleaned_data['dirOtrosDcto1'] is not None else False
+                resultado['dirOtrosMonto2'] = form.cleaned_data['dirOtrosMonto2'] if form.cleaned_data['dirOtrosMonto2'] is not None else 0
+                resultado['dirOtros2'] = form.cleaned_data['dirOtros2'] if form.cleaned_data['dirOtros2'] is not None else "-"
+                resultado['dirOtrosDcto2'] = form.cleaned_data['dirOtrosDcto2'] if form.cleaned_data['dirOtrosDcto2'] is not None else False
+
+
+                #PAGO VOLUNTARIO
+                resultado['pagoVoluntario1'] = form.cleaned_data['pagoVoluntario1'] if form.cleaned_data['pagoVoluntario1'] is not None else 0
+                resultado['pagoVoluntarioMonto1'] = form.cleaned_data['pagoVoluntarioMonto1'] if form.cleaned_data['pagoVoluntarioMonto1'] is not None else 0
+                resultado['pagoVoluntarioDcto1'] = form.cleaned_data['pagoVoluntarioDcto1'] if form.cleaned_data['pagoVoluntarioDcto1'] is not None else 0
+                resultado['pagoVoluntario2'] = form.cleaned_data['pagoVoluntario2'] if form.cleaned_data['pagoVoluntario2'] is not None else 0
+                resultado['pagoVoluntarioMonto2'] = form.cleaned_data['pagoVoluntarioMonto2'] if form.cleaned_data['pagoVoluntarioMonto2'] is not None else 0
+                resultado['pagoVoluntarioDcto2'] = form.cleaned_data['pagoVoluntarioDcto2'] if form.cleaned_data['pagoVoluntarioDcto2'] is not None else 0
+                resultado['pagoVoluntario3'] = form.cleaned_data['pagoVoluntario3'] if form.cleaned_data['pagoVoluntario3'] is not None else 0
+                resultado['pagoVoluntarioMonto3'] = form.cleaned_data['pagoVoluntarioMonto3'] if form.cleaned_data['pagoVoluntarioMonto3'] is not None else 0
+                resultado['pagoVoluntarioDcto3'] = form.cleaned_data['pagoVoluntarioDcto3'] if form.cleaned_data['pagoVoluntarioDcto3'] is not None else 0
+                resultado['pagoVoluntario4'] = form.cleaned_data['pagoVoluntario4'] if form.cleaned_data['pagoVoluntario4'] is not None else 0
+                resultado['pagoVoluntarioMonto4'] = form.cleaned_data['pagoVoluntarioMonto4'] if form.cleaned_data['pagoVoluntarioMonto4'] is not None else 0
+                resultado['pagoVoluntarioDcto4'] = form.cleaned_data['pagoVoluntarioDcto4'] if form.cleaned_data['pagoVoluntarioDcto4'] is not None else 0
+
+
 
 
                 
