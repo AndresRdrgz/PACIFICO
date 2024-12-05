@@ -87,7 +87,7 @@ def generate_report(request):
     sheet['E21'] = resultado['cotMontoPrestamo']
     sheet['E23'] = resultado['calcMontoNotaria']
     sheet['E24'] = resultado['promoPublicidad']
-    sheet['e29'] = resultado['calcComiCierreFinal']
+    sheet['e29'] = resultado['calcComiCierreFinal'] / 100
     sheet['e31'] = resultado['auxMonto2']
     sheet['E39'] = resultado['wrkMontoLetra'] - resultado['montoMensualSeguro']
     sheet['e42'] = resultado['montoMensualSeguro']
@@ -261,6 +261,17 @@ def fideicomiso_view(request):
                 resultado['licencia'] = form.cleaned_data['licencia'] if form.cleaned_data['licencia'] is not None else "-"
                 resultado['posicion'] = form.cleaned_data['posicion'] if form.cleaned_data['posicion'] is not None else "-"
                 resultado['perfilUniversitario'] = form.cleaned_data['perfilUniversitario'] if form.cleaned_data['perfilUniversitario'] is not None else "-"
+
+                #DATOS NIVEL DE ENDEUDAMIENTO
+                resultado['salarioBaseMensual'] = form.cleaned_data['salarioBaseMensual'] if form.cleaned_data['salarioBaseMensual'] is not None else 0
+                resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0
+                resultado['horasExtrasDcto'] = form.cleaned_data['horasExtrasDcto'] if form.cleaned_data['horasExtrasDcto'] is not None else 0
+                resultado['primaMonto'] = form.cleaned_data['primaMonto'] if form.cleaned_data['primaMonto'] is not None else 0
+                resultado['primaDcto'] = form.cleaned_data['primaDcto'] if form.cleaned_data['primaDcto'] is not None else 0
+                resultado['bonosMonto'] = form.cleaned_data['bonosMonto'] if form.cleaned_data['bonosMonto'] is not None else 0
+                resultado['bonosDcto'] = form.cleaned_data['bonosDcto'] if form.cleaned_data['bonosDcto'] is not None else 0
+                resultado['otrosMonto'] = form.cleaned_data['otrosMonto'] if form.cleaned_data['otrosMonto'] is not None else 0
+                resultado['otrosDcto'] = form.cleaned_data['otrosDcto'] if form.cleaned_data['otrosDcto'] is not None else 0
 
 
                 
