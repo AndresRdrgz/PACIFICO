@@ -66,6 +66,7 @@ def generate_report(request):
         return HttpResponse("Sheet not found.", status=404)
     
     # Example: Write the resultado data to the Excel sheet
+    sheet['D6'] =resultado['oficial']
     sheet['C10'] = resultado['nombreCliente']
     sheet['G10'] = resultado['cedulaCliente']
     sheet['H10'] = resultado['tipoDocumento']
@@ -124,15 +125,16 @@ def generate_report(request):
 
     
     
-    
     # Save the workbook to a temporary file
     temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
     workbook.save(temp_file)
     
     # Serve the file as a response
+    nombre_cliente = resultado['nombreCliente']
+    filename = f"Consulta - {nombre_cliente}.xlsx"
     with open(temp_file, 'rb') as f:
         response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=consultaFideicomiso.xlsx'
+        response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
 #@login_required
@@ -226,9 +228,11 @@ def fideicomiso_view(request):
                 resultado['calcFechaPromeCK'] = resultado['calcFechaPromeCK'].strftime('%Y-%m-%d')
 
                 #PASE DE CAMPOS
+                resultado['oficial'] = form.cleaned_data['oficial'] if form.cleaned_data['oficial'] is not None else "-"
                 resultado['sexo'] = sexo
                 resultado['nombreCliente'] = form.cleaned_data['nombreCliente'] if form.cleaned_data['nombreCliente'] is not None else "-"
                 resultado['cedulaCliente'] = form.cleaned_data['cedulaCliente'] if form.cleaned_data['cedulaCliente'] is not None else "-"
+                resultado['calcComiCierreFinal'] = resultado['calcComiCierreFinal'] * 100
                 
                 resultado['tipoDocumento'] = form.cleaned_data['tipoDocumento'] if form.cleaned_data['tipoDocumento'] is not None else "-"
                 resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else "-"
