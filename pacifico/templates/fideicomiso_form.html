@@ -7,19 +7,24 @@
     <div class="text-center">
         <h1 class="text-3xl font-bold mb-4">Cotizador - Fideicomiso</h1>
     </div>
-    <form method="post" class="bg-white p-6 rounded-lg shadow-md">
+    <form id="myForm" method="post" class="bg-white p-6 rounded-lg shadow-md">
         {% if resultado %}
         <div class="flex items-center p-4 mb-4 text-sm rounded-lg bg-green-100 dark:bg-green-200">
-            <svg class="flex-shrink-0 w-5 h-5 mr-3 text-green-700 dark:text-green-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m0 0a9 9 0 11-6.364-2.636A9 9 0 0112 21a9 9 0 010-18z"></path>
-            </svg>
-            <span class="font-medium text-green-700 dark:text-green-800">
-            ¡Cálculo generado con éxito!
+            <span class="font-medium text-green-700 dark:text-green-800 inline-block">
+                ✅ ¡Cálculo generado con éxito!
             </span>
-          </div>
+            <div class="ml-auto">
+                <a href="{% url 'generate_report' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 inline-block">
+                    Descargar Reporte de Consulta 📄
+                </a>
+            </div>
+        </div>
         {% endif %}
         {% csrf_token %}
-
+        <div class="flex-1 mb-4">
+            <label for="id_oficial" class="block text-sm font-medium text-gray-700 mb-1">Oficial</label>
+            {{ form.oficial }}
+        </div>
          <!-- Datos generales Section -->
          <div class="flex-1 p-4 border rounded-lg mb-5">
             <h1 class="text-lg font-bold mb-5">Datos del cliente</h1>
@@ -171,7 +176,7 @@
                     {{ form.frecuenciaPagoSeguro }}
                  </div>
                 <div class="flex-1" id="div_id_mesesFinancia">
-                    <label for="id_mesesFinancia" class="block text-sm font-medium text-gray-700 mb-1">Meses a Financiar</label>
+                    <label for="id_mesesFinanciaSeguro" class="block text-sm font-medium text-gray-700 mb-1">Meses a Financiar</label>
                     {{ form.mesesFinanciaSeguro }}
                 </div>
                 
@@ -199,19 +204,19 @@
          <!-- Parametros de la cotizacion -->
          <div class="flex-1 p-4 border rounded-lg mb-5">
             <h1 class="text-lg font-bold mb-5">Parámetros de la Cotización</h1>
-            
-            <div class="flex-1 mb-4"> 
-                <div class="mb-4">
-                        <label for="id_Patrono" class="block text-sm font-medium text-gray-700 mb-1">Patrono</label>
-                        {{ form.patrono }}
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="id_Patrono" class="block text-sm font-medium text-gray-700 mb-1">Patrono</label>
+                    {{ form.patrono }}
                 </div>
-                <div class="mb-4">
+                <div class="w-3/3 mb-4">
                     <label for="id_patronoCodigo" class="block text-sm font-medium text-gray-700 mb-1">Código</label>
                     {{ form.patronoCodigo }} 
+                </div>
             </div>
-            <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModal()">Buscar Patrono</button>
-        
-          </div>
+   
+
+          <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModal()">Buscar Patrono 🔍</button>
          
          
              
@@ -229,7 +234,7 @@
                     <label for="id_vendedorComision" class="block text-sm font-medium text-gray-700 mb-1">Comisión del Vendedor ($)</label>
                     {{ form.vendedorComision }}
                 </div>
-                <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModalVendedor()">Buscar Vendedor</button>
+                <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModalVendedor()">Buscar Vendedor 🔍</button>
             </div>
             
              <div class="flex-1 mb-4">
@@ -248,10 +253,9 @@
           <!-- Motivo de la consulta -->
           <div class="flex-1 p-4 border rounded-lg mb-5">
             <h1 class="text-lg font-bold mb-5">Motivo de la Consulta</h1>
-            <!-- Form Elements -->
-
+            
             <div class="flex-1 mb-4">
-                    <label for="id_fechaInicioPago" class="block text-sm font-medium text-gray-700 mb-1"></label>
+                    <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1"></label>
                     {{ form.observaciones }}
              </div>
         </div>
@@ -259,11 +263,16 @@
          <div class="flex-1 p-4 border rounded-lg mb-5">
             <h1 class="text-lg font-bold mb-5">Parámetros del Cálculo</h1>
             <!-- Form Elements -->
-
-            <div class="flex-1 mb-4">
-                    <label for="id_fechaInicioPago" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio de Pago</label>
-                    {{ form.fechaInicioPago }}
-             </div>
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                        <label for="id_fechaInicioPago" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio de Pago</label>
+                        {{ form.fechaInicioPago }}
+                </div>
+                <div class="flex-1 mb-4 flex justify-center">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Calcular 💰</button>
+                </div>
+            </div>
+            
              <div class="flex space-x-4">
                 <div class="flex-1 mb-4">
                     <label for="id_montoPrestamo" class="block text-sm font-medium text-gray-700 mb-1">Monto del Préstamo</label>
@@ -282,27 +291,28 @@
                 </div>
 
                 <div class="flex-1 mb-4">
-                    <label for="id_tasaInteres" class="block text-sm font-medium text-red-700 mb-1">Rentabilidad deseada (%)</label>
+                    <label for="id_r_deseada" class="block text-sm font-medium text-red-700 mb-1">Rentabilidad deseada (%)</label>
                     {{ form.r_deseada }}
                 </div>
             </div>
             
                 
             
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Calcular</button>
+            
             {% if resultado %}
             <div class="mt-6 p-6 bg-green-100 border border-green-400 text-green-700 rounded-lg">
                 <h2 class="text-2xl font-bold mb-4">👷 Diseño en progreso 👷</h2>
                 <h2 class="text-2xl font-bold mb-4">Resultado</h2>
                 <a href="{% url 'generate_report' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 inline-block">
-                    Generar Reporte de Consulta
+                    Descargar Reporte de Consulta 📄
                 </a>
                 <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Letra calculada: ${{ resultado.wrkMontoLetra }}</pre>
                 <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Tasa: {{ resultado.tasaEstimada|default_if_none:0|floatformat:2 }}%</pre>
+                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Comi. Cierre Final (%): {{ resultado.calcComiCierreFinal|default_if_none:0|floatformat:2 }}%</pre>
                 <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">r1 (estimada): {{ resultado.r1|default_if_none:0|floatformat:2 }}%</pre>
                 <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Monto CAPITAL: ${{ resultado.auxMonto2|default_if_none:0|floatformat:2 }}</pre>
                 
-                <div class="mt-10"
+                <div class="mt-10">
                 <h2 class="text-2xl font-bold mb-4">Prueba Andres</h2>
                 
                 <h2>{{ resultado }}</h2>
@@ -318,51 +328,112 @@
 
           <!-- Detalles del deudor -->
           <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Detalles del Deudor</h1>
-            <!-- Form Elements -->
-           <div class="flex space-x-4">
-                <div class="flex-1 mb-4">
-                        <label for="id_tiempoServicio" class="block text-sm font-medium text-gray-700 mb-1">Tiempo de Servicio</label>
-                        {{ form.tiempoServicio }}
-                </div>
-                <div class="flex-1 mb-4">
-                    <label for="id_ingresos" class="block text-sm font-medium text-gray-700 mb-1">Ingresos</label>
-                     {{ form.ingresos }}
-                </div>
-            </div>
+                <h1 class="text-lg font-bold mb-5">Detalles del Deudor</h1>
+                <!-- Form Elements -->
             <div class="flex space-x-4">
-                <div class="flex-1 mb-4">
-                        <label for="id_nombreEmpresa" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa</label>
-                        {{ form.nombreEmpresa }}
+                    <div class="flex-1 mb-4">
+                            <label for="id_tiempoServicio" class="block text-sm font-medium text-gray-700 mb-1">Tiempo de Servicio</label>
+                            {{ form.tiempoServicio }}
+                    </div>
+                    <div class="flex-1 mb-4">
+                        <label for="id_ingresos" class="block text-sm font-medium text-gray-700 mb-1">Ingresos</label>
+                        {{ form.ingresos }}
+                    </div>
                 </div>
-                <div class="flex-1 mb-4">
-                    <label for="id_referenciasAPC" class="block text-sm font-medium text-gray-700 mb-1">Referencias APC</label>
-                     {{ form.referenciasAPC }}
+                <div class="flex space-x-4">
+                    <div class="flex-1 mb-4">
+                            <label for="id_nombreEmpresa" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa</label>
+                            {{ form.nombreEmpresa }}
+                    </div>
+                    <div class="flex-1 mb-4">
+                        <label for="id_referenciasAPC" class="block text-sm font-medium text-gray-700 mb-1">Referencias APC</label>
+                        {{ form.referenciasAPC }}
+                    </div>
                 </div>
-            </div>
-            <div class="flex space-x-4">
-                <div class="flex-1 mb-4">
-                    <label for="id_cartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
-                     {{ form.cartera }}
+                <div class="flex space-x-4">
+                    <div class="flex-1 mb-4">
+                        <label for="id_cartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
+                        {{ form.cartera }}
+                    </div>
+                    <div class="flex-1 mb-4">
+                        <label for="id_licencia" class="block text-sm font-medium text-gray-700 mb-1">Licencia de Conducir</label>
+                        {{ form.licencia }}
                 </div>
-                <div class="flex-1 mb-4">
-                    <label for="id_licencia" class="block text-sm font-medium text-gray-700 mb-1">Licencia de Conducir</label>
-                    {{ form.licencia }}
-            </div>
-           
+            
 
-        </div>
-        <div class="flex space-x-4">
-            <div class="flex-1 mb-4">
-                <label for="id_posicion" class="block text-sm font-medium text-gray-700 mb-1">Posición</label>
-                {{ form.posicion }}
             </div>
+            <div class="flex space-x-4">
                 <div class="flex-1 mb-4">
-                <label for="id_perfilUniversitario" class="block text-sm font-medium text-gray-700 mb-1">Perfil / Título Universitario</label>
-                {{ form.perfilUniversitario }}
-                 </div>
+                    <label for="id_posicion" class="block text-sm font-medium text-gray-700 mb-1">Posición</label>
+                    {{ form.posicion }}
+                </div>
+                    <div class="flex-1 mb-4">
+                    <label for="id_perfilUniversitario" class="block text-sm font-medium text-gray-700 mb-1">Perfil / Título Universitario</label>
+                    {{ form.perfilUniversitario }}
+                    </div>
         </div>
+    </div>
+
+        <!-- Nivel de Endeudamiento -->
+        <div class="flex-1 p-4 border rounded-lg mb-5">
+            <h1 class="text-lg font-bold mb-5">Nivel de Endeudamiento</h1>
+            
+            <div class="flex-1 mb-4">
+                <label for="id_salarioBaseMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Base Mensual</label>
+                {{ form.salarioBaseMensual }}
+            </div>
+             
+             <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ingresos Adicionales</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Mensual</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aplica Dcto. Legal</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">Horas extras</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="number" name="horas_extras_monto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" name="horas_extras_dcto" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">Prima de producción</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="number" name="prima_produccion_monto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" name="prima_produccion_dcto" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">Bonos</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="number" name="bonos_monto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" name="bonos_dcto" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">Otros</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="number" name="otros_monto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" name="otros_dcto" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         
+
        </form>
     
    
@@ -419,9 +490,7 @@
                     <div class="flex-1 mb-4">
                         <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModal()">Cerrar</button>
                     </div>
-                
-                
-                    
+     
                 
             </div>
                 <div class="mt-2">
@@ -460,7 +529,28 @@
         </div>
     </div>
 
+
+    <!-- Loading Animation -->
+    <div 
+        id="loading" 
+        class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-[#22a650] border-solid"></div>
+    </div>
+
     <script>
+        function highlightEmptyRequiredFields() {
+            const form = document.getElementById('myForm');
+            const requiredFields = form.querySelectorAll('[required]');
+    
+            requiredFields.forEach(function(field) {
+                if (!field.value.trim()) {
+                    field.classList.add('border-yellow-500', 'bg-yellow-100');
+                } else {
+                    field.classList.remove('border-yellow-500', 'bg-yellow-100');
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const fechaNacimientoInput = document.getElementById('id_fechaNacimiento');
             const edadInput = document.getElementById('id_edad');
@@ -469,6 +559,7 @@
             const comisionVendedorInput = document.getElementById('id_vendedorComision');
             const montoAnualSeguroInput = document.getElementById('id_montoanualSeguro');
             const cantidadPagosSeguroInput = document.getElementById('id_cantPagosSeguro');
+            const mesesFinanciarSeguroInput = document.getElementById('id_mesesFinancia');
             const montoMensualSeguroInput = document.getElementById('id_montoMensualSeguro');
             const financiaSeguroCheckbox = document.getElementById('id_financiaSeguro');
             const corredorField = document.getElementById('div_id_Corredor');
@@ -492,6 +583,19 @@
             const montoAbonoInput = document.getElementById('amount');
             const percentageAbonoInput = document.getElementById('percentage');
 
+            highlightEmptyRequiredFields();
+
+            const form = document.getElementById('myForm');
+            form.addEventListener('input', function() {
+                highlightEmptyRequiredFields();
+            });
+    
+    
+            window.addEventListener('load', function() {
+                document.getElementById('loading').classList.add('hidden');
+            });
+
+           
            
             if (totalValueInput) {
                 totalValueInput.addEventListener('input', function() {
@@ -530,7 +634,7 @@
                 hiddenLineaField.value = this.value;
             });
 
-            const form = document.querySelector('form');
+            //const form = document.querySelector('form');
 
             //use fetch("{% static 'autos.json' %}") in order to load the lineas based on selected marca
             fetch("{% static 'autos.json' %}")
@@ -597,7 +701,21 @@
             if (cantidadPagosSeguroInput) {
                 cantidadPagosSeguroInput.addEventListener('change', calculateMontoMensualSeguro);
             }
+            
+            if(financiaSeguroCheckbox){
+                financiaSeguroCheckbox.addEventListener('change', function() {
+                    if (financiaSeguroCheckbox.checked) {
 
+                        cantidadPagosSeguroInput.value = 12;
+                        document.getElementById('id_mesesFinanciaSeguro').value = 3;
+                        
+                    } else {
+                        cantidadPagosSeguroInput.value = 0;
+                        document.getElementById('id_mesesFinanciaSeguro').value = 0;
+                        
+                    }
+                });
+            }
             
             
             /*
@@ -770,6 +888,10 @@
             
         }
 
+        document.getElementById('myForm').addEventListener('submit', function () {
+            document.getElementById('loading').classList.remove('hidden');
+        });
+       
 
     </script>
     {% endblock %}

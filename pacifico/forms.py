@@ -51,6 +51,7 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Fecha de Inicio',
                 'class': 'w-full text-slate-600 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500',
                 'type': 'date',
+                'readonly': 'readonly',
             }),
             'comiCierre': forms.NumberInput(attrs={
                 'placeholder': 'Comisión de Cierre',
@@ -63,6 +64,7 @@ class FideicomisoForm(forms.ModelForm):
             'montoPrestamo': forms.NumberInput(attrs={
                 'placeholder': 'Monto del Préstamo',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'readonly': 'readonly',
             }),
             'r_deseada': forms.NumberInput(attrs={
                 'placeholder': 'R Deseada',
@@ -156,6 +158,16 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
+            'oficial': forms.Select(attrs={
+                'placeholder': 'Oficial',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                
+            }),
+            #NIVEL DE ENDEUDAMIENTO
+            'salarioBaseMensual': forms.NumberInput(attrs={
+                'placeholder': 'Salario Base Mensual',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow', 
+            }),
         }
 
     periodoPago = forms.ChoiceField(
@@ -176,7 +188,7 @@ class FideicomisoForm(forms.ModelForm):
     )
     aseguradora = forms.ModelChoiceField(
         queryset=Aseguradora.objects.all(),
-        required=False,
+        required=True,
         widget=forms.Select(attrs={
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
@@ -219,20 +231,20 @@ class FideicomisoForm(forms.ModelForm):
     tipoDocumento = forms.ChoiceField(
         choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')],
         initial='CEDULA',
-        required=False,
+        required=True,
         widget=forms.Select(attrs={
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
     apcScore = forms.IntegerField(
-        required=False,
+        required=True,
         widget=forms.NumberInput(attrs={
             'placeholder': 'APC Score',
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
     apcPI = forms.DecimalField(
-        required=False,
+        required=True,
         widget=forms.NumberInput(attrs={
             'placeholder': 'APC PI',
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -292,8 +304,8 @@ class FideicomisoForm(forms.ModelForm):
     )
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['nombreCliente'].required = False
-        self.fields['cedulaCliente'].required = False
+        #self.fields['nombreCliente'].required = False
+        #self.fields['cedulaCliente'].required = False
         self.fields['tiempoServicio'].required = False
         self.fields['ingresos'].required = False
         self.fields['nombreEmpresa'].required = False
@@ -302,4 +314,9 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['licencia'].required = False
         self.fields['posicion'].required = False
         self.fields['perfilUniversitario'].required = False
+        #self.fields['oficial'].required = False
+        self.fields['vendedor'].required = False
+        self.fields['montoPrestamo'].required = False
+        self.fields['fechaInicioPago'].required = False
+        self.fields['salarioBaseMensual'].required = False
         
