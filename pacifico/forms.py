@@ -302,6 +302,129 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
+    #ENDEUDAMIENTO
+    horasExtrasMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Horas Extras Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    horasExtrasDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    primaMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Prima Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    primaDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    bonosMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Bonos Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    bonosDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    otrosMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Otros Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    otrosDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    #descuento directo
+    siacapMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'SIACAP Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    siacapDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    praaMonto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'PRAA Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    praaDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    dirOtros1 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Otros',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOTrosMonto1 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'PRAA Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosDcto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    dirOtros2 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Otros',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOTrosMonto2 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'PRAA Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosDcto2 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+
+
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #self.fields['nombreCliente'].required = False
