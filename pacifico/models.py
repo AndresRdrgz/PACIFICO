@@ -72,6 +72,25 @@ class Cotizacion(models.Model):
     ("YULEISIS GONZÁLEZ", "YULEISIS GONZÁLEZ"),
 ]
      
+    
+    CARTERA_OPCIONES = [
+
+    ]
+    CARTERA_OPCIONES = [
+        ("CONTRALORÍA", "CONTRALORÍA"),
+        ("EMP. CSS", "EMP. CSS"),
+        ("AUTÓNOMAS", "AUTÓNOMAS"),
+        ("ACP", "ACP"),
+        ("JUBILADO CSS", "JUBILADO CSS"),
+        ("EMP. PRIVADA", "EMP. PRIVADA"),
+        ("JUBILADO DE LA ZONA", "JUBILADO DE LA ZONA"),
+        ("JUBI ACTIVO CONTRALORIA", "JUBI ACTIVO CONTRALORIA"),
+        ("JUBI ACTIVO CSS", "JUBI ACTIVO CSS"),
+        ("JUBILADO CONTRALORIA", "JUBILADO CONTRALORIA"),
+        ("JUBI ACTIVO AUTÓNOMA", "JUBI ACTIVO AUTÓNOMA"),
+        ("JUBILADO RIESGOS PROF. CSS", "JUBILADO RIESGOS PROF. CSS"),
+        ("INDEPENDIENTE", "INDEPENDIENTE"),
+    ]
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
 
@@ -84,8 +103,8 @@ class Cotizacion(models.Model):
     #Parametros de la Cotizacion
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)
-    vendedor = models.CharField(max_length=255, null=True)
-    vendedorComision = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    vendedor = models.CharField(max_length=255, null=True, default='1 - SIN VENDEDOR')
+    vendedorComision = models.DecimalField(max_digits=5, decimal_places=2, null=True, default=0)
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
@@ -110,7 +129,7 @@ class Cotizacion(models.Model):
     ingresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     nombreEmpresa = models.CharField(max_length=255, null=True)
     referenciasAPC = models.CharField(max_length=255, null=True)
-    cartera = models.CharField(max_length=255, null=True)
+    cartera = models.CharField(max_length=255, null=True, choices=CARTERA_OPCIONES)
     licencia = models.CharField(max_length=10, choices=LICENCIA_OPCIONES, default='SI')
     posicion = models.CharField(max_length=255, null=True)
     perfilUniversitario = models.CharField(max_length=255, null=True)

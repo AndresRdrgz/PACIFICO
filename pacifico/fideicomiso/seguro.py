@@ -18,6 +18,7 @@ def auxBusquedaSeguro(codigo, edad):
             return row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"]
 
     # Return None if no match is found
+    print("No se encontró el seguro",codigo,edad)
     return None, None, None
 
 def seguroAdicional():

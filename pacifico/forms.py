@@ -83,7 +83,7 @@ class FideicomisoForm(forms.ModelForm):
             'vendedor': forms.TextInput(attrs={
                 'placeholder': 'Vendedor',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-                'initial': '1 - SIN VENDEDOR',
+                #'initial': '1 - SIN VENDEDOR',
                 'readonly': 'readonly',
             }),
             'vendedorComision': forms.NumberInput(attrs={
@@ -139,11 +139,11 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
-            'cartera': forms.TextInput(attrs={
-                'placeholder': 'Cartera',
+            'cartera': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-                
+                'placeholder': 'Cartera',
             }),
+           
             'licencia': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
@@ -389,14 +389,14 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
         })
     )
-    dirOTrosMonto1 = forms.DecimalField(
+    dirOtrosMonto1 = forms.DecimalField(
         required=False,
         widget=forms.NumberInput(attrs={
-            'placeholder': 'PRAA Monto',
+            'placeholder': 'Otros Monto',
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
         })
     )
-    dirOtrosDcto = forms.BooleanField(
+    dirOtrosDcto1 = forms.BooleanField(
         required=False,
         widget=forms.CheckboxInput(attrs={
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -409,10 +409,10 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
         })
     )
-    dirOTrosMonto2 = forms.DecimalField(
+    dirOtrosMonto2 = forms.DecimalField(
         required=False,
         widget=forms.NumberInput(attrs={
-            'placeholder': 'PRAA Monto',
+            'placeholder': 'Otros Monto',
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
         })
     )
@@ -422,6 +422,91 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
         })
     )
+    #PAGOS VOLUNTARIOS
+    pagoVoluntario1 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto1 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto1 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    pagoVoluntario2 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto2 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto2 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    pagoVoluntario3 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto3 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto3 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    pagoVoluntario4 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto4 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto4 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    
+    
+    
+    
 
 
 
