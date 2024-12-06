@@ -122,6 +122,7 @@ def generate_report(request):
     sheet['J51']=resultado['licencia']
     sheet['E52']=resultado['posicion']
     sheet['E53']=resultado['perfilUniversitario']
+    sheet['J78']=resultado['horasExtrasMonto']
 
     #DESCUENTO DIRECTO
     sheet['E87'] = resultado['siacapMonto']
@@ -361,6 +362,7 @@ def fideicomiso_view(request):
                 resultado['pagoVoluntario4'] = form.cleaned_data['pagoVoluntario4'] if form.cleaned_data['pagoVoluntario4'] is not None else 0
                 resultado['pagoVoluntarioMonto4'] = form.cleaned_data['pagoVoluntarioMonto4'] if form.cleaned_data['pagoVoluntarioMonto4'] is not None else 0
                 resultado['pagoVoluntarioDcto4'] = form.cleaned_data['pagoVoluntarioDcto4'] if form.cleaned_data['pagoVoluntarioDcto4'] is not None else 0
+                resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0
 
 
 
