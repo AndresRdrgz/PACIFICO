@@ -91,8 +91,19 @@ class Cotizacion(models.Model):
         ("JUBILADO RIESGOS PROF. CSS", "JUBILADO RIESGOS PROF. CSS"),
         ("INDEPENDIENTE", "INDEPENDIENTE"),
     ]
+    SUCURSALES_OPCIONES = [
+        ("2", "COLON"),
+        ("4", "CASINO"),
+        ("7", "DAVID"),
+        ("8", "CHORRERA"),
+        ("11", "SANTIAGO"),
+        ("13", "CALLE 50"),
+        ("16", "CHITRE"),
+        ("17", "PENONOME"),
+]
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
+    sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES,null=True)
 
     #Datos del cliente
     nombreCliente = models.CharField(max_length=100, null=True)
