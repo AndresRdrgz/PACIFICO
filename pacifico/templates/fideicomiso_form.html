@@ -1,89 +1,110 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Generate Fideicomiso{% endblock %}
+{% block title %}Cotizador - Préstamo de Auto{% endblock %}
 
 {% block content %}
     <div class="text-center">
-        <h1 class="text-3xl font-bold mb-4">Cotizador - Fideicomiso</h1>
+        <h1 class="text-3xl font-bold mb-4">Cotizador - Préstamo de Auto</h1>
     </div>
     <form id="myForm" method="post" class="bg-white p-6 rounded-lg shadow-md">
         {% if resultado %}
-        <div class="flex items-center p-4 mb-4 text-sm rounded-lg bg-green-100 dark:bg-green-200">
+        <div class="flex items-center p-4 mb-10 text-sm rounded-lg bg-green-100 dark:bg-green-200 border border-green-400">
             <span class="font-medium text-green-700 dark:text-green-800 inline-block">
                 ✅ ¡Cálculo generado con éxito!
             </span>
             <div class="ml-auto">
-                <a href="{% url 'generate_report' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 inline-block">
+                <a href="{% url 'generate_report' %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
                     Descargar Reporte de Consulta 📄
                 </a>
+            </div>
+            
+        </div>
+             <div class="mt-10">
+               
+                <div class="mt-6 p-6 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4">👷 Diseño en progreso 👷</h2>
+                    <h2 class="text-2xl font-bold mb-4">Resultado</h2>
+                   
+                    <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Letra calculada: ${{ resultado.wrkMontoLetra }}</pre>
+                    <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Tasa: {{ resultado.tasaEstimada|default_if_none:0|floatformat:2 }}%</pre>
+                    <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Comi. Cierre Final (%): {{ resultado.calcComiCierreFinal|default_if_none:0|floatformat:2 }}%</pre>
+                    <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">r1 (estimada): {{ resultado.r1|default_if_none:0|floatformat:2 }}%</pre>
+                    <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Monto CAPITAL: ${{ resultado.auxMonto2|default_if_none:0|floatformat:2 }}</pre>
+                <!--h2>{{ resultado }}</h2>-->
             </div>
         </div>
         {% endif %}
         {% csrf_token %}
+        <div class="flex space-x-4 mt-4">
         <div class="flex-1 mb-4">
             <label for="id_oficial" class="block text-sm font-medium text-gray-700 mb-1">Oficial</label>
             {{ form.oficial }}
         </div>
+        <div class="flex-1 mb-4">
+            <label for="id_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+            {{ form.sucursal }}
+        </div>
+    </div>
          <!-- Datos generales Section -->
-         <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Datos del cliente</h1>
+        <div class="flex-1 p-4 border rounded-lg mb-2">
+            <h1 class="text-lg font-bold mb-2">Datos del cliente</h1>
             <!-- Form Elements -->
-            <div class="flex space-x-4">
-                    <!-- Nested Fields -->
-                    <div class="flex-1 mb-4">
-                        <label for="id_nombreCliente" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente</label>
-                        {{ form.nombreCliente }}
-                    </div>
-                    <div class="flex-1">
-                        <label for="id_tipoDocumento" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
-                        {{ form.tipoDocumento }}
-                    </div>
-                    <div class="flex-1">
-                        <label for="id_cedulaCliente" class="block text-sm font-medium text-gray-700 mb-1">Cédula del Cliente</label>
-                        {{ form.cedulaCliente }}
-                    </div>
+            <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+                <!-- Nested Fields -->
+                
+                <div class="flex-1 mb-1">
+                    <label for="id_nombreCliente" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente</label>
+                    {{ form.nombreCliente }}
+                </div>
+                <div class="flex-1 mb-1">
+                    <label for="id_tipoDocumento" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
+                    {{ form.tipoDocumento }}
+                </div>
+                <div class="flex-1 mb-1">
+                    <label for="id_cedulaCliente" class="block text-sm font-medium text-gray-700 mb-1">Cédula del Cliente</label>
+                    {{ form.cedulaCliente }}
+                </div>
             </div>
-            <div class="flex space-x-4">
+            <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
                 <!-- Nested Fields -->
                 <div class="flex-1 mb-4">
                     <label for="id_fechaNacimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
                     {{ form.fechaNacimiento }}
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 mb-1">
                     <label for="id_edad" class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
                     {{ form.edad }}
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 mb-1">
                     <label for="id_sexo" class="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
                     {{ form.sexo }}
                 </div>
-            </div>
-            <div class="flex space-x-4">
-                <!-- Nested Fields -->
-                <div class="flex-1">
+                <div class="flex-1 mb-1">
                     <label for="id_apcScore" class="block text-sm font-medium text-gray-700 mb-1">Score</label>
                     {{ form.apcScore }}
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 mb-1">
                     <label for="id_apcPI" class="block text-sm font-medium text-gray-700 mb-1">PI</label>
                     {{ form.apcPI }}
                 </div>
-
             </div>
-            
-          
         </div>
 
            
           <!-- Datos del vehiculo -->
-          <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Datos del Vehículo</h1>
-            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" onclick="openModalAbono()">Calcular Abono</button>
-
+          <div class="flex-1 p-4 border rounded-lg mb-2">
+            <h1 class="text-lg font-bold mb-2">Datos del Vehículo</h1>
+           
             <!-- Form Elements -->
-            <div class="flex space-x-4">
+            <div class="flex flex-col space-y-4  mb-2 md:flex-row md:space-x-4 md:space-y-0">
                 <!-- Nested Fields -->
+                <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModalAbono()">Calcular Abono 💵</button>
+
+                <div class="flex-1 mb-4">
+                    <label for="id_valorAuto" class="block text-sm font-medium text-gray-700 mb-1">Valor del Auto</label>
+                    {{ form.valorAuto }}
+                 </div>
                 <div class="flex-1 mb-4">
                     <label for="id_marcaAuto" class="block text-sm font-medium text-gray-700 mb-1">Marca</label>
                     {{ form.marcaAuto }}
@@ -116,27 +137,26 @@
                     {{ form.claseAuto }}
                 </div>
                 -->
-                <div class="flex-1 mb-4">
-                    <label for="id_valorAuto" class="block text-sm font-medium text-gray-700 mb-1">Valor del Auto</label>
-                    {{ form.valorAuto }}
-                 </div>
+               
                 
                 <div class="flex-1">
                     <label for="id_transmisionAuto" class="block text-sm font-medium text-gray-700 mb-1">Transmisión</label>
                     {{ form.transmisionAuto }}
                  </div>
-
-            </div>
-            <div class="flex space-x-4" >
-                <div class="flex-1">
+                 <div class="flex-1">
                     <label for="id_nuevoAuto" class="block text-sm font-medium text-gray-700 mb-1">Auto Nuevo/Usado</label>
                     {{ form.nuevoAuto }}
                  </div>
-            
                  <div class="flex-1">
                     <label for="id_kilometrajeAuto" class="block text-sm font-medium text-gray-700 mb-1">Kilometraje</label>
                     {{ form.kilometrajeAuto }}
                  </div>
+
+            </div>
+            <div class="flex space-x-4" >
+                
+            
+                
                 
             </div>
           
@@ -144,88 +164,112 @@
         </div>
         
         <!-- Datos Seguro de AuTO Section -->
-           <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Seguro de Auto</h1>
-            <!-- Form Elements -->
-            <div class="flex space-x-4">
-                <!-- Nested Fields -->
-                <div class="flex-1 mb-4">
-                    <label for="id_Aseguradora" class="block text-sm font-medium text-gray-700 mb-1">Aseguradora</label>
-                    {{ form.aseguradoraAuto }}
+        
+        <div class="flex-1 p-4 border rounded-lg mb-2">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold">Seguro de Auto</h1>
+                <div class="ml-auto">
+                    <label class="inline-flex items-center ms-5 cursor-pointer">
+                        <input type="checkbox" id="toggleSeguroAuto" class="sr-only peer" onchange="toggleSeguroAutoSection()">
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
                 </div>
-                <div class="flex-1">
-                    <label for="id_seguroIncluido" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                    {{ form.tipoSeguro }}
-                </div>
-               
-                <div class="flex-1">
-                    <label for="id_financiaSeguro" class="block text-sm font-medium text-gray-700 mb-1">¿Financia seguro de auto?</label>
-                    {{ form.financiaSeguro }}
-                </div>
-               
             </div>
-            <!-- Nested Fields -->
-            <div class="flex space-x-4" id="id_CamposFinanciar1" >
+            <div id="sectionSeguroAuto" class="flex-1 p-1 rounded-lg">
+                    <!-- Form Elements -->
+                    <div class="flex space-x-4">
+                        <!-- Nested Fields -->
+                        <div class="flex-1 mb-4">
+                            <label for="id_Aseguradora" class="block text-sm font-medium text-gray-700 mb-1">Aseguradora</label>
+                            {{ form.aseguradoraAuto }}
+                        </div>
+                        <div class="flex-1">
+                            <label for="id_seguroIncluido" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            {{ form.tipoSeguro }}
+                        </div>
+                    
+                        <div class="flex-1">
+                            <label for="id_financiaSeguro" class="block text-sm font-medium text-gray-700 mb-1">¿Financia seguro de auto?</label>
+                            {{ form.financiaSeguro }}
+                        </div>
+                    
+                    </div>
+                    <!-- Nested Fields -->
+                    <div class="flex space-x-4" id="id_CamposFinanciar1" >
+                        
+                        <div class="flex-1 mb-4">
+                            <label for="id_Corredor" class="block text-sm font-medium text-gray-700 mb-1">Corredor</label>
+                            {{ form.corredorSeguro }}
+                        </div>
+                        <div class="flex-1 mb-4">
+                            <label for="id_FrecuenciaPago" class="block text-sm font-medium text-gray-700 mb-1">Frecuencia de Pago</label>
+                            {{ form.frecuenciaPagoSeguro }}
+                        </div>
+                        <div class="flex-1" id="div_id_mesesFinancia">
+                            <label for="id_mesesFinanciaSeguro" class="block text-sm font-medium text-gray-700 mb-1">Meses a Financiar</label>
+                            {{ form.mesesFinanciaSeguro }}
+                        </div>
+                        
+                    </div>
+                    <!--Campos financiar 2 linea-->
+                    <div class="flex space-x-4" id="id_CamposFinanciar2" >
+                        <div class="flex-1">
+                            <label for="id_montoanualSeguro" class="block text-sm font-medium text-gray-700 mb-1">Monto Anual</label>
+                            {{ form.montoanualSeguro }}
+                        </div>
+                        <div class="flex-1">
+                            <label for="id_montoMensualSeguro" class="block text-sm font-medium text-gray-700 mb-1">Monto Mensual</label>
+                            {{ form.montoMensualSeguro }}
+                        </div>
+                        <div class="flex-1">
+                            <label for="id_cantPagosSeguro" class="block text-sm font-medium text-gray-700 mb-1">Cantidad de Pagos</label>
+                            {{ form.cantPagosSeguro }}
+                        </div>
+                    </div>
+                    <!-- Modalidad Field -->
                 
-                <div class="flex-1 mb-4">
-                    <label for="id_Corredor" class="block text-sm font-medium text-gray-700 mb-1">Corredor</label>
-                    {{ form.corredorSeguro }}
-                </div>
-                <div class="flex-1 mb-4">
-                    <label for="id_FrecuenciaPago" class="block text-sm font-medium text-gray-700 mb-1">Frecuencia de Pago</label>
-                    {{ form.frecuenciaPagoSeguro }}
-                 </div>
-                <div class="flex-1" id="div_id_mesesFinancia">
-                    <label for="id_mesesFinanciaSeguro" class="block text-sm font-medium text-gray-700 mb-1">Meses a Financiar</label>
-                    {{ form.mesesFinanciaSeguro }}
-                </div>
-                
             </div>
-            <!--Campos financiar 2 linea-->
-            <div class="flex space-x-4" id="id_CamposFinanciar2" >
-                <div class="flex-1">
-                    <label for="id_montoanualSeguro" class="block text-sm font-medium text-gray-700 mb-1">Monto Anual</label>
-                    {{ form.montoanualSeguro }}
-                </div>
-                <div class="flex-1">
-                    <label for="id_montoMensualSeguro" class="block text-sm font-medium text-gray-700 mb-1">Monto Mensual</label>
-                    {{ form.montoMensualSeguro }}
-                </div>
-                <div class="flex-1">
-                    <label for="id_cantPagosSeguro" class="block text-sm font-medium text-gray-700 mb-1">Cantidad de Pagos</label>
-                    {{ form.cantPagosSeguro }}
-                </div>
-            </div>
-            <!-- Modalidad Field -->
-          
-        </div>
+    </div>
 
 
          <!-- Parametros de la cotizacion -->
-         <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Parámetros de la Cotización</h1>
-            <div class="flex space-x-4">
+         <div class="flex-1 p-4 border rounded-lg mb-2">
+            <h1 class="text-lg font-bold mb-2">Parámetros de la Cotización</h1>
+            <div class="flex flex-col space-y-4 mb-2 md:flex-row md:space-x-4 md:space-y-0">
+                
+               
+                 <button type="button"  class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModal()">Buscar Patrono 🔍</button>
+                
                 <div class="flex-1 mb-4">
                     <label for="id_Patrono" class="block text-sm font-medium text-gray-700 mb-1">Patrono</label>
                     {{ form.patrono }}
                 </div>
-                <div class="w-3/3 mb-4">
+                <div class="flex-1 mb-4">
                     <label for="id_patronoCodigo" class="block text-sm font-medium text-gray-700 mb-1">Código</label>
                     {{ form.patronoCodigo }} 
                 </div>
+                <div class="flex-1 mb-4">
+                    <label for="id_colectivoCredito" class="block text-sm font-medium text-gray-700 mb-1">Colectivo de Crédito</label>
+                    {{ form.aseguradora }}
+                 </div>
+                
             </div>
    
-
-          <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModal()">Buscar Patrono 🔍</button>
-         
-         
-             
-             <div class="flex-1 mb-4">
-                <label for="id_formaPago" class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
-                {{ form.formaPago}}
-             </div>
+   
+          <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="id_formaPago" class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
+                    {{ form.formaPago}}
+                </div>
+                <div class="flex-1 mb-4">
+                    <label for="id_periodoPago" class="block text-sm font-medium text-gray-700 mb-1">Periodo de Pago</label>
+                    {{ form.periodoPago }}
+                </div>
+            </div>
              <!--Campos vendedor-->
              <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+                <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModalVendedor()">Buscar Vendedor 🔍</button>
+          
                 <div class="flex-1 mb-4">
                     <label for="id_vendedor" class="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
                     {{ form.vendedor }}
@@ -234,46 +278,34 @@
                     <label for="id_vendedorComision" class="block text-sm font-medium text-gray-700 mb-1">Comisión del Vendedor ($)</label>
                     {{ form.vendedorComision }}
                 </div>
-                <button type="button" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModalVendedor()">Buscar Vendedor 🔍</button>
-            </div>
+                </div>
             
-             <div class="flex-1 mb-4">
-                <label for="id_colectivoCredito" class="block text-sm font-medium text-gray-700 mb-1">Colectivo de Crédito</label>
-                {{ form.aseguradora }}
-             </div>
-             <div class="flex-1 mb-4">
-                <label for="id_periodoPago" class="block text-sm font-medium text-gray-700 mb-1">Periodo de Pago</label>
-                {{ form.periodoPago }}
-             </div>
+            
            
            
             <!-- Modalidad Field -->
           
         </div>
-          <!-- Motivo de la consulta -->
-          <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Motivo de la Consulta</h1>
-            
-            <div class="flex-1 mb-4">
-                    <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1"></label>
-                    {{ form.observaciones }}
-             </div>
-        </div>
+
+      
+
          <!-- Parametros del calculo -->
-         <div class="flex-1 p-4 border rounded-lg mb-5">
-            <h1 class="text-lg font-bold mb-5">Parámetros del Cálculo</h1>
-            <!-- Form Elements -->
-            <div class="flex space-x-4">
-                <div class="flex-1 mb-4">
-                        <label for="id_fechaInicioPago" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio de Pago</label>
-                        {{ form.fechaInicioPago }}
-                </div>
-                <div class="flex-1 mb-4 flex justify-center">
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Calcular 💰</button>
+         <div class="flex-1 p-4 border rounded-lg mb-2">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold mb-2">Parámetros del Cálculo</h1>
+                <div class="ml-auto">
+                    
                 </div>
             </div>
-            
-             <div class="flex space-x-4">
+           
+            <!-- Form Elements -->  
+            <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+                <button type="submit" class="bg-[#22a650] text-white px-4 py-2 rounded hover:bg-[#1e8a4b]">Calcular 💰</button>
+
+                <div class="flex-1 mb-4">
+                    <label for="id_fechaInicioPago" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio de Pago</label>
+                    {{ form.fechaInicioPago }}
+            </div>
                 <div class="flex-1 mb-4">
                     <label for="id_montoPrestamo" class="block text-sm font-medium text-gray-700 mb-1">Monto del Préstamo</label>
                     {{ form.montoPrestamo }}
@@ -282,9 +314,6 @@
                     <label for="id_plazoPago" class="block text-sm font-medium text-gray-700 mb-1">Plazo</label>
                     {{ form.plazoPago }}
                 </div>
-            </div>
-            <div class="flex space-x-4">
-            
                 <div class="flex-1 mb-4">
                     <label for="id_comiCierre" class="block text-sm font-medium text-gray-700 mb-1">Comisión de Cierre (%)</label>
                     {{ form.comiCierre }}
@@ -295,40 +324,55 @@
                     {{ form.r_deseada }}
                 </div>
             </div>
+            <div class="flex space-x-4">
+            
+               
+            </div>
             
                 
             
             
             {% if resultado %}
-            <div class="mt-6 p-6 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-                <h2 class="text-2xl font-bold mb-4">👷 Diseño en progreso 👷</h2>
-                <h2 class="text-2xl font-bold mb-4">Resultado</h2>
-                <a href="{% url 'generate_report' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 inline-block">
-                    Descargar Reporte de Consulta 📄
-                </a>
-                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Letra calculada: ${{ resultado.wrkMontoLetra }}</pre>
-                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Tasa: {{ resultado.tasaEstimada|default_if_none:0|floatformat:2 }}%</pre>
-                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Comi. Cierre Final (%): {{ resultado.calcComiCierreFinal|default_if_none:0|floatformat:2 }}%</pre>
-                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">r1 (estimada): {{ resultado.r1|default_if_none:0|floatformat:2 }}%</pre>
-                <pre class="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">Monto CAPITAL: ${{ resultado.auxMonto2|default_if_none:0|floatformat:2 }}</pre>
-                
-                <div class="mt-10">
-                <h2 class="text-2xl font-bold mb-4">Prueba Andres</h2>
-                
-                <h2>{{ resultado }}</h2>
-                </div>
-            </div>
-        {% endif %}
-  
-            
            
+            {% endif %}
+    
+                
+            
             <!-- Modalidad Field -->
           
         </div>
 
+            <!-- Motivo de la consulta -->
+            <div class="flex-1 p-4 border rounded-lg mb-2">
+                <div class="flex items-center ">
+                    <h1 class="text-lg font-bold">Motivo de la Consulta</h1>
+                    <div class="ml-auto">
+                        <label class="inline-flex items-center ms-5 cursor-pointer">
+                            <input type="checkbox" id="toggleMotivoConsulta" class="sr-only peer" onchange="toggleMotivoConsultaSection()">
+                            <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                </div>
+              <div id="sectionMotivoConsulta" class="flex-1 p-1 rounded-lg mb-1">
+                    <div class="flex-1 mb-1">
+                        <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Motivo de la Consulta</label>
+                        {{ form.observaciones }}
+                    </div>  
+            </div>
+        </div>
+
           <!-- Detalles del deudor -->
-          <div class="flex-1 p-4 border rounded-lg mb-5">
-                <h1 class="text-lg font-bold mb-5">Detalles del Deudor</h1>
+        <div class="flex-1 p-4 border rounded-lg mb-2">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold">Detalles del Deudor</h1>
+                <div class="ml-auto">
+                    <label class="inline-flex items-center ms-5 cursor-pointer">
+                        <input type="checkbox" id="toggleDetallesDeudor" class="sr-only peer" onchange="toggleDetallesDeudorSection()">
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+            </div>
+          <div id="sectionDetallesDeudor" class="flex-1 p-4 rounded-lg mb-2">
                 <!-- Form Elements -->
             <div class="flex space-x-4">
                     <div class="flex-1 mb-4">
@@ -373,12 +417,22 @@
                     </div>
         </div>
     </div>
+</div>
 
         <!-- Nivel de Endeudamiento -->
-        <div class="flex-1 p-4 border rounded-lg mb-5">
+       
+        <div class="flex-1 p-4 border rounded-lg mb-2">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold">Nivel de Endeudamiento</h1>
+                <div class="ml-auto">
+                    <label class="inline-flex items-center ms-5 cursor-pointer">
+                        <input type="checkbox" id="toggleNivelEndeudamiento" class="sr-only peer" onchange="toggleNivelEndeudamientoSection()">
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+            </div>
+        <div id="sectionNivelEndeudamiento" class="flex-1 p-1 rounded-lg">
             <!--DEUDOR-->
-            <h1 class="text-lg font-bold mb-5">Nivel de Endeudamiento</h1>
-            
             <div class="flex-1 mb-4">
                 <label for="id_salarioBaseMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Base Mensual</label>
                 {{ form.salarioBaseMensual }}
@@ -435,7 +489,7 @@
             <div class="flex space-x-4 mt-10">
                 <div class="flex-1">
                     <!--DESCUENTOS DIRECTO-->
-                    <h1 class="text-lg font-bold mb-5 text-center">Descuentos Directos</h1>
+                    <h1 class="text-lg font-bold mb-2 text-center">Descuentos Directos</h1>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -486,7 +540,7 @@
                 </div>
                 <div class="flex-1">
                     <!--PAGOS VOLUNTARIOS-->
-                    <h1 class="text-lg font-bold mb-5 text-center">Pagos Voluntarios</h1>
+                    <h1 class="text-lg font-bold mb-2 text-center">Pagos Voluntarios</h1>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -539,6 +593,7 @@
        
        
         </div>
+    </div>
 
         
 
@@ -647,6 +702,52 @@
     </div>
 
     <script>
+        function toggleSeguroAutoSection() {
+            const section = document.getElementById('sectionSeguroAuto');
+            const checkbox = document.getElementById('toggleSeguroAuto');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleDetallesDeudorSection() {
+            const section = document.getElementById('sectionDetallesDeudor');
+            const checkbox = document.getElementById('toggleDetallesDeudor');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleNivelEndeudamientoSection() {
+            const section = document.getElementById('sectionNivelEndeudamiento');
+            const checkbox = document.getElementById('toggleNivelEndeudamiento');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleMotivoConsultaSection() {
+            const section = document.getElementById('sectionMotivoConsulta');
+            const checkbox = document.getElementById('toggleMotivoConsulta');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        // Initialize the section to be hidden by default
+        document.getElementById('sectionSeguroAuto').style.display = 'none';
+        document.getElementById('sectionDetallesDeudor').style.display = 'none';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        document.getElementById('sectionMotivoConsulta').style.display = 'none';
+        
         function highlightEmptyRequiredFields() {
             const form = document.getElementById('myForm');
             const requiredFields = form.querySelectorAll('[required]');

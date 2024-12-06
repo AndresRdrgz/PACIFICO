@@ -44,7 +44,7 @@ def get_lineas(request):
 def generate_report(request):
     # Retrieve the result from the session
     resultado = request.session.get('resultado')
-    print(resultado)
+    #print(resultado)
     
     if not resultado:
         return HttpResponse("No data found.", status=404)
@@ -233,7 +233,7 @@ def fideicomiso_view(request):
                 forma_pago = 4
                 #COLECTIVO DE CREDITO
                 aseguradora = form.cleaned_data['aseguradora']
-                print('aseguradora', aseguradora)
+                #print('aseguradora', aseguradora)
                 codigoSeguro = aseguradora.codigo
                 r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
                 comisionVendedor = form.cleaned_data['vendedorComision']
@@ -243,8 +243,9 @@ def fideicomiso_view(request):
                 montoanualSeguro = form.cleaned_data['montoanualSeguro']
                 montoMensualSeguro = form.cleaned_data['montoMensualSeguro']
                 cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
+                sucursal = form.cleaned_data['sucursal']
 
-                
+               
                 #parse cotMontoPRestamo to float
                 cotMontoPrestamo = float(cotMontoPrestamo)
                 calcTasaInteres = float(calcTasaInteres)
@@ -253,10 +254,12 @@ def fideicomiso_view(request):
                 comisionVendedor = float(comisionVendedor)
                 montoanualSeguro = float(montoanualSeguro)
                 montoMensualSeguro = float(montoMensualSeguro)
-                
+                sucursal = int(sucursal)
+                print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
                 params = {
                     'edad': edad,
+                    'sucursal': sucursal,
                     'cotMontoPrestamo': cotMontoPrestamo,
                     'calcTasaInteres': calcTasaInteres,
                     'calcComiCierre': calcComiCierre,
@@ -276,10 +279,10 @@ def fideicomiso_view(request):
                     'cantPagosSeguro': cantPagosSeguro
 
                 }
-                print('RESULTADO PARAMETROS', params)
+                #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso2(params)
-                print("--------finalizado---------")
-                print(form.cleaned_data)
+                #print("--------finalizado---------")
+                #print(form.cleaned_data)
                 #deserialize fechaCalculo in resultado
                 resultado['fechaCalculo'] = resultado['fechaCalculo'].strftime('%Y-%m-%d')
                 resultado['cotFechaInicioPago'] = resultado['cotFechaInicioPago'].strftime('%Y-%m-%d')
@@ -287,6 +290,7 @@ def fideicomiso_view(request):
 
                 #PASE DE CAMPOS
                 resultado['oficial'] = form.cleaned_data['oficial'] if form.cleaned_data['oficial'] is not None else "-"
+                resultado['sucursal'] = form.cleaned_data['sucursal'] if form.cleaned_data['sucursal'] is not None else "-"
                 resultado['sexo'] = sexo
                 resultado['nombreCliente'] = form.cleaned_data['nombreCliente'] if form.cleaned_data['nombreCliente'] is not None else "-"
                 resultado['cedulaCliente'] = form.cleaned_data['cedulaCliente'] if form.cleaned_data['cedulaCliente'] is not None else "-"

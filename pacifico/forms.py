@@ -85,6 +85,7 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 #'initial': '1 - SIN VENDEDOR',
                 'readonly': 'readonly',
+                
             }),
             'vendedorComision': forms.NumberInput(attrs={
                 'placeholder': 'Comisión del Vendedor',
@@ -160,6 +161,11 @@ class FideicomisoForm(forms.ModelForm):
             }),
             'oficial': forms.Select(attrs={
                 'placeholder': 'Oficial',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                
+            }),
+            'sucursal': forms.Select(attrs={
+                'placeholder': 'Sucursal',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
