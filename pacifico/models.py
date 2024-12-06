@@ -101,6 +101,14 @@ class Cotizacion(models.Model):
         ("16", "CHITRE"),
         ("17", "PENONOME"),
 ]
+    REFERENCIAS_OPCIONES = [
+        ("BUENAS", "BUENAS"),
+        ("REGULARES", "REGULARES"),
+        ("MALAS", "MALAS"),
+        ("PESIMAS", "PESIMAS"),
+        ("SIN REFERENCIAS", "SIN REFERENCIAS"),
+    ]
+
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES,null=True)
@@ -139,7 +147,7 @@ class Cotizacion(models.Model):
     tiempoServicio = models.CharField(max_length=255, null=True)
     ingresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     nombreEmpresa = models.CharField(max_length=255, null=True)
-    referenciasAPC = models.CharField(max_length=255, null=True)
+    referenciasAPC = models.CharField(max_length=255, null=True, choices=REFERENCIAS_OPCIONES)
     cartera = models.CharField(max_length=255, null=True, choices=CARTERA_OPCIONES)
     licencia = models.CharField(max_length=10, choices=LICENCIA_OPCIONES, default='SI')
     posicion = models.CharField(max_length=255, null=True)
