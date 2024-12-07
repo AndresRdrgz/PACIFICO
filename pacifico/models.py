@@ -141,6 +141,9 @@ class Cotizacion(models.Model):
     montoMensualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     cantPagosSeguro = models.IntegerField(null=True,default=0)
     # DATOS DEL AUTO
+    cashback = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
+    abono = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
+    abonoPorcentaje = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=0)
     #DATOS DE LA CONSULTA
     observaciones = models.TextField(null=True, blank=True)
     #DETALLES DEL DEUDOR
