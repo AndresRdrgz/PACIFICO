@@ -516,6 +516,12 @@ def tablaAmortizacion(params):
                 calcsobtMontoInteres = round(calcsobtMontoInteres, 2)
             
             #FIN TABLA
+             #GUARDAR LETRA SEGURO
+            if(i==1):
+                wrkLetraSeguro = calcsobtMontoSeguro
+                wrkLetraSeguro = round(wrkLetraSeguro, 2)
+
+
             
             tablaTotalPagos += calcsobtMontoLetra
             tablaTotalSeguro += calcsobtMontoSeguro
@@ -545,6 +551,7 @@ def tablaAmortizacion(params):
         tablaTotalMontoCapital = round(tablaTotalMontoCapital, 2)
         wrkMontoLetra = round(wrkMontoLetra, 2)
 
+       
         #ojo - ajuste para minimizar el CR de colchon
         if wrkSaldoBruto < 0:
             wrkMontoBaloom = wrkSaldoBruto
@@ -553,7 +560,7 @@ def tablaAmortizacion(params):
                 pass
             else:
                 #print("Salida 1")
-                return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra
+                return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro
 
         if wrkSaldoAnterior > 0:
             wrkValorSumar = 1
@@ -581,7 +588,7 @@ def tablaAmortizacion(params):
 
         if(auxRecrear == False):
             #print("Salida 2")
-            return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra
+            return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro
         #print("Salida 2")
         #return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra
 

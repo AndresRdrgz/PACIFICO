@@ -321,7 +321,7 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
 
     params["calcMontoTimbres"] = calcMontoTimbres
 
-    tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra = tablaAmortizacion(params)
+    tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro = tablaAmortizacion(params)
 
     
     params['tablaTotalPagos'] = tablaTotalPagos
@@ -330,6 +330,7 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     params['tablaTotalInteres'] = tablaTotalInteres
     params['tablaTotalMontoCapital'] = tablaTotalMontoCapital
     params['wrkMontoLetra'] = wrkMontoLetra
+    params['wrkLetraSeguro'] = wrkLetraSeguro
 
     
     

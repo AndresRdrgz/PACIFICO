@@ -169,10 +169,26 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
+            'cashback': forms.NumberInput(attrs={
+                'placeholder': 'Cashback',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            'abono': forms.NumberInput(attrs={
+                'placeholder': 'Abono',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+              'abonoPorcentaje': forms.NumberInput(attrs={
+                'placeholder': 'Abono',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
             #NIVEL DE ENDEUDAMIENTO
             'salarioBaseMensual': forms.NumberInput(attrs={
                 'placeholder': 'Salario Base Mensual',
-                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow', 
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
             }),
         }
 
@@ -243,14 +259,14 @@ class FideicomisoForm(forms.ModelForm):
         })
     )
     apcScore = forms.IntegerField(
-        required=True,
+        required=False,
         widget=forms.NumberInput(attrs={
             'placeholder': 'APC Score',
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
     apcPI = forms.DecimalField(
-        required=True,
+        required=False,
         widget=forms.NumberInput(attrs={
             'placeholder': 'APC PI',
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -305,7 +321,8 @@ class FideicomisoForm(forms.ModelForm):
         required=False,
         widget=forms.NumberInput(attrs={
             'placeholder': 'Valor del Vehículo',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            'readonly': 'readonly',
         })
     )
     #ENDEUDAMIENTO
@@ -428,6 +445,46 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
         })
     )
+    dirOtros3 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Otros',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosMonto3 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Otros Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosDcto3 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    dirOtros4 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Otros',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosMonto4 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Otros Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    dirOtrosDcto4 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
     #PAGOS VOLUNTARIOS
     pagoVoluntario1 = forms.CharField(
         required=False,
@@ -509,6 +566,48 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
         })
     )
+    pagoVoluntario5 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto5 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto5 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    pagoVoluntario6 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Descripción',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioMonto6 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Pago Voluntario Monto',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        })
+    )
+    pagoVoluntarioDcto6 = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+        })
+    )
+    
+    
     
     
     
@@ -533,4 +632,7 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['montoPrestamo'].required = False
         self.fields['fechaInicioPago'].required = False
         self.fields['salarioBaseMensual'].required = False
+        self.fields['cashback'].required = False
+        self.fields['abono'].required = False
+        self.fields['abonoPorcentaje'].required = False
         
