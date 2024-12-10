@@ -410,6 +410,14 @@
                 <label for="id_salarioBaseMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Base Mensual</label>
                 {{ form.salarioBaseMensual }}
             </div>
+            <div class="mb-4">
+                <label for="salarioNeto" class="block text-sm font-medium text-gray-700 mb-1"> Salario Neto</label>
+                <input type="number" id="salarioNeto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+            </div>
+            <div class="mb-4">
+                <label for="nivelEndeudamiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel de Endeudamiento (%)</label>
+                <input type="number" id="nivelEndeudamiento" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
+            </div>
              
             <table class="min-w-full divide-y divide-gray-200" id="tableIngresosAdicionales">
                 <thead class="bg-gray-50">
@@ -1230,12 +1238,18 @@
             return total;
         }
         function calculateNivelDeEndeudamiento(){
+            var cartera = document.getElementById('id_cartera').value;
             const salarioBaseMensual = parseFloat(document.getElementById('id_salarioBaseMensual').value) || 0;
             var totalIngresosAdicionales = 0
             var totalDescuentosDirectos = 0
             var totalPagosVoluntarios = 0
             var totalDescuentosLegales = 0
-            var letraMensual = 400
+            var letraMensual = 468.78
+            var impuestoSobreLaRenta = 0
+            var seguroEducativo = 0
+            var seguroSocial = 0 
+            var auxISR15 = 0
+            var auxISR25 = 0
             totalIngresosAdicionales = calculateTotalIngresosAdicionales()
             totalDescuentosDirectos = calculateTotalDescuentoDirecto()
             totalPagosVoluntarios = calculatetotalPagosVoluntarios()
@@ -1243,22 +1257,76 @@
             totalIngresosMensuales = salarioBaseMensual + totalIngresosAdicionales
             console.log("Total Ingresos Mensuales:", totalIngresosMensuales)
             
+            //SEGURO SOCIAL
+            if (cartera == 'INDEPENDIENTE'){
+                seeguroSocial = 0
+            }else{
+                if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS'].includes(cartera)) {
+
+                    seguroSocial = (totalIngresosMensuales*6.75)/100;
+                    
+                
+                }else{
+                    seguroSocial = (totalIngresosMensuales*9.75)/100;
+                }
+
+            }
+            console.log("Seguro Social:", seguroSocial)
            
-            //NIVEL REAL
-            var granTotalDescontado = totalDescuentosDirectos + totalPagosVoluntarios + totalDescuentosLegales
-            var salarioNetoActual = totalIngresosMensuales - granTotalDescontado
-            var salarioNeto  = salarioNetoActual - letraMensual
+           //SEGURO EDUCATIVO
+           if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
+                seguroEducativo = 0;
+            }else{
+                seguroEducativo = (totalIngresosMensuales*1.25)/100;
+            }
+
+            //IMPUESTO SOBRE LA RENTA
+            //
+            if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
+                impuestoSobreLaRenta = 0;
+            }else{
+                var salarioAnual = totalIngresosMensuales * 13
+                if (salarioAnual < 11000) {
+                    auxISR15 = 0;
+                } else if (salarioAnual >= 11000 && salarioAnual < 50000) {
+                    auxISR15 = (salarioAnual - 11000) * 0.15;
+                } else if (salarioAnual >= 50000) {
+                    auxISR15 = (50000-11000)*0.15;
+                    auxISR25 = (salarioAnual - 50000) * 0.25;
+                }
+                impuestoSobreLaRentaAnual = auxISR15 + auxISR25;
+                impuestoSobreLaRenta = impuestoSobreLaRentaAnual / 13;
+                //console.log("Impuesto Sobre la Renta:", auxISR15);
+                //console.log("Impuesto Sobre la Renta:", auxISR25);
+                console.log("Impuesto Sobre la Renta:", impuestoSobreLaRenta);
+
+            }
+            console.log("Seguro Educativo:", seguroEducativo)
+            //total descuentos totalDescuentosLegales 
+            totalDescuentosLegales = impuestoSobreLaRenta + seguroEducativo + seguroSocial;
+
+             //NIVEL REAL
+             var granTotalDescontado = totalDescuentosDirectos + totalPagosVoluntarios + totalDescuentosLegales
+             console.log("Gran Total Descontado:", granTotalDescontado);
+             var salarioNetoActual = totalIngresosMensuales - granTotalDescontado;
+             var salarioNeto  = salarioNetoActual - letraMensual;
+
+            console.log("Cartera:", cartera)
             //porcentajes
             var porSalarioNetoActual = (salarioNetoActual / totalIngresosMensuales) * 100
             var porLetraMensual = (letraMensual / totalIngresosMensuales) * 100
             var porSalarioNeto = (salarioNeto / totalIngresosMensuales) * 100
 
+            
             console.log("Salario Neto Actual:", salarioNetoActual)
             console.log("Salario Neto:", salarioNeto)
             console.log("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
             console.log("Porcentaje Letra Mensual:", porLetraMensual)
             console.log("Porcentaje Salario Neto:", porSalarioNeto)
-            
+
+            document.getElementById('salarioNeto').value = salarioNeto.toFixed(2)
+            document.getElementById('nivelEndeudamiento').value = porSalarioNeto.toFixed(2);
+
 
             
             
