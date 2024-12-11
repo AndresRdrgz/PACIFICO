@@ -131,9 +131,9 @@ class Cotizacion(models.Model):
     fechaInicioPago = models.DateField(null=True)
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     tasaInteres = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    comiCierre = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    comiCierre = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=13)
     plazoPago = models.IntegerField(null=True)
-    r_deseada = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    r_deseada = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=14)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=False)
     mesesFinanciaSeguro = models.IntegerField(null=True,default=0)
