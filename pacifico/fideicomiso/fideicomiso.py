@@ -509,28 +509,27 @@ def generarFideicomiso2(params):
         # Goal seeking algorithm
         desired_r1 = params['r_deseada']
         tolerance = 0.001  # Define a tolerance level for the desired r1 value
-        max_iterations = 200  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 100  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
-            if r1 >= desired_r1:
+            if abs(r1 - desired_r1) <= tolerance:
                 break
+            elif r1 < desired_r1:
+                params['calcTasaInteres'] += 0.001 # Increase the interest rate
             else:
-                params['calcTasaInteres'] += 0.001  # Increase the interest rate
-                iteration += 1
+                params['calcTasaInteres'] -= 0.001  # Decrease the interest rate
+            iteration += 1
 
         if iteration == max_iterations:
             logger.warning("Goal seeking algorithm did not converge within the maximum number of iterations.")
-            print('r1', r1)
-            resultados['r1'] = r1 * 100
-            resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
             print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
-            resultados['r1'] = r1 * 100
-            resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
+            resultados['r1'] = r1 *100
+            resultados['tasaEstimada'] = params['calcTasaInteres'] *100
 
         return resultados
     except Exception as e:
