@@ -3,6 +3,7 @@ def nivelEndeudamiento(resultado):
   
     
     
+    
     totalIngresosAdicionales =resultado['horasExtrasMonto'] + resultado['primaMonto'] + resultado['bonosMonto'] + resultado['otrosMonto']
     totalIngresosAdicionales = round(totalIngresosAdicionales,2)
     print("Total de ingresos adicionales: ", totalIngresosAdicionales)
@@ -13,7 +14,7 @@ def nivelEndeudamiento(resultado):
     print("Total de pagos voluntarios: ", totalPagoVoluntario)
 
     print(resultado)
-    totalIngresosMensuales = resultado['salarioBaseMensual'] + totalIngresosAdicionales
+    totalIngresosMensuales = resultado['salarioBaseMensual']
     totalIngresosMensuales = round(totalIngresosMensuales,2)
     print("Total de ingresos mensuales: ", totalIngresosMensuales)
 
