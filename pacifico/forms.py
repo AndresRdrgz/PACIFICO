@@ -190,6 +190,11 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
             }),
+            'totalIngresosAdicionales': forms.NumberInput(attrs={
+                'placeholder': 'Total Ingresos Adicionales',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
         }
 
     periodoPago = forms.ChoiceField(
@@ -635,4 +640,4 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['cashback'].required = False
         self.fields['abono'].required = False
         self.fields['abonoPorcentaje'].required = False
-        
+        self.fields['totalIngresosAdicionales'].required = False
