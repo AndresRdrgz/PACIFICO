@@ -19,10 +19,14 @@ if DEBUG:
     }
 else:
     DATABASES = {
-        'default': dj_database_url.config(
-            default='postgresql://postgres:postgres@localhost:5432/pacifico',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'pacifico',
+            'USER': 'pacifico',
+            'PASSWORD': 'jKd5sDLNRiHzrPb7',
+            'HOST': 'localhost',
+            'PORT': '3306'
+        }
     }
 ''' COMENTARIO ANDRES - UTILIZAR ESTE BLOQUE PARA DESPLIEGUE EN RENDER (PRUEBAS)
 else:
