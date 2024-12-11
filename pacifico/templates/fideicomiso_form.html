@@ -416,8 +416,7 @@
             </div>
             <div class="mb-4">
                 <label for="nivelEndeudamiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel de Endeudamiento (%)</label>
-                <input type="number" id="nivelEndeudamiento" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
-            </div>
+                %{{resultado.porSalarioNeto}}     </div>
              
             <table class="min-w-full divide-y divide-gray-200" id="tableIngresosAdicionales">
                 <thead class="bg-gray-50">
@@ -468,8 +467,8 @@
                 <tfoot class="bg-gray-50">
                     <tr>
                         <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">Total</td>
-                        <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">
-                            
+                        <td id="id_totalIngresosAdicionales" class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">
+                            {{form.totalIngresosAdicionales}}
                         </td>
                         <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider"></td>
                     </tr>
@@ -794,6 +793,17 @@
         document.getElementById('sectionSeguroAuto').style.display = 'none';
         document.getElementById('sectionDetallesDeudor').style.display = 'none';
         document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        {% if resultado %}
+        //document.getElementById('sectionSeguroAuto').style.display = 'block';
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'block';
+        //document.getElementById('sectionMotivoConsulta').style.display = 'block';
+        {% else %}
+        document.getElementById('sectionSeguroAuto').style.display = 'none';
+        document.getElementById('sectionDetallesDeudor').style.display = 'none';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        document.getElementById('sectionMotivoConsulta').style.display = 'none';
+        {% endif %}
         document.getElementById('sectionMotivoConsulta').style.display = 'none';
         
         function highlightEmptyRequiredFields() {
@@ -1207,8 +1217,15 @@
             }
             rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
             console.log("Total:", total);
+            
+            document.getElementById('id_totalIngresosAdicionales').value = total;
+   
+            
+            console.log("Total:", total);
             return total;
         }
+        
+       
         function calculateTotalDescuentoDirecto() {
             const table = document.getElementById('tableDescuentoDirecto');
             const rows = table.getElementsByTagName('tr');
@@ -1328,10 +1345,42 @@
             document.getElementById('nivelEndeudamiento').value = porSalarioNeto.toFixed(2);
 
 
-            
-            
 
         }
+
+
+        //Event Listeners - tablas nivel de endeudamiento
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tableIngresosAdicionales input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculateTotalIngresosAdicionales);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tableDescuentoDirecto input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculateTotalDescuentoDirecto);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tablePagosVoluntarios input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculatetotalPagosVoluntarios);
+            });
+        });
+
+
+        calculateTotalDescuentoDirecto();
+        calculateTotalIngresosAdicionales();
+        calculatetotalPagosVoluntarios();
+        
+        
+
+      
+
+            
 
 
 

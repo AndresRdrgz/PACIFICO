@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from .forms import FideicomisoForm
-from .fideicomiso.fideicomiso import generarFideicomiso2  # Corrected import statement
+from .fideicomiso.fideicomiso import generarFideicomiso2
+from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
 import logging
 from decimal import Decimal
@@ -14,6 +15,7 @@ from django.conf import settings
 from django.http import JsonResponse
 import json
 from pathlib import Path
+
 
 
 
@@ -426,8 +428,20 @@ def fideicomiso_view(request):
                 resultado['abonoPorcentaje'] = form.cleaned_data['abonoPorcentaje'] if form.cleaned_data['abonoPorcentaje'] is not None else 0
                 resultado['abonoPorcentaje'] = round(resultado['abonoPorcentaje'], 2)
                 print('abonoporcentaje', resultado['abonoPorcentaje'])
-                # Convert Decimal fields to floats
+                
+                 # Convert Decimal fields to floats
                 resultado = convert_decimal_to_float(resultado)
+               
+                #CALCULO NIVEL DE ENDEUDAMIENTO
+                resultadoNivel = nivelEndeudamiento(resultado)
+                resultado['salarioNeto'] = resultadoNivel['salarioNeto']
+                resultado['porSalarioNeto'] = resultadoNivel['porSalarioNeto']
+                resultado['salarioNetoActual'] = resultadoNivel['salarioNetoActual']
+                resultado['totalIngresosAdicionales'] = resultadoNivel['totalIngresosAdicionales']
+                resultado['totalIngresosMensuales'] = resultadoNivel['totalIngresosMensuales']
+                resultado['totalDescuentoDirecto'] = resultadoNivel['totalDescuentoDirecto']
+                resultado['totalPagoVoluntario'] = resultadoNivel['totalPagoVoluntario']
+                resultado['totalDescuentosLegales'] = resultadoNivel['totalDescuentosLegales']
                 request.session['resultado'] = resultado
               
             except Exception as e:

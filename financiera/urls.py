@@ -3,6 +3,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('pacifico/', include('pacifico.urls')),  # Include the pacifico app's URLs
+    path('', include('pacifico.urls')),  # Include the pacifico app's URLs
     path('accounts/', include('django.contrib.auth.urls')),  # Include the default authentication URLs
 ]
