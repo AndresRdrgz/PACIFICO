@@ -24,6 +24,15 @@ else:
             conn_max_age=600
         )
     }
+''' COMENTARIO ANDRES - UTILIZAR ESTE BLOQUE PARA DESPLIEGUE EN RENDER (PRUEBAS)
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:postgres@localhost:5432/pacifico',
+            conn_max_age=600
+        )
+    }
+'''
 
 # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

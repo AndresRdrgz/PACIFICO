@@ -432,7 +432,7 @@ def fideicomiso_view(request):
                  # Convert Decimal fields to floats
                 resultado = convert_decimal_to_float(resultado)
                
-                #CALCULO NIVEL DE ENDEUDAMIENTO
+                #CALCULO NIVEL DE ENDEUDAMIENTO - REAL
                 resultadoNivel = nivelEndeudamiento(resultado)
                 resultado['salarioNeto'] = resultadoNivel['salarioNeto']
                 resultado['porSalarioNeto'] = resultadoNivel['porSalarioNeto']
@@ -442,6 +442,15 @@ def fideicomiso_view(request):
                 resultado['totalDescuentoDirecto'] = resultadoNivel['totalDescuentoDirecto']
                 resultado['totalPagoVoluntario'] = resultadoNivel['totalPagoVoluntario']
                 resultado['totalDescuentosLegales'] = resultadoNivel['totalDescuentosLegales']
+                #nivel de endeudamiento - completo
+                resultado['totalIngresosMensualesCompleto'] = resultadoNivel['totalIngresosMensualesCompleto']
+                resultado['totalDescuentosLegalesCompleto'] = resultadoNivel['totalDescuentosLegalesCompleto']
+                resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
+                resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
+                resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
+                
+
+
                 request.session['resultado'] = resultado
               
             except Exception as e:
