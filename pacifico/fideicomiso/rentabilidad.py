@@ -12,7 +12,8 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     pagadiciembre1 = "Y"
 
-    #print("----RENTABILIDAD EFECTIVA ----")
+    print("----RENTABILIDAD EFECTIVA ----")
+    print('calcMontoLetra:',calcMontoLetra)
 
     wrkMontoFECI = round(wrkMontoFECI, 2)
     wrkNum7_2 = round(wrkNum7_2, 2)
@@ -58,8 +59,9 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
     auxL = 0.000102
 
     auxJ = 0
+    print("auxp:",auxP)
     if patrono == 620 and tipo_prestamo != "LEASING":
-        auxJ = "letra"
+        auxJ = calcMontoLetra
         auxJ = (auxJ * auxP) * 1.5 / 100
 
     auxX = calcTasaInteres

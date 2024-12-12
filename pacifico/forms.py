@@ -72,8 +72,8 @@ class FideicomisoForm(forms.ModelForm):
             }),
             'patrono': forms.TextInput(attrs={
                 'placeholder': 'Patrono',
-                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-                'readonly': 'readonly',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            
             }),
             'patronoCodigo': forms.NumberInput(attrs={
                 'placeholder': 'Código del Patrono',
@@ -628,7 +628,6 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['ingresos'].required = False
         self.fields['nombreEmpresa'].required = False
         self.fields['referenciasAPC'].required = False
-        self.fields['cartera'].required = False
         self.fields['licencia'].required = False
         self.fields['posicion'].required = False
         self.fields['perfilUniversitario'].required = False

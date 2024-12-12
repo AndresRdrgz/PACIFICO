@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import dj_database_url
+ 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,7 +10,7 @@ STATIC_URL = '/static/'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = False
+DEBUG = True
 if DEBUG:
     DATABASES = {
         'default': {
@@ -17,6 +18,15 @@ if DEBUG:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:postgres@localhost:5432/pacifico',
+            conn_max_age=600
+        )
+    }
+
+''' COMENTARIO ANDRES - UTILIZAR ESTE BLOQUE PARA DESPLIEGUE EN WEBSERVER PACIFICO
 else:
     DATABASES = {
         'default': {
@@ -28,6 +38,7 @@ else:
             'PORT': '3306'
         }
     }
+'''
 ''' COMENTARIO ANDRES - UTILIZAR ESTE BLOQUE PARA DESPLIEGUE EN RENDER (PRUEBAS)
 else:
     DATABASES = {
@@ -132,6 +143,7 @@ WSGI_APPLICATION = "financiera.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+'''
 if not DEBUG:
     DATABASES = {
         'default': dj_database_url.config(
@@ -140,6 +152,7 @@ if not DEBUG:
             conn_max_age=600
         )
     }
+'''
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

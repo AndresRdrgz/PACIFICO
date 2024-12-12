@@ -211,7 +211,9 @@
          <!-- Parametros de la cotizacion -->
          <div class="flex-1 p-4 border rounded-lg mb-2">
             <h1 class="text-lg font-bold mb-2">Parámetros de la Cotización</h1>
-            <div class="flex flex-col space-y-4 mb-2 md:flex-row md:space-x-4 md:space-y-0">
+            <p class="mt-1 text-sm font-normal text-gray-500">De no encontrar el patrono en el listado, puede escribir directamente el nombre en el campo "Patrono".</p>
+      
+            <div class="flex flex-col space-y-4 mb-2 mt-2 md:flex-row md:space-x-4 md:space-y-0">
                 
                
                  <button type="button"  class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="openModal()">Buscar Patrono 🔍</button>
@@ -220,9 +222,13 @@
                     <label for="id_Patrono" class="block text-sm font-medium text-gray-700 mb-1">Patrono</label>
                     {{ form.patrono }}
                 </div>
-                <div class="flex-1 mb-4">
+                <div class="flex-1 mb-4" id="divPatronoCodigo">
                     <label for="id_patronoCodigo" class="block text-sm font-medium text-gray-700 mb-1">Código</label>
                     {{ form.patronoCodigo }} 
+                </div>
+                <div class="flex-1 mb-4">
+                    <label for="id_cartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
+                    {{ form.cartera }}
                 </div>
                
                 
@@ -369,9 +375,8 @@
                 </div>
                 <div class="flex space-x-4">
                     <div class="flex-1 mb-4">
-                        <label for="id_cartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
-                        {{ form.cartera }}
-                    </div>
+                        <label for="cartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
+                        <input type="text" id="cartera" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" readonly></div>
                     <div class="flex-1 mb-4">
                         <label for="id_licencia" class="block text-sm font-medium text-gray-700 mb-1">Licencia de Conducir</label>
                         {{ form.licencia }}
@@ -416,7 +421,8 @@
             </div>
             <div class="mb-4">
                 <label for="nivelEndeudamiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel de Endeudamiento (%)</label>
-                %{{resultado.porSalarioNeto}}     </div>
+                %{{resultado.porSalarioNeto}}
+            </div>
              
             <table class="min-w-full divide-y divide-gray-200" id="tableIngresosAdicionales">
                 <thead class="bg-gray-50">
@@ -749,6 +755,8 @@
     </div>
 
     <script>
+
+
         function toggleSeguroAutoSection() {
             const section = document.getElementById('sectionSeguroAuto');
             const checkbox = document.getElementById('toggleSeguroAuto');
@@ -793,6 +801,7 @@
         document.getElementById('sectionSeguroAuto').style.display = 'none';
         document.getElementById('sectionDetallesDeudor').style.display = 'none';
         document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        document.getElementById('divPatronoCodigo').style.display = 'none';
         {% if resultado %}
         //document.getElementById('sectionSeguroAuto').style.display = 'block';
         document.getElementById('sectionDetallesDeudor').style.display = 'block';
@@ -1184,20 +1193,19 @@
 
             if (abonoType == 'percentage') {
                 abono = totalValue * (percentage / 100);
-                document.getElementById('montoFinanciado').value = totalValue - abono - cashbackValue;
             } else {
                 abono = amount;
-                document.getElementById('montoFinanciado').value = totalValue - abono - cashbackValue;
             }
-            
-            document.getElementById('id_montoPrestamo').value = document.getElementById('montoFinanciado').value;
-            document.getElementById('id_cashback').value = cashbackValue;
-            document.getElementById('id_abono').value = abono;
+            console.log("abono:", abono);
+
+            const montoFinanciado = totalValue - abono - cashbackValue;
+            document.getElementById('montoFinanciado').value = montoFinanciado.toFixed(2);
+            document.getElementById('id_montoPrestamo').value = montoFinanciado.toFixed(2);
+            document.getElementById('id_cashback').value = cashbackValue.toFixed(2);
+            document.getElementById('id_abono').value = abono.toFixed(2);
             //Calculate % of abono
             const porcentajeAbono = (abono / totalValue) * 100;
             document.getElementById('id_abonoPorcentaje').value = porcentajeAbono.toFixed(2);
-
-            
         }
 
         document.getElementById('myForm').addEventListener('submit', function () {
@@ -1375,6 +1383,19 @@
         calculateTotalDescuentoDirecto();
         calculateTotalIngresosAdicionales();
         calculatetotalPagosVoluntarios();
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_patrono').addEventListener('change', function() {
+                document.getElementById('id_patronoCodigo').value = 9999;
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_cartera').addEventListener('change', function() {
+                document.getElementById('cartera').value = document.getElementById('id_cartera').value;
+            });
+        });
         
         
 

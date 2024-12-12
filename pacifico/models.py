@@ -37,6 +37,7 @@ class Cotizacion(models.Model):
     ]
     OFICIAL_OPCIONES = [
         ('TAIRA DE OBALDIA', 'TAIRA DE OBALDIA'),
+        ('GERALDINE RODRIGUEZ', 'GERALDINE RODRIGUEZ'),
         ('BLANCA VERGARA', 'BLANCA VERGARA'),
         ('MICHELLE SANTANA', 'MICHELLE SANTANA'),
         ('SHARLEN SAMANIEGO', 'SHARLEN SAMANIEGO'),
@@ -68,6 +69,7 @@ class Cotizacion(models.Model):
         ('SHELUNSKA MASA', 'SHELUNSKA MASA'),
         ('ARGELIS GOMEZ', 'ARGELIS GOMEZ'),
         ('ROSMERY ANDRADE', 'ROSMERY ANDRADE'),
+
     ]
      
     
