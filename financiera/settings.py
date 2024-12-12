@@ -21,10 +21,21 @@ if DEBUG:
 else:
     DATABASES = {
         'default': dj_database_url.config(
-            default='postgresql://postgres:postgres@localhost:5432/pacifico',
+            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
             conn_max_age=600
         )
     }
+
+'''PARAMETROS POSTGRE
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
+            conn_max_age=600
+        )
+    }
+
+'''
 
 ''' COMENTARIO ANDRES - UTILIZAR ESTE BLOQUE PARA DESPLIEGUE EN WEBSERVER PACIFICO
 else:

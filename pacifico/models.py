@@ -15,6 +15,13 @@ class Aseguradora(models.Model):
     def __str__(self):
         return f"{self.codigo} - {self.descripcion}"
     
+class PruebaDario(models.Model):
+    nombre = models.CharField(max_length=100, null=True)
+    apellido = models.CharField(max_length=100, null=True)
+    departamento = models.CharField(max_length=100, null=True)
+
+    def __str__(self):
+        return self.nombre
     
 
 class PeriodoPago(models.Model):
