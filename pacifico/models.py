@@ -80,9 +80,7 @@ class Cotizacion(models.Model):
     ]
      
     
-    CARTERA_OPCIONES = [
-
-    ]
+  
     CARTERA_OPCIONES = [
         ("CONTRALORÍA", "CONTRALORÍA"),
         ("EMP. CSS", "EMP. CSS"),
@@ -116,6 +114,12 @@ class Cotizacion(models.Model):
         ("SIN REFERENCIAS", "SIN REFERENCIAS"),
     ]
 
+    #Jubilado choices Si o No
+    JUBILADO_CHOICES = [
+        ('SI', 'Si'),
+        ('NO', 'No'),
+    ]
+
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES,null=True)
@@ -126,6 +130,7 @@ class Cotizacion(models.Model):
     fechaNacimiento = models.DateField(null=True)
     edad = models.IntegerField(null=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
+    jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
     #Parametros de la Cotizacion
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)

@@ -141,9 +141,11 @@ def tablaAmortizacion(params):
     totalSeguro = params['totalSeguro']
     wrkMontoLetra = params['wrkMontoLetra']
     seguroAndres = params['seguroAdicional']
+    jubilado = params['jubilado']
+
     #wrkMontoLetra = 984.56
     #-------
-
+    print("jubi: ", jubilado)
     auxRecrear = True
     #while auxRecrear = true
     while auxRecrear == True:
@@ -163,7 +165,10 @@ def tablaAmortizacion(params):
         calcsobtSecuencia = 1
         wrkSaldoInteresAnt = 0
         wrkSaldoFeciAnt=0
-        wrkLogic5 = "NO"
+        if jubilado == "NO":
+            wrkLogic5 = "NO"
+        else:
+            wrkLogic5 = "SI"
         wrkSaldoSeguro = 0
         wrkSaldoSeguro2 = 0
         wrkcredito3 = 0
@@ -334,7 +339,12 @@ def tablaAmortizacion(params):
             
             #CALCULO DEL FECI
             calcsobtMontoFECI = 0
-            calcLogic ="N" #VERIFICAR
+            if wrkLogic5 == "SI":
+                calcLogic = "Y"
+            else:
+                calcLogic = "N"
+
+            
             jubilado = wrkLogic5
 
             if calcLogic == "Y":
