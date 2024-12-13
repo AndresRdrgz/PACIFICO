@@ -254,6 +254,7 @@ def fideicomiso_view(request):
                 # Extract form data
                 edad = form.cleaned_data['edad']
                 sexo = form.cleaned_data['sexo']
+                jubilado = form.cleaned_data['jubilado']
                 nombreCliente = form.cleaned_data['nombreCliente']
                 cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
                 calcTasaInteres = 10 / 100
@@ -297,6 +298,8 @@ def fideicomiso_view(request):
                 params = {
                     'edad': edad,
                     'sucursal': sucursal,
+                    'sexo': sexo,
+                    'jubilado': jubilado,
                     'cotMontoPrestamo': cotMontoPrestamo,
                     'calcTasaInteres': calcTasaInteres,
                     'calcComiCierre': calcComiCierre,

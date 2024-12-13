@@ -509,12 +509,13 @@ def generarFideicomiso2(params):
         # Goal seeking algorithm
         desired_r1 = params['r_deseada']
         tolerance = 0.001  # Define a tolerance level for the desired r1 value
-        max_iterations = 100  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 200  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
+            print("Diferencia",abs(r1 - desired_r1))
             if abs(r1 - desired_r1) <= tolerance:
                 break
             elif r1 < desired_r1:
