@@ -83,6 +83,12 @@ EXCEL_FILE_PATH = os.path.join(BASE_DIR, 'financiera/pacifico/fideicomiso/patron
 SECRET_KEY = "django-insecure-gy#*57bwnd=06f*jup!b=a15%=3yclx0^x&$+oytscnhs!hf2_"
 
 ALLOWED_HOSTS = ["*"]
+# ALLOWED_HOSTS = ['cotfid.fpacifico.com']
+
+'''PARAMETROS SSL
+SECURE_SSL_REDIRECT = True  # Comentario o elimina esta línea temporalmente
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+ALLOWED_HOSTS = ['cotfid.fpacifico.com', 'www.cotfid.fpacifico.com']
 
 '''
 LOGGING = {
@@ -103,7 +109,7 @@ LOGGING = {
         },
     },
 }
-'''
+
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'main_menu'
@@ -154,16 +160,8 @@ WSGI_APPLICATION = "financiera.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-'''
-if not DEBUG:
-    DATABASES = {
-        'default': dj_database_url.config(
-            # Replace this value with your local database's connection string.
-            default='postgresql://postgres:postgres@localhost:5432/pacifico',
-            conn_max_age=600
-        )
-    }
-'''
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

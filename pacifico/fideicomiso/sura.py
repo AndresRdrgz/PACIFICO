@@ -7,8 +7,20 @@ def cotizacionSeguroAuto():
     valor = 20000
     yearsFinanciamiento = 1
 
+    #LESIONES COPORALES
+    #DANOS A LA PROPIEDAD
+    #GASTOS MEDICOS
+    #COMPRENSIVO
+    #COLISION
+    #INCENDIO
+    #HURTO
+    #COBERTURA SOAT
+    #ENDOSO FULL EXTRAS
+    
 
-    subTotal = 608.09
+
+    #total cotizacion
+    subTotal = 608.09 #VERIFICAR ESTO
     impuestos = subTotal * 0.06
     total = subTotal + impuestos
     totalFinanciamiento = total * yearsFinanciamiento

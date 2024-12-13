@@ -530,6 +530,7 @@ def generarFideicomiso2(params):
             print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
             resultados['r1'] = r1 *100
             resultados['tasaEstimada'] = params['calcTasaInteres'] *100
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'],2)
 
         return resultados
     except Exception as e:

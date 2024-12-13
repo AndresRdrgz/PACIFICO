@@ -101,12 +101,31 @@ def nivelEndeudamiento(resultado):
     print("Cartera:", resultado['cartera'])
     
     # porcentajes
-    porSalarioNetoActual = (salarioNetoActual / totalIngresosMensuales) * 100
-    porLetraMensual = (letraMensual / totalIngresosMensuales) * 100
-    porSalarioNeto = (salarioNeto / totalIngresosMensuales) * 100
-    porSalarioNetoActualCompleto = (salarioNetoActualCompleto / totalIngresosMensualesCompleto) * 100
-    porSalarioNetoCompleto = (salarioNetoCompleto / totalIngresosMensualesCompleto) * 100
-    porLetraMensualCompleto = (letraMensual / totalIngresosMensualesCompleto) * 100
+    try:
+        porSalarioNetoActual = (salarioNetoActual / totalIngresosMensuales) * 100
+    except ZeroDivisionError:
+        porSalarioNetoActual = 0
+
+    try:
+        porLetraMensual = (letraMensual / totalIngresosMensuales) * 100
+    except ZeroDivisionError:
+        porLetraMensual = 0
+
+    try:
+        porSalarioNeto = (salarioNeto / totalIngresosMensuales) * 100
+    except ZeroDivisionError:
+        porSalarioNeto = 0
+
+    try:
+        porSalarioNetoActualCompleto = (salarioNetoActualCompleto / totalIngresosMensualesCompleto) * 100
+    except ZeroDivisionError:
+        porSalarioNetoActualCompleto = 0
+
+    try:
+        porSalarioNetoCompleto = (salarioNetoCompleto / totalIngresosMensualesCompleto) * 100
+    except ZeroDivisionError:
+        porSalarioNetoCompleto = 0
+
     print("Porcentaje Salario Neto Actual Completo:", porSalarioNetoActualCompleto)
 
 
