@@ -253,7 +253,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     if patrono in [642, 643, 649, 650]:
         comisionTotal10 = 10
 
-    #print("----CALCULO RENTABILIDAD----")
+
 
     promoActiva = "Y"
     if promoActiva == "Y":
@@ -269,9 +269,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         else:
             pass
     
+    #SI ES CARTERA ACP
     if 630 <= patrono <= 660:
         wrkLogic4 = "Y"
 
+    
     wrkMontoCancelAnt = 0
     wrkMontoPedido = 0
     claseVend = "SIN VENDEDOR"  # Example value, replace with actual value retrieval logic
