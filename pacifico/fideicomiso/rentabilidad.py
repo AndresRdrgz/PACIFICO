@@ -323,6 +323,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     wrkNetoTotal += manejo_5porc
     wrkNetoTotal -= 0  # dev Interes
     wrkNetoTotal -= 0  # dev Seguro
+    if tipo_prestamo == "PREST AUTO":
+        wrkNetoTotal += calcMontoNetoBruto
+
+    print('calcMontoNetoBruto: ', calcMontoNetoBruto)
+
     #print('manejo_5porc:', manejo_5porc)
     #print('wrkNetoTotal:', wrkNetoTotal)
 
