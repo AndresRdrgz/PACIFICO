@@ -15,13 +15,40 @@ from django.conf import settings
 from django.http import JsonResponse
 import json
 from pathlib import Path
-
-
-
+from django.views.decorators.csrf import csrf_exempt
+from .fideicomiso.sura import cotizacionSeguroAuto
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+
+@csrf_exempt
+def cotizacion_seguro_auto(request):
+    if request.method == 'POST':
+        #print all the data received
+        print('request.POST', request.POST)
+        marca = request.POST.get('marca')
+        
+        modelo = request.POST.get('modelo')
+        
+        year_auto = int(request.POST.get('year_auto'))
+        
+        valor = float(request.POST.get('valor'))
+        years_financiamiento = int(request.POST.get('years_financiamiento'))
+
+     
+
+
+        # Call the cotizacionSeguroAuto function
+        result = cotizacionSeguroAuto(marca, modelo, year_auto, valor, years_financiamiento)
+        print('result', result)
+        # Return the result as JSON
+        return JsonResponse(result)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
 
 def convert_decimal_to_float(data):
     for key, value in data.items():

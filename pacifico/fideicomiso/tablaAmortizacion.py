@@ -12,7 +12,7 @@ def calculoInteres_F(wrkSaldoAnterior, tasaInteres, wrkDiasCalc):
 
 def calculoFECI_F(calcLogic, wrkSaldoAnterior, auxMonto2, i, calcsobtFechaVenc, calcsobtFechaFin, auxLI, auxL, jubilado, wrkDiasEnteros2):
     tasaFeci = 1 / 100
-
+    
     if calcLogic == "Y":
         return 0
     else:

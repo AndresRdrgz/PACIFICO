@@ -156,6 +156,9 @@ class Cotizacion(models.Model):
     cashback = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     abono = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     abonoPorcentaje = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=0)
+    marca = models.CharField(max_length=255, null=True)
+    modelo = models.CharField(max_length=255, null=True)
+    yearsFinanciamiento = models.IntegerField(null=True,default=1)
     #DATOS DE LA CONSULTA
     observaciones = models.TextField(null=True, blank=True)
     #DETALLES DEL DEUDOR
