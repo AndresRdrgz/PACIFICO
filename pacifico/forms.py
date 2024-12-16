@@ -24,8 +24,7 @@ class FideicomisoForm(forms.ModelForm):
         
         widgets = {
             'nombreCliente': forms.TextInput(attrs={
-                'placeholder': 'Nombre del Cliente',
-                
+                'placeholder': 'Nombre del Cliente',      
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
@@ -197,6 +196,19 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Total Ingresos Adicionales',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
+            }),
+            #DATOS DEL AUTO
+            'marca':forms.TextInput(attrs={
+                'placeholder': 'Marca del Auto',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'modelo':forms.TextInput(attrs={
+                'placeholder': 'Modelo del Auto',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'yearsFinanciamiento': forms.NumberInput(attrs={
+                'placeholder': 'Años de Financiamiento',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
         }
 

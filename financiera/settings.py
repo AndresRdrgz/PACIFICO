@@ -115,8 +115,17 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'main_menu'
 
 # Application definition
+CSRF_TRUSTED_ORIGINS = [
+    'https://cotfid.fpacifico.com',
+    'http://cotfid.fpacifico.com',
+    'http://localhost:8000',
+    'http://cotfid.fpacifico.com:8000',
+]
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
