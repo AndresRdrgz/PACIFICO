@@ -655,3 +655,4 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['abono'].required = False
         self.fields['abonoPorcentaje'].required = False
         self.fields['totalIngresosAdicionales'].required = False
+        self.fields['yearsFinanciamiento'].required = False
