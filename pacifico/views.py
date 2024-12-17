@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from .forms import FideicomisoForm
-from .fideicomiso.fideicomiso import generarFideicomiso2
+from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3
 from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
 import logging
@@ -347,7 +347,7 @@ def fideicomiso_view(request):
 
                 }
                 #print('RESULTADO PARAMETROS', params)
-                resultado = generarFideicomiso2(params)
+                resultado = generarFideicomiso3(params)
                 #print("--------finalizado---------")
                 #print(form.cleaned_data)
                 #deserialize fechaCalculo in resultado
