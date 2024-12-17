@@ -324,7 +324,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     wrkNetoTotal -= 0  # dev Interes
     wrkNetoTotal -= 0  # dev Seguro
     if tipo_prestamo == "PREST AUTO":
-        wrkNetoTotal += calcMontoNetoBruto
+       
+        wrkNetoTotal += 291.90
 
     print('calcMontoNetoBruto: ', calcMontoNetoBruto)
 
@@ -536,10 +537,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     r1 = calcRentaAnual
     #r1 = round(r1, 2)
 
-    #print("R1 =", r1)
+    print("R1 =", r1)
 
     #calculo para la tasa efectiva, diferenciarla de la r1
     TasaEfectiva = rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,calcMontoNetoBruto,calcMontoTimbres,calcMontoNotaria,tipopagoPeriocidad,patrono,tipo_prestamo,calcTasaInteres,fechaInicioPago,plazoInteres,fechaCalculo,calcMontoLetra,calcInicioPago,tempPrimerDiaHabil,params)
     #TasaEfectiva=round(TasaEfectiva,2)
+    print("TasaEfectiva =", TasaEfectiva)
     return TasaEfectiva, r1
 
