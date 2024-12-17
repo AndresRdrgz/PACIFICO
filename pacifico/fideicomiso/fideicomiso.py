@@ -509,8 +509,16 @@ def generarFideicomiso2(params):
         # Goal seeking algorithm
         desired_r1 = params['r_deseada']
         tolerance = 0.00005  # Define a tolerance level for the desired r1 value
-        max_iterations = 400  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 2  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
+        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        #count all fields in params
+        i =0
+        for key in params:
+            i=i+1
+        print("Total de campos: ",i)
+
+
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
@@ -579,15 +587,21 @@ def generarFideicomiso3(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
+        print("Desired r1: ", desired_r1)
         tolerance = 0.00005  # Define a tolerance level for the desired r1 value
         max_iterations = 400  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search
         lower_bound = 0.0
-        upper_bound = 1.0
+        upper_bound = 0.6
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
-
+        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+          #count all fields in params
+        i =0
+        for key in params:
+            i=i+1
+        print("Total de campos: ",i)
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
@@ -601,6 +615,7 @@ def generarFideicomiso3(params):
                 upper_bound = params['calcTasaInteres']
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
             iteration += 1
+            print("Iteracion: ",iteration)
 
         if iteration == max_iterations:
             print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
