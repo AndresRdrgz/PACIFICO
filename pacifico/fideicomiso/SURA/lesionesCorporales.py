@@ -136,7 +136,15 @@ def lesionesCorporales(params):
     print(params['porRestriccion'])
     #CHASIS
     params['codMarca'] = search_idChasis(params['marca'],params['modelo'])
-    params['idChasis'] = str(params['codMarca'])[2:4]  # Ensure codMarca is a string before slicing
+    #Count characters of codMarca
+    params['numCaracteresCodMarca'] = len(str(params['codMarca']))
+    print('numCaracteresCodMarca', params['numCaracteresCodMarca'])
+    
+    if params['numCaracteresCodMarca'] == 7:
+        params['idChasis'] = str(params['codMarca'])[2:4]  # Ensure codMarca is a string before slicing
+    else:
+        params['idChasis'] = str(params['codMarca'])[3:5]
+    
     print('idChasis',params['idChasis'])
     params['porcentajeChasis'] = obtenerPorcentaje(params['idChasis'])
 
