@@ -588,14 +588,15 @@ def generarFideicomiso3(params):
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
         print("Desired r1: ", desired_r1)
-        tolerance = 0.00005  # Define a tolerance level for the desired r1 value
-        max_iterations = 400  # Define a maximum number of iterations to prevent infinite loops
+        tolerance = 0.000001  # Define a tolerance level for the desired r1 value
+        max_iterations = 600  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search
         lower_bound = 0.0
-        upper_bound = 0.6
+        upper_bound = 0.65
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
+        params['calcTasaInteres'] = round(params['calcTasaInteres'], 6)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params
         i =0
@@ -605,8 +606,9 @@ def generarFideicomiso3(params):
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
-            print("Diferencia: ", abs(r1 - desired_r1))
-            print("Diferencia: ", r1 - desired_r1)
+            #print("Diferencia: ", abs(r1 - desired_r1))
+            #print("Diferencia: ", r1 - desired_r1)
+            print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
             if abs(r1 - desired_r1) <= tolerance:
                 break
             elif r1 < desired_r1:
@@ -614,23 +616,27 @@ def generarFideicomiso3(params):
             else:
                 upper_bound = params['calcTasaInteres']
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
+            params['calcTasaInteres'] = round(params['calcTasaInteres'], 6)
             iteration += 1
-            print("Iteracion: ",iteration)
+            print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
         if iteration == max_iterations:
             print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
+            print("Tasa de interes: ",params['calcTasaInteres'])
+             
+
             while r1 < desired_r1:
                 params['calcTasaInteres'] += 0.001  # Ensure r1 is above desired_r1
                 r1, resultados = rutinaCalculo(params)
                 resultados['r1'] = r1 * 100
                 resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 2)
+                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 6)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
-            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'],"tolerance: ",tolerance*100)
+            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 2)
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 6)
 
         return resultados
     except Exception as e:

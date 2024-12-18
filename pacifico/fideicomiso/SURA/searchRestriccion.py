@@ -47,6 +47,7 @@ def search_idChasis(marca, modelo, file_path=None):
         for entry in data:
             if f"{entry['MARCA']}{entry['LINEA']}".upper() == target:
                 
+                print("entry.get('COD.1', None): ", entry.get('COD.1', None))
                 return entry.get('COD.1', None)
 
         # If not found, return None
@@ -61,6 +62,7 @@ def search_idChasis(marca, modelo, file_path=None):
 
 
 def obtenerPorcentaje(idChasis):
+    print ("OBtener porcentaje - idChasis: ", idChasis)
     porcentajes = {
         "01": "4%",
         "02": "-3%",

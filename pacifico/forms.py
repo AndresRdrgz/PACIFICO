@@ -628,7 +628,70 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
         })
     )
+    #Datos del Codeudor
+    codeudorEstabilidad = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Estabilidad',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorIngresos = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Ingresos',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorNombre = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Nombre del Codeudor',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorCedula = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Cédula del Codeudor',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    #codeudorLicencia select field with Si or No
+    codeudorLicencia = forms.ChoiceField(
+        choices=[
+            ('', 'Seleccione una opción'),
+            ('SI', 'Sí'),
+            ('NO', 'No')],
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorEmpresa = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Nombre de la Empresa',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorReferenciasAPC = forms.ChoiceField(
+        choices=[
+            ('', 'Seleccione una opción'),
+            ('BUENAS', 'BUENAS'),
+            ('REGULARES', 'REGULARES'),
+            ('MALAS', 'MALAS'),
+            ('PESIMAS', 'PESIMAS'),
+            ('SIN REFERENCIAS', 'SIN REFERENCIAS')
+        ],
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+
     
+
     
     
     

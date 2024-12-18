@@ -60,52 +60,60 @@ def cotizacionSeguroAuto(marca,modelo,yearAuto,valor,yearsFinanciamiento):
         "limitesLesionesCorporales": 10000,
         "limitesDanosPropiedad": 20000,
         "limitesGastosMedicos": 2000,
-
     }
 
-    #LESIONES COPORALES
+    print("Params initialized:", params)
+
+    # LESIONES CORPORALES
     params = lesionesCorporales(params)
-    primaLesiones = obtenerPrima(params['limitesLesionesCorporales'],params['descuentoLesionesCorp'])
-    print(params['descuentoLesionesCorp'])
-    print(primaLesiones)
-    #DANOS A LA PROPIEDAD
-    primaDanos = primaDanosPropiedad(params['limitesDanosPropiedad'],params['descuentoLesionesCorp'])
-    print(primaDanos)
-    #GASTOS MEDICOS
-    primaGastoMedico = primaGastosMedicos(params['limitesGastosMedicos'],params['descuentoLesionesCorp'])
-    print(primaGastoMedico)
-    #COMPRENSIVO
-    com = 0.75/100
+    print("Params after lesionesCorporales:", params)
+    primaLesiones = obtenerPrima(params['limitesLesionesCorporales'], params['descuentoLesionesCorporales'])
+    print("Prima Lesiones:", primaLesiones)
+
+    # DANOS A LA PROPIEDAD
+    primaDanos = primaDanosPropiedad(params['limitesDanosPropiedad'], params['descuentoLesionesCorporales'])
+    print("Prima Danos:", primaDanos)
+
+    # GASTOS MEDICOS
+    primaGastoMedico = primaGastosMedicos(params['limitesGastosMedicos'], params['descuentoLesionesCorporales'])
+    print("Prima Gasto Medico:", primaGastoMedico)
+
+    # COMPRENSIVO
+    com = 0.75 / 100
     if params['yearsDelVehiculo'] > 10:
         primaComprensivo = 0
     else:
-        
-        primaComprensivo = (valor*com) * (1-params['descuentoLesionesCorp']/100)
+        primaComprensivo = (valor * com) * (1 - params['descuentoLesionesCorporales'] / 100)
+    print("Prima Comprensivo:", primaComprensivo)
 
-    print(primaComprensivo)
-    
-    #COLISION
-    col = 3.6/100
+    # COLISION
+    col = 3.6 / 100
     if params['yearsDelVehiculo'] > 10:
         primaColision = 0
     else:
-        
-        primaColision = (valor*col) * (1-params['descuentoLesionesCorp']/100)
+        primaColision = (valor * col) * (1 - params['descuentoLesionesCorporales'] / 100)
+    print("Prima Colision:", primaColision)
 
-    print(primaColision)
-    
-    #INCENDIO
+    # INCENDIO
     primaIncendio = 0
-    #HURTO
-    primaHurto = 0
-    #COBERTURA SOAT
-    primaSOAT = 30.25
-    #ENDOSO FULL EXTRAS
-    primaEndoso = 23.58
+    print("Prima Incendio:", primaIncendio)
 
-    #subtotal
+    # HURTO
+    primaHurto = 0
+    print("Prima Hurto:", primaHurto)
+
+    # COBERTURA SOAT
+    primaSOAT = 30.25
+    print("Prima SOAT:", primaSOAT)
+
+    # ENDOSO FULL EXTRAS
+    primaEndoso = 23.58
+    print("Prima Endoso:", primaEndoso)
+
+    # Subtotal
     subtotal = primaLesiones + primaDanos + primaGastoMedico + primaComprensivo + primaColision + primaIncendio + primaHurto + primaSOAT + primaEndoso
-    
+    print("Subtotal:", subtotal)
+
     recargoHistorial = 0
     subtotal = subtotal + recargoHistorial
     impuesto = subtotal * 0.06
@@ -116,12 +124,13 @@ def cotizacionSeguroAuto(marca,modelo,yearAuto,valor,yearsFinanciamiento):
     total = round(total, 2)
     totalFinanciamiento = round(totalFinanciamiento, 2)
     pago = round(pago, 2)
-    
+
     resultado = {
         "total": total,
         "totalFinanciamiento": totalFinanciamiento,
         "pago": pago,
     }
 
-    return resultado
+    print("Resultado:", resultado)
 
+    return resultado
