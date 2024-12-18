@@ -85,7 +85,7 @@
           <div class="flex-1 p-4 border rounded-lg mb-2">
             
                 <h1 class="text-lg font-bold mb-2">Datos del Vehículo</h1>
-                <p class="mt-1 text-sm mb-4 font-normal text-gray-500">En caso que el auto no se encuentre en el cotizador de SURA, puede realizar la cobertura manual ingresando manualmente los datos en los campos requeridos.</p>
+                <p class="mt-1 text-sm mb-4 font-normal text-gray-500">En caso que el auto no se encuentre en el cotizador de SURA, puede realizar la cobertura manual ingresando directamente los datos en los campos requeridos.</p>
     
       
             <!-- Form Elements -->
@@ -397,6 +397,8 @@
         </div>
     </div>
 </div>
+<!-- Prorrateo section-->
+{% include 'partials/prorrateo.html' %}
 
         <!-- Nivel de Endeudamiento -->
        
@@ -416,10 +418,12 @@
                 <label for="id_salarioBaseMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Base Mensual</label>
                 {{ form.salarioBaseMensual }}
             </div>
+            <!--
             <div class="mb-4">
                 <label for="salarioNeto" class="block text-sm font-medium text-gray-700 mb-1"> Salario Neto</label>
                 <input type="number" id="salarioNeto" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2">
             </div>
+            -->
             <div class="mb-4">
                 <label for="nivelEndeudamiento" class="block text-sm font-medium text-gray-700 mb-1">Nivel de Endeudamiento (%)</label>
                 %{{resultado.porSalarioNeto}}
@@ -647,7 +651,7 @@
         
     </div>
 
-    {% include 'partials/prorrateo.html' %}
+    
 
        </form>
     
@@ -781,6 +785,17 @@
             }
         }
 
+        function toggleProrrateoSection() {
+            const section = document.getElementById('sectionProrrateo');
+            const checkbox = document.getElementById('toggleProrrateo');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+
         function toggleNivelEndeudamientoSection() {
             const section = document.getElementById('sectionNivelEndeudamiento');
             const checkbox = document.getElementById('toggleNivelEndeudamiento');
@@ -803,17 +818,21 @@
         
         // Initialize the section to be hidden by default
         
-        document.getElementById('sectionDetallesDeudor').style.display = 'none';
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
         document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
         document.getElementById('divPatronoCodigo').style.display = 'none';
+        document.getElementById('sectionProrrateo').style.display = 'block';
+        document.getElementById('toggleProrrateo').checked = true;
+        document.getElementById('toggleDetallesDeudor').checked = true;
         {% if resultado %}
         //document.getElementById('sectionSeguroAuto').style.display = 'block';
         document.getElementById('sectionDetallesDeudor').style.display = 'block';
         document.getElementById('sectionNivelEndeudamiento').style.display = 'block';
         //document.getElementById('sectionMotivoConsulta').style.display = 'block';
+        document.getElementById('sectionProrrateo').style.display = 'block';
         {% else %}
         
-        document.getElementById('sectionDetallesDeudor').style.display = 'none';
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
         document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
         document.getElementById('sectionMotivoConsulta').style.display = 'none';
         {% endif %}
@@ -866,6 +885,7 @@
 
             const ingresosInput = document.getElementById('id_ingresos');
             const salarioBaseMensualInput = document.getElementById('id_salarioBaseMensual');
+            const prorrateoSalarioInput = document.getElementById('prorrateoSalario');
 
             //CAMPOS SURA
             const suraMarca = document.getElementById('id_marcaAuto');
@@ -887,15 +907,21 @@
                 document.getElementById('loading').classList.add('hidden');
             });
 
-           if(ingresosInput){
+            /*
+            if (ingresosInput) {
                 ingresosInput.addEventListener('input', function() {
-                    const salarioBaseMensual = parseFloat(salarioBaseMensualInput.value);
-                    const ingresos = parseFloat(ingresosInput.value);
-
-                    salarioBaseMensualInput.value = ingresosInput.value;
-                });
+                    const salarioBaseMensual = parseFloat(salarioBaseMensualInput.value) || 0;
+                    const salarioProrrateo = parseFloat(prorrateoSalarioInput.value) || 0;
+                    const ingresos = parseFloat(ingresosInput.value) || 0;
+                    console.log("1")
+                    prorrateoSalarioInput.value = ingresos;
+                    salarioBaseMensualInput.value = ingresos;
+                    console.log(prorrateoSalarioInput.value);
+                    console.log("2")
                     
+                });
             }
+                */
 
             if (fechaNacimientoInput) {
                 fechaNacimientoInput.addEventListener('change', function() {
@@ -1457,6 +1483,24 @@
             });
         });
         
+        document.addEventListener('DOMContentLoaded', function() {
+            const ingresosInput = document.getElementById('id_ingresos');
+            const salarioBaseMensualInput = document.getElementById('id_salarioBaseMensual');
+            const prorrateoSalarioInput = document.getElementById('prorrateoSalario');
+        
+            if (ingresosInput) {
+                ingresosInput.addEventListener('input', function() {
+                    const ingresos = parseFloat(ingresosInput.value) || 0;
+                    console.log("Ingresos:", ingresos);
+        
+                    prorrateoSalarioInput.value = ingresos;
+                    salarioBaseMensualInput.value = ingresos;
+        
+                    console.log("Prorrateo Salario:", prorrateoSalarioInput.value);
+                    console.log("Salario Base Mensual:", salarioBaseMensualInput.value);
+                });
+            }
+        });
         
 
       

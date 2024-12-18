@@ -351,6 +351,7 @@ class FideicomisoForm(forms.ModelForm):
         widget=forms.NumberInput(attrs={
             'placeholder': 'Horas Extras Monto',
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            'readonly': 'readonly',
         })
     )
     horasExtrasDcto = forms.BooleanField(
@@ -364,6 +365,7 @@ class FideicomisoForm(forms.ModelForm):
         widget=forms.NumberInput(attrs={
             'placeholder': 'Prima Monto',
             'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            'readonly': 'readonly',
         })
     )
     primaDcto = forms.BooleanField(
