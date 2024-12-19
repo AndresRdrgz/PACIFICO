@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
 
 # Create your models here.
 class FormPago(models.Model):
@@ -174,3 +176,19 @@ class Cotizacion(models.Model):
     salarioBaseMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
 
+    #SAVE FUNCTION
+    NumeroCotizacion = models.IntegerField(null=True, blank=True, unique=True)
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.NumeroCotizacion is None:
+            last_cotizacion = Cotizacion.objects.all().order_by('NumeroCotizacion').last()
+            if last_cotizacion and last_cotizacion.NumeroCotizacion is not None:
+                self.NumeroCotizacion = last_cotizacion.NumeroCotizacion + 1
+            else:
+                self.NumeroCotizacion = 1
+        super(Cotizacion, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente}"

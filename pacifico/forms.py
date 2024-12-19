@@ -23,6 +23,7 @@ class FideicomisoForm(forms.ModelForm):
         exclude = ['tasaInteres']
         
         widgets = {
+            'added_by': forms.HiddenInput(),
             'nombreCliente': forms.TextInput(attrs={
                 'placeholder': 'Nombre del Cliente',      
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -689,6 +690,76 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
+    codeudorNombreEmpres1 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Nombre de la Empresa',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorPeriodo1 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Periodo',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorSalario1 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Salario',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorNombreEmpres2 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Nombre de la Empresa',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorPeriodo2 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Periodo',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorSalario2 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Salario',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorNombreEmpres3 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Nombre de la Empresa',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorPeriodo3 = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Periodo',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+    codeudorSalario3 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Salario',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+        })
+    )
+
+
+
+
+
+
+
 
     
 

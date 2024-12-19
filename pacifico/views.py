@@ -17,10 +17,18 @@ import json
 from pathlib import Path
 from django.views.decorators.csrf import csrf_exempt
 from .fideicomiso.sura import cotizacionSeguroAuto
+from .models import Cotizacion
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+#@logi_required
+def cotizacionesList(request):
+    cotizaciones = Cotizacion.objects.all()
+    
+    return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
+
 
 
 @csrf_exempt
@@ -481,7 +489,20 @@ def fideicomiso_view(request):
                 
 
 
+                
+                #form save
+                if request.user.is_authenticated:
+                    form.added_by = request.user
+                else:
+                    form.added_by = "INVITADO"
+           
+                form.save()
+                # Get the NumeroCotizacion after saving the form
+                numero_cotizacion = form.instance.NumeroCotizacion
+                resultado['numero_cotizacion'] = numero_cotizacion
+                print('NumeroCotizacion:', numero_cotizacion)
                 request.session['resultado'] = resultado
+            
               
             except Exception as e:
                 logger.error("Error in fideicomiso_view: %s", e)
