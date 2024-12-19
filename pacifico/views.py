@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from .forms import FideicomisoForm
-from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3
+from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3, generarFideicomiso4
 from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
 import logging
@@ -18,14 +18,95 @@ from pathlib import Path
 from django.views.decorators.csrf import csrf_exempt
 from .fideicomiso.sura import cotizacionSeguroAuto
 from .models import Cotizacion
+import openpyxl
+import pprint
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+
+#@login_required
+def download_cotizaciones_excel(request):
+    cotizaciones = Cotizacion.objects.all()
+
+    cotizaciones = cotizaciones.order_by('-created_at')
+
+    # Create an in-memory workbook
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Cotizaciones"
+    
+    # Define the headers
+    headers = [
+        "ID", "Oficial", "Sucursal", "Nombre Cliente", "Cédula Cliente", "Fecha Nacimiento", "Edad", "Sexo", 
+        "Jubilado", "Patrono", "Patrono Código", "Vendedor", "Vendedor Comisión", "Aseguradora", "Tasa Bruta", 
+        "Marca", "Modelo", "Fecha Inicio Pago", "Monto Préstamo", "Tasa Interés", "Comisión Cierre", 
+        "Comisión Cierre Final", "Plazo Pago", "R Deseada", "Tasa Estimada", "R1", "Monto 2", "Monto Letra", 
+        "Monto Notaría", "Monto Timbres", "Manejo 5%", "Total Pagos", "Total Seguro", "Total Feci", 
+        "Total Interés", "Total Monto Capital"
+    ]
+    
+    # Write the header row
+    sheet.append(headers)
+
+    # Write the data rows
+    for cotizacion in cotizaciones:
+        row = [
+            cotizacion.id,
+            cotizacion.oficial,
+            cotizacion.sucursal,
+            cotizacion.nombreCliente,
+            cotizacion.cedulaCliente,
+            cotizacion.fechaNacimiento,
+            cotizacion.edad,
+            cotizacion.sexo,
+            cotizacion.jubilado,
+            cotizacion.patrono,
+            cotizacion.patronoCodigo,
+            cotizacion.vendedor,
+            cotizacion.vendedorComision,
+            str(cotizacion.aseguradora),  # Convert aseguradora to string
+            cotizacion.tasaBruta,
+            cotizacion.marca,
+            cotizacion.modelo,
+            cotizacion.fechaInicioPago,
+            cotizacion.montoPrestamo,
+            cotizacion.tasaInteres,
+            cotizacion.comiCierre,
+            cotizacion.calcComiCierreFinal,
+            cotizacion.plazoPago,
+            cotizacion.r_deseada,
+            cotizacion.tasaEstimada,
+            cotizacion.r1,
+            cotizacion.auxMonto2,
+            cotizacion.wrkMontoLetra,
+            cotizacion.calcMontoNotaria,
+            cotizacion.calcMontoTimbres,
+            cotizacion.manejo_5porc,
+            cotizacion.tablaTotalPagos,
+            cotizacion.tablaTotalSeguro,
+            cotizacion.tablaTotalFeci,
+            cotizacion.tablaTotalInteres,
+            cotizacion.tablaTotalMontoCapital,
+        ]
+        sheet.append(row)
+
+    # Set the response content type to Excel
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="cotizaciones.xlsx"'
+
+    # Save the workbook to the response
+    workbook.save(response)
+
+    return response
+
 #@logi_required
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()
+
+    #sort by newest first
+    cotizaciones = cotizaciones.order_by('-created_at')
     
     return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
 
@@ -356,7 +437,11 @@ def fideicomiso_view(request):
                 }
                 #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso3(params)
-                #print("--------finalizado---------")
+                print("--------finalizado---------")
+                # print in ta table format reusltado
+                pp = pprint.PrettyPrinter(indent=4)
+                pp.pprint(resultado)
+
                 #print(form.cleaned_data)
                 #deserialize fechaCalculo in resultado
                 resultado['fechaCalculo'] = resultado['fechaCalculo'].strftime('%Y-%m-%d')
@@ -488,7 +573,21 @@ def fideicomiso_view(request):
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
                 
 
-
+                #save resultado['tasaEstimada'] in form instance
+                form.instance.tasaEstimada = resultado['tasaEstimada']
+                form.instance.tasaBruta = resultado['tasaBruta']
+                form.instance.r1 = resultado['r1']
+                form.instance.auxMonto2 = resultado['auxMonto2']
+                form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                form.instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                form.instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                form.instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                form.instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                form.instance.manejo_5porc = resultado['manejo_5porc']
                 
                 #form save
                 if request.user.is_authenticated:

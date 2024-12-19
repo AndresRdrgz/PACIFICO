@@ -589,14 +589,14 @@ def generarFideicomiso3(params):
         desired_r1 = params['r_deseada']
         print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
-        max_iterations = 600  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 300  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search
         lower_bound = 0.0
         upper_bound = 0.65
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
-        params['calcTasaInteres'] = round(params['calcTasaInteres'], 6)
+        params['calcTasaInteres'] = round(params['calcTasaInteres'], 5)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params
         i =0
@@ -616,27 +616,29 @@ def generarFideicomiso3(params):
             else:
                 upper_bound = params['calcTasaInteres']
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
-            params['calcTasaInteres'] = round(params['calcTasaInteres'], 6)
+            params['calcTasaInteres'] = round(params['calcTasaInteres'], 5)
             iteration += 1
             print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
         if iteration == max_iterations:
             print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
             print("Tasa de interes: ",params['calcTasaInteres'])
-             
+            resultados['r1'] = r1 * 100
+            resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
 
             while r1 < desired_r1:
                 params['calcTasaInteres'] += 0.001  # Ensure r1 is above desired_r1
                 r1, resultados = rutinaCalculo(params)
                 resultados['r1'] = r1 * 100
                 resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 6)
+                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
             print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 6)
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
 
         return resultados
     except Exception as e:
@@ -644,4 +646,65 @@ def generarFideicomiso3(params):
         logger.error("Traceback: %s", traceback.format_exc())
         raise
 
+
+
+def generarFideicomiso4(params):
+    try:
+        logger.info("Starting generarFideicomiso2 with params: %s", params)
+        
+        patrono = params['patrono']
+        sucursal = params['sucursal']
+        forma_pago = params['forma_pago']
+
+        fechaCalculo = datetime.datetime.now() + datetime.timedelta(days=31)
+        params['cotFechaInicioPago'] = fechaCalculo
+
+        logger.info("Fecha Calculo set to: %s", fechaCalculo)
+
+        # PAGA DICIEMBRE
+        pagaDiciembre = paga_diciembre(patrono, "PREST AUTO", forma_pago, "SI")
+        logger.info("Paga Diciembre: %s", pagaDiciembre)
+
+        # IDENTIFICAR NOTARIA
+        notaria = identificar_notaria(sucursal, params['cotMontoPrestamo'], "PREST AUTO", 100, patrono, "")
+        calcMontoNotaria = search_gasto(notaria)
+        logger.info("Calc Monto Notaria: %s", calcMontoNotaria)
+
+        # FECHA PROMESA
+        fecha_promesa = calculoFechaPromesa()
+        logger.info("Fecha Promesa: %s", fecha_promesa)
+
+        # Add calcMontoNotaria to params
+        params['calcFechaPromeCK'] = fecha_promesa
+        params['calcMontoNotaria'] = calcMontoNotaria
+
+        # Goal seeking algorithm using binary search
+        desired_r1 = params['r_deseada']
+        print("Desired r1: ", desired_r1)
+        tolerance = 0.000001  # Define a tolerance level for the desired r1 value
+        max_iterations = 1  # Define a maximum number of iterations to prevent infinite loops
+        iteration = 0
+
+        # Set initial bounds for binary search
+        lower_bound = 0.0
+        upper_bound = 0.65
+        params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
+        params['calcTasaInteres'] = 9.99/100
+        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+          #count all fields in params
+        i =0
+        for key in params:
+            i=i+1
+        print("Total de campos: ",i)
+        r1, resultados = rutinaCalculo(params)
+        resultados['r1'] = r1 * 100
+        resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
+        resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
+
+
+        return resultados
+    except Exception as e:
+        logger.error("Error in generarFideicomiso2: %s", e)
+        logger.error("Traceback: %s", traceback.format_exc())
+        raise
 

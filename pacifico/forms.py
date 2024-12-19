@@ -64,6 +64,11 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Plazo de Pago',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            'tasaEstimada': forms.NumberInput(attrs={
+                'placeholder': 'Tasa Estimada',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
             'montoPrestamo': forms.NumberInput(attrs={
                 'placeholder': 'Monto del Préstamo',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -236,6 +241,15 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
+    tasaBruta = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Tasa Bruta',
+            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            'readonly': 'readonly',
+        })
+    )
+
     aseguradoraAuto = forms.ChoiceField(
         choices=[(6, 'SEGUROS SURAMERICANA, S.A.')],
         initial=6,
@@ -792,3 +806,19 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['abonoPorcentaje'].required = False
         self.fields['totalIngresosAdicionales'].required = False
         self.fields['yearsFinanciamiento'].required = False
+        self.fields['tasaEstimada'].required = False
+        self.fields['tasaBruta'].required = False
+        self.fields['auxMonto2'].required = False
+        self.fields['wrkMontoLetra'].required = False
+        self.fields['montoMensualSeguro'].required = False
+        self.fields['r1'].required = False
+        self.fields['calcComiCierreFinal'].required = False
+        self.fields['calcMontoNotaria'].required = False
+        self.fields['calcMontoTimbres'].required = False
+        self.fields['tablaTotalPagos'].required = False
+        self.fields['tablaTotalSeguro'].required = False
+        self.fields['tablaTotalFeci'].required = False
+        self.fields['tablaTotalInteres'].required = False
+        self.fields['tablaTotalMontoCapital'].required = False
+        self.fields['manejo_5porc'].required = False
+       

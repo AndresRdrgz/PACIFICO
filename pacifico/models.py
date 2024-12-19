@@ -176,6 +176,23 @@ class Cotizacion(models.Model):
     salarioBaseMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
 
+    #RESULTADOS COTIZACION
+    tasaEstimada = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    tasaBruta = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+
+    r1 = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    auxMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    wrkMontoLetra = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    calcComiCierreFinal = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    calcMontoNotaria = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    calcMontoTimbres = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    tablaTotalPagos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tablaTotalSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tablaTotalFeci = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tablaTotalInteres = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tablaTotalMontoCapital = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    manejo_5porc = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    
     #SAVE FUNCTION
     NumeroCotizacion = models.IntegerField(null=True, blank=True, unique=True)
     added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
