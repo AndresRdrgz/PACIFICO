@@ -14,6 +14,5 @@ def calculoMensualidadSobresaldo(cotPlazo,auxMonto2,cotTasaInteres):
     #print("auxE = ",auxE," auxC = ",auxC," auxD = ",auxD," auxA = ",auxA)
     auxX = (auxB/((1-(1/auxE))/auxC))
     auxX = round(auxX,2)
-
-    #print("Monto letra = ",auxX)
+    
     return auxX

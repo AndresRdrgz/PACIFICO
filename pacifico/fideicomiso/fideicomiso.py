@@ -681,25 +681,17 @@ def generarFideicomiso4(params):
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
         print("Desired r1: ", desired_r1)
-        tolerance = 0.000001  # Define a tolerance level for the desired r1 value
-        max_iterations = 1  # Define a maximum number of iterations to prevent infinite loops
-        iteration = 0
+       
 
         # Set initial bounds for binary search
-        lower_bound = 0.0
-        upper_bound = 0.65
-        params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
         params['calcTasaInteres'] = 9.99/100
+        params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params
-        i =0
-        for key in params:
-            i=i+1
-        print("Total de campos: ",i)
         r1, resultados = rutinaCalculo(params)
         resultados['r1'] = r1 * 100
         resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-        resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
+        resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 6)
 
 
         return resultados

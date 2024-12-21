@@ -17,7 +17,7 @@ def calculate_tasa_interes_mensual(wrk_logic5, sobresaldo, tasa_interes, monto2)
     aux_a = aux_a * 100
 
     tasa_interes_a = round(aux_a, 4)
-    #print("Tasa interes mensual = ",tasa_interes_a)
+    
     return tasa_interes_a
 def calculate_tasa_interes_mensual_1(wrk_logic5, sobresaldo, tasa_interes, monto2):
     tasa_feci = 1
@@ -53,13 +53,15 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
     aux_h = 0
     aux_j = 0
     aux_k = 0
-    print('tasabruta',tasa_bruta)
+    
     aux_c = tasa_bruta
     aux_d = aux_notaria_gasto
     aux_m = 0
     aux_f = comis_cierre
     aux_i = 0
     aux_o = 0
+
+    print("Monto prestamo = ",aux_a,"calcNetoCancelacion = ",aux_b,"notaria = ",aux_d,"comis cierre = ",aux_f)
 
     # GASTO FIDEICOMISO EN EL FINANCIAMIENTO
     if tipo_prestamo == "PREST AUTO":
@@ -82,6 +84,6 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
 
     aux_x = ((((aux_l + aux_d + aux_o) / (1 - aux_f)) * ((aux_c / 1000) * aux_m)) + aux_z)
     aux_x = round(aux_x * 100) / 100
-    #print("Monto a amortizar = ",aux_x)
+    print("Monto a amortizar = ",aux_x)
 
     return aux_l, aux_z, aux_x, comis_cierre/100, tasa_bruta,tasa_real

@@ -11,5 +11,6 @@ urlpatterns = [
     path('cotizacion_seguro_auto/', cotizacion_seguro_auto, name='cotizacion_seguro_auto'),
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),
+    path('login/', login_view, name='login'),
 ]
 

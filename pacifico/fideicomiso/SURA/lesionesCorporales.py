@@ -32,7 +32,7 @@ def obtenerPrima(limiteInferior,descuento):
 
     for limiteInf, limiteSup, prima in primas:
         if limiteInferior <= limiteInf:
-            print(prima)
+            print('Prima: ',prima,' Formula:',prima,"*" ,descuento)
             prima = prima * descuento
             return prima
 
@@ -133,7 +133,7 @@ def lesionesCorporales(params):
     params['yearsDelVehiculo'] = yearsDelVehiculo
     #restriccion
     params['porRestriccion']= search_restriccion(params['marca'],params['modelo'])
-    print(params['porRestriccion'])
+    print('PorRestriccion: ',params['porRestriccion'])
     #CHASIS
     params['codMarca'] = search_idChasis(params['marca'],params['modelo'])
     #Count characters of codMarca
@@ -150,7 +150,7 @@ def lesionesCorporales(params):
 
     # Convert porcentajeChasis to float
     params['porcentajeChasis'] = float(params['porcentajeChasis'].strip('%')) / 100
-    print(params['porcentajeChasis'])
+    print('Porcentaje Chasis: ',params['porcentajeChasis'])
 
     #DESCUENTO
     descuentos_antiguedad = {
@@ -200,7 +200,7 @@ def lesionesCorporales(params):
     print("Calculo Descuento: ", calculoDescuento)
 
     descuento = calculoDescuento - params['porRestriccion']*100- params['porcentajeChasis']*100 + params['descuentoLesionesCorporales']*100
-    params['descuentoLesionesCorp'] = descuento
+    params['descuentoLesionesCorporales'] = descuento
     print("Descuento Lesiones Corporales: ", descuento)
     
     return params
