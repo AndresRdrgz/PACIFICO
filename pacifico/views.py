@@ -436,7 +436,7 @@ def fideicomiso_view(request):
 
                 }
                 #print('RESULTADO PARAMETROS', params)
-                resultado = generarFideicomiso4(params)
+                resultado = generarFideicomiso3(params)
                 print("--------finalizado---------")
                 # print in ta table format reusltado
                 pp = pprint.PrettyPrinter(indent=4)
