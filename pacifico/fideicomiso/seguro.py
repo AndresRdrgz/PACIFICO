@@ -8,13 +8,15 @@ def auxBusquedaSeguro(codigo, edad):
         {"CODIGO": 7, "DESCRIPCION": "INTERNACIONAL DE SEGUROS - FIDEICOMISO H", "SECUENCIA": 3, "EDAD MIN": 62, "EDAD MAX": 99, "TASABRUTA": 0, "SOBRETASA": None, "TASAREAL": None},
         {"CODIGO": 8, "DESCRIPCION": "INTERNACIONAL DE SEGUROS - FIDEICOMISO M", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 57, "TASABRUTA": 0.75, "SOBRETASA": None, "TASAREAL": 0.75},
         {"CODIGO": 8, "DESCRIPCION": "INTERNACIONAL DE SEGUROS - FIDEICOMISO M", "SECUENCIA": 2, "EDAD MIN": 58, "EDAD MAX": 99, "TASABRUTA": 0, "SOBRETASA": None, "TASAREAL": None},
+        {"CODIGO": 10, "DESCRIPCION": "SOBREPESO 2%", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 99, "TASABRUTA": 2, "SOBRETASA": 2, "TASAREAL": 2},
         {"CODIGO": 99, "DESCRIPCION": "SIN SEGURO", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 99, "TASABRUTA": 0, "SOBRETASA": 0, "TASAREAL": 0},
-        
     ]
 
+    print("codigo:",codigo,"edad:",edad)
     # Find the matching row in the table
     for row in table:
         if row["CODIGO"] == codigo and row["EDAD MIN"] <= edad <= row["EDAD MAX"]:
+            print("Seguro encontrado:", row["DESCRIPCION"], row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"])
             return row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"]
 
     # Return None if no match is found

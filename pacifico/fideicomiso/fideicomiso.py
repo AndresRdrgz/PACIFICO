@@ -401,7 +401,7 @@ def rutinaCalculo(params):
     
     pagadiciembre1 = "Y"
     forma_pago = 4
-    codigoSeguro = 7
+    codigoSeguro = params['codigoSeguro']
     
     auxPlazoInteres = auxPlazoPago
     #Neto Cancelacion
