@@ -2,59 +2,72 @@
 
 <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-yellow-100 border border-yellow-400">
     <span class="font-medium text-yellow-700 inline-block">
-        ⚠️ Esta ventana y sus funciones se encuentran actualmente en desarrollo. Haga clic el boton de abajo para ir al cotizador.
+        ⚠️ Esta ventana y sus funciones se encuentran actualmente en desarrollo.
     </span>
 </div>
-<div class="mb-4">
-    <a href="{% url 'fideicomiso' %}" class="inline-block bg-green-700 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Nueva cotización 💰</a>
-</div>
-<div class="mb-4">
-    <a href="{% url 'download_cotizaciones_excel' %}" class="inline-block bg-green-700 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Descargar en Excel 📄</a>
+<!---->
+
+
+<!---->
+<div class="mb-4 flex items-center justify-between">
+    <div class="relative w-2/3">
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Buscar por nombre de cliente o número de cotización" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2">
+    </div>
+    <div class="flex space-x-2">
+        <a href="{% url 'fideicomiso' %}" class="inline-block" style="background-color: #22a650; hover:bg-green-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Nueva cotización 💰</a>
+        <a href="{% url 'download_cotizaciones_excel' %}" class="inline-block" style="background-color: black; hover:bg-black-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Exportar en Excel 📄</a></div>
 </div>
 
+
     <div class="relative overflow-x-auto sm:rounded-lg border border-gray-200">
-        <table class="w-full text-sm text-left rtl:text-right text-gray-500">
-            <thead class="text-xs text-white uppercase" style="background-color: #22a650;">
-                <tr>
-                    <th scope="col" class="px-2 py-3 w-1/12">Cotización</th>
-                    <th scope="col" class="px-6 py-3">Cliente</th>
-                    <th scope="col" class="px-6 py-3">Cédula</th>
-                    <th scope="col" class="px-6 py-3">Marca</th>
-                    <th scope="col" class="px-6 py-3">Modelo</th>
-                    <th scope="col" class="px-6 py-3">Valor del Auto</th>
-                    <th scope="col" class="px-6 py-3">Plazo</th>
-                    <th scope="col" class="px-6 py-3">Tasa (%)</th>
-                    <th scope="col" class="px-6 py-3">Comi. Cierre (%)</th>
-                    <th scope="col" class="px-6 py-3 w-1/12">Total Financiado</th>
-                    <th scope="col" class="px-6 py-3">Oficial</th>
-                    <th scope="col" class="px-6 py-3">Fecha</th>
-                </tr>
-            </thead>
-            <tbody id="deudas-table-body" class="bg-white border-b">
-                {% for cotizacion in cotizaciones %}
-            <tr class="odd:bg-white even:bg-gray-50">
-                <td class="px-6 py-4">{{ cotizacion.NumeroCotizacion }}</td>
-                <td class="px-6 py-4">{{ cotizacion.nombreCliente }}</td>
-                <td class="px-6 py-4">{{ cotizacion.cedulaCliente }}</td>
-                <td class="px-6 py-4">{{ cotizacion.marca }}</td>
-                <td class="px-6 py-4">{{ cotizacion.modelo }}</td>
-                <td class="px-6 py-4">${{ cotizacion.valorAuto }}</td>
-                <td class="px-6 py-4">{{ cotizacion.plazo }}</td>
-                <td class="px-6 py-4">%{{ cotizacion.tasaEstimada }}</td>
-                <td class="px-6 py-4">{{ cotizacion.comisionCierre }}%</td>
-                <td class="px-6 py-4">${{ cotizacion.totalFinanciado }}</td>
-                <td class="px-6 py-4">{{ cotizacion.oficial }}</td>
-                <td class="px-6 py-4">{{ cotizacion.created_at|date:"d/m/Y" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="11" class="px-6 py-4 text-center text-gray-500">
-                    No se encontraron cotizaciones que coincidan con la búsqueda.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div class="overflow-y-auto" style="max-height: 400px;">
+            <table class="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
+                    <tr>
+                        <th scope="col" class="px-2 py-3 w-1/12">Cotización</th>
+                        <th scope="col" class="px-6 py-3">Cliente</th>
+                        <th scope="col" class="px-6 py-3">Cédula</th>
+                        <th scope="col" class="px-6 py-3">Marca</th>
+                        <th scope="col" class="px-6 py-3">Modelo</th>
+                        <th scope="col" class="px-6 py-3">Plazo</th>
+                        <th scope="col" class="px-6 py-3">Tasa (%)</th>
+                        <th scope="col" class="px-6 py-3">Comi. Cierre (%)</th>
+                        <th scope="col" class="px-6 py-3 w-1/12">Total Financiado</th>
+                        <th scope="col" class="px-6 py-3">Oficial</th>
+                        <th scope="col" class="px-6 py-3">Fecha Cotización</th>
+                    </tr>
+                </thead>
+                <tbody id="deudas-table-body" class="bg-white border-b">
+                    {% for cotizacion in cotizaciones %}
+                    <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200">
+                        <td class="px-6 py-4">{{ cotizacion.NumeroCotizacion }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.nombreCliente }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.cedulaCliente }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.marca }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.modelo }}</td>                    
+                        <td class="px-6 py-4">{{ cotizacion.plazoPago }}</td>
+                        <td class="px-6 py-4">%{{ cotizacion.tasaEstimada }}</td>
+                        <td class="px-6 py-4">%{{ cotizacion.calcComiCierreFinal }}</td>
+                        <td class="px-6 py-4">${{ cotizacion.auxMonto2 }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.oficial }}</td>
+                        <td class="px-6 py-4">{{ cotizacion.created_at|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="px-6 py-4 text-center text-gray-500">
+                            No se encontraron cotizaciones que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div class="mt-4">
@@ -78,5 +91,42 @@
 </div>
 
 <script>
+    function filterTable() {
+        var input, filter, table, tr, td, i, txtValue, noMatch;
+        input = document.getElementById("searchInput");
+        filter = input.value.toUpperCase();
+        table = document.querySelector("table");
+        tr = table.getElementsByTagName("tr");
+        noMatch = true;
 
+        for (i = 1; i < tr.length; i++) {
+            var tdCotizacion = tr[i].getElementsByTagName("td")[0]; // Index 0 for Cotización column
+            var tdCliente = tr[i].getElementsByTagName("td")[1]; // Index 1 for Cliente column
+            if (tdCotizacion || tdCliente) {
+                var txtValueCotizacion = tdCotizacion ? tdCotizacion.textContent || tdCotizacion.innerText : "";
+                var txtValueCliente = tdCliente ? tdCliente.textContent || tdCliente.innerText : "";
+                if (txtValueCotizacion.toUpperCase().indexOf(filter) > -1 || txtValueCliente.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                    noMatch = false;
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        // Check if no matches are found
+        var noMatchRow = document.getElementById("noMatchRow");
+        if (noMatch) {
+            if (!noMatchRow) {
+                noMatchRow = document.createElement("tr");
+                noMatchRow.id = "noMatchRow";
+                noMatchRow.innerHTML = '<td colspan="11" class="px-6 py-4 text-center text-gray-500">No se encontraron cotizaciones que coincidan con la búsqueda.</td>';
+                table.querySelector("tbody").appendChild(noMatchRow);
+            }
+        } else {
+            if (noMatchRow) {
+                noMatchRow.remove();
+            }
+        }
+    }
 </script>
