@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
-from .forms import FideicomisoForm
+from .forms import FideicomisoForm, ClienteForm, AseguradoraForm
 from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3, generarFideicomiso4
 from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
@@ -17,16 +17,76 @@ import json
 from pathlib import Path
 from django.views.decorators.csrf import csrf_exempt
 from .fideicomiso.sura import cotizacionSeguroAuto
-from .models import Cotizacion, Cliente
+from .models import Cotizacion, Cliente, Aseguradora
 import openpyxl
 import pprint
 from django.db.models import Count
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+
+def aseguradora_create(request):
+    if request.method == 'POST':
+        form = AseguradoraForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('aseguradora_list')
+    else:
+        form = AseguradoraForm()
+    return render(request, 'aseguradora_form.html', {'form': form})
+
+def aseguradora_list(request):
+    aseguradoras = Aseguradora.objects.all()
+    return render(request, 'aseguradora_list.html', {'aseguradoras': aseguradoras})
+
+
+def cotizacion_detail(request, pk):
+    print('ID cotizacion', pk)  
+    cotizacion = get_object_or_404(Cotizacion, pk=pk)
+    form = FideicomisoForm(instance=cotizacion)
+    resultado = {
+        'auxMonto2': cotizacion.auxMonto2,
+        'r1': cotizacion.r1,
+        'tasaEstimada': cotizacion.tasaEstimada,
+        'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
+        'auxPlazoPago': cotizacion.plazoPago,
+        'wrkLetraSinSeguros': cotizacion.wrkLetraSinSeguros,
+        'wrkLetraSeguro': cotizacion.wrkLetraSeguro,
+        'wrkMontoLetra': cotizacion.wrkMontoLetra,
+        'montoMensualSeguro': cotizacion.montoMensualSeguro,
+        'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
+        'tablaTotalPagos': cotizacion.tablaTotalPagos,
+    }
+    context = {
+        'form': form,
+        'cotizacion': cotizacion,
+        'resultado': resultado,
+    }
+    return render(request, 'fideicomiso_form.html', context)
+
+def cliente_profile(request, cedula):
+    cliente = get_object_or_404(Cliente, cedulaCliente=cedula)
+    cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
+
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, instance=cliente)
+        if form.is_valid():
+            form.save()
+            return redirect('cliente_profile', cedula=cliente.cedula)
+    else:
+        form = ClienteForm(instance=cliente)
+
+    context = {
+        'cliente': cliente,
+        'cotizaciones': cotizaciones,
+        'form': form,
+    }
+    return render(request, 'cliente_profile.html', context)
 
 def clientesList(request):
     clientes = Cliente.objects.all()
@@ -592,6 +652,8 @@ def fideicomiso_view(request):
                 form.instance.r1 = resultado['r1']
                 form.instance.auxMonto2 = resultado['auxMonto2']
                 form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
                 form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
                 form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
                 form.instance.calcMontoTimbres = resultado['calcMontoTimbres']
@@ -601,6 +663,7 @@ def fideicomiso_view(request):
                 form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
                 form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                 form.instance.manejo_5porc = resultado['manejo_5porc']
+                
                 
                 #form save
                 if request.user.is_authenticated:
@@ -619,8 +682,10 @@ def fideicomiso_view(request):
             except Exception as e:
                 logger.error("Error in fideicomiso_view: %s", e)
                 messages.error(request, 'An error occurred while processing your request.')
+                print(e)
         else:
             logger.warning("Form is not valid: %s", form.errors)
+            print(form.errors)
     else:
         form = FideicomisoForm()
     

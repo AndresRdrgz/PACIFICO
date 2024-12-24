@@ -1,6 +1,6 @@
 import os
 from django import forms
-from .models import Cotizacion, Aseguradora
+from .models import Cotizacion, Aseguradora, Cliente
 from pathlib import Path
 import json
 from django.conf import settings
@@ -16,7 +16,48 @@ unique_marcas = list({item['MARCA'] for item in choices_data})
 # Convert unique "MARCA" values to choices format
 marca_choices = [(marca, marca) for marca in unique_marcas]
 
+class AseguradoraForm(forms.ModelForm):
 
+    class Meta:
+        model = Aseguradora
+        fields = '__all__'
+
+#Cliente form all fields
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = '__all__'
+        
+        widgets = {
+            'cedulaCliente': forms.TextInput(attrs={
+                'placeholder': 'Cédula del Cliente',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'nombreCliente': forms.TextInput(attrs={
+                'placeholder': 'Nombre del Cliente',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'fechaNacimiento': forms.DateInput(attrs={
+                'placeholder': 'Fecha de Nacimiento',
+                'class': 'w-full text-slate-600 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500',
+                'type': 'date',
+            }),
+            'edad': forms.NumberInput(attrs={
+                'placeholder': 'Edad',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'readonly': 'readonly',
+            }),
+            'sexo': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'jubilado': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'patrono': forms.TextInput(attrs={
+                'placeholder': 'Patrono',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+        }
 class FideicomisoForm(forms.ModelForm):
     class Meta:
         model = Cotizacion
@@ -810,6 +851,8 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['tasaBruta'].required = False
         self.fields['auxMonto2'].required = False
         self.fields['wrkMontoLetra'].required = False
+        self.fields['wrkLetraSeguro'].required = False
+        self.fields['wrkLetraSinSeguros'].required = False
         self.fields['montoMensualSeguro'].required = False
         self.fields['r1'].required = False
         self.fields['calcComiCierreFinal'].required = False

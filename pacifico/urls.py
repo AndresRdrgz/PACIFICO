@@ -12,7 +12,9 @@ urlpatterns = [
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),
     path('login/', login_view, name='login'),
-     path('clientes/', clientesList, name="clientesList"),
-   
+    path('clientes/', clientesList, name="clientesList"),
+    path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),
+    path('cotizacion/<int:pk>/', views.cotizacion_detail, name='cotizacion_detail'),
+    path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),
+    path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),
 ]
-

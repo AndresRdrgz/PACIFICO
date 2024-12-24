@@ -195,6 +195,8 @@ class Cotizacion(models.Model):
     r1 = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     auxMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     wrkMontoLetra = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    wrkLetraSeguro = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    wrkLetraSinSeguros = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     calcComiCierreFinal = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     calcMontoNotaria = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     calcMontoTimbres = models.DecimalField(max_digits=5, decimal_places=2, null=True)
