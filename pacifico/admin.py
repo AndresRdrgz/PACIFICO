@@ -1,11 +1,16 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
-from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario
+from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente
 
 # Register your models here.
 @admin.register(Cotizacion)
 class CotizacionAdmin(ModelAdmin):
     pass
+
+@admin.register(Cliente)
+class ClienteAdmin(ModelAdmin):
+    pass
+
 
 @admin.register(PeriodoPago)
 class PeriodoPagoAdmin(ModelAdmin):

@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal, ROUND_HALF_UP
 
 
 def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,calcMontoNetoBruto,calcMontoTimbres,calcMontoNotaria,tipopagoPeriocidad,patrono,tipo_prestamo,calcTasaInteres,fechaInicioPago,plazoInteres,fechaCalculo,calcMontoLetra,calcInicioPago,tempPrimerDiaHabil,params):
@@ -308,12 +309,13 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         auxQ = wrkMontoFECI
     else:
         pass
-    
+    #print("wrkMontoFECI:",wrkMontoFECI,"wrkNum7_2:",wrkNum7_2)
     auxQ = auxQ / plazoPago
     auxQ = round(auxQ, 3)
     #print("auxQ =", auxQ)
 
     wrkNetoTotal = calcMontoNetoBruto
+    
     wrkNetoTotal += calcMontoTimbres
     wrkNetoTotal += calcMontoServDes
     wrkNetoTotal += calcMontoServDes2
@@ -326,8 +328,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     if tipo_prestamo == "PREST AUTO":
        
         wrkNetoTotal += 291.90
-
-    print('calcMontoNetoBruto: ', calcMontoNetoBruto)
+    
+    #print("wrkNetoTotal:",wrkNetoTotal)
 
     #print('manejo_5porc:', manejo_5porc)
     #print('wrkNetoTotal:', wrkNetoTotal)
@@ -350,7 +352,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     wrkNetoTotal += parmgralComisionPers
     wrkNetoTotal += comisionVendedor
     #print("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
-    
+    #print("wrkNetoTotal =", wrkNetoTotal)
     
     wrkNetoTotal2 = wrkNetoTotal
     auxP = tipopagoPeriocidad
@@ -367,17 +369,17 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     auxX += 1
     auxX = pow(auxX, (1 / 12))
     wrkNumeric5_7 = auxX
-    
+   # print("auxX =", auxX)
     auxX = wrkNumeric5_7
     auxX = round(auxX, 7)
-    
+    #print("auxX =", auxX)
     auxX -= 1
     auxX = round(auxX, 7)
     
     auxV = wrkNum7_2
     auxV = auxV / plazoPago
-    auxV = round(auxV, 3)
-    
+    auxV = round(auxV, 13)
+    #print("auxV =", auxV)
     auxX = round(auxX, 7)
 
     calcInicioPago = cotFechaInicioPago
@@ -385,9 +387,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     #calcFechaPromeCK =calcFechaPromeCK
     
     #CICLO CALCULO RENTA
+    contador =0
     auxRepetir = True
     while auxRepetir:
         auxK = 0
+        contador = contador +1
         auxW += 1
         wrkMes = fechaInicioPago.month
         wrkNum3 = wrkMes
@@ -428,9 +432,15 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         if sobresaldo == "Y":
             auxB = auxB + auxT - 1
 
-        wrkNum9_2 = auxQ
+        #print("auxq:", auxQ)
+        auxq_decimal = Decimal(str(auxQ))
+        wrkNum9_2 = auxq_decimal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        wrkNum9_2 = float(wrkNum9_2)  # Convert back to float
+
+        #print("wrkNum9_2:",wrkNum9_2)
         auxQ = wrkNum9_2
-        wrkNum9_2 = auxV
+        wrkNum9_2 = round(auxV,2)
+        #print("wrkNum9_2:",wrkNum9_2)
         auxV = wrkNum9_2
         auxV = round(auxV, 2)
         auxQ = round(auxQ, 3)
@@ -444,7 +454,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         auxE -= auxV
         auxE -= auxJ
         auxS = auxE
-
+        #print("auxS =", auxS)
         for auxA in range(auxT, auxB+1):
             if plazoPago == 1:
                 if auxA == auxB:
@@ -457,7 +467,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
             auxD = 1 + auxX
             auxZ = auxD
             auxH = auxX
-
+            
+            
+            
             wrkAlpha4 = auxB
             if pagadiciembre1 == "Y" or wrkNum3 != 12:
                 auxR = auxA
@@ -465,7 +477,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                 auxE = auxE / auxD
             else:
                 auxE = 0
-
+           
             rentableSecuencia = auxA
             rentableMes = wrkNum3
             rentableValor = round(auxE, 2)
@@ -477,12 +489,18 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
             wrkMonto += auxE
             wrkMonto = round(wrkMonto, 2)
+            #print('wrkMonto:',wrkMonto,"auxA:",auxA,"auxE:",auxE,"auxw:",auxW)
 
+            
+            
+
+        
         wrkCredito5 = wrkDebito
         wrkDebito = wrkMonto
         wrkDebito = wrkDebito - wrkNetoTotal
         wrkDebito = round(wrkDebito, 2)
-        ##print("wrkDebito =", wrkDebito, "wrkNetoTotal =", wrkNetoTotal, "wrkMonto =", wrkMonto)
+        #print("wrkDebito =", wrkDebito)
+        
         
 
         wrkCredito = auxW
@@ -490,7 +508,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         if auxW == 99999:
             #print("auxW == 99999",auxW)
             return
-
+        
         if calcMonto2 <= 100000:
             wrkIG = -0.10
         else:
@@ -498,31 +516,46 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
         if calcMonto2 > 100000:
             wrkIG = -1
-
+        
+        #print("wrkdebito:",wrkDebito,"0.01:",0.01)
         if wrkDebito < 0.01:
+            #print("wrkDebito < wrkIG",wrkDebito,"<",wrkIG,wrkDebito<wrkIG,"auxW:",auxW)
             if wrkDebito < wrkIG:
                 auxM = 0.000001
                 auxL = 0.00000001
                 auxX -= auxM
+                auxX = round(auxX, 7)
                 auxRepetir = True
+                auxFlagNegativo = True
+                #print("TT - auxX =", auxX)
             else:
+                #print("TF - auxX =", auxX)
                 auxRepetir = False
-        else:
+        else:  
             auxX += auxL
-            
+            auxX = round(auxX, 7)
+            #print("F - auxX =", auxX,"auxW:",auxW)
             auxRepetir = True
+            auxFlagNegativo = False
+            if auxW == 999:
+                auxRepetir = False
 
-        auxX = round(auxX, 7)
-        
+    
+        '''
         if wrkDebito <= 0.3:
             wrkDebito = 0
             auxRepetir = False
-    
+        '''
+
+    #FIN CICLO CALCULO RENTA
+    #print('wrkd:',wrkDebito,'auxH:',auxH)
     wrkCredito2 = wrkDebito
     wrk1110 = auxH
     wrkRentaMensual = auxH
+    
     auxY = auxH
     auxY = auxY * 100
+    
     #print("auxH =", auxH)
     #print("auxY =", auxY)
     calcRentabilidad = auxY
@@ -532,6 +565,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
     ##print("calcRentabilidad =", calcRentabilidad)
     auxU = auxY * 12
+    #print("auxU =", auxU)
+
     calcRentaAnual = auxU
     calcRentaAnual = round(calcRentaAnual * 100 / 10000, 4)
     r1 = calcRentaAnual

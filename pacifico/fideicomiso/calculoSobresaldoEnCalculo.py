@@ -74,7 +74,7 @@ def calculate_comision_manejo(sobresaldo, comis_cierre, monto2, monto1):
         # Additional logic for "agregado" can be added here if needed
         pass
     
-    return round(monto_manejo_t, 4)
+    return round(monto_manejo_t, 2)
 
 def calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres):
     # Calculate initial monto_manejo_b
@@ -135,7 +135,8 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
 
    # Example usage
     monto_manejo_t = calculate_comision_manejo("Y",calcComiCierre,calcMonto2,cotMontoPrestamo)  # Example value
-    #print('monto_manejo_t:', monto_manejo_t)
+    print('monto_manejo_t:', monto_manejo_t)
+    params['montoManejoT'] = monto_manejo_t
     sobresaldo = "Y"  # Example value
     monto_serv_des = 0  # Example value
     tipo_prestamo = "PREST AUTO"  # Example value
@@ -154,7 +155,7 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
 
     #GASTO MANEJO
     wrk_monto21, monto_manejo_b, manejo_5porc = calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres)
-    #print(f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
+    print(f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
 
     sobresaldo = "Y"  # Example value
     aux_notaria_gasto = calcMontoNotaria  # Example value

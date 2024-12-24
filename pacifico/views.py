@@ -17,13 +17,23 @@ import json
 from pathlib import Path
 from django.views.decorators.csrf import csrf_exempt
 from .fideicomiso.sura import cotizacionSeguroAuto
-from .models import Cotizacion
+from .models import Cotizacion, Cliente
 import openpyxl
 import pprint
+from django.db.models import Count
+from django.utils import timezone
+
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+def clientesList(request):
+    clientes = Cliente.objects.all()
+
+    #sort by newest first
+    
+    return render(request, 'clientesList.html', {'clientes': clientes})
 
 
 #@login_required
@@ -432,12 +442,15 @@ def fideicomiso_view(request):
                     'mesesFinanciaSeguro': mesesFinanciaSeguro,
                     'montoanualSeguro': montoanualSeguro,
                     'montoMensualSeguro': montoMensualSeguro,
-                    'cantPagosSeguro': cantPagosSeguro
+                    'cantPagosSeguro': cantPagosSeguro,
+                    'gastoFideicomiso': 291.90,
 
                 }
                 #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso3(params)
+                
                 print("--------finalizado---------")
+                resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra']/2,2) * 2
                 # print in ta table format reusltado
                 pp = pprint.PrettyPrinter(indent=4)
                 pp.pprint(resultado)

@@ -257,7 +257,7 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
 
     pagaDiciembre2 = "N"
     auxM = 0
-    montoManejoB = 2120.04 #VERIFICAR
+    montoManejoB = params['montoManejoB']
 
     #print("----TASA EFECTIVA MENSUAL----")
 
@@ -275,19 +275,21 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     else:
         pass
     wrkInteresTotal = round(wrkInteresTotal * 100) / 100
+    #print("WRK WORK TASA EFECTIVA - Interes Total: ",wrkInteresTotal)
     montoManejoB = round(montoManejoB * 100) / 100
+    #print("WRK WORK TASA EFECTIVA - Monto Manejo: ",montoManejoB)
     wrkTasaEfectiva = wrkTasaEfectiva + montoManejoB
     wrkTasaEfectiva = wrkTasaEfectiva * 2
     wrkTasaEfectiva = wrkTasaEfectiva * auxM
-    wrkTasaEfectiva = round(wrkTasaEfectiva * 100) / 100
-
+    #wrkTasaEfectiva = round(wrkTasaEfectiva * 100) / 100
+    wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
+    #print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
     auxV = 0
     calcNetoCancelac = params['calcNetoCancelacion']
     calcMontoRefi = 0
     calcDevInteres = 0
     calcDevSeguro = 0
     auxP = cotMontoPrestamo
-
     auxP = auxP + calcNetoCancelac
     auxP = auxP + calcMontoRefi
     auxP = auxP - calcDevInteres
@@ -297,15 +299,16 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     auxN = auxPlazoPago + 1
 
     auxD = auxP * auxN
-
+    print(wrkTasaEfectiva,"/",auxD)
     wrkTasaEfectiva = wrkTasaEfectiva / auxD
-    wrkTasaEfectiva = round(wrkTasaEfectiva, 6)
-
+    wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
+    #print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
     if wrkTasaEfectiva <= 0.99:
         wrkTasaEfectiva = wrkTasaEfectiva * 100
 
+    wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
     calcTasaEfectiva = wrkTasaEfectiva
-    #print("Tasa Efectiva: ",calcTasaEfectiva)
+    print("Tasa Efectiva: ",calcTasaEfectiva)
 
     return calcTasaEfectiva
 
@@ -338,8 +341,31 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     auxMontoLetra2 = auxMensualidad / auxPeriocidad
     wrkMontoLetra = round(auxMontoLetra2,2)
     calcMontoLetra = wrkMontoLetra
-
+    #GOSUB CRE CALCULO SOBRESALDO EN CALCULO:
+        #GASTO DE MANEJO
+    montoManejoB = params['montoManejoT']
+    montoManejoB = montoManejoB - params['calcMontoTimbres']
+    montoManejoB = montoManejoB - params['gastoFideicomiso']
+    print("Monto Manejo B: ",montoManejoB)
+    #if sobresaldo
+    wrkMonto21 = montoManejoB
+    presvari5Manejo = montoManejoB
+    presvari5Manejo = presvari5Manejo * 0.0654205
+    presvari5Manejo = round(presvari5Manejo,2)
+    print("presvari5Manejo: ",presvari5Manejo)
+    montoManejoB = montoManejoB - presvari5Manejo
+    wrkMonto20 = presvari5Manejo
+    wrkMonto20 = wrkMonto20 + montoManejoB
+    if wrkMonto21 == wrkMonto20:
+        pass
+    else:
+        wrkMonto15 = wrkMonto21
+        wrkMonto15 = wrkMonto15 - wrkMonto20
+        montoManejoB = wrkMonto15
+    print("Monto Manejo B: ",montoManejoB)
+    params['montoManejoB'] = montoManejoB
     calcTasaEfectiva = calculoTasaEfectiva(wrkMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoPrestamo,auxPlazoPago,params)
+    params['calcTasaEfectiva'] = calcTasaEfectiva
     #print("Tasa Efectiva: ",calcTasaEfectiva)
     wrkLogic10 = "Y"
     if(wrkLogic10=="Y"):
@@ -596,7 +622,7 @@ def generarFideicomiso3(params):
         lower_bound = 0.0
         upper_bound = 0.65
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
-        params['calcTasaInteres'] = round(params['calcTasaInteres'], 5)
+        params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params
         i =0
@@ -616,7 +642,7 @@ def generarFideicomiso3(params):
             else:
                 upper_bound = params['calcTasaInteres']
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
-            params['calcTasaInteres'] = round(params['calcTasaInteres'], 5)
+            params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
             iteration += 1
             print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
@@ -625,20 +651,20 @@ def generarFideicomiso3(params):
             print("Tasa de interes: ",params['calcTasaInteres'])
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
 
             while r1 < desired_r1:
                 params['calcTasaInteres'] += 0.001  # Ensure r1 is above desired_r1
                 r1, resultados = rutinaCalculo(params)
                 resultados['r1'] = r1 * 100
                 resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
+                resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
             print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
-            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 5)
+            resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
 
         return resultados
     except Exception as e:
@@ -684,7 +710,7 @@ def generarFideicomiso4(params):
        
 
         # Set initial bounds for binary search
-        params['calcTasaInteres'] = 9.99/100
+        params['calcTasaInteres'] = 10.65/100
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params

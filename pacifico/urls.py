@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel
+from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList
 from . import views
 
 
@@ -12,5 +12,7 @@ urlpatterns = [
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),
     path('login/', login_view, name='login'),
+     path('clientes/', clientesList, name="clientesList"),
+   
 ]
 

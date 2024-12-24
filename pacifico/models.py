@@ -2,6 +2,15 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+SEXO_OPCIONES = [
+        ('MASCULINO', 'Masculino'),
+        ('FEMENINO', 'Femenino'),
+    ]
+
+JUBILADO_CHOICES = [
+        ('SI', 'Si'),
+        ('NO', 'No'),
+    ]
 # Create your models here.
 class FormPago(models.Model):
     descripcion = models.CharField(max_length=100, null=True)
@@ -35,11 +44,22 @@ class PeriodoPago(models.Model):
         return self.descripcion
          
 
+class Cliente(models.Model):
+    cedulaCliente = models.CharField(max_length=255, null=True)
+    nombreCliente = models.CharField(max_length=255, null=True)
+    fechaNacimiento = models.DateField(null=True)
+    edad = models.IntegerField(null=True)
+    sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
+    jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
+    patrono = models.CharField(max_length=255, null=True)
+    
+    def __str__(self):
+        return f"{self.nombreCliente} - {self.cedulaCliente}"
+    
+
+
 class Cotizacion(models.Model):
-    SEXO_OPCIONES = [
-        ('MASCULINO', 'Masculino'),
-        ('FEMENINO', 'Femenino'),
-    ]
+    
     LICENCIA_OPCIONES = [
         ('NO', 'No'),
         ('SI', 'Si'),
@@ -79,10 +99,7 @@ class Cotizacion(models.Model):
         ('ARGELIS GOMEZ', 'ARGELIS GOMEZ'),
         ('ROSMERY ANDRADE', 'ROSMERY ANDRADE'),
 
-    ]
-     
-    
-  
+    ] 
     CARTERA_OPCIONES = [
         ("CONTRALORÍA", "CONTRALORÍA"),
         ("EMP. CSS", "EMP. CSS"),
@@ -116,12 +133,7 @@ class Cotizacion(models.Model):
         ("SIN REFERENCIAS", "SIN REFERENCIAS"),
     ]
 
-    #Jubilado choices Si o No
-    JUBILADO_CHOICES = [
-        ('SI', 'Si'),
-        ('NO', 'No'),
-    ]
-
+   
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES,null=True)
@@ -205,7 +217,31 @@ class Cotizacion(models.Model):
                 self.NumeroCotizacion = last_cotizacion.NumeroCotizacion + 1
             else:
                 self.NumeroCotizacion = 1
-        super(Cotizacion, self).save(*args, **kwargs)
+        
+        #Verifica si existe el cliente
+        cliente, created = Cliente.objects.get_or_create(
+            cedulaCliente=self.cedulaCliente,
+            defaults={
+            'nombreCliente': self.nombreCliente,
+            'fechaNacimiento': self.fechaNacimiento,
+            'edad': self.edad,
+            'sexo': self.sexo,
+            'jubilado': self.jubilado,
+            'patrono': self.patrono
+            }
+        )
+        if not created:
+            # Update existing Cliente fields
+            cliente.nombreCliente = self.nombreCliente
+            cliente.fechaNacimiento = self.fechaNacimiento
+            cliente.edad = self.edad
+            cliente.sexo = self.sexo
+            cliente.jubilado = self.jubilado
+            cliente.patrono = self.patrono
+            # Update other fields as necessary
+            cliente.save()
+            
+            super(Cotizacion, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente}"
