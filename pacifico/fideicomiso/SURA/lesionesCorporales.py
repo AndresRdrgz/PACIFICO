@@ -142,6 +142,8 @@ def lesionesCorporales(params):
     
     if params['numCaracteresCodMarca'] == 7:
         params['idChasis'] = str(params['codMarca'])[2:4]  # Ensure codMarca is a string before slicing
+    elif params['numCaracteresCodMarca'] == 6:
+        params['idChasis'] = str(params['codMarca'])[1:3]
     else:
         params['idChasis'] = str(params['codMarca'])[3:5]
     
