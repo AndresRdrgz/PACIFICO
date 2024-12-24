@@ -9,8 +9,8 @@
 
 
 <!---->
-<div class="mb-4 flex items-center justify-between">
-    <div class="relative w-2/3">
+<div class="mb-4 flex flex-col sm:flex-row items-center justify-between">
+    <div class="relative w-full sm:w-2/3 mb-2 sm:mb-0">
         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
@@ -18,9 +18,10 @@
         </div>
         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Buscar por nombre de cliente o número de cotización" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2">
     </div>
-    <div class="flex space-x-2">
-        <a href="{% url 'fideicomiso' %}" class="inline-block" style="background-color: #22a650; hover:bg-green-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Nueva cotización 💰</a>
-        <a href="{% url 'download_cotizaciones_excel' %}" class="inline-block" style="background-color: black; hover:bg-black-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Exportar en Excel 📄</a></div>
+    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+        <a href="{% url 'fideicomiso' %}" class="inline-block text-center" style="background-color: #22a650; hover:bg-green-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Nueva cotización 💰</a>
+        <a href="{% url 'download_cotizaciones_excel' %}" class="inline-block text-center" style="background-color: black; hover:bg-black-700; color: white; font-bold; padding: 0.5rem 1rem; border-radius: 0.375rem; outline: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);">Exportar en Excel 📄</a>
+    </div>
 </div>
 
 
@@ -44,7 +45,7 @@
                 </thead>
                 <tbody id="deudas-table-body" class="bg-white border-b">
                     {% for cotizacion in cotizaciones %}
-                    <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200">
+                    <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
                         <td class="px-6 py-4">{{ cotizacion.NumeroCotizacion }}</td>
                         <td class="px-6 py-4">{{ cotizacion.nombreCliente }}</td>
                         <td class="px-6 py-4">{{ cotizacion.cedulaCliente }}</td>
@@ -58,7 +59,7 @@
                         <td class="px-6 py-4">{{ cotizacion.created_at|date:"d/m/Y" }}</td>
                     </tr>
                     {% empty %}
-                    <tr>
+                    <tr id="noMatchRow">
                         <td colspan="11" class="px-6 py-4 text-center text-gray-500">
                             No se encontraron cotizaciones que coincidan con la búsqueda.
                         </td>
@@ -68,7 +69,7 @@
             </table>
         </div>
     </div>
-</div>
+
 
 <div class="mt-4">
     {% if is_paginated %}
@@ -90,7 +91,94 @@
     {% endif %}
 </div>
 
+<!-- Modal -->
+<div id="modalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden"></div>
+<div id="cotizacionModal" class="fixed inset-0 z-50 hidden overflow-y-auto transition-opacity duration-300 ease-in-out">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-lg">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold">Detalles de la Cotización</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div class="p-4">
+                <p><strong>Cotización ID:</strong> <span id="modalCotizacionId"></span></p>
+                <p><strong>Cliente:</strong> <span id="modalCliente"></span></p>
+                <p><strong>Cédula:</strong> <span id="modalCedula"></span></p>
+                <p><strong>Marca:</strong> <span id="modalMarca"></span></p>
+                <p><strong>Modelo:</strong> <span id="modalModelo"></span></p>
+                <p><strong>Plazo:</strong> <span id="modalPlazo"></span></p>
+                <p><strong>Tasa (%):</strong> <span id="modalTasa"></span></p>
+                <p><strong>Comi. Cierre (%):</strong> <span id="modalComiCierre"></span></p>
+                <p><strong>Total Financiado:</strong> <span id="modalTotalFinanciado"></span></p>
+                <p><strong>Oficial:</strong> <span id="modalOficial"></span></p>
+                <p><strong>Fecha Cotización:</strong> <span id="modalFecha"></span></p>
+            </div>
+            <div class="flex justify-between items-center p-4 border-t">
+                <div class="flex space-x-2">
+                    <a id="cotizacionDetailButton" href="#" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Ver Cotización</a>
+                    <a id="clienteProfileButton" href="#" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Ver Cliente</a>
+                </div>
+                <a id="descargaReporteConsulta" href="#" class="bg-black hover:bg-black-700 text-white font-bold py-2 px-4 rounded">Descargar Reporte de Consulta 📄</a>
+            </div>
+    </div>
+</div>
+
 <script>
+    function openModal(cotizacion) {
+        document.getElementById('modalCotizacionId').innerText = cotizacion.NumeroCotizacion;
+        document.getElementById('modalCliente').innerText = cotizacion.nombreCliente;
+        document.getElementById('modalCedula').innerText = cotizacion.cedulaCliente;
+        document.getElementById('modalMarca').innerText = cotizacion.marca;
+        document.getElementById('modalModelo').innerText = cotizacion.modelo;
+        document.getElementById('modalPlazo').innerText = cotizacion.plazoPago;
+        document.getElementById('modalTasa').innerText = cotizacion.tasaEstimada;
+        document.getElementById('modalComiCierre').innerText = cotizacion.calcComiCierreFinal;
+        document.getElementById('modalTotalFinanciado').innerText = cotizacion.auxMonto2;
+        document.getElementById('modalOficial').innerText = cotizacion.oficial;
+        document.getElementById('modalFecha').innerText = cotizacion.created_at;
+
+        document.getElementById('cotizacionDetailButton').href = `/cotizacion/${cotizacion.NumeroCotizacion}/`;
+        document.getElementById('clienteProfileButton').href = `/cliente/${cotizacion.cedulaCliente}/`;
+
+        const modal = document.getElementById('cotizacionModal');
+        const backdrop = document.getElementById('modalBackdrop');
+        modal.classList.remove('hidden');
+        modal.classList.add('visible');
+        backdrop.classList.remove('hidden');
+        backdrop.classList.add('visible');
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('cotizacionModal');
+        const backdrop = document.getElementById('modalBackdrop');
+        modal.classList.remove('visible');
+        modal.classList.add('hidden');
+        backdrop.classList.remove('visible');
+        backdrop.classList.add('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const rows = document.querySelectorAll('#deudas-table-body tr');
+        rows.forEach(row => {
+            row.addEventListener('click', function() {
+                const cotizacion = {
+                    NumeroCotizacion: this.querySelector('td:nth-child(1)').innerText,
+                    nombreCliente: this.querySelector('td:nth-child(2)').innerText,
+                    cedulaCliente: this.querySelector('td:nth-child(3)').innerText,
+                    marca: this.querySelector('td:nth-child(4)').innerText,
+                    modelo: this.querySelector('td:nth-child(5)').innerText,
+                    plazoPago: this.querySelector('td:nth-child(6)').innerText,
+                    tasaEstimada: this.querySelector('td:nth-child(7)').innerText,
+                    calcComiCierreFinal: this.querySelector('td:nth-child(8)').innerText,
+                    auxMonto2: this.querySelector('td:nth-child(9)').innerText,
+                    oficial: this.querySelector('td:nth-child(10)').innerText,
+                    created_at: this.querySelector('td:nth-child(11)').innerText
+                };
+                openModal(cotizacion);
+            });
+        });
+    });
+    
     function filterTable() {
         var input, filter, table, tr, td, i, txtValue, noMatch;
         input = document.getElementById("searchInput");
