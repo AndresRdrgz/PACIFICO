@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList
 from . import views
+from django.contrib.auth import views as auth_views
+from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 
 
 urlpatterns = [
@@ -17,4 +19,6 @@ urlpatterns = [
     path('cotizacion/<int:pk>/', views.cotizacion_detail, name='cotizacion_detail'),
     path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),
     path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),
+    path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
+    path('password_change/done/', CustomPasswordChangeDoneView.as_view(), name='password_change_done'),
 ]

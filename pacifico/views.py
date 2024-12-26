@@ -23,12 +23,21 @@ import pprint
 from django.db.models import Count
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
 
 
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+
+class CustomPasswordChangeView(PasswordChangeView):
+    template_name = 'registration/password_change.html'
+    success_url = reverse_lazy('password_change_done')
+
+class CustomPasswordChangeDoneView(PasswordChangeDoneView):
+    template_name = 'registration/password_change_done.html'
 
 def aseguradora_create(request):
     if request.method == 'POST':
