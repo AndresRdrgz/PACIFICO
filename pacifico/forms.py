@@ -91,6 +91,16 @@ class FideicomisoForm(forms.ModelForm):
             'jubilado': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            'apcScore': forms.NumberInput(attrs={
+                'placeholder': 'APC Score',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                
+            }),
+            'apcPI': forms.NumberInput(attrs={
+                'placeholder': 'APC PI',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                
+            }),
             'fechaInicioPago': forms.DateInput(attrs={
                 'placeholder': 'Fecha de Inicio',
                 'class': 'w-full text-slate-600 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500',
@@ -239,12 +249,174 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
             }),
+            'horasExtrasMonto': forms.NumberInput(attrs={
+                'placeholder': 'Horas Extras Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            'horasExtrasDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'primaMonto': forms.NumberInput(attrs={
+                'placeholder': 'Prima Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            'primaDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'bonosMonto': forms.NumberInput(attrs={
+                'placeholder': 'Bonos Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'bonosDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'otrosMonto': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'otrosDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'siacapMonto'   : forms.NumberInput(attrs={
+                'placeholder': 'SIACAP Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+
+            }),
+            'siacapDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'praaMonto': forms.NumberInput(attrs={
+                'placeholder': 'PRAA Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'praaDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'dirOtros1': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosMonto1': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosDcto1': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'dirOtros2': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosMonto2': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosDcto2': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'dirOtros3': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosMonto3': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosDcto3': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'dirOtros4': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosMonto4': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'dirOtrosDcto4': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario1': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto1': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto1': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario2': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto2': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto2': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario3': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto3': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto3': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario4': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto4': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto4': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario5': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto5': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto5': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'pagoVoluntario6': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioMonto6': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'pagoVoluntarioDcto6': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
             'totalIngresosAdicionales': forms.NumberInput(attrs={
                 'placeholder': 'Total Ingresos Adicionales',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
             }),
             #DATOS DEL AUTO
+            'valorAuto': forms.NumberInput(attrs={
+                'placeholder': 'Valor del Auto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
             'marca':forms.TextInput(attrs={
                 'placeholder': 'Marca del Auto',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -256,6 +428,79 @@ class FideicomisoForm(forms.ModelForm):
             'yearsFinanciamiento': forms.NumberInput(attrs={
                 'placeholder': 'Años de Financiamiento',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            #PRORRATEO
+            'mes0': forms.NumberInput(attrs={
+                'placeholder': 'Mes 1',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes1': forms.NumberInput(attrs={
+                'placeholder': 'Mes 2',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes2': forms.NumberInput(attrs={
+                'placeholder': 'Mes 3',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes3': forms.NumberInput(attrs={
+                'placeholder': 'Mes 4',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes4': forms.NumberInput(attrs={
+                'placeholder': 'Mes 5',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes5': forms.NumberInput(attrs={
+                'placeholder': 'Mes 6',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes6': forms.NumberInput(attrs={
+                'placeholder': 'Mes 7',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes7': forms.NumberInput(attrs={
+                'placeholder': 'Mes 8',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes8': forms.NumberInput(attrs={
+                'placeholder': 'Mes 9',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes9': forms.NumberInput(attrs={
+                'placeholder': 'Mes 10',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes10': forms.NumberInput(attrs={
+                'placeholder': 'Mes 11',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'mes11': forms.NumberInput(attrs={
+                'placeholder': 'Mes 12',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
             }),
         }
 
@@ -334,20 +579,7 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
-    apcScore = forms.IntegerField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'APC Score',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    apcPI = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'APC PI',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
+    
     marcaAuto = forms.ChoiceField(
         choices=marca_choices,
         required=False,
@@ -393,176 +625,14 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
-    valorAuto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Valor del Vehículo',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-            'readonly': 'readonly',
-        })
-    )
+
     #ENDEUDAMIENTO
-    horasExtrasMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Horas Extras Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-            'readonly': 'readonly',
-        })
-    )
-    horasExtrasDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    primaMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Prima Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-            'readonly': 'readonly',
-        })
-    )
-    primaDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    bonosMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Bonos Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    bonosDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    otrosMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Otros Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    otrosDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
+    
+   
     #descuento directo
-    siacapMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'SIACAP Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    siacapDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    praaMonto = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'PRAA Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    praaDcto = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    dirOtros1 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Otros',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosMonto1 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Otros Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosDcto1 = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    dirOtros2 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Otros',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosMonto2 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Otros Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosDcto2 = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    dirOtros3 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Otros',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosMonto3 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Otros Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosDcto3 = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
-    dirOtros4 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Otros',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosMonto4 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Otros Monto',
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-        })
-    )
-    dirOtrosDcto4 = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
-        })
-    )
+    
+   
+    
     #PAGOS VOLUNTARIOS
     pagoVoluntario1 = forms.CharField(
         required=False,
@@ -809,23 +879,6 @@ class FideicomisoForm(forms.ModelForm):
         })
     )
 
-
-
-
-
-
-
-
-    
-
-    
-    
-    
-    
-    
-
-
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #self.fields['nombreCliente'].required = False
@@ -864,4 +917,75 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['tablaTotalInteres'].required = False
         self.fields['tablaTotalMontoCapital'].required = False
         self.fields['manejo_5porc'].required = False
-       
+        self.fields['apcScore'].required = False
+        self.fields['apcPI'].required = False
+        self.fields['cartera'].required = False
+        self.fields['siacapMonto'].required = False
+        self.fields['siacapDcto'].required = False
+        self.fields['praaMonto'].required = False
+        self.fields['praaDcto'].required = False
+        self.fields['dirOtros1'].required = False
+        self.fields['dirOtrosMonto1'].required = False
+        self.fields['dirOtrosDcto1'].required = False
+        self.fields['dirOtros2'].required = False
+        self.fields['dirOtrosMonto2'].required = False
+        self.fields['dirOtrosDcto2'].required = False
+        self.fields['dirOtros3'].required = False
+        self.fields['dirOtrosMonto3'].required = False
+        self.fields['dirOtrosDcto3'].required = False
+        self.fields['dirOtros4'].required = False
+        self.fields['dirOtrosMonto4'].required = False
+        self.fields['dirOtrosDcto4'].required = False
+        self.fields['pagoVoluntario1'].required = False
+        self.fields['pagoVoluntarioMonto1'].required = False
+        self.fields['pagoVoluntarioDcto1'].required = False
+        self.fields['pagoVoluntario2'].required = False
+        self.fields['pagoVoluntarioMonto2'].required = False
+        self.fields['pagoVoluntarioDcto2'].required = False
+        self.fields['pagoVoluntario3'].required = False
+        self.fields['pagoVoluntarioMonto3'].required = False
+        self.fields['pagoVoluntarioDcto3'].required = False
+        self.fields['pagoVoluntario4'].required = False
+        self.fields['pagoVoluntarioMonto4'].required = False
+        self.fields['pagoVoluntarioDcto4'].required = False
+        self.fields['pagoVoluntario5'].required = False
+        self.fields['pagoVoluntarioMonto5'].required = False
+        self.fields['pagoVoluntarioDcto5'].required = False
+        self.fields['pagoVoluntario6'].required = False
+        self.fields['pagoVoluntarioMonto6'].required = False
+        self.fields['pagoVoluntarioDcto6'].required = False
+        self.fields['totalDescuentosLegales'].required = False
+        self.fields['totalDescuentoDirecto'].required = False
+        self.fields['totalPagoVoluntario'].required = False
+        self.fields['salarioNetoActual'].required = False
+        self.fields['salarioNeto'].required = False
+        self.fields['porSalarioNeto'].required = False
+        self.fields['totalIngresosMensualesCompleto'].required = False
+        self.fields['totalDescuentosLegalesCompleto'].required = False
+        self.fields['salarioNetoActualCompleto'].required = False
+        self.fields['salarioNetoCompleto'].required = False
+        self.fields['porSalarioNetoCompleto'].required = False
+        self.fields['horasExtrasMonto'].required = False
+        self.fields['horasExtrasDcto'].required = False
+        self.fields['primaMonto'].required = False
+        self.fields['primaDcto'].required = False
+        self.fields['bonosMonto'].required = False
+        self.fields['bonosDcto'].required = False
+        self.fields['otrosMonto'].required = False
+        self.fields['otrosDcto'].required = False
+        self.fields['mes0'].required = False
+        self.fields['mes1'].required = False
+        self.fields['mes2'].required = False
+        self.fields['mes3'].required = False
+        self.fields['mes4'].required = False
+        self.fields['mes5'].required = False
+        self.fields['mes6'].required = False
+        self.fields['mes7'].required = False
+        self.fields['mes8'].required = False
+        self.fields['mes9'].required = False
+        self.fields['mes10'].required = False
+        self.fields['mes11'].required = False
+
+        
+
+

@@ -56,8 +56,12 @@ def aseguradora_list(request):
 @login_required
 def cotizacion_detail(request, pk):
     print('ID cotizacion', pk)  
-    cotizacion = get_object_or_404(Cotizacion, pk=pk)
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=pk)
+    print('cotizacion', cotizacion)
     form = FideicomisoForm(instance=cotizacion)
+    consulta = {
+        'consulta': True,
+    }
     resultado = {
         'auxMonto2': cotizacion.auxMonto2,
         'r1': cotizacion.r1,
@@ -70,11 +74,31 @@ def cotizacion_detail(request, pk):
         'montoMensualSeguro': cotizacion.montoMensualSeguro,
         'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
         'tablaTotalPagos': cotizacion.tablaTotalPagos,
-    }
+        'nombreCliente': cotizacion.nombreCliente,
+        'valorAuto': cotizacion.valorAuto,
+        'abono': cotizacion.abono,
+        'salarioBaseMensual': cotizacion.salarioBaseMensual,
+        'totalDescuentosLegales': cotizacion.totalDescuentosLegales,
+        'totalDescuentoDirecto': cotizacion.totalDescuentoDirecto,
+        'totalPagoVoluntario': cotizacion.totalPagoVoluntario,
+        'salarioNetoActual': cotizacion.salarioNetoActual,
+        'salarioNeto': cotizacion.salarioNeto,
+        'porSalarioNeto': cotizacion.porSalarioNeto,
+        'totalIngresosAdicionales': cotizacion.totalIngresosAdicionales,
+        'totalIngresosMensualesCompleto': cotizacion.totalIngresosMensualesCompleto,
+        'totalDescuentosLegalesCompleto': cotizacion.totalDescuentosLegalesCompleto,
+        'salarioNetoActualCompleto': cotizacion.salarioNetoActualCompleto,
+        'salarioNetoCompleto': cotizacion.salarioNetoCompleto,
+        'porSalarioNetoCompleto': cotizacion.porSalarioNetoCompleto
+
+ }
+
+    print('resultado', resultado)
     context = {
         'form': form,
         'cotizacion': cotizacion,
         'resultado': resultado,
+        'consulta': consulta,
     }
     return render(request, 'fideicomiso_form.html', context)
 
@@ -676,7 +700,26 @@ def fideicomiso_view(request):
                 form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
                 form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                 form.instance.manejo_5porc = resultado['manejo_5porc']
-                
+                form.instance.valorAuto = resultado['valorAuto']
+                form.instance.aseguradora = aseguradora
+                form.instance.siacapMonto = resultado['siacapMonto']
+                form.instance.siacapDcto = resultado['siacapDcto']
+                form.instance.praaMonto = resultado['praaMonto']
+                form.instance.praaDcto = resultado['praaDcto']
+                #resultado nivel de endeuamiento - real
+                form.instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                form.instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                form.instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                form.instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                form.instance.salarioNetoActual = resultado['salarioNetoActual']
+                form.instance.salarioNeto = resultado['salarioNeto']
+                form.instance.porSalarioNeto = resultado['porSalarioNeto']
+                form.instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                form.instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                form.instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
                 
                 #form save
                 if request.user.is_authenticated:
@@ -685,6 +728,7 @@ def fideicomiso_view(request):
                     form.added_by = "INVITADO"
            
                 try:
+                    print("intentando guardar")
                     form.save()
                     # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = form.instance.NumeroCotizacion
