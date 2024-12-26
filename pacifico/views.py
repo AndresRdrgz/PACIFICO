@@ -44,7 +44,7 @@ def aseguradora_list(request):
     aseguradoras = Aseguradora.objects.all()
     return render(request, 'aseguradora_list.html', {'aseguradoras': aseguradoras})
 
-
+@login_required
 def cotizacion_detail(request, pk):
     print('ID cotizacion', pk)  
     cotizacion = get_object_or_404(Cotizacion, pk=pk)
@@ -69,6 +69,7 @@ def cotizacion_detail(request, pk):
     }
     return render(request, 'fideicomiso_form.html', context)
 
+@login_required
 def cliente_profile(request, cedula):
     cliente = get_object_or_404(Cliente, cedulaCliente=cedula)
     cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
@@ -88,6 +89,7 @@ def cliente_profile(request, cedula):
     }
     return render(request, 'cliente_profile.html', context)
 
+@login_required
 def clientesList(request):
     clientes = Cliente.objects.all()
 
@@ -96,7 +98,7 @@ def clientesList(request):
     return render(request, 'clientesList.html', {'clientes': clientes})
 
 
-#@login_required
+@login_required
 def download_cotizaciones_excel(request):
     cotizaciones = Cotizacion.objects.all()
 
@@ -171,7 +173,7 @@ def download_cotizaciones_excel(request):
 
     return response
 
-#@logi_required
+@login_required
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()
 
@@ -228,7 +230,7 @@ def get_lineas(request):
         logger.error("Error in get_lineas: %s", e)
         return JsonResponse({'error': 'An error occurred while processing your request.'}, status=500)
 
-#@login_required
+@login_required
 def generate_report(request):
     # Retrieve the result from the session
     resultado = request.session.get('resultado')
@@ -413,7 +415,7 @@ def generate_report(request):
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
-#@login_required
+@login_required
 def main_menu(request):
     return render(request, 'main_menu.html')
 
@@ -422,15 +424,17 @@ def login_view(request):
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)
+        print('user', user, username, password)
         if user is not None:
             login(request, user)
             return redirect('main_menu')  # Redirect to the main menu after successful login
         else:
             messages.error(request, 'Invalid username or password')
+            print('Invalid username or password')
     return render(request, 'registration/login.html')
 
 
-#@login_required
+@login_required
 def fideicomiso_view(request):
     resultado = None
     if request.method == 'POST':
@@ -671,12 +675,16 @@ def fideicomiso_view(request):
                 else:
                     form.added_by = "INVITADO"
            
-                form.save()
-                # Get the NumeroCotizacion after saving the form
-                numero_cotizacion = form.instance.NumeroCotizacion
-                resultado['numero_cotizacion'] = numero_cotizacion
-                print('NumeroCotizacion:', numero_cotizacion)
-                request.session['resultado'] = resultado
+                try:
+                    form.save()
+                    # Get the NumeroCotizacion after saving the form
+                    numero_cotizacion = form.instance.NumeroCotizacion
+                    resultado['numero_cotizacion'] = numero_cotizacion
+                    print('NumeroCotizacion:', numero_cotizacion)
+                    request.session['resultado'] = resultado
+                except Exception as e:
+                    logger.error("Error saving form: %s", e)
+                    messages.error(request, 'An error occurred while saving the form.')
             
               
             except Exception as e:
