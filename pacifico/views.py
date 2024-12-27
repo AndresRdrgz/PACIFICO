@@ -356,7 +356,10 @@ def generate_report(request):
     sheet['J51']=resultado['licencia']
     sheet['E52']=resultado['posicion']
     sheet['E53']=resultado['perfilUniversitario']
-    sheet['J78']=resultado['horasExtrasMonto']
+    
+    if resultado['horasExtrasMonto'] > 0:
+        sheet['J78']=resultado['horasExtrasMonto']
+    
 
     #DESCUENTO DIRECTO
     
@@ -626,7 +629,7 @@ def fideicomiso_view(request):
                 #DATOS DEL AUTO
                 resultado['marcaAuto'] = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
                 resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
-                resultado['yearAuto'] = form.cleaned_data['yearAuto'] if form.cleaned_data['yearAuto'] is not None else "-"
+                resultado['yearAuto'] = form.cleaned_data['yearCarro'] if form.cleaned_data['yearCarro'] is not None else "-"
                 resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
                 resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
                 resultado['promoPublicidad'] = 50  # Assuming this is a fixed value

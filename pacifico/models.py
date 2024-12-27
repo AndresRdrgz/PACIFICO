@@ -289,6 +289,8 @@ class Cotizacion(models.Model):
     abonoPorcentaje = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=0)
     marca = models.CharField(max_length=255, null=True)
     modelo = models.CharField(max_length=255, null=True)
+    yearCarro = models.IntegerField(null=True)
+    
     yearsFinanciamiento = models.IntegerField(null=True,default=1)
     #DATOS DE LA CONSULTA
     observaciones = models.TextField(null=True, blank=True)
