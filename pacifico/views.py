@@ -273,7 +273,7 @@ def generate_report(request):
         return HttpResponse("No data found.", status=404)
     
     # Path to the static Excel file
-    excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaFideicomiso.xlsx')
+    excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
 
     if not os.path.exists(excel_path):
         return HttpResponse("File not found.", status=404)
@@ -282,9 +282,9 @@ def generate_report(request):
     workbook = load_workbook(excel_path)
     sheet = workbook.active
     
-    # Select the sheet with name "COTIZADOR LEASING"
-    if "COTIZADOR LEASING" in workbook.sheetnames:
-        sheet = workbook["COTIZADOR LEASING"]
+    # Select the sheet with name "COTIZADOR PREST. AUTO"
+    if "COTIZADOR PREST. AUTO" in workbook.sheetnames:
+        sheet = workbook["COTIZADOR PREST. AUTO"]
     else:
         return HttpResponse("Sheet not found.", status=404)
     
@@ -359,82 +359,133 @@ def generate_report(request):
     sheet['J78']=resultado['horasExtrasMonto']
 
     #DESCUENTO DIRECTO
-    sheet['E87'] = resultado['siacapMonto']
-    sheet['e88'] = resultado['praaMonto']
-    sheet['e89'] = resultado['dirOtrosMonto1']
-    sheet['e90'] = resultado['dirOtrosMonto2']
-    sheet['e91'] = resultado['dirOtrosMonto3']
-    sheet['e92'] = resultado['dirOtrosMonto4']
-    sheet['C89'] = resultado['dirOtros1']
-    sheet['C90'] = resultado['dirOtros2']
-    sheet['C91'] = resultado['dirOtros3']
-    sheet['C92'] = resultado['dirOtros4']
-    if resultado['siacapDcto'] == True:
-        sheet['F87'] = 'SÍ'
-    else:
-        sheet['F87'] = 'NO'
-    if resultado['praaDcto'] == True:
-        sheet['F88'] = 'SÍ'
-    else:
-        sheet['F88'] = 'NO'
-    if resultado['dirOtrosDcto1'] == True:
-        sheet['F89'] = 'SÍ'
-    else:
-        sheet['F89'] = 'NO'
-    if resultado['dirOtrosDcto2'] == True:
-        sheet['F90'] = 'SÍ'
-    else:
-        sheet['F90'] = 'NO'
-    if resultado['dirOtrosDcto3'] == True:
-        sheet['F91'] = 'SÍ'
-    else:
-        sheet['F91'] = 'NO'
-    if resultado['dirOtrosDcto4'] == True:
-        sheet['f92'] = 'SÍ'
-    else:
-        sheet['f92'] = 'NO'
+    
+    print('siacapMonto', resultado['siacapMonto'])
+    if resultado['siacapMonto'] > 0:
+        sheet['E87'] = resultado['siacapMonto']
+        if resultado['siacapDcto'] == True:
+            sheet['F87'] = 'SÍ'
+        else:
+            sheet['F87'] = 'NO'
+
+    if resultado['praaMonto'] > 0:
+        sheet['E88'] = resultado['praaMonto']
+        if resultado['praaDcto'] == True:
+            sheet['F88'] = 'SÍ'
+        else:
+            sheet['F88'] = 'NO'
+    if resultado['dirOtrosMonto1'] > 0:
+        sheet['E89'] = resultado['dirOtrosMonto1']
+        sheet['C89'] = resultado['dirOtros1']
+        if resultado['dirOtrosDcto1'] == True:
+            sheet['F89'] = 'SÍ'
+        else:
+            sheet['F89'] = 'NO'
+
+    if resultado['dirOtrosMonto2'] > 0:
+        sheet['E90'] = resultado['dirOtrosMonto2']
+        sheet['C90'] = resultado['dirOtros2']
+        if resultado['dirOtrosDcto2'] == True:
+            sheet['F90'] = 'SÍ'
+        else:
+            sheet['F90'] = 'NO'
+
+    if resultado['dirOtrosMonto3'] > 0:
+        sheet['E91'] = resultado['dirOtrosMonto3']
+        sheet['C91'] = resultado['dirOtros3']
+        if resultado['dirOtrosDcto3'] == True:
+            sheet['F91'] = 'SÍ'
+        else:
+            sheet['F91'] = 'NO'
+
+    if resultado['dirOtrosMonto4'] > 0:
+        sheet['E92'] = resultado['dirOtrosMonto4']
+        sheet['C92'] = resultado['dirOtros4']
+        if resultado['dirOtrosDcto4'] == True:
+            sheet['F92'] = 'SÍ'
+        else:
+            sheet['F92'] = 'NO'
+
     #pagos voluntarios
     sheet['H87'] = resultado['pagoVoluntario1']
-    sheet['J87'] = resultado['pagoVoluntarioMonto1']
     sheet['H88'] = resultado['pagoVoluntario2']
-    sheet['J88'] = resultado['pagoVoluntarioMonto2']
     sheet['H89'] = resultado['pagoVoluntario3']
-    sheet['J89'] = resultado['pagoVoluntarioMonto3']
+    
     sheet['H90'] = resultado['pagoVoluntario4']
-    sheet['J90'] = resultado['pagoVoluntarioMonto4']
+    
     sheet['H91'] = resultado['pagoVoluntario5']
-    sheet['J91'] = resultado['pagoVoluntarioMonto5']
+    
     sheet['H92'] = resultado['pagoVoluntario6']
-    sheet['J92'] = resultado['pagoVoluntarioMonto6']
+    
        
 
     #PARSE TRUE TO SI AND FALSE TO NO
-    if resultado['pagoVoluntarioDcto1'] == True:
-        sheet['K87'] = 'SÍ'
-    else:
-        sheet['K87'] = 'NO'
-    if resultado['pagoVoluntarioDcto2'] == True:
-        sheet['K88'] = 'SÍ'
-    else:
-        sheet['K88'] = 'NO'
-    if resultado['pagoVoluntarioDcto3'] == True:
-        sheet['K89'] = 'SÍ'
-    else:
-        sheet['K89'] = 'NO'
-    if resultado['pagoVoluntarioDcto4'] == True:
+    if resultado['pagoVoluntarioMonto1'] > 0:
+        sheet['J87'] = resultado['pagoVoluntarioMonto1']
+        if resultado['pagoVoluntarioDcto1'] == True:
+            sheet['K87'] = 'SÍ'
+        else:
+            sheet['K87'] = 'NO'
+
+    if resultado['pagoVoluntarioMonto2'] > 0:
+        sheet['J88'] = resultado['pagoVoluntarioMonto2']
+        if resultado['pagoVoluntarioDcto2'] == True:
+            sheet['K88'] = 'SÍ'
+        else:
+            sheet['K88'] = 'NO'
+
+    if resultado['pagoVoluntarioMonto3'] > 0:
+        sheet['J89'] = resultado['pagoVoluntarioMonto3']
+        if resultado['pagoVoluntarioDcto3'] == True:
+            sheet['K89'] = 'SÍ'
+        else:
+            sheet['K89'] = 'NO'
+
+    if resultado['pagoVoluntarioMonto4'] > 0:
+        sheet['J90'] = resultado['pagoVoluntarioMonto4']
+        if resultado['pagoVoluntarioDcto4'] == True:
             sheet['K90'] = 'SÍ'
-    else:
+        else:
             sheet['K90'] = 'NO'
-    if resultado['pagoVoluntarioDcto5'] == True:
+        
+    if resultado['pagoVoluntarioMonto5'] > 0:
+        sheet['J91'] = resultado['pagoVoluntarioMonto5']
+        if resultado['pagoVoluntarioDcto5'] == True:
             sheet['K91'] = 'SÍ'
-    else:
+        else:
             sheet['K91'] = 'NO'
-    if resultado['pagoVoluntarioDcto6'] == True:
-            sheet['K92'] = 'SÍ'
-    else:
-            sheet['K92'] = 'NO'
-  
     
+    if resultado['pagoVoluntarioMonto6'] > 0:
+        sheet['J92'] = resultado['pagoVoluntarioMonto6']
+        if resultado['pagoVoluntarioDcto6'] == True:
+            sheet['K92'] = 'SÍ'
+        else:
+            sheet['K92'] = 'NO'
+
+  
+     # Select the sheet with name "PRORRATEO"
+    if "PRORRATEO" in workbook.sheetnames:
+        prorrateo = workbook["PRORRATEO"]
+    else:
+        return HttpResponse("Sheet not found.", status=404)
+    
+    prorrateo['D6'] = resultado['mes0']
+    prorrateo['d7'] = resultado['mes1']
+    prorrateo['d8'] = resultado['mes2']
+    prorrateo['d9'] = resultado['mes3']
+    prorrateo['d10'] = resultado['mes4']
+    prorrateo['d11'] = resultado['mes5']
+    prorrateo['d12'] = resultado['mes6']
+    prorrateo['d13'] = resultado['mes7']
+    prorrateo['d14'] = resultado['mes8']
+    prorrateo['d15'] = resultado['mes9']
+    prorrateo['d16'] = resultado['mes10']
+    prorrateo['d17'] = resultado['mes11']
+    prorrateo['C6'] = resultado['primerMes']
+    print('prmer mes', resultado['primerMes'])
+
+  
+
        
     # Save the workbook to a temporary file
     temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
@@ -573,8 +624,8 @@ def fideicomiso_view(request):
                 resultado['cotPlazoPago'] = auxPlazoPago if auxPlazoPago is not None else 0
                 resultado['vendedor'] = form.cleaned_data['vendedor'] if form.cleaned_data['vendedor'] is not None else "-"
                 #DATOS DEL AUTO
-                resultado['marcaAuto'] = form.cleaned_data['marcaAuto'] if form.cleaned_data['marcaAuto'] is not None else "-"
-                resultado['lineaAuto'] = form.cleaned_data['lineaAuto'] if form.cleaned_data['lineaAuto'] is not None else "-"
+                resultado['marcaAuto'] = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
+                resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
                 resultado['yearAuto'] = form.cleaned_data['yearAuto'] if form.cleaned_data['yearAuto'] is not None else "-"
                 resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
                 resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
@@ -645,6 +696,22 @@ def fideicomiso_view(request):
                 resultado['pagoVoluntarioDcto6'] = form.cleaned_data['pagoVoluntarioDcto6'] if form.cleaned_data['pagoVoluntarioDcto6'] is not None else 0
                 
                 resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0  
+                #PRORRATEO
+                resultado['mes0'] = form.cleaned_data['mes0'] if form.cleaned_data['mes0'] is not None else ""
+                resultado['mes1'] = form.cleaned_data['mes1'] if form.cleaned_data['mes1'] is not None else ""
+                resultado['mes2'] = form.cleaned_data['mes2'] if form.cleaned_data['mes2'] is not None else ""
+                resultado['mes3'] = form.cleaned_data['mes3'] if form.cleaned_data['mes3'] is not None else ""
+                resultado['mes4'] = form.cleaned_data['mes4'] if form.cleaned_data['mes4'] is not None else ""
+                resultado['mes5'] = form.cleaned_data['mes5'] if form.cleaned_data['mes5'] is not None else ""
+                resultado['mes6'] = form.cleaned_data['mes6'] if form.cleaned_data['mes6'] is not None else ""
+                resultado['mes7'] = form.cleaned_data['mes7'] if form.cleaned_data['mes7'] is not None else ""
+                resultado['mes8'] = form.cleaned_data['mes8'] if form.cleaned_data['mes8'] is not None else ""
+                resultado['mes9'] = form.cleaned_data['mes9'] if form.cleaned_data['mes9'] is not None else ""
+                resultado['mes10'] = form.cleaned_data['mes10'] if form.cleaned_data['mes10'] is not None else ""
+                resultado['mes11'] = form.cleaned_data['mes11'] if form.cleaned_data['mes11'] is not None else ""
+                resultado['primerMes'] = form.cleaned_data['primerMes'] if form.cleaned_data['primerMes'] is not None else ""
+                resultado['tipoProrrateo'] = form.cleaned_data['tipoProrrateo'] if form.cleaned_data['tipoProrrateo'] is not None else ""
+                print('primer mes', resultado['primerMes'],form.cleaned_data['primerMes'])
                 
                 # MONTO LETRA SIN SEGUROS
                 resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
@@ -681,6 +748,8 @@ def fideicomiso_view(request):
                 resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
                 resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
+                
+               
                 
 
                 #save resultado['tasaEstimada'] in form instance

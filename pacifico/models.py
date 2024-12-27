@@ -85,6 +85,25 @@ REFERENCIAS_OPCIONES = [
         ("SIN REFERENCIAS", "SIN REFERENCIAS"),
     ]
 
+MESES_OPCIONES = [
+    ('ENERO', 'ENERO'),
+    ('FEBRERO', 'FEBRERO'),
+    ('MARZO', 'MARZO'),
+    ('ABRIL', 'ABRIL'),
+    ('MAYO', 'MAYO'),
+    ('JUNIO', 'JUNIO'),
+    ('JULIO', 'JULIO'),
+    ('AGOSTO', 'AGOSTO'),
+    ('SEPTIEMBRE', 'SEPTIEMBRE'),
+    ('OCTUBRE', 'OCTUBRE'),
+    ('NOVIEMBRE', 'NOVIEMBRE'),
+    ('DICIEMBRE', 'DICIEMBRE'),
+    ]
+
+TIPO_PRORRATEO_OPCIONES = [
+        ('horas_extras', 'Horas Extras'),
+        ('prima_produccion', 'Prima de Producción'),
+    ]
 # Create your models here.
 class FormPago(models.Model):
     descripcion = models.CharField(max_length=100, null=True)
@@ -209,6 +228,9 @@ class Cliente(models.Model):
     mes9 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     mes10 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    primerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
+    tipoProrrateo = models.CharField(max_length=20, choices=TIPO_PRORRATEO_OPCIONES, default='horas_extras')
+    
     
        
 
@@ -374,6 +396,8 @@ class Cotizacion(models.Model):
     mes9 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     mes10 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    primerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
+    tipoProrrateo = models.CharField(max_length=20, choices=TIPO_PRORRATEO_OPCIONES, default='horas_extras')
 
            
     
@@ -477,6 +501,8 @@ class Cotizacion(models.Model):
             'mes9': self.mes9,
             'mes10': self.mes10,
             'mes11': self.mes11,
+            'primerMes': self.primerMes,
+            'tipoProrrateo': self.tipoProrrateo,
 
 
             }
@@ -560,15 +586,8 @@ class Cotizacion(models.Model):
             cliente.mes9 = self.mes9
             cliente.mes10 = self.mes10
             cliente.mes11 = self.mes11
-
-        
-
-
-
-        
-         
-
-
+            cliente.primerMes = self.primerMes
+            cliente.tipoProrrateo = self.tipoProrrateo
           
 
             # Update other fields as necessary
