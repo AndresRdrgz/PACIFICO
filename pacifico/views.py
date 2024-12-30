@@ -530,9 +530,25 @@ def generate_report(request):
     sheet['J51']=resultado['licencia']
     sheet['E52']=resultado['posicion']
     sheet['E53']=resultado['perfilUniversitario']
-    
+
     if resultado['horasExtrasMonto'] > 0:
         sheet['J78']=resultado['horasExtrasMonto']
+
+    if resultado['otrosMonto'] > 0:
+        sheet['J81']=resultado['otrosMonto']
+        if resultado['otrosDcto'] == True:
+            sheet['K81'] = 'SÍ'
+        else:
+            sheet['K81'] = 'NO'
+
+    if resultado['bonosMonto'] > 0:
+        sheet['J80']=resultado['bonosMonto']
+        if resultado['bonosDcto'] == True:
+            sheet['K80'] = 'SÍ'
+        else:
+            sheet['K80'] = 'NO'
+        
+
     
 
     #DESCUENTO DIRECTO
