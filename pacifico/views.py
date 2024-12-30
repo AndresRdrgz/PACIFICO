@@ -274,6 +274,10 @@ def cliente_profile(request, cedula):
     cliente = get_object_or_404(Cliente, cedulaCliente=cedula)
     cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
 
+    if request.user.is_authenticated:
+        cotizaciones = cotizaciones.filter(added_by=request.user
+        )
+
     if request.method == 'POST':
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
