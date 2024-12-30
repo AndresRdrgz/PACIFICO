@@ -379,6 +379,12 @@ def cotizacionesList(request):
 
     #sort by newest first
     cotizaciones = cotizaciones.order_by('-created_at')
+
+    #Filter cotizaciones by addedBy current user
+    if request.user.is_authenticated:
+        cotizaciones = cotizaciones.filter(added_by=request.user
+        )
+
     
     return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
 
@@ -489,6 +495,7 @@ def generate_report(request):
     sheet['e30'] = resultado['manejo_5porc']
     sheet['e31'] = resultado['auxMonto2']
     sheet['E39'] = resultado['wrkLetraSinSeguros']
+    sheet['E43'] = resultado['wrkLetraSinSeguros']
     sheet['e40'] = resultado['wrkLetraSeguro']
     sheet['E41'] = resultado['wrkMontoLetra']
     sheet['e42'] = resultado['montoMensualSeguro']
@@ -960,14 +967,11 @@ def fideicomiso_view(request):
                 form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                 form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
                 
-                #form save
-                if request.user.is_authenticated:
-                    form.added_by = request.user
-                else:
-                    form.added_by = "INVITADO"
-           
+
+                
                 try:
                     print("intentando guardar")
+                    form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     form.save()
                     # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = form.instance.NumeroCotizacion

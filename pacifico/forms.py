@@ -13,8 +13,8 @@ with open(BASE_DIR / 'static/insumos/autos.json') as f:
 # Extract unique values for the "MARCA" field
 unique_marcas = list({item['MARCA'] for item in choices_data})
 
-# Convert unique "MARCA" values to choices format
-marca_choices = [(marca, marca) for marca in unique_marcas]
+# Convert unique "MARCA" values to choices format and add a default choice
+marca_choices = [('', 'Seleccione una marca')] + [(marca, marca) for marca in unique_marcas]
 
 class AseguradoraForm(forms.ModelForm):
 
