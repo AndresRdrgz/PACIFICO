@@ -278,6 +278,11 @@ def cliente_profile(request, cedula):
         cotizaciones = cotizaciones.filter(added_by=request.user
         )
 
+    #If user is staff show all cotizaciones
+    if request.user.is_staff:
+        cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
+    
+
     if request.method == 'POST':
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
@@ -389,6 +394,9 @@ def cotizacionesList(request):
         cotizaciones = cotizaciones.filter(added_by=request.user
         )
 
+    #If user is staff show all cotizaciones
+    if request.user.is_staff:
+        cotizaciones = Cotizacion.objects.all()
     
     return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
 
