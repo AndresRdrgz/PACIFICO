@@ -615,7 +615,7 @@ def generarFideicomiso3(params):
         desired_r1 = params['r_deseada']
         print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
-        max_iterations = 200  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 150  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search

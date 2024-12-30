@@ -25,6 +25,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from .viewsFideicomiso.cotizadorFideicomiso import perform_fideicomiso_calculation
 
 
 
@@ -52,6 +53,172 @@ def aseguradora_create(request):
 def aseguradora_list(request):
     aseguradoras = Aseguradora.objects.all()
     return render(request, 'aseguradora_list.html', {'aseguradoras': aseguradoras})
+
+@login_required
+def cotizacionDetail(request, pk):
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=pk)
+    form = FideicomisoForm(instance=cotizacion)
+    consulta = {
+        'consulta': True,
+    }
+    resultado = {
+        'auxMonto2': cotizacion.auxMonto2,
+        'r1': cotizacion.r1,
+        'tasaEstimada': cotizacion.tasaEstimada,
+        'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
+        'auxPlazoPago': cotizacion.plazoPago,
+        'wrkLetraSinSeguros': cotizacion.wrkLetraSinSeguros,
+        'wrkLetraSeguro': cotizacion.wrkLetraSeguro,
+        'wrkMontoLetra': cotizacion.wrkMontoLetra,
+        'montoMensualSeguro': cotizacion.montoMensualSeguro,
+        'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
+        'tablaTotalPagos': cotizacion.tablaTotalPagos,
+        'nombreCliente': cotizacion.nombreCliente,
+        'valorAuto': cotizacion.valorAuto,
+        'abono': cotizacion.abono,
+        'salarioBaseMensual': cotizacion.salarioBaseMensual,
+        'totalDescuentosLegales': cotizacion.totalDescuentosLegales,
+        'totalDescuentoDirecto': cotizacion.totalDescuentoDirecto,
+        'totalPagoVoluntario': cotizacion.totalPagoVoluntario,
+        'salarioNetoActual': cotizacion.salarioNetoActual,
+        'salarioNeto': cotizacion.salarioNeto,
+        'porSalarioNeto': cotizacion.porSalarioNeto,
+        'totalIngresosAdicionales': cotizacion.totalIngresosAdicionales,
+        'totalIngresosMensualesCompleto': cotizacion.totalIngresosMensualesCompleto,
+        'totalDescuentosLegalesCompleto': cotizacion.totalDescuentosLegalesCompleto,
+        'salarioNetoActualCompleto': cotizacion.salarioNetoActualCompleto,
+        'salarioNetoCompleto': cotizacion.salarioNetoCompleto,
+        'porSalarioNetoCompleto': cotizacion.porSalarioNetoCompleto,
+        'numero_cotizacion': cotizacion.NumeroCotizacion
+
+ }
+
+    print('resultado', resultado)
+    context = {
+        'form': form,
+        'cotizacion': cotizacion,
+        'resultado': resultado,
+        'consulta': consulta,
+    }
+
+    if request.method == 'POST':
+        form = FideicomisoForm(request.POST, instance=cotizacion)
+        if form.is_valid():
+            try:
+                aseguradora = form.cleaned_data['aseguradora']
+                form_data = form.cleaned_data
+                resultado = perform_fideicomiso_calculation(form)
+
+                # Create a new form instance to save a new record
+                new_form = FideicomisoForm(request.POST)
+                #guardar resultado en nueva intancia
+                #save resultado['tasaEstimada'] in form instance
+                print("Guardando resultado en nueva instancia")
+                pp = pprint.PrettyPrinter(indent=4)
+                pp.pprint(resultado)
+                new_form.instance.tasaEstimada = resultado['tasaEstimada']
+                new_form.instance.tasaBruta = resultado['tasaBruta']
+                new_form.instance.r1 = resultado['r1']
+                new_form.instance.auxMonto2 = resultado['auxMonto2']
+                new_form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                new_form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                new_form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
+                new_form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                new_form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                new_form.instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                new_form.instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                new_form.instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                new_form.instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                new_form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                new_form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                new_form.instance.manejo_5porc = resultado['manejo_5porc']
+                new_form.instance.valorAuto = resultado['valorAuto']
+                new_form.instance.aseguradora = aseguradora
+                new_form.instance.siacapMonto = resultado['siacapMonto']
+                new_form.instance.siacapDcto = resultado['siacapDcto']
+                new_form.instance.praaMonto = resultado['praaMonto']
+                new_form.instance.praaDcto = resultado['praaDcto']
+                #resultado nivel de endeuamiento - real
+                new_form.instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                new_form.instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                new_form.instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                new_form.instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                new_form.instance.salarioNetoActual = resultado['salarioNetoActual']
+                new_form.instance.salarioNeto = resultado['salarioNeto']
+                new_form.instance.porSalarioNeto = resultado['porSalarioNeto']
+                new_form.instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                new_form.instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                new_form.instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                new_form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                new_form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                new_form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+                # ------------------- Save the new record -------------------
+                if new_form.is_valid():
+                    new_instance = new_form.save(commit=False)
+                    new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                     # Set the calculated values on the new instance
+                    new_instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                    new_instance.tasaEstimada = resultado['tasaEstimada']
+                    new_instance.r1 = resultado['r1']
+                    new_instance.auxMonto2 = resultado['auxMonto2']
+                    new_instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                    new_instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                    new_instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                    new_instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                    new_instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                    new_instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                    new_instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                    new_instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                    new_instance.manejo_5porc = resultado['manejo_5porc']
+                    new_instance.valorAuto = resultado['valorAuto']
+                    new_instance.aseguradora = aseguradora
+                    new_instance.siacapMonto = resultado['siacapMonto']
+                    new_instance.siacapDcto = resultado['siacapDcto']
+                    new_instance.praaMonto = resultado['praaMonto']
+                    new_instance.praaDcto = resultado['praaDcto']
+                    #resultado nivel de endeuamiento - real
+                    new_instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                    new_instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                    new_instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                    new_instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                    new_instance.salarioNetoActual = resultado['salarioNetoActual']
+                    new_instance.salarioNeto = resultado['salarioNeto']
+                    new_instance.porSalarioNeto = resultado['porSalarioNeto']
+                    new_instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                    new_instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                    new_instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                    new_instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                    new_instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                    new_instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+
+                    new_instance.save()
+                    messages.success(request, 'New record has been created successfully.')
+                     # Get the NumeroCotizacion after saving the form
+                    numero_cotizacion = new_form.instance.NumeroCotizacion
+                    resultado['numero_cotizacion'] = numero_cotizacion
+                    print('NumeroCotizacion:', numero_cotizacion)
+                    request.session['resultado'] = resultado
+
+
+                    
+                    return redirect('cotizacion_detail', pk=new_instance.NumeroCotizacion)
+                    
+                else:
+                    logger.warning("New form is not valid: %s", new_form.errors)
+                    messages.error(request, 'An error occurred while creating a new record.')
+               
+            except Exception as e:
+                print('Error:', e)
+                pass
+                
+        else:
+            logger.warning("Form is not valid: %s", form.errors)
+            print(form.errors)
+            
+            
+    return render(request, 'fideicomiso_form.html', context)
+
+
 
 @login_required
 def cotizacion_detail(request, pk):
@@ -807,6 +974,9 @@ def fideicomiso_view(request):
                     resultado['numero_cotizacion'] = numero_cotizacion
                     print('NumeroCotizacion:', numero_cotizacion)
                     request.session['resultado'] = resultado
+
+                    return redirect('cotizacion_detail', pk=form.instance.NumeroCotizacion)
+
                 except Exception as e:
                     logger.error("Error saving form: %s", e)
                     messages.error(request, 'An error occurred while saving the form.')
