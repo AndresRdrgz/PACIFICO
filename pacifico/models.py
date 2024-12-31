@@ -139,6 +139,7 @@ class PeriodoPago(models.Model):
 
 class Cliente(models.Model):
     cedulaCliente = models.CharField(max_length=255, null=True)
+    tipoDocumento = models.CharField(max_length=10, choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')], default='CEDULA')
     nombreCliente = models.CharField(max_length=255, null=True)
     fechaNacimiento = models.DateField(null=True)
     edad = models.IntegerField(null=True)
@@ -254,6 +255,7 @@ class Cotizacion(models.Model):
     #Datos del cliente
     nombreCliente = models.CharField(max_length=100, null=True)
     cedulaCliente = models.CharField(max_length=10, null=True,default='')
+    tipoDocumento = models.CharField(max_length=10, choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')], default='CEDULA')
     fechaNacimiento = models.DateField(null=True)
     edad = models.IntegerField(null=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
@@ -290,7 +292,19 @@ class Cotizacion(models.Model):
     marca = models.CharField(max_length=255, null=True)
     modelo = models.CharField(max_length=255, null=True)
     yearCarro = models.IntegerField(null=True)
-    
+    transmisionAuto = models.CharField(
+        max_length=10,
+        choices=[('MANUAL', 'Manual'), ('AUTOMÁTICO', 'Automático')],
+        default='MANUAL',
+        null=True
+    )
+    kilometrajeAuto = models.IntegerField(null=True, default=0)
+    nuevoAuto = models.CharField(
+        max_length=10,
+        choices=[('AUTO NUEVO', 'Auto Nuevo'), ('AUTO USADO', 'Auto Usado')],
+        default='AUTO NUEVO',
+        null=True
+    )
     yearsFinanciamiento = models.IntegerField(null=True,default=1)
     #DATOS DE LA CONSULTA
     observaciones = models.TextField(null=True, blank=True)
@@ -505,6 +519,7 @@ class Cotizacion(models.Model):
             'mes11': self.mes11,
             'primerMes': self.primerMes,
             'tipoProrrateo': self.tipoProrrateo,
+            'tipoDocumento': self.tipoDocumento,
 
 
             }
@@ -590,6 +605,7 @@ class Cotizacion(models.Model):
             cliente.mes11 = self.mes11
             cliente.primerMes = self.primerMes
             cliente.tipoProrrateo = self.tipoProrrateo
+            cliente.tipoDocumento = self.tipoDocumento
           
 
             # Update other fields as necessary

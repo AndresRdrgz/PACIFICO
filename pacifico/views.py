@@ -449,13 +449,114 @@ def get_lineas(request):
         return JsonResponse({'error': 'An error occurred while processing your request.'}, status=500)
 
 @login_required
-def generate_report(request):
-    # Retrieve the result from the session
-    resultado = request.session.get('resultado')
-    #print(resultado)
+def generate_report(request, numero_cotizacion):
+    # Retrieve the cotizacion record based on numero_cotizacion
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
     
-    if not resultado:
-        return HttpResponse("No data found.", status=404)
+    # Populate resultado with the values from the cotizacion record
+    resultado = {
+        'oficial': cotizacion.oficial,
+        'nombreCliente': cotizacion.nombreCliente,
+        'cedulaCliente': cotizacion.cedulaCliente,
+        'tipoDocumento': cotizacion.tipoDocumento,
+        'edad': cotizacion.edad,
+        'sexo': cotizacion.sexo,
+        'apcScore': cotizacion.apcScore,
+        'apcPI': cotizacion.apcPI,
+        'cotPlazoPago': cotizacion.plazoPago,
+        'r1': cotizacion.r1,
+        'abonoPorcentaje': cotizacion.abonoPorcentaje,
+        'abono': cotizacion.abono,
+        'cashback': cotizacion.cashback,
+        'valorAuto': cotizacion.valorAuto,
+        'calcMontoTimbres': cotizacion.calcMontoTimbres,
+        'tasaBruta': cotizacion.tasaBruta,
+        'cotMontoPrestamo': cotizacion.montoPrestamo,
+        'calcMontoNotaria': cotizacion.calcMontoNotaria,
+        'promoPublicidad': 50,
+        'montoLetraSeguroAdelantado': cotizacion.mesesFinanciaSeguro * cotizacion.montoMensualSeguro,
+        'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
+        'manejo_5porc': cotizacion.manejo_5porc,
+        'auxMonto2': cotizacion.auxMonto2,
+        'wrkLetraSinSeguros': cotizacion.wrkLetraSinSeguros,
+        'wrkLetraSeguro': cotizacion.wrkLetraSeguro,
+        'wrkMontoLetra': cotizacion.wrkMontoLetra,
+        'montoMensualSeguro': cotizacion.montoMensualSeguro,
+        'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
+        'tablaTotalPagos': cotizacion.tablaTotalPagos,
+        'vendedor': cotizacion.vendedor,
+        'comisionVendedor': cotizacion.vendedorComision,
+        'marcaAuto': cotizacion.marca,
+        'lineaAuto': cotizacion.modelo,
+        'yearAuto': cotizacion.yearCarro,
+        'transmision': cotizacion.transmisionAuto,
+        'nuevoAuto': cotizacion.nuevoAuto,
+        'kilometrajeAuto': cotizacion.kilometrajeAuto,
+        'observaciones': cotizacion.observaciones,
+        'salarioBaseMensual': cotizacion.salarioBaseMensual,
+        'tiempoServicio': cotizacion.tiempoServicio,
+        'ingresos': cotizacion.ingresos,
+        'nombreEmpresa': cotizacion.nombreEmpresa,
+        'referenciasAPC': cotizacion.referenciasAPC,
+        'cartera': cotizacion.cartera,
+        'licencia': cotizacion.licencia,
+        'posicion': cotizacion.posicion,
+        'perfilUniversitario': cotizacion.perfilUniversitario,
+        'horasExtrasMonto': cotizacion.horasExtrasMonto,
+        'otrosMonto': cotizacion.otrosMonto,
+        'montoanualSeguro': cotizacion.montoanualSeguro,
+        'otrosDcto': cotizacion.otrosDcto,
+        'bonosMonto': cotizacion.bonosMonto,
+        'bonosDcto': cotizacion.bonosDcto,
+        'siacapMonto': cotizacion.siacapMonto,
+        'siacapDcto': cotizacion.siacapDcto,
+        'praaMonto': cotizacion.praaMonto,
+        'praaDcto': cotizacion.praaDcto,
+        'dirOtrosMonto1': cotizacion.dirOtrosMonto1,
+        'dirOtros1': cotizacion.dirOtros1,
+        'dirOtrosDcto1': cotizacion.dirOtrosDcto1,
+        'dirOtrosMonto2': cotizacion.dirOtrosMonto2,
+        'dirOtros2': cotizacion.dirOtros2,
+        'dirOtrosDcto2': cotizacion.dirOtrosDcto2,
+        'dirOtrosMonto3': cotizacion.dirOtrosMonto3,
+        'dirOtros3': cotizacion.dirOtros3,
+        'dirOtrosDcto3': cotizacion.dirOtrosDcto3,
+        'dirOtrosMonto4': cotizacion.dirOtrosMonto4,
+        'dirOtros4': cotizacion.dirOtros4,
+        'dirOtrosDcto4': cotizacion.dirOtrosDcto4,
+        'pagoVoluntario1': cotizacion.pagoVoluntario1,
+        'pagoVoluntarioMonto1': cotizacion.pagoVoluntarioMonto1,
+        'pagoVoluntarioDcto1': cotizacion.pagoVoluntarioDcto1,
+        'pagoVoluntario2': cotizacion.pagoVoluntario2,
+        'pagoVoluntarioMonto2': cotizacion.pagoVoluntarioMonto2,
+        'pagoVoluntarioDcto2': cotizacion.pagoVoluntarioDcto2,
+        'pagoVoluntario3': cotizacion.pagoVoluntario3,
+        'pagoVoluntarioMonto3': cotizacion.pagoVoluntarioMonto3,
+        'pagoVoluntarioDcto3': cotizacion.pagoVoluntarioDcto3,
+        'pagoVoluntario4': cotizacion.pagoVoluntario4,
+        'pagoVoluntarioMonto4': cotizacion.pagoVoluntarioMonto4,
+        'pagoVoluntarioDcto4': cotizacion.pagoVoluntarioDcto4,
+        'pagoVoluntario5': cotizacion.pagoVoluntario5,
+        'pagoVoluntarioMonto5': cotizacion.pagoVoluntarioMonto5,
+        'pagoVoluntarioDcto5': cotizacion.pagoVoluntarioDcto5,
+        'pagoVoluntario6': cotizacion.pagoVoluntario6,
+        'pagoVoluntarioMonto6': cotizacion.pagoVoluntarioMonto6,
+        'pagoVoluntarioDcto6': cotizacion.pagoVoluntarioDcto6,
+        'mes0': cotizacion.mes0,
+        'mes1': cotizacion.mes1,
+        'mes2': cotizacion.mes2,
+        'mes3': cotizacion.mes3,
+        'mes4': cotizacion.mes4,
+        'mes5': cotizacion.mes5,
+        'mes6': cotizacion.mes6,
+        'mes7': cotizacion.mes7,
+        'mes8': cotizacion.mes8,
+        'mes9': cotizacion.mes9,
+        'mes10': cotizacion.mes10,
+        'mes11': cotizacion.mes11,
+        'primerMes': cotizacion.primerMes,
+        'tipoProrrateo': cotizacion.tipoProrrateo,
+    }
     
     # Path to the static Excel file
     excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
@@ -474,7 +575,7 @@ def generate_report(request):
         return HttpResponse("Sheet not found.", status=404)
     
     # Example: Write the resultado data to the Excel sheet
-    sheet['D6'] =resultado['oficial']
+    sheet['D6'] = resultado['oficial']
     sheet['C10'] = resultado['nombreCliente']
     sheet['G10'] = resultado['cedulaCliente']
     sheet['H10'] = resultado['tipoDocumento']
@@ -543,9 +644,13 @@ def generate_report(request):
     sheet['E52']=resultado['posicion']
     sheet['E53']=resultado['perfilUniversitario']
 
+    if resultado['horasExtrasMonto'] is None:
+        resultado['horasExtrasMonto'] = 0
     if resultado['horasExtrasMonto'] > 0:
         sheet['J78']=resultado['horasExtrasMonto']
 
+    if resultado['otrosMonto'] is None:
+        resultado['otrosMonto'] = 0
     if resultado['otrosMonto'] > 0:
         sheet['J81']=resultado['otrosMonto']
         if resultado['otrosDcto'] == True:
@@ -553,6 +658,8 @@ def generate_report(request):
         else:
             sheet['K81'] = 'NO'
 
+    if resultado['bonosMonto'] is None:
+        resultado['bonosMonto'] = 0
     if resultado['bonosMonto'] > 0:
         sheet['J80']=resultado['bonosMonto']
         if resultado['bonosDcto'] == True:
@@ -579,6 +686,9 @@ def generate_report(request):
             sheet['F88'] = 'SÍ'
         else:
             sheet['F88'] = 'NO'
+    
+    if resultado['dirOtrosMonto1'] is None:
+        resultado['dirOtrosMonto1'] = 0
     if resultado['dirOtrosMonto1'] > 0:
         sheet['E89'] = resultado['dirOtrosMonto1']
         sheet['C89'] = resultado['dirOtros1']
@@ -586,6 +696,9 @@ def generate_report(request):
             sheet['F89'] = 'SÍ'
         else:
             sheet['F89'] = 'NO'
+
+    if resultado['dirOtrosMonto2'] is None:
+        resultado['dirOtrosMonto2'] = 0
 
     if resultado['dirOtrosMonto2'] > 0:
         sheet['E90'] = resultado['dirOtrosMonto2']
@@ -595,6 +708,9 @@ def generate_report(request):
         else:
             sheet['F90'] = 'NO'
 
+    if resultado['dirOtrosMonto3'] is None:
+        resultado['dirOtrosMonto3'] = 0
+
     if resultado['dirOtrosMonto3'] > 0:
         sheet['E91'] = resultado['dirOtrosMonto3']
         sheet['C91'] = resultado['dirOtros3']
@@ -602,6 +718,10 @@ def generate_report(request):
             sheet['F91'] = 'SÍ'
         else:
             sheet['F91'] = 'NO'
+
+    if resultado['dirOtrosMonto4'] is None:
+        resultado['dirOtrosMonto4'] = 0
+
 
     if resultado['dirOtrosMonto4'] > 0:
         sheet['E92'] = resultado['dirOtrosMonto4']
@@ -625,6 +745,9 @@ def generate_report(request):
        
 
     #PARSE TRUE TO SI AND FALSE TO NO
+    if resultado ['pagoVoluntarioMonto1'] is None:
+        resultado['pagoVoluntarioMonto1'] = 0
+
     if resultado['pagoVoluntarioMonto1'] > 0:
         sheet['J87'] = resultado['pagoVoluntarioMonto1']
         if resultado['pagoVoluntarioDcto1'] == True:
@@ -632,6 +755,8 @@ def generate_report(request):
         else:
             sheet['K87'] = 'NO'
 
+    if resultado['pagoVoluntarioMonto2'] is None:
+        resultado['pagoVoluntarioMonto2'] = 0
     if resultado['pagoVoluntarioMonto2'] > 0:
         sheet['J88'] = resultado['pagoVoluntarioMonto2']
         if resultado['pagoVoluntarioDcto2'] == True:
@@ -639,12 +764,16 @@ def generate_report(request):
         else:
             sheet['K88'] = 'NO'
 
+    if resultado['pagoVoluntarioMonto3'] is None:
+        resultado['pagoVoluntarioMonto3'] = 0
     if resultado['pagoVoluntarioMonto3'] > 0:
         sheet['J89'] = resultado['pagoVoluntarioMonto3']
         if resultado['pagoVoluntarioDcto3'] == True:
             sheet['K89'] = 'SÍ'
         else:
             sheet['K89'] = 'NO'
+    if resultado['pagoVoluntarioMonto4'] is None:
+        resultado['pagoVoluntarioMonto4'] = 0
 
     if resultado['pagoVoluntarioMonto4'] > 0:
         sheet['J90'] = resultado['pagoVoluntarioMonto4']
@@ -652,7 +781,10 @@ def generate_report(request):
             sheet['K90'] = 'SÍ'
         else:
             sheet['K90'] = 'NO'
-        
+
+    if resultado['pagoVoluntarioMonto5'] is None:
+        resultado['pagoVoluntarioMonto5'] = 0
+
     if resultado['pagoVoluntarioMonto5'] > 0:
         sheet['J91'] = resultado['pagoVoluntarioMonto5']
         if resultado['pagoVoluntarioDcto5'] == True:
@@ -660,6 +792,9 @@ def generate_report(request):
         else:
             sheet['K91'] = 'NO'
     
+    if resultado['pagoVoluntarioMonto6'] is None:
+        resultado['pagoVoluntarioMonto6'] = 0
+
     if resultado['pagoVoluntarioMonto6'] > 0:
         sheet['J92'] = resultado['pagoVoluntarioMonto6']
         if resultado['pagoVoluntarioDcto6'] == True:

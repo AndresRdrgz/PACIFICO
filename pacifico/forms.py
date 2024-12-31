@@ -75,6 +75,11 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 
             }),
+            'tipoDocumento': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+
+            }),
+
             'fechaNacimiento': forms.DateInput(attrs={
                 'placeholder': 'Fecha de Inicio',
                 'class': 'w-full text-slate-600 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500',
@@ -433,6 +438,20 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Años de Financiamiento',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            'transmisionAuto': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'kilometrajeAuto': forms.NumberInput(attrs={
+                'placeholder': 'Kilometraje del Auto',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'nuevoAuto': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            
+
+
+
             #PRORRATEO
             'mes0': forms.NumberInput(attrs={
                 'placeholder': 'Mes 1',
@@ -581,14 +600,7 @@ class FideicomisoForm(forms.ModelForm):
             'readonly': 'readonly',
         })
     )
-    tipoDocumento = forms.ChoiceField(
-        choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')],
-        initial='CEDULA',
-        required=True,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
+
     
     marcaAuto = forms.ChoiceField(
         choices=marca_choices,
@@ -612,31 +624,8 @@ class FideicomisoForm(forms.ModelForm):
         })
     )
 
-    transmisionAuto = forms.ChoiceField(
-        choices=[('MANUAL', 'Manual'), ('AUTOMÁTICO', 'Automático')],
-        initial='MANUAL',
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    nuevoAuto = forms.ChoiceField(
-        choices=[('AUTO NUEVO', 'Auto Nuevo'), ('AUTO USADO', 'Auto Usado')],
-        initial='AUTO NUEVO',
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    kilometrajeAuto = forms.IntegerField(
-        initial=0,
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Kilometraje del Vehículo',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-
+    
+    
     #ENDEUDAMIENTO
     
    
