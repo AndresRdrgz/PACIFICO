@@ -615,7 +615,7 @@ def generarFideicomiso3(params):
         desired_r1 = params['r_deseada']
         print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
-        max_iterations = 150  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 50  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search
@@ -650,7 +650,7 @@ def generarFideicomiso3(params):
 
         if iteration == max_iterations:
             print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
-            print("Tasa de interes: ",params['calcTasaInteres'])
+            print("Tasa de interes: ",params['calcTasaInteres'],"ITERACIONES: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
@@ -663,7 +663,7 @@ def generarFideicomiso3(params):
                 resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
-            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100)
+            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100,"iteraciones: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)

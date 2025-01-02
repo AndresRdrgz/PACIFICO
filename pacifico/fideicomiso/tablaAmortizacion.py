@@ -147,10 +147,14 @@ def tablaAmortizacion(params):
     #-------
     print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
     auxRecrear = True
+    auxAndres = 1
     #while auxRecrear = true
     while auxRecrear == True:
         auxRecrear = False
-        
+        print("auxAndres: ", auxAndres)
+        auxAndres += 1
+        if auxAndres > 999:
+            return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro
         pagaDiciembre = "Y"
         wrkDiasCalcAnt =0
         wrkSaldo13 = 0
@@ -595,7 +599,9 @@ def tablaAmortizacion(params):
             auxRecrear = True
         else:
             pass
-
+        
+       
+            
         if(auxRecrear == False):
             #print("Salida 2")
             return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro
