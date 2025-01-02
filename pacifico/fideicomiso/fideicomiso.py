@@ -620,10 +620,12 @@ def generarFideicomiso3(params):
 
         # Set initial bounds for binary search
         lower_bound = 0.0
-        upper_bound = 0.65
+        #upper_bound = 0.65
+        upper_bound = 1.0
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
         print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        print(params)
           #count all fields in params
         i =0
         for key in params:

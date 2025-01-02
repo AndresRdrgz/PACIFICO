@@ -877,7 +877,7 @@ def fideicomiso_view(request):
                 patrono = form.cleaned_data['patronoCodigo']
                 #if patrono is None: patrono = 9999
                 if patrono is None: patrono = 9999
-                
+
                 sucursal = 13
                 auxPeriocidad = 1
                 forma_pago = 4
@@ -1141,7 +1141,10 @@ def fideicomiso_view(request):
                     form.save()
                     # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = form.instance.NumeroCotizacion
-                    resultado['numero_cotizacion'] = numero_cotizacion
+                    try:
+                        resultado['numero_cotizacion'] = int(numero_cotizacion)
+                    except:
+                        resultado['numero_cotizacion'] = 0
                     print('NumeroCotizacion:', numero_cotizacion)
                     request.session['resultado'] = resultado
 
