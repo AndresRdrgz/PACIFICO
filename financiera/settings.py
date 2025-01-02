@@ -10,7 +10,24 @@ STATIC_URL = '/static/'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = False
+DEBUG = True
+if DEBUG:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
+            conn_max_age=600
+        )
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
+            conn_max_age=600
+        )
+    }
+
+'''PARAMETROS POSTGRE
+DEBUG = True
 if DEBUG:
     DATABASES = {
         'default': {
@@ -25,7 +42,7 @@ else:
             conn_max_age=600
         )
     }
-
+'''
 '''PARAMETROS POSTGRE
 else:
     DATABASES = {
