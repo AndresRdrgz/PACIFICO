@@ -1,0 +1,58 @@
+    <!-- Footer with Progress Tracker -->
+<!-- Footer with Progress Tracker -->
+<div id="footer" class="fixed bottom-0 left-0 right-0 bg-white p-1 shadow-md pt-4" style="z-index: 10;">
+    <div class="flex justify-between items-center">
+        <div class="w-full bg-gray-200 rounded-full h-4">
+            <div id="progressBar" class="h-4 rounded-full" style="width: 0%; background-color: #22a650; transition: width 0.5s;"></div>
+        </div>
+        <span id="progressText" class="ml-4 text-sm font-medium text-gray-700">0%</span>
+    </div>
+    <div id="confirmationMessage" class="mt-1 text-center font-bold hidden" style="color: #22a650;">
+        ¡Campos obligatorios completados! Ya puede realizar el cálculo
+    </div>
+    <div id="missingFields" class="mt-1 text-center text-red-500 font-medium">
+        <!-- Missing fields will be displayed here -->
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('myForm');
+        const requiredFields = form.querySelectorAll('[required]');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const missingFieldsContainer = document.getElementById('missingFields');
+
+        function updateProgress() {
+            let filledFields = 0;
+            let missingFields = [];
+
+            requiredFields.forEach(function(field) {
+                if (field.value.trim()) {
+                    filledFields++;
+                } else {
+                    missingFields.push(field.getAttribute('name') || field.getAttribute('id'));
+                }
+            });
+
+            const progress = (filledFields / requiredFields.length) * 100;
+            progressBar.style.width = progress + '%';
+            progressText.textContent = Math.round(progress) + '%';
+
+            if (progress === 100) {
+                confirmationMessage.classList.remove('hidden');
+                missingFieldsContainer.textContent = '';
+            } else {
+                confirmationMessage.classList.add('hidden');
+                missingFieldsContainer.textContent = 'Campos faltantes: ' + missingFields.join(', ');
+            }
+        }
+
+        requiredFields.forEach(function(field) {
+            field.addEventListener('input', updateProgress);
+        });
+
+        updateProgress(); // Initial call to set the progress on page load
+    });
+</script>

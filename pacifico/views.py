@@ -833,7 +833,7 @@ def generate_report(request, numero_cotizacion):
     
     # Serve the file as a response
     nombre_cliente = resultado['nombreCliente']
-    filename = f"Consulta - {nombre_cliente}.xlsx"
+    filename = f"Consulta - {numero_cotizacion} -{nombre_cliente}.xlsx"
     with open(temp_file, 'rb') as f:
         response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename={filename}'
