@@ -195,13 +195,16 @@ def cotizacionDetail(request, pk):
                     messages.success(request, 'New record has been created successfully.')
                      # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = new_form.instance.NumeroCotizacion
-                    resultado['numero_cotizacion'] = numero_cotizacion
-                    print('NumeroCotizacion:', numero_cotizacion)
+                    resultado['numero_cotizacion'] = int(numero_cotizacion)
+                    #if resultado numero_cotizacion is not a number set it to = 0
+                    if not isinstance(resultado['numero_cotizacion'], int):
+                        resultado['numero_cotizacion'] = 0
+                    logger.info('NumeroCotizacion: %s', numero_cotizacion)
                     request.session['resultado'] = resultado
 
 
                     
-                    return redirect('cotizacion_detail', pk=new_instance.NumeroCotizacion)
+                    return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
                     
                 else:
                     logger.warning("New form is not valid: %s", new_form.errors)
@@ -1091,10 +1094,7 @@ def fideicomiso_view(request):
                 resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
                 resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
-                
-               
-                
-
+            
                 #save resultado['tasaEstimada'] in form instance
                 form.instance.tasaEstimada = resultado['tasaEstimada']
                 form.instance.tasaBruta = resultado['tasaBruta']
@@ -1133,12 +1133,14 @@ def fideicomiso_view(request):
                 form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                 form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
                 
-
-                
                 try:
+                    #print form fields
+                    print(form.cleaned_data)
+                    
                     print("intentando guardar")
                     form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     form.save()
+                    print("guardado")
                     # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = form.instance.NumeroCotizacion
                     try:
@@ -1148,7 +1150,8 @@ def fideicomiso_view(request):
                     print('NumeroCotizacion:', numero_cotizacion)
                     request.session['resultado'] = resultado
 
-                    return redirect('cotizacion_detail', pk=form.instance.NumeroCotizacion)
+                    #return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
+                    return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
 
                 except Exception as e:
                     logger.error("Error saving form: %s", e)
