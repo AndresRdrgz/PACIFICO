@@ -5,6 +5,7 @@ from .forms import FideicomisoForm, ClienteForm, AseguradoraForm
 from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3, generarFideicomiso4
 from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
+import decimal
 import logging
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
@@ -26,6 +27,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
 from .viewsFideicomiso.cotizadorFideicomiso import perform_fideicomiso_calculation
+from decimal import Decimal, InvalidOperation
 
 
 
@@ -433,10 +435,13 @@ def cotizacion_seguro_auto(request):
 
 
 def convert_decimal_to_float(data):
+    print('data', data)
     for key, value in data.items():
         if isinstance(value, Decimal):
             data[key] = float(value)
+            print('key', key)
     return data
+
 
 
 def get_lineas(request):
@@ -964,7 +969,7 @@ def fideicomiso_view(request):
                 resultado['calcComiCierreFinal'] = resultado['calcComiCierreFinal'] * 100
                 
                 resultado['tipoDocumento'] = form.cleaned_data['tipoDocumento'] if form.cleaned_data['tipoDocumento'] is not None else "-"
-                resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else "-"
+                resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else 0
                 resultado['apcPI'] = form.cleaned_data['apcPI'] / 100 if form.cleaned_data['apcPI'] is not None else 0
                 resultado['valorAuto'] = form.cleaned_data['valorAuto'] if form.cleaned_data['valorAuto'] is not None else 0
                 resultado['cotPlazoPago'] = auxPlazoPago if auxPlazoPago is not None else 0
@@ -983,7 +988,7 @@ def fideicomiso_view(request):
 
                 #Datos del deudor
                 resultado['tiempoServicio'] = form.cleaned_data['tiempoServicio'] if form.cleaned_data['tiempoServicio'] is not None else "-"
-                resultado['ingresos'] = form.cleaned_data['ingresos'] if form.cleaned_data['ingresos'] is not None else "-"
+                resultado['ingresos'] = form.cleaned_data['ingresos'] if form.cleaned_data['ingresos'] is not None else 0
                 resultado['nombreEmpresa'] = form.cleaned_data['nombreEmpresa'] if form.cleaned_data['nombreEmpresa'] is not None else "-"
                 resultado['referenciasAPC'] = form.cleaned_data['referenciasAPC'] if form.cleaned_data['referenciasAPC'] is not None else "-"
                 resultado['cartera'] = form.cleaned_data['cartera'] if form.cleaned_data['cartera'] is not None else "-"
@@ -1043,18 +1048,18 @@ def fideicomiso_view(request):
                 
                 resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0  
                 #PRORRATEO
-                resultado['mes0'] = form.cleaned_data['mes0'] if form.cleaned_data['mes0'] is not None else ""
-                resultado['mes1'] = form.cleaned_data['mes1'] if form.cleaned_data['mes1'] is not None else ""
-                resultado['mes2'] = form.cleaned_data['mes2'] if form.cleaned_data['mes2'] is not None else ""
-                resultado['mes3'] = form.cleaned_data['mes3'] if form.cleaned_data['mes3'] is not None else ""
-                resultado['mes4'] = form.cleaned_data['mes4'] if form.cleaned_data['mes4'] is not None else ""
-                resultado['mes5'] = form.cleaned_data['mes5'] if form.cleaned_data['mes5'] is not None else ""
-                resultado['mes6'] = form.cleaned_data['mes6'] if form.cleaned_data['mes6'] is not None else ""
-                resultado['mes7'] = form.cleaned_data['mes7'] if form.cleaned_data['mes7'] is not None else ""
-                resultado['mes8'] = form.cleaned_data['mes8'] if form.cleaned_data['mes8'] is not None else ""
-                resultado['mes9'] = form.cleaned_data['mes9'] if form.cleaned_data['mes9'] is not None else ""
-                resultado['mes10'] = form.cleaned_data['mes10'] if form.cleaned_data['mes10'] is not None else ""
-                resultado['mes11'] = form.cleaned_data['mes11'] if form.cleaned_data['mes11'] is not None else ""
+                resultado['mes0'] = form.cleaned_data['mes0'] if form.cleaned_data['mes0'] is not None else 0
+                resultado['mes1'] = form.cleaned_data['mes1'] if form.cleaned_data['mes1'] is not None else 0
+                resultado['mes2'] = form.cleaned_data['mes2'] if form.cleaned_data['mes2'] is not None else 0
+                resultado['mes3'] = form.cleaned_data['mes3'] if form.cleaned_data['mes3'] is not None else 0
+                resultado['mes4'] = form.cleaned_data['mes4'] if form.cleaned_data['mes4'] is not None else 0
+                resultado['mes5'] = form.cleaned_data['mes5'] if form.cleaned_data['mes5'] is not None else 0
+                resultado['mes6'] = form.cleaned_data['mes6'] if form.cleaned_data['mes6'] is not None else 0
+                resultado['mes7'] = form.cleaned_data['mes7'] if form.cleaned_data['mes7'] is not None else 0
+                resultado['mes8'] = form.cleaned_data['mes8'] if form.cleaned_data['mes8'] is not None else 0
+                resultado['mes9'] = form.cleaned_data['mes9'] if form.cleaned_data['mes9'] is not None else 0
+                resultado['mes10'] = form.cleaned_data['mes10'] if form.cleaned_data['mes10'] is not None else 0
+                resultado['mes11'] = form.cleaned_data['mes11'] if form.cleaned_data['mes11'] is not None else 0
                 resultado['primerMes'] = form.cleaned_data['primerMes'] if form.cleaned_data['primerMes'] is not None else ""
                 resultado['tipoProrrateo'] = form.cleaned_data['tipoProrrateo'] if form.cleaned_data['tipoProrrateo'] is not None else ""
                 print('primer mes', resultado['primerMes'],form.cleaned_data['primerMes'])
@@ -1077,7 +1082,7 @@ def fideicomiso_view(request):
                 
                  # Convert Decimal fields to floats
                 resultado = convert_decimal_to_float(resultado)
-               
+                #print('resultado despues de funcion------', resultado)
                 #CALCULO NIVEL DE ENDEUDAMIENTO - REAL
                 resultadoNivel = nivelEndeudamiento(resultado)
                 resultado['salarioNeto'] = resultadoNivel['salarioNeto']
@@ -1094,12 +1099,15 @@ def fideicomiso_view(request):
                 resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
                 resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
-            
+
+                pp.pprint(resultado)
                 #save resultado['tasaEstimada'] in form instance
                 form.instance.tasaEstimada = resultado['tasaEstimada']
                 form.instance.tasaBruta = resultado['tasaBruta']
                 form.instance.r1 = resultado['r1']
-                form.instance.auxMonto2 = resultado['auxMonto2']
+                form.instance.montoPrestamo = resultado['cotMontoPrestamo']
+                form.instance.auxMonto2 = round(Decimal(resultado['auxMonto2']),2)
+                form.instance.apcPI = resultado['apcPI']
                 form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
                 form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
                 form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
@@ -1119,6 +1127,54 @@ def fideicomiso_view(request):
                 form.instance.praaMonto = resultado['praaMonto']
                 form.instance.praaDcto = resultado['praaDcto']
                 #resultado nivel de endeuamiento - real
+                form.instance.ingresos = resultado['ingresos']
+                form.instance.horasExtrasMonto = resultado['horasExtrasMonto']
+                form.instance.dirOtrosMonto1 = resultado['dirOtrosMonto1']
+                form.instance.dirOtros1 = resultado['dirOtros1']
+                form.instance.dirOtrosDcto1 = resultado['dirOtrosDcto1']
+                form.instance.dirOtrosMonto2 = resultado['dirOtrosMonto2']
+                form.instance.dirOtros2 = resultado['dirOtros2']
+                form.instance.dirOtrosDcto2 = resultado['dirOtrosDcto2']
+                form.instance.dirOtrosMonto3 = resultado['dirOtrosMonto3']
+                form.instance.dirOtros3 = resultado['dirOtros3']
+                form.instance.dirOtrosDcto3 = resultado['dirOtrosDcto3']
+                form.instance.dirOtrosMonto4 = resultado['dirOtrosMonto4']
+                form.instance.dirOtros4 = resultado['dirOtros4']
+                form.instance.dirOtrosDcto4 = resultado['dirOtrosDcto4']
+                form.instance.otrosDcto = resultado['otrosDcto']
+                form.instance.pagoVoluntarioMonto1 = resultado['pagoVoluntarioMonto1']
+                form.instance.pagoVoluntarioDcto1 = resultado['pagoVoluntarioDcto1']
+                
+                form.instance.pagoVoluntarioDcto2 = resultado['pagoVoluntarioDcto2']
+                form.instance.pagoVoluntarioMonto3 = resultado['pagoVoluntarioMonto3']
+                form.instance.pagoVoluntarioDcto3 = resultado['pagoVoluntarioDcto3']
+                form.instance.pagoVoluntarioMonto4 = resultado['pagoVoluntarioMonto4']
+                form.instance.pagoVoluntarioDcto4 = resultado['pagoVoluntarioDcto4']
+                form.instance.pagoVoluntarioMonto5 = resultado['pagoVoluntarioMonto5']
+                form.instance.pagoVoluntarioDcto5 = resultado['pagoVoluntarioDcto5']
+                form.instance.pagoVoluntarioMonto6 = resultado['pagoVoluntarioMonto6']
+                form.instance.pagoVoluntarioDcto6 = resultado['pagoVoluntarioDcto6']
+                form.instance.pagoVoluntarioMonto2 = resultado['pagoVoluntarioMonto2']
+
+                form.instance.mes0 = resultado['mes0']
+                form.instance.mes1 = resultado['mes1']
+                form.instance.mes2 = resultado['mes2']
+                form.instance.mes3 = resultado['mes3']
+                form.instance.mes4 = resultado['mes4']
+                form.instance.mes5 = resultado['mes5']
+                form.instance.mes6 = resultado['mes6']
+                form.instance.mes7 = resultado['mes7']
+                form.instance.mes8 = resultado['mes8']
+                form.instance.mes9 = resultado['mes9']
+                form.instance.mes10 = resultado['mes10']
+                form.instance.mes11 = resultado['mes11']
+                form.instance.primerMes = resultado['primerMes']
+                form.instance.tipoProrrateo = resultado['tipoProrrateo']
+                
+
+                form.instance.otrosMonto = resultado['otrosMonto']
+                form.instance.bonosMonto = resultado['bonosMonto']
+                form.instance.primaMonto = resultado['primaMonto']
                 form.instance.salarioBaseMensual = resultado['salarioBaseMensual']
                 form.instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
                 form.instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
@@ -1132,13 +1188,16 @@ def fideicomiso_view(request):
                 form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
                 form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                 form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+                form.instance.patrono = resultado['nombreEmpresa']
+                form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                 
+                #------SAFE-------
                 try:
                     #print form fields
-                    print(form.cleaned_data)
+                   
                     
                     print("intentando guardar")
-                    form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                    
                     form.save()
                     print("guardado")
                     # Get the NumeroCotizacion after saving the form
@@ -1157,11 +1216,20 @@ def fideicomiso_view(request):
                     logger.error("Error saving form: %s", e)
                     messages.error(request, 'An error occurred while saving the form.')
             
+                #--------
+                
+               
+                
+                return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
+
+                    
+            
               
             except Exception as e:
                 logger.error("Error in fideicomiso_view: %s", e)
                 messages.error(request, 'An error occurred while processing your request.')
                 print(e)
+                
         else:
             logger.warning("Form is not valid: %s", form.errors)
             print(form.errors)

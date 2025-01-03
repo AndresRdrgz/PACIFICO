@@ -148,7 +148,7 @@ class Cliente(models.Model):
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
     patrono = models.CharField(max_length=255, null=True)
     apcScore = models.IntegerField(null=True)
-    apcPI = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     #Detalles del cliente
     tiempoServicio = models.CharField(max_length=255, null=True)
     ingresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -158,7 +158,7 @@ class Cliente(models.Model):
     posicion = models.CharField(max_length=255, null=True)
     perfilUniversitario = models.CharField(max_length=255, null=True)
     #Nivel endeudamiento
-    horasExtrasMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    horasExtrasMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     horasExtrasDcto = models.BooleanField(default=False)
     primaMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     primaDcto = models.BooleanField(default=False)
@@ -207,7 +207,7 @@ class Cliente(models.Model):
     totalPagoVoluntario = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoActual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNeto = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    porSalarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
      #resultado nivel - completo
     totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     totalIngresosMensualesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -215,7 +215,7 @@ class Cliente(models.Model):
     totalDescuentosLegalesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoActualCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNetoCompleto = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    porSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
      #PRORRATEO
     mes0 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     mes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -261,23 +261,22 @@ class Cotizacion(models.Model):
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
     jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
     apcScore = models.IntegerField(null=True)
-    apcPI = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    
     #Parametros de la Cotizacion
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)
     vendedor = models.CharField(max_length=255, null=True, default='1 - SIN VENDEDOR')
-    vendedorComision = models.DecimalField(max_digits=5, decimal_places=2, null=True, default=0)
+    vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
     # Datos de la cotización
     fechaInicioPago = models.DateField(null=True)
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    tasaInteres = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    comiCierre = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=13)
+    comiCierre = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=13)
     plazoPago = models.IntegerField(null=True)
-    r_deseada = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=14)
+    r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=14)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=False)
     mesesFinanciaSeguro = models.IntegerField(null=True,default=0)
@@ -288,7 +287,7 @@ class Cotizacion(models.Model):
     valorAuto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     cashback = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     abono = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
-    abonoPorcentaje = models.DecimalField(max_digits=5, decimal_places=2, null=True,default=0)
+    abonoPorcentaje = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     marca = models.CharField(max_length=255, null=True)
     modelo = models.CharField(max_length=255, null=True)
     yearCarro = models.IntegerField(null=True)
@@ -365,17 +364,17 @@ class Cotizacion(models.Model):
     totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
 
     #RESULTADOS COTIZACION
-    tasaEstimada = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    tasaBruta = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    tasaEstimada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tasaBruta = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
-    r1 = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    r1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     auxMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    wrkMontoLetra = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    wrkLetraSeguro = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    wrkLetraSinSeguros = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    calcComiCierreFinal = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    calcMontoNotaria = models.DecimalField(max_digits=5, decimal_places=2, null=True)
-    calcMontoTimbres = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    wrkMontoLetra = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    wrkLetraSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    wrkLetraSinSeguros = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    calcComiCierreFinal = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    calcMontoNotaria = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    calcMontoTimbres = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     tablaTotalPagos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     tablaTotalSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     tablaTotalFeci = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -390,14 +389,14 @@ class Cotizacion(models.Model):
     totalPagoVoluntario = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoActual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNeto = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    porSalarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     #resultado nivel - completo
     totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     totalIngresosMensualesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     totalDescuentosLegalesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoActualCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     salarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNetoCompleto = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+    porSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
     #PRORRATEO
     mes0 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -431,6 +430,7 @@ class Cotizacion(models.Model):
                 self.NumeroCotizacion = 1
         
         #Verifica si existe el cliente
+        '''
         cliente, created = Cliente.objects.get_or_create(
             cedulaCliente=self.cedulaCliente,
             defaults={
@@ -610,6 +610,7 @@ class Cotizacion(models.Model):
 
             # Update other fields as necessary
         cliente.save()
+        '''
             
         super(Cotizacion, self).save(*args, **kwargs)
 
