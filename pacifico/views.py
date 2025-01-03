@@ -1013,7 +1013,7 @@ def fideicomiso_view(request):
                 resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
                 resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
                 resultado['promoPublicidad'] = 50  # Assuming this is a fixed value
-                resultado['transmision'] = form.cleaned_data['transmisionAuto'] if form.cleaned_data['transmisionAuto'] is not None else "-"
+                resultado['transmision'] = form.cleaned_data['transmisionAuto'] if form.cleaned_data['transmisionAuto'] is not None else "AUTOMÁTICO"
                 resultado['nuevoAuto'] = form.cleaned_data['nuevoAuto'] if form.cleaned_data['nuevoAuto'] is not None else "-"
                 resultado['kilometrajeAuto'] = form.cleaned_data['kilometrajeAuto'] if form.cleaned_data['kilometrajeAuto'] is not None else 0
                 resultado['observaciones'] = form.cleaned_data['observaciones'] if form.cleaned_data['observaciones'] is not None else "-"
@@ -1139,7 +1139,7 @@ def fideicomiso_view(request):
                 form.instance.r1 = resultado['r1']
                 form.instance.montoPrestamo = resultado['cotMontoPrestamo']
                 form.instance.auxMonto2 = round(Decimal(resultado['auxMonto2']),2)
-                form.instance.apcPI = resultado['apcPI']
+                #form.instance.apcPI = resultado['apcPI']
                 form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
                 form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
                 form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
@@ -1153,7 +1153,7 @@ def fideicomiso_view(request):
                 form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                 form.instance.manejo_5porc = resultado['manejo_5porc']
                 form.instance.valorAuto = resultado['valorAuto']
-                form.instance.aseguradora = aseguradora
+                #form.instance.aseguradora = aseguradora
                 form.instance.siacapMonto = resultado['siacapMonto']
                 form.instance.siacapDcto = resultado['siacapDcto']
                 form.instance.praaMonto = resultado['praaMonto']
@@ -1226,10 +1226,9 @@ def fideicomiso_view(request):
                 #------SAFE-------
                 try:
                     #print form fields
-                   
-                    
+                    #print all form fields in form instan
                     print("intentando guardar")
-                    
+                    pp.pprint(form.cleaned_data)
                     form.save()
                     print("guardado")
                     # Get the NumeroCotizacion after saving the form
