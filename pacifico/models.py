@@ -294,7 +294,7 @@ class Cotizacion(models.Model):
     transmisionAuto = models.CharField(
         max_length=10,
         choices=[('MANUAL', 'Manual'), ('AUTOMÁTICO', 'Automático')],
-        default='MANUAL',
+        default='AUTOMÁTICO',
         null=True
     )
     kilometrajeAuto = models.IntegerField(null=True, default=0)

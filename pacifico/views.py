@@ -28,6 +28,9 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
 from .viewsFideicomiso.cotizadorFideicomiso import perform_fideicomiso_calculation
 from decimal import Decimal, InvalidOperation
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.sessions.models import Session
+from django.contrib.auth.models import User
 
 
 
@@ -41,6 +44,35 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     template_name = 'registration/password_change_done.html'
+
+@user_passes_test(lambda u: u.is_superuser)
+def view_active_sessions(request):
+    # Get all non-expired sessions
+    sessions = Session.objects.filter(expire_date__gte=timezone.now())
+    user_sessions = []
+    
+    # Get user details from each session
+    for session in sessions:
+        data = session.get_decoded()
+        user_id = data.get('_auth_user_id', None)
+        if user_id:
+            user = User.objects.get(id=user_id)
+            user_sessions.append({
+                'username': user.username,
+                'session_key': session.session_key,
+                'expire_date': session.expire_date,
+                'email': user.email
+            })
+    
+    return render(request, 'active_sessions.html', {'sessions': user_sessions})
+
+@user_passes_test(lambda u: u.is_superuser)
+def terminate_all_sessions(request):
+    sessions = Session.objects.all()
+    for session in sessions:
+        session.delete()
+    messages.success(request, 'All sessions have been terminated and users have been logged out.')
+    return redirect('active_sessions')
 
 def aseguradora_create(request):
     if request.method == 'POST':

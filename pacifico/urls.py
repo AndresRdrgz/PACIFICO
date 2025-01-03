@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList
+from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList, view_active_sessions, terminate_all_sessions
 from . import views
 from django.contrib.auth import views as auth_views
 from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
@@ -21,4 +21,8 @@ urlpatterns = [
     path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),
     path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
     path('password_change/done/', CustomPasswordChangeDoneView.as_view(), name='password_change_done'),
+    path('active-sessions/', view_active_sessions, name='active_sessions'),
+    path('terminate-sessions/', terminate_all_sessions, name='terminate_sessions'),
+   
+   
 ]
