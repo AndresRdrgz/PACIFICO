@@ -369,6 +369,10 @@ def clientesList(request):
 def download_cotizaciones_excel(request):
     cotizaciones = Cotizacion.objects.all()
 
+    # Filter cotizaciones by addedBy current user
+    if request.user.is_authenticated and not request.user.is_staff:
+        cotizaciones = cotizaciones.filter(added_by=request.user)
+        
     cotizaciones = cotizaciones.order_by('-created_at')
 
     # Create an in-memory workbook
