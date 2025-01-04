@@ -34,6 +34,7 @@ from django.contrib.auth.models import User
 
 
 
+
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,23 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     template_name = 'registration/password_change_done.html'
+
+def log_error(error_message):
+    # Define the directory where you want to save the error logs
+    log_dir = os.path.join(settings.BASE_DIR, 'logs')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    # Create a unique filename based on the current timestamp
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_filename = f'error_log_{timestamp}.txt'
+    log_filepath = os.path.join(log_dir, log_filename)
+    
+    # Configure logging
+    logging.basicConfig(filename=log_filepath, level=logging.ERROR)
+    
+    # Log the error message
+    logging.error(error_message)
 
 @user_passes_test(lambda u: u.is_superuser)
 def view_active_sessions(request):
@@ -1184,14 +1202,19 @@ def fideicomiso_view(request):
                         print(field.name, field.value_from_object(form.instance))
 
                     print("intentando guardar")
-                    form.save()
-                    print("guardado")
-                    # Get the NumeroCotizacion after saving the form
-                    numero_cotizacion = form.instance.NumeroCotizacion
+                    try:
+                        form.save()
+                        print("guardado")
+                        numero_cotizacion = form.instance.NumeroCotizacion
+                        resultado['numero_cotizacion'] = int(numero_cotizacion)
+                        print('NumeroCotizacion:', numero_cotizacion)
+                        request.session['resultado'] = resultado
+                        log_error("hola")
+                    except Exception as e:
+                        error_message = str(e)
+                        log_error(error_message)
                     
-                    resultado['numero_cotizacion'] = int(numero_cotizacion)
-                    print('NumeroCotizacion:', numero_cotizacion)
-                    request.session['resultado'] = resultado
+                   
 
                     #return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
                     return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
