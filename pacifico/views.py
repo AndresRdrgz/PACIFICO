@@ -242,7 +242,7 @@ def cotizacionDetail(request, pk):
                     new_instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
                     new_instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                     new_instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
-
+                    new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     #------- SAFE SAVE ------------
                     for field in new_instance._meta.fields:
                         print(field.name, field.value_from_object(new_instance))
@@ -443,8 +443,6 @@ def download_cotizaciones_excel(request):
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()
 
-    #sort by newest first
-    cotizaciones = cotizaciones.order_by('-created_at')
 
     #Filter cotizaciones by addedBy current user
     if request.user.is_authenticated:
@@ -454,6 +452,10 @@ def cotizacionesList(request):
     #If user is staff show all cotizaciones
     if request.user.is_staff:
         cotizaciones = Cotizacion.objects.all()
+
+     #sort by newest first
+    cotizaciones = cotizaciones.order_by('-created_at')
+        
     
     return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
 
