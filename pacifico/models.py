@@ -430,7 +430,7 @@ class Cotizacion(models.Model):
                 self.NumeroCotizacion = 1
         
         #Verifica si existe el cliente
-        '''
+        
         cliente, created = Cliente.objects.get_or_create(
             cedulaCliente=self.cedulaCliente,
             defaults={
@@ -610,7 +610,7 @@ class Cotizacion(models.Model):
 
             # Update other fields as necessary
         cliente.save()
-        '''
+        
             
         super(Cotizacion, self).save(*args, **kwargs)
 

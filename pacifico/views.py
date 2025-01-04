@@ -46,15 +46,15 @@ class CustomPasswordChangeView(PasswordChangeView):
 class CustomPasswordChangeDoneView(PasswordChangeDoneView):
     template_name = 'registration/password_change_done.html'
 
-def log_error(error_message):
+def log_error(error_message, username):
     # Define the directory where you want to save the error logs
     log_dir = os.path.join(settings.BASE_DIR, 'logs')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
-    # Create a unique filename based on the current timestamp
+    # Create a unique filename based on the current timestamp and username
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = f'error_log_{timestamp}.txt'
+    log_filename = f'error_log_{username}_{timestamp}.txt'
     log_filepath = os.path.join(log_dir, log_filename)
     
     # Configure logging
@@ -243,27 +243,30 @@ def cotizacionDetail(request, pk):
                     new_instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                     new_instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
 
+                    #------- SAFE SAVE ------------
+                    for field in new_instance._meta.fields:
+                        print(field.name, field.value_from_object(new_instance))
+                    print("intentando guardar")
                     new_instance.save()
-                    messages.success(request, 'New record has been created successfully.')
+                    print("se guardo -",new_form.instance.NumeroCotizacion)
                      # Get the NumeroCotizacion after saving the form
-                    numero_cotizacion = new_form.instance.NumeroCotizacion
-                    resultado['numero_cotizacion'] = int(numero_cotizacion)
-                    #if resultado numero_cotizacion is not a number set it to = 0
-                    if not isinstance(resultado['numero_cotizacion'], int):
-                        resultado['numero_cotizacion'] = 0
-                    logger.info('NumeroCotizacion: %s', numero_cotizacion)
+                    numero_cotizacion = int(new_form.instance.NumeroCotizacion)
+                    resultado['numero_cotizacion'] = numero_cotizacion
+                    print('numero_cotizacion -',numero_cotizacion)
                     request.session['resultado'] = resultado
-
-
-                    
-                    return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
+                    print("resultados guardados")
+                    return redirect('cotizacion_detail', pk=int(new_form.instance.NumeroCotizacion))
                     
                 else:
                     logger.warning("New form is not valid: %s", new_form.errors)
                     messages.error(request, 'An error occurred while creating a new record.')
+                    error_message = str(e)
+                    log_error(error_message, request.user.username)
                
             except Exception as e:
                 print('Error:', e)
+                error_message = str(e)
+                log_error(error_message, request.user.username)
                 pass
                 
         else:
@@ -1178,7 +1181,9 @@ def fideicomiso_view(request):
                 
 
                 
-
+                resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
+                form.instance.lineaAuto = resultado['lineaAuto']
+   
                 form.instance.otrosMonto = resultado['otrosMonto']
                 form.instance.bonosMonto = resultado['bonosMonto']
                 form.instance.primaMonto = resultado['primaMonto']
@@ -1213,10 +1218,11 @@ def fideicomiso_view(request):
                         resultado['numero_cotizacion'] = int(numero_cotizacion)
                         print('NumeroCotizacion:', numero_cotizacion)
                         request.session['resultado'] = resultado
-                        log_error("hola")
+                        print(request.user.username)
                     except Exception as e:
                         error_message = str(e)
-                        log_error(error_message)
+                        log_error(error_message, request.user.username)
+                        
                     
                    
 
