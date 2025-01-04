@@ -730,6 +730,8 @@ def generate_report(request, numero_cotizacion):
     #DESCUENTO DIRECTO
     
     print('siacapMonto', resultado['siacapMonto'])
+    if resultado['siacapMonto'] is None:
+        resultado['siacapMonto'] = 0
     if resultado['siacapMonto'] > 0:
         sheet['E87'] = resultado['siacapMonto']
         if resultado['siacapDcto'] == True:
@@ -737,6 +739,8 @@ def generate_report(request, numero_cotizacion):
         else:
             sheet['F87'] = 'NO'
 
+    if resultado['praaMonto'] is None:
+        resultado['praaMonto'] = 0
     if resultado['praaMonto'] > 0:
         sheet['E88'] = resultado['praaMonto']
         if resultado['praaDcto'] == True:
@@ -1216,8 +1220,8 @@ def fideicomiso_view(request):
                     
                    
 
-                    #return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
-                    return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
+                    return redirect('cotizacion_detail', pk=int(form.instance.NumeroCotizacion))
+                    #return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
 
                 except Exception as e:
                     logger.error("Error saving form: %s", e)
