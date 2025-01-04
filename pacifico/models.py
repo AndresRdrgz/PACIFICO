@@ -292,7 +292,7 @@ class Cotizacion(models.Model):
     modelo = models.CharField(max_length=255, null=True)
     yearCarro = models.IntegerField(null=True)
     transmisionAuto = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=[('MANUAL', 'Manual'), ('AUTOMÁTICO', 'Automático')],
         default='AUTOMÁTICO',
         null=True
