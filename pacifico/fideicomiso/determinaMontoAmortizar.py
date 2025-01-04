@@ -61,7 +61,7 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
     aux_i = 0
     aux_o = 0
 
-    print("Monto prestamo = ",aux_a,"calcNetoCancelacion = ",aux_b,"notaria = ",aux_d,"comis cierre = ",aux_f)
+    #print("Monto prestamo = ",aux_a,"calcNetoCancelacion = ",aux_b,"notaria = ",aux_d,"comis cierre = ",aux_f)
 
     # GASTO FIDEICOMISO EN EL FINANCIAMIENTO
     if tipo_prestamo == "PREST AUTO":
@@ -84,6 +84,6 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
 
     aux_x = ((((aux_l + aux_d + aux_o) / (1 - aux_f)) * ((aux_c / 1000) * aux_m)) + aux_z)
     aux_x = round(aux_x * 100) / 100
-    print("Monto a amortizar = ",aux_x)
+    #print("Monto a amortizar = ",aux_x)
 
     return aux_l, aux_z, aux_x, comis_cierre/100, tasa_bruta,tasa_real

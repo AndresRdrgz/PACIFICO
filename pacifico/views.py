@@ -359,7 +359,7 @@ def download_cotizaciones_excel(request):
     headers = [
         "ID", "Oficial", "Sucursal", "Nombre Cliente", "Cédula Cliente", "Fecha Nacimiento", "Edad", "Sexo", 
         "Jubilado", "Patrono", "Patrono Código", "Vendedor", "Vendedor Comisión", "Aseguradora", "Tasa Bruta", 
-        "Marca", "Modelo", "Fecha Inicio Pago", "Monto Préstamo", "Tasa Interés", "Comisión Cierre", 
+        "Marca", "Modelo", "Fecha Inicio Pago", "Monto Préstamo", "Comisión Cierre", 
         "Comisión Cierre Final", "Plazo Pago", "R Deseada", "Tasa Estimada", "R1", "Monto 2", "Monto Letra", 
         "Monto Notaría", "Monto Timbres", "Manejo 5%", "Total Pagos", "Total Seguro", "Total Feci", 
         "Total Interés", "Total Monto Capital"
@@ -390,7 +390,6 @@ def download_cotizaciones_excel(request):
             cotizacion.modelo,
             cotizacion.fechaInicioPago,
             cotizacion.montoPrestamo,
-            cotizacion.tasaInteres,
             cotizacion.comiCierre,
             cotizacion.calcComiCierreFinal,
             cotizacion.plazoPago,
@@ -467,11 +466,11 @@ def cotizacion_seguro_auto(request):
 
 
 def convert_decimal_to_float(data):
-    print('data', data)
+    
     for key, value in data.items():
         if isinstance(value, Decimal):
             data[key] = float(value)
-            print('key', key)
+            
     return data
 
 
@@ -950,7 +949,7 @@ def fideicomiso_view(request):
                 montoanualSeguro = float(montoanualSeguro)
                 montoMensualSeguro = float(montoMensualSeguro)
                 sucursal = int(sucursal)
-                print('Sucursal', sucursal)
+                #print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
                 params = {
                     'edad': edad,
@@ -980,11 +979,11 @@ def fideicomiso_view(request):
                 #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso3(params)
                 
-                print("--------finalizado---------")
+                #print("--------finalizado---------")
                 resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra']/2,2) * 2
                 # print in ta table format reusltado
-                pp = pprint.PrettyPrinter(indent=4)
-                pp.pprint(resultado)
+                #pp = pprint.PrettyPrinter(indent=4)
+                #pp.pprint(resultado)
 
                 #print(form.cleaned_data)
                 #deserialize fechaCalculo in resultado
@@ -1013,7 +1012,7 @@ def fideicomiso_view(request):
                 resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
                 resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
                 resultado['promoPublicidad'] = 50  # Assuming this is a fixed value
-                resultado['transmision'] = form.cleaned_data['transmisionAuto'] if form.cleaned_data['transmisionAuto'] is not None else "AUTOMÁTICO"
+                
                 resultado['nuevoAuto'] = form.cleaned_data['nuevoAuto'] if form.cleaned_data['nuevoAuto'] is not None else "-"
                 resultado['kilometrajeAuto'] = form.cleaned_data['kilometrajeAuto'] if form.cleaned_data['kilometrajeAuto'] is not None else 0
                 resultado['observaciones'] = form.cleaned_data['observaciones'] if form.cleaned_data['observaciones'] is not None else "-"
@@ -1094,7 +1093,7 @@ def fideicomiso_view(request):
                 resultado['mes11'] = form.cleaned_data['mes11'] if form.cleaned_data['mes11'] is not None else 0
                 resultado['primerMes'] = form.cleaned_data['primerMes'] if form.cleaned_data['primerMes'] is not None else ""
                 resultado['tipoProrrateo'] = form.cleaned_data['tipoProrrateo'] if form.cleaned_data['tipoProrrateo'] is not None else ""
-                print('primer mes', resultado['primerMes'],form.cleaned_data['primerMes'])
+                #print('primer mes', resultado['primerMes'],form.cleaned_data['primerMes'])
                 
                 # MONTO LETRA SIN SEGUROS
                 resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
@@ -1110,7 +1109,7 @@ def fideicomiso_view(request):
                 resultado['abono'] = round(resultado['abono'], 2)
                 resultado['abonoPorcentaje'] = form.cleaned_data['abonoPorcentaje'] if form.cleaned_data['abonoPorcentaje'] is not None else 0
                 resultado['abonoPorcentaje'] = round(resultado['abonoPorcentaje'], 2)
-                print('abonoporcentaje', resultado['abonoPorcentaje'])
+                #print('abonoporcentaje', resultado['abonoPorcentaje'])
                 
                  # Convert Decimal fields to floats
                 resultado = convert_decimal_to_float(resultado)
@@ -1131,8 +1130,6 @@ def fideicomiso_view(request):
                 resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
                 resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
-
-                pp.pprint(resultado)
                 #save resultado['tasaEstimada'] in form instance
                 form.instance.tasaEstimada = resultado['tasaEstimada']
                 form.instance.tasaBruta = resultado['tasaBruta']
@@ -1154,54 +1151,10 @@ def fideicomiso_view(request):
                 form.instance.manejo_5porc = resultado['manejo_5porc']
                 form.instance.valorAuto = resultado['valorAuto']
                 #form.instance.aseguradora = aseguradora
-                form.instance.siacapMonto = resultado['siacapMonto']
-                form.instance.siacapDcto = resultado['siacapDcto']
-                form.instance.praaMonto = resultado['praaMonto']
-                form.instance.praaDcto = resultado['praaDcto']
-                #resultado nivel de endeuamiento - real
-                form.instance.ingresos = resultado['ingresos']
-                form.instance.horasExtrasMonto = resultado['horasExtrasMonto']
-                form.instance.dirOtrosMonto1 = resultado['dirOtrosMonto1']
-                form.instance.dirOtros1 = resultado['dirOtros1']
-                form.instance.dirOtrosDcto1 = resultado['dirOtrosDcto1']
-                form.instance.dirOtrosMonto2 = resultado['dirOtrosMonto2']
-                form.instance.dirOtros2 = resultado['dirOtros2']
-                form.instance.dirOtrosDcto2 = resultado['dirOtrosDcto2']
-                form.instance.dirOtrosMonto3 = resultado['dirOtrosMonto3']
-                form.instance.dirOtros3 = resultado['dirOtros3']
-                form.instance.dirOtrosDcto3 = resultado['dirOtrosDcto3']
-                form.instance.dirOtrosMonto4 = resultado['dirOtrosMonto4']
-                form.instance.dirOtros4 = resultado['dirOtros4']
-                form.instance.dirOtrosDcto4 = resultado['dirOtrosDcto4']
-                form.instance.otrosDcto = resultado['otrosDcto']
-                form.instance.pagoVoluntarioMonto1 = resultado['pagoVoluntarioMonto1']
-                form.instance.pagoVoluntarioDcto1 = resultado['pagoVoluntarioDcto1']
                 
-                form.instance.pagoVoluntarioDcto2 = resultado['pagoVoluntarioDcto2']
-                form.instance.pagoVoluntarioMonto3 = resultado['pagoVoluntarioMonto3']
-                form.instance.pagoVoluntarioDcto3 = resultado['pagoVoluntarioDcto3']
-                form.instance.pagoVoluntarioMonto4 = resultado['pagoVoluntarioMonto4']
-                form.instance.pagoVoluntarioDcto4 = resultado['pagoVoluntarioDcto4']
-                form.instance.pagoVoluntarioMonto5 = resultado['pagoVoluntarioMonto5']
-                form.instance.pagoVoluntarioDcto5 = resultado['pagoVoluntarioDcto5']
-                form.instance.pagoVoluntarioMonto6 = resultado['pagoVoluntarioMonto6']
-                form.instance.pagoVoluntarioDcto6 = resultado['pagoVoluntarioDcto6']
-                form.instance.pagoVoluntarioMonto2 = resultado['pagoVoluntarioMonto2']
+                #resultado nivel de endeuamiento - real
+                
 
-                form.instance.mes0 = resultado['mes0']
-                form.instance.mes1 = resultado['mes1']
-                form.instance.mes2 = resultado['mes2']
-                form.instance.mes3 = resultado['mes3']
-                form.instance.mes4 = resultado['mes4']
-                form.instance.mes5 = resultado['mes5']
-                form.instance.mes6 = resultado['mes6']
-                form.instance.mes7 = resultado['mes7']
-                form.instance.mes8 = resultado['mes8']
-                form.instance.mes9 = resultado['mes9']
-                form.instance.mes10 = resultado['mes10']
-                form.instance.mes11 = resultado['mes11']
-                form.instance.primerMes = resultado['primerMes']
-                form.instance.tipoProrrateo = resultado['tipoProrrateo']
                 
 
                 form.instance.otrosMonto = resultado['otrosMonto']
@@ -1227,16 +1180,16 @@ def fideicomiso_view(request):
                 try:
                     #print form fields
                     #print all form fields in form instan
+                    for field in form.instance._meta.fields:
+                        print(field.name, field.value_from_object(form.instance))
+
                     print("intentando guardar")
-                    pp.pprint(form.cleaned_data)
                     form.save()
                     print("guardado")
                     # Get the NumeroCotizacion after saving the form
                     numero_cotizacion = form.instance.NumeroCotizacion
-                    try:
-                        resultado['numero_cotizacion'] = int(numero_cotizacion)
-                    except:
-                        resultado['numero_cotizacion'] = 0
+                    
+                    resultado['numero_cotizacion'] = int(numero_cotizacion)
                     print('NumeroCotizacion:', numero_cotizacion)
                     request.session['resultado'] = resultado
 

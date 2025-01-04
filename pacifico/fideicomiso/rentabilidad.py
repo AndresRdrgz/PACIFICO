@@ -13,8 +13,8 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     pagadiciembre1 = "Y"
 
-    print("----RENTABILIDAD EFECTIVA ----")
-    print('calcMontoLetra:',calcMontoLetra)
+    #print("----RENTABILIDAD EFECTIVA ----")
+    #print('calcMontoLetra:',calcMontoLetra)
 
     wrkMontoFECI = round(wrkMontoFECI, 2)
     wrkNum7_2 = round(wrkNum7_2, 2)
@@ -60,7 +60,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
     auxL = 0.000102
 
     auxJ = 0
-    print("auxp:",auxP)
+    #print("auxp:",auxP)
     if patrono == 620 and tipo_prestamo != "LEASING":
         auxJ = calcMontoLetra
         auxJ = (auxJ * auxP) * 1.5 / 100
@@ -572,11 +572,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     r1 = calcRentaAnual
     #r1 = round(r1, 2)
 
-    print("R1 =", r1)
+    #print("R1 =", r1)
 
     #calculo para la tasa efectiva, diferenciarla de la r1
     TasaEfectiva = rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,calcMontoNetoBruto,calcMontoTimbres,calcMontoNotaria,tipopagoPeriocidad,patrono,tipo_prestamo,calcTasaInteres,fechaInicioPago,plazoInteres,fechaCalculo,calcMontoLetra,calcInicioPago,tempPrimerDiaHabil,params)
     #TasaEfectiva=round(TasaEfectiva,2)
-    print("TasaEfectiva =", TasaEfectiva)
+    #print("TasaEfectiva =", TasaEfectiva)
     return TasaEfectiva, r1
 

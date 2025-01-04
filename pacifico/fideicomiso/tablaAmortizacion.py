@@ -145,13 +145,13 @@ def tablaAmortizacion(params):
 
     #wrkMontoLetra = 984.56
     #-------
-    print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
+    #print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
     auxRecrear = True
     auxAndres = 1
     #while auxRecrear = true
     while auxRecrear == True:
         auxRecrear = False
-        print("auxAndres: ", auxAndres)
+        #print("auxAndres: ", auxAndres)
         auxAndres += 1
         if auxAndres > 999:
             return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro

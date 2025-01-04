@@ -299,7 +299,7 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     auxN = auxPlazoPago + 1
 
     auxD = auxP * auxN
-    print(wrkTasaEfectiva,"/",auxD)
+    #print(wrkTasaEfectiva,"/",auxD)
     wrkTasaEfectiva = wrkTasaEfectiva / auxD
     wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
     #print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
@@ -308,7 +308,7 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
 
     wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
     calcTasaEfectiva = wrkTasaEfectiva
-    print("Tasa Efectiva: ",calcTasaEfectiva)
+    #print("Tasa Efectiva: ",calcTasaEfectiva)
 
     return calcTasaEfectiva
 
@@ -346,13 +346,13 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     montoManejoB = params['montoManejoT']
     montoManejoB = montoManejoB - params['calcMontoTimbres']
     montoManejoB = montoManejoB - params['gastoFideicomiso']
-    print("Monto Manejo B: ",montoManejoB)
+    #print("Monto Manejo B: ",montoManejoB)
     #if sobresaldo
     wrkMonto21 = montoManejoB
     presvari5Manejo = montoManejoB
     presvari5Manejo = presvari5Manejo * 0.0654205
     presvari5Manejo = round(presvari5Manejo,2)
-    print("presvari5Manejo: ",presvari5Manejo)
+    #print("presvari5Manejo: ",presvari5Manejo)
     montoManejoB = montoManejoB - presvari5Manejo
     wrkMonto20 = presvari5Manejo
     wrkMonto20 = wrkMonto20 + montoManejoB
@@ -362,7 +362,7 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
         wrkMonto15 = wrkMonto21
         wrkMonto15 = wrkMonto15 - wrkMonto20
         montoManejoB = wrkMonto15
-    print("Monto Manejo B: ",montoManejoB)
+    #print("Monto Manejo B: ",montoManejoB)
     params['montoManejoB'] = montoManejoB
     calcTasaEfectiva = calculoTasaEfectiva(wrkMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoPrestamo,auxPlazoPago,params)
     params['calcTasaEfectiva'] = calcTasaEfectiva
@@ -537,12 +537,12 @@ def generarFideicomiso2(params):
         tolerance = 0.00005  # Define a tolerance level for the desired r1 value
         max_iterations = 2  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
-        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
         #count all fields in params
         i =0
         for key in params:
             i=i+1
-        print("Total de campos: ",i)
+        #print("Total de campos: ",i)
 
 
         while iteration < max_iterations:
@@ -613,7 +613,7 @@ def generarFideicomiso3(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
-        print("Desired r1: ", desired_r1)
+        #print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
         max_iterations = 50  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
@@ -624,19 +624,19 @@ def generarFideicomiso3(params):
         upper_bound = 1.0
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
-        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
-        print(params)
+        #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        #print(params)
           #count all fields in params
         i =0
         for key in params:
             i=i+1
-        print("Total de campos: ",i)
+        #print("Total de campos: ",i)
         while iteration < max_iterations:
             r1, resultados = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
             #print("Diferencia: ", abs(r1 - desired_r1))
             #print("Diferencia: ", r1 - desired_r1)
-            print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
+            #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
             if abs(r1 - desired_r1) <= tolerance:
                 break
             elif r1 < desired_r1:
@@ -646,7 +646,7 @@ def generarFideicomiso3(params):
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
             params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
             iteration += 1
-            print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
+            #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
         if iteration == max_iterations:
             print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
@@ -708,13 +708,13 @@ def generarFideicomiso4(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
-        print("Desired r1: ", desired_r1)
+        #print("Desired r1: ", desired_r1)
        
 
         # Set initial bounds for binary search
         params['calcTasaInteres'] = 10.65/100
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
-        print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
           #count all fields in params
         r1, resultados = rutinaCalculo(params)
         resultados['r1'] = r1 * 100
