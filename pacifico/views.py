@@ -616,6 +616,7 @@ def generate_report(request, numero_cotizacion):
         'mes11': cotizacion.mes11,
         'primerMes': cotizacion.primerMes,
         'tipoProrrateo': cotizacion.tipoProrrateo,
+        'tasaInteres': cotizacion.tasaEstimada/100,
     }
     
     # Path to the static Excel file
@@ -649,7 +650,8 @@ def generate_report(request, numero_cotizacion):
     sheet['E14'] = resultado['abonoPorcentaje'] / 100
     sheet['e15'] = resultado['abono']
     print('cashback', resultado['cashback'])
-    sheet['h14'] = resultado['cashback']
+    sheet['H14'] = resultado['tasaInteres']
+    sheet['E20'] = resultado['cashback']
     sheet['C14'] = resultado['valorAuto']
     sheet['L14'] = resultado['calcMontoTimbres']
     sheet['i15'] = 'SI APLICA'
