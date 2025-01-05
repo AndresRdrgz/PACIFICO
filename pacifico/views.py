@@ -75,11 +75,13 @@ def view_active_sessions(request):
         user_id = data.get('_auth_user_id', None)
         if user_id:
             user = User.objects.get(id=user_id)
+            last_activity = data.get('last_activity', None)
             user_sessions.append({
                 'username': user.username,
                 'session_key': session.session_key,
                 'expire_date': session.expire_date,
-                'email': user.email
+                'email': user.email,
+                'last_activity': last_activity
             })
     
     return render(request, 'active_sessions.html', {'sessions': user_sessions})
