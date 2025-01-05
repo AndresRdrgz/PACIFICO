@@ -528,7 +528,7 @@ def generate_report(request, numero_cotizacion):
         'edad': cotizacion.edad,
         'sexo': cotizacion.sexo,
         'apcScore': cotizacion.apcScore,
-        'apcPI': cotizacion.apcPI,
+        'apcPI': cotizacion.apcPI / 100,
         'cotPlazoPago': cotizacion.plazoPago,
         'r1': cotizacion.r1,
         'abonoPorcentaje': cotizacion.abonoPorcentaje,
