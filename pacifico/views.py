@@ -917,7 +917,7 @@ def generate_report(request, numero_cotizacion):
     except Exception as e:
         error_message = str(e)
         log_error(error_message, request.user.username)
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e), 'resultado': resultado}, status=500)
         
 
 @login_required
