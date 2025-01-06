@@ -519,399 +519,405 @@ def get_lineas(request):
 @login_required
 def generate_report(request, numero_cotizacion):
     # Retrieve the cotizacion record based on numero_cotizacion
-    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
-    
-    # Populate resultado with the values from the cotizacion record
-    resultado = {
-        'oficial': cotizacion.oficial,
-        'nombreCliente': cotizacion.nombreCliente,
-        'cedulaCliente': cotizacion.cedulaCliente,
-        'tipoDocumento': cotizacion.tipoDocumento,
-        'edad': cotizacion.edad,
-        'sexo': cotizacion.sexo,
-        'apcScore': cotizacion.apcScore,
-        'apcPI': cotizacion.apcPI / 100,
-        'cotPlazoPago': cotizacion.plazoPago,
-        'r1': cotizacion.r1,
-        'abonoPorcentaje': cotizacion.abonoPorcentaje,
-        'abono': cotizacion.abono,
-        'cashback': cotizacion.cashback,
-        'valorAuto': cotizacion.valorAuto,
-        'calcMontoTimbres': cotizacion.calcMontoTimbres,
-        'tasaBruta': cotizacion.tasaBruta,
-        'cotMontoPrestamo': cotizacion.montoPrestamo,
-        'calcMontoNotaria': cotizacion.calcMontoNotaria,
-        'promoPublicidad': 50,
-        'montoLetraSeguroAdelantado': cotizacion.mesesFinanciaSeguro * cotizacion.montoMensualSeguro,
-        'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
-        'manejo_5porc': cotizacion.manejo_5porc,
-        'auxMonto2': cotizacion.auxMonto2,
-        'wrkLetraSinSeguros': cotizacion.wrkLetraSinSeguros,
-        'wrkLetraSeguro': cotizacion.wrkLetraSeguro,
-        'wrkMontoLetra': cotizacion.wrkMontoLetra,
-        'montoMensualSeguro': cotizacion.montoMensualSeguro,
-        'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
-        'tablaTotalPagos': cotizacion.tablaTotalPagos,
-        'vendedor': cotizacion.vendedor,
-        'comisionVendedor': cotizacion.vendedorComision,
-        'marcaAuto': cotizacion.marca,
-        'lineaAuto': cotizacion.modelo,
-        'yearAuto': cotizacion.yearCarro,
-        'transmision': cotizacion.transmisionAuto,
-        'nuevoAuto': cotizacion.nuevoAuto,
-        'kilometrajeAuto': cotizacion.kilometrajeAuto,
-        'observaciones': cotizacion.observaciones,
-        'salarioBaseMensual': cotizacion.salarioBaseMensual,
-        'tiempoServicio': cotizacion.tiempoServicio,
-        'ingresos': cotizacion.ingresos,
-        'nombreEmpresa': cotizacion.nombreEmpresa,
-        'referenciasAPC': cotizacion.referenciasAPC,
-        'cartera': cotizacion.cartera,
-        'licencia': cotizacion.licencia,
-        'posicion': cotizacion.posicion,
-        'perfilUniversitario': cotizacion.perfilUniversitario,
-        'horasExtrasMonto': cotizacion.horasExtrasMonto,
-        'otrosMonto': cotizacion.otrosMonto,
-        'montoanualSeguro': cotizacion.montoanualSeguro,
-        'otrosDcto': cotizacion.otrosDcto,
-        'bonosMonto': cotizacion.bonosMonto,
-        'bonosDcto': cotizacion.bonosDcto,
-        'siacapMonto': cotizacion.siacapMonto,
-        'siacapDcto': cotizacion.siacapDcto,
-        'praaMonto': cotizacion.praaMonto,
-        'praaDcto': cotizacion.praaDcto,
-        'dirOtrosMonto1': cotizacion.dirOtrosMonto1,
-        'dirOtros1': cotizacion.dirOtros1,
-        'dirOtrosDcto1': cotizacion.dirOtrosDcto1,
-        'dirOtrosMonto2': cotizacion.dirOtrosMonto2,
-        'dirOtros2': cotizacion.dirOtros2,
-        'dirOtrosDcto2': cotizacion.dirOtrosDcto2,
-        'dirOtrosMonto3': cotizacion.dirOtrosMonto3,
-        'dirOtros3': cotizacion.dirOtros3,
-        'dirOtrosDcto3': cotizacion.dirOtrosDcto3,
-        'dirOtrosMonto4': cotizacion.dirOtrosMonto4,
-        'dirOtros4': cotizacion.dirOtros4,
-        'dirOtrosDcto4': cotizacion.dirOtrosDcto4,
-        'pagoVoluntario1': cotizacion.pagoVoluntario1,
-        'pagoVoluntarioMonto1': cotizacion.pagoVoluntarioMonto1,
-        'pagoVoluntarioDcto1': cotizacion.pagoVoluntarioDcto1,
-        'pagoVoluntario2': cotizacion.pagoVoluntario2,
-        'pagoVoluntarioMonto2': cotizacion.pagoVoluntarioMonto2,
-        'pagoVoluntarioDcto2': cotizacion.pagoVoluntarioDcto2,
-        'pagoVoluntario3': cotizacion.pagoVoluntario3,
-        'pagoVoluntarioMonto3': cotizacion.pagoVoluntarioMonto3,
-        'pagoVoluntarioDcto3': cotizacion.pagoVoluntarioDcto3,
-        'pagoVoluntario4': cotizacion.pagoVoluntario4,
-        'pagoVoluntarioMonto4': cotizacion.pagoVoluntarioMonto4,
-        'pagoVoluntarioDcto4': cotizacion.pagoVoluntarioDcto4,
-        'pagoVoluntario5': cotizacion.pagoVoluntario5,
-        'pagoVoluntarioMonto5': cotizacion.pagoVoluntarioMonto5,
-        'pagoVoluntarioDcto5': cotizacion.pagoVoluntarioDcto5,
-        'pagoVoluntario6': cotizacion.pagoVoluntario6,
-        'pagoVoluntarioMonto6': cotizacion.pagoVoluntarioMonto6,
-        'pagoVoluntarioDcto6': cotizacion.pagoVoluntarioDcto6,
-        'mes0': cotizacion.mes0,
-        'mes1': cotizacion.mes1,
-        'mes2': cotizacion.mes2,
-        'mes3': cotizacion.mes3,
-        'mes4': cotizacion.mes4,
-        'mes5': cotizacion.mes5,
-        'mes6': cotizacion.mes6,
-        'mes7': cotizacion.mes7,
-        'mes8': cotizacion.mes8,
-        'mes9': cotizacion.mes9,
-        'mes10': cotizacion.mes10,
-        'mes11': cotizacion.mes11,
-        'primerMes': cotizacion.primerMes,
-        'tipoProrrateo': cotizacion.tipoProrrateo,
-        'tasaInteres': cotizacion.tasaEstimada/100,
-    }
-    
-    # Path to the static Excel file
-    excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
+    try:
+        cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
+        
+        # Populate resultado with the values from the cotizacion record
+        resultado = {
+            'oficial': cotizacion.oficial,
+            'nombreCliente': cotizacion.nombreCliente,
+            'cedulaCliente': cotizacion.cedulaCliente,
+            'tipoDocumento': cotizacion.tipoDocumento,
+            'edad': cotizacion.edad,
+            'sexo': cotizacion.sexo,
+            'apcScore': cotizacion.apcScore,
+            'apcPI': cotizacion.apcPI / 100,
+            'cotPlazoPago': cotizacion.plazoPago,
+            'r1': cotizacion.r1,
+            'abonoPorcentaje': cotizacion.abonoPorcentaje,
+            'abono': cotizacion.abono,
+            'cashback': cotizacion.cashback,
+            'valorAuto': cotizacion.valorAuto,
+            'calcMontoTimbres': cotizacion.calcMontoTimbres,
+            'tasaBruta': cotizacion.tasaBruta,
+            'cotMontoPrestamo': cotizacion.montoPrestamo,
+            'calcMontoNotaria': cotizacion.calcMontoNotaria,
+            'promoPublicidad': 50,
+            'montoLetraSeguroAdelantado': cotizacion.mesesFinanciaSeguro * cotizacion.montoMensualSeguro,
+            'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
+            'manejo_5porc': cotizacion.manejo_5porc,
+            'auxMonto2': cotizacion.auxMonto2,
+            'wrkLetraSinSeguros': cotizacion.wrkLetraSinSeguros,
+            'wrkLetraSeguro': cotizacion.wrkLetraSeguro,
+            'wrkMontoLetra': cotizacion.wrkMontoLetra,
+            'montoMensualSeguro': cotizacion.montoMensualSeguro,
+            'wrkLetraConSeguros': cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro,
+            'tablaTotalPagos': cotizacion.tablaTotalPagos,
+            'vendedor': cotizacion.vendedor,
+            'comisionVendedor': cotizacion.vendedorComision,
+            'marcaAuto': cotizacion.marca,
+            'lineaAuto': cotizacion.modelo,
+            'yearAuto': cotizacion.yearCarro,
+            'transmision': cotizacion.transmisionAuto,
+            'nuevoAuto': cotizacion.nuevoAuto,
+            'kilometrajeAuto': cotizacion.kilometrajeAuto,
+            'observaciones': cotizacion.observaciones,
+            'salarioBaseMensual': cotizacion.salarioBaseMensual,
+            'tiempoServicio': cotizacion.tiempoServicio,
+            'ingresos': cotizacion.ingresos,
+            'nombreEmpresa': cotizacion.nombreEmpresa,
+            'referenciasAPC': cotizacion.referenciasAPC,
+            'cartera': cotizacion.cartera,
+            'licencia': cotizacion.licencia,
+            'posicion': cotizacion.posicion,
+            'perfilUniversitario': cotizacion.perfilUniversitario,
+            'horasExtrasMonto': cotizacion.horasExtrasMonto,
+            'otrosMonto': cotizacion.otrosMonto,
+            'montoanualSeguro': cotizacion.montoanualSeguro,
+            'otrosDcto': cotizacion.otrosDcto,
+            'bonosMonto': cotizacion.bonosMonto,
+            'bonosDcto': cotizacion.bonosDcto,
+            'siacapMonto': cotizacion.siacapMonto,
+            'siacapDcto': cotizacion.siacapDcto,
+            'praaMonto': cotizacion.praaMonto,
+            'praaDcto': cotizacion.praaDcto,
+            'dirOtrosMonto1': cotizacion.dirOtrosMonto1,
+            'dirOtros1': cotizacion.dirOtros1,
+            'dirOtrosDcto1': cotizacion.dirOtrosDcto1,
+            'dirOtrosMonto2': cotizacion.dirOtrosMonto2,
+            'dirOtros2': cotizacion.dirOtros2,
+            'dirOtrosDcto2': cotizacion.dirOtrosDcto2,
+            'dirOtrosMonto3': cotizacion.dirOtrosMonto3,
+            'dirOtros3': cotizacion.dirOtros3,
+            'dirOtrosDcto3': cotizacion.dirOtrosDcto3,
+            'dirOtrosMonto4': cotizacion.dirOtrosMonto4,
+            'dirOtros4': cotizacion.dirOtros4,
+            'dirOtrosDcto4': cotizacion.dirOtrosDcto4,
+            'pagoVoluntario1': cotizacion.pagoVoluntario1,
+            'pagoVoluntarioMonto1': cotizacion.pagoVoluntarioMonto1,
+            'pagoVoluntarioDcto1': cotizacion.pagoVoluntarioDcto1,
+            'pagoVoluntario2': cotizacion.pagoVoluntario2,
+            'pagoVoluntarioMonto2': cotizacion.pagoVoluntarioMonto2,
+            'pagoVoluntarioDcto2': cotizacion.pagoVoluntarioDcto2,
+            'pagoVoluntario3': cotizacion.pagoVoluntario3,
+            'pagoVoluntarioMonto3': cotizacion.pagoVoluntarioMonto3,
+            'pagoVoluntarioDcto3': cotizacion.pagoVoluntarioDcto3,
+            'pagoVoluntario4': cotizacion.pagoVoluntario4,
+            'pagoVoluntarioMonto4': cotizacion.pagoVoluntarioMonto4,
+            'pagoVoluntarioDcto4': cotizacion.pagoVoluntarioDcto4,
+            'pagoVoluntario5': cotizacion.pagoVoluntario5,
+            'pagoVoluntarioMonto5': cotizacion.pagoVoluntarioMonto5,
+            'pagoVoluntarioDcto5': cotizacion.pagoVoluntarioDcto5,
+            'pagoVoluntario6': cotizacion.pagoVoluntario6,
+            'pagoVoluntarioMonto6': cotizacion.pagoVoluntarioMonto6,
+            'pagoVoluntarioDcto6': cotizacion.pagoVoluntarioDcto6,
+            'mes0': cotizacion.mes0,
+            'mes1': cotizacion.mes1,
+            'mes2': cotizacion.mes2,
+            'mes3': cotizacion.mes3,
+            'mes4': cotizacion.mes4,
+            'mes5': cotizacion.mes5,
+            'mes6': cotizacion.mes6,
+            'mes7': cotizacion.mes7,
+            'mes8': cotizacion.mes8,
+            'mes9': cotizacion.mes9,
+            'mes10': cotizacion.mes10,
+            'mes11': cotizacion.mes11,
+            'primerMes': cotizacion.primerMes,
+            'tipoProrrateo': cotizacion.tipoProrrateo,
+            'tasaInteres': cotizacion.tasaEstimada/100,
+        }
+        
+        # Path to the static Excel file
+        excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
 
-    if not os.path.exists(excel_path):
-        return HttpResponse("File not found.", status=404)
-    
-    # Load the workbook and select the active sheet
-    workbook = load_workbook(excel_path)
-    sheet = workbook.active
-    
-    # Select the sheet with name "COTIZADOR PREST. AUTO"
-    if "COTIZADOR PREST. AUTO" in workbook.sheetnames:
-        sheet = workbook["COTIZADOR PREST. AUTO"]
-    else:
-        return HttpResponse("Sheet not found.", status=404)
-    
-    # Example: Write the resultado data to the Excel sheet
-    sheet['D6'] = resultado['oficial']
-    sheet['C10'] = resultado['nombreCliente']
-    sheet['G10'] = resultado['cedulaCliente']
-    sheet['H10'] = resultado['tipoDocumento']
-    sheet['J10'] = resultado['edad']
-    sheet['I10'] = resultado['sexo']
-    sheet['k10'] = resultado['apcScore']
-    sheet['l10'] = resultado['apcPI']
-    #parametros de la cotizacion
-    sheet['F14'] = resultado['cotPlazoPago']
-    sheet['G14'] = resultado['r1'] / 100
-    sheet['E14'] = resultado['abonoPorcentaje'] / 100
-    sheet['e15'] = resultado['abono']
-    print('cashback', resultado['cashback'])
-    sheet['H14'] = resultado['tasaInteres']
-    sheet['E20'] = resultado['cashback']
-    sheet['C14'] = resultado['valorAuto']
-    sheet['L14'] = resultado['calcMontoTimbres']
-    sheet['i15'] = 'SI APLICA'
-    sheet['J15'] = resultado['tasaBruta']
-    if resultado['tasaBruta'] == 0:
-        sheet['K15'] = 'NO'
-
-    #sheet['H14'] = resultado['cashback']
-
-    #DETALLES DE LA COTIZACION
-    sheet['E21'] = resultado['cotMontoPrestamo']
-    sheet['E23'] = resultado['calcMontoNotaria']
-    sheet['E24'] = resultado['promoPublicidad']
-    sheet['e26'] = resultado['montoLetraSeguroAdelantado']
-    sheet['e29'] = resultado['calcComiCierreFinal'] / 100
-    sheet['e30'] = resultado['manejo_5porc']
-    sheet['e31'] = resultado['auxMonto2']
-    sheet['E39'] = resultado['wrkLetraSinSeguros']
-    sheet['E43'] = resultado['wrkLetraSinSeguros']
-    sheet['e40'] = resultado['wrkLetraSeguro']
-    sheet['E41'] = resultado['wrkMontoLetra']
-    sheet['e42'] = resultado['montoMensualSeguro']
-    sheet['E44'] = resultado['wrkLetraConSeguros']
-
-    sheet['E46'] = resultado['tablaTotalPagos']
-    
-    #DATOS DEL VENDEDOR
-    sheet['j18'] = resultado['vendedor']
-    sheet['j20'] = resultado['comisionVendedor']
-
-    #DATOS DEL VEHICULO
-    sheet['j23'] = resultado['marcaAuto']
-    sheet['j24'] = resultado['lineaAuto']
-    sheet['j25'] = resultado['yearAuto']
-    sheet['j30'] = resultado['montoMensualSeguro']
-    sheet['j31'] = resultado['montoanualSeguro']
-    sheet['j26'] = resultado['transmision']
-    sheet['j27'] = resultado['nuevoAuto']
-    sheet['j28'] = resultado['kilometrajeAuto']
-
-    #motivo consulta
-    sheet['H42'] = resultado['observaciones']
-
-    #DATOS DEL DEudor
-    sheet['e77'] = resultado['salarioBaseMensual']
-    sheet['E49']=resultado['tiempoServicio']
-    sheet['J49']=resultado['ingresos']
-    sheet['E50']=resultado['nombreEmpresa'] 
-    sheet['J50']=resultado['referenciasAPC']
-    sheet['e51']=resultado['cartera']
-    sheet['J51']=resultado['licencia']
-    sheet['E52']=resultado['posicion']
-    sheet['E53']=resultado['perfilUniversitario']
-
-    if resultado['horasExtrasMonto'] is None:
-        resultado['horasExtrasMonto'] = 0
-    if resultado['horasExtrasMonto'] > 0:
-        sheet['J78']=resultado['horasExtrasMonto']
-
-    if resultado['otrosMonto'] is None:
-        resultado['otrosMonto'] = 0
-    if resultado['otrosMonto'] > 0:
-        sheet['J81']=resultado['otrosMonto']
-        if resultado['otrosDcto'] == True:
-            sheet['K81'] = 'SÍ'
+        if not os.path.exists(excel_path):
+            return HttpResponse("File not found.", status=404)
+        
+        # Load the workbook and select the active sheet
+        workbook = load_workbook(excel_path)
+        sheet = workbook.active
+        
+        # Select the sheet with name "COTIZADOR PREST. AUTO"
+        if "COTIZADOR PREST. AUTO" in workbook.sheetnames:
+            sheet = workbook["COTIZADOR PREST. AUTO"]
         else:
-            sheet['K81'] = 'NO'
+            return HttpResponse("Sheet not found.", status=404)
+        
+        # Example: Write the resultado data to the Excel sheet
+        sheet['D6'] = resultado['oficial']
+        sheet['C10'] = resultado['nombreCliente']
+        sheet['G10'] = resultado['cedulaCliente']
+        sheet['H10'] = resultado['tipoDocumento']
+        sheet['J10'] = resultado['edad']
+        sheet['I10'] = resultado['sexo']
+        sheet['k10'] = resultado['apcScore']
+        sheet['l10'] = resultado['apcPI']
+        #parametros de la cotizacion
+        sheet['F14'] = resultado['cotPlazoPago']
+        sheet['G14'] = resultado['r1'] / 100
+        sheet['E14'] = resultado['abonoPorcentaje'] / 100
+        sheet['e15'] = resultado['abono']
+        print('cashback', resultado['cashback'])
+        sheet['H14'] = resultado['tasaInteres']
+        sheet['E20'] = resultado['cashback']
+        sheet['C14'] = resultado['valorAuto']
+        sheet['L14'] = resultado['calcMontoTimbres']
+        sheet['i15'] = 'SI APLICA'
+        sheet['J15'] = resultado['tasaBruta']
+        if resultado['tasaBruta'] == 0:
+            sheet['K15'] = 'NO'
 
-    if resultado['bonosMonto'] is None:
-        resultado['bonosMonto'] = 0
-    if resultado['bonosMonto'] > 0:
-        sheet['J80']=resultado['bonosMonto']
-        if resultado['bonosDcto'] == True:
-            sheet['K80'] = 'SÍ'
-        else:
-            sheet['K80'] = 'NO'
+        #sheet['H14'] = resultado['cashback']
+
+        #DETALLES DE LA COTIZACION
+        sheet['E21'] = resultado['cotMontoPrestamo']
+        sheet['E23'] = resultado['calcMontoNotaria']
+        sheet['E24'] = resultado['promoPublicidad']
+        sheet['e26'] = resultado['montoLetraSeguroAdelantado']
+        sheet['e29'] = resultado['calcComiCierreFinal'] / 100
+        sheet['e30'] = resultado['manejo_5porc']
+        sheet['e31'] = resultado['auxMonto2']
+        sheet['E39'] = resultado['wrkLetraSinSeguros']
+        sheet['E43'] = resultado['wrkLetraSinSeguros']
+        sheet['e40'] = resultado['wrkLetraSeguro']
+        sheet['E41'] = resultado['wrkMontoLetra']
+        sheet['e42'] = resultado['montoMensualSeguro']
+        sheet['E44'] = resultado['wrkLetraConSeguros']
+
+        sheet['E46'] = resultado['tablaTotalPagos']
+        
+        #DATOS DEL VENDEDOR
+        sheet['j18'] = resultado['vendedor']
+        sheet['j20'] = resultado['comisionVendedor']
+
+        #DATOS DEL VEHICULO
+        sheet['j23'] = resultado['marcaAuto']
+        sheet['j24'] = resultado['lineaAuto']
+        sheet['j25'] = resultado['yearAuto']
+        sheet['j30'] = resultado['montoMensualSeguro']
+        sheet['j31'] = resultado['montoanualSeguro']
+        sheet['j26'] = resultado['transmision']
+        sheet['j27'] = resultado['nuevoAuto']
+        sheet['j28'] = resultado['kilometrajeAuto']
+
+        #motivo consulta
+        sheet['H42'] = resultado['observaciones']
+
+        #DATOS DEL DEudor
+        sheet['e77'] = resultado['salarioBaseMensual']
+        sheet['E49']=resultado['tiempoServicio']
+        sheet['J49']=resultado['ingresos']
+        sheet['E50']=resultado['nombreEmpresa'] 
+        sheet['J50']=resultado['referenciasAPC']
+        sheet['e51']=resultado['cartera']
+        sheet['J51']=resultado['licencia']
+        sheet['E52']=resultado['posicion']
+        sheet['E53']=resultado['perfilUniversitario']
+
+        if resultado['horasExtrasMonto'] is None:
+            resultado['horasExtrasMonto'] = 0
+        if resultado['horasExtrasMonto'] > 0:
+            sheet['J78']=resultado['horasExtrasMonto']
+
+        if resultado['otrosMonto'] is None:
+            resultado['otrosMonto'] = 0
+        if resultado['otrosMonto'] > 0:
+            sheet['J81']=resultado['otrosMonto']
+            if resultado['otrosDcto'] == True:
+                sheet['K81'] = 'SÍ'
+            else:
+                sheet['K81'] = 'NO'
+
+        if resultado['bonosMonto'] is None:
+            resultado['bonosMonto'] = 0
+        if resultado['bonosMonto'] > 0:
+            sheet['J80']=resultado['bonosMonto']
+            if resultado['bonosDcto'] == True:
+                sheet['K80'] = 'SÍ'
+            else:
+                sheet['K80'] = 'NO'
+            
+
         
 
+        #DESCUENTO DIRECTO
+        
+        print('siacapMonto', resultado['siacapMonto'])
+        if resultado['siacapMonto'] is None:
+            resultado['siacapMonto'] = 0
+        if resultado['siacapMonto'] > 0:
+            sheet['E87'] = resultado['siacapMonto']
+            if resultado['siacapDcto'] == True:
+                sheet['F87'] = 'SÍ'
+            else:
+                sheet['F87'] = 'NO'
+
+        if resultado['praaMonto'] is None:
+            resultado['praaMonto'] = 0
+        if resultado['praaMonto'] > 0:
+            sheet['E88'] = resultado['praaMonto']
+            if resultado['praaDcto'] == True:
+                sheet['F88'] = 'SÍ'
+            else:
+                sheet['F88'] = 'NO'
+        
+        if resultado['dirOtrosMonto1'] is None:
+            resultado['dirOtrosMonto1'] = 0
+        if resultado['dirOtrosMonto1'] > 0:
+            sheet['E89'] = resultado['dirOtrosMonto1']
+            sheet['C89'] = resultado['dirOtros1']
+            if resultado['dirOtrosDcto1'] == True:
+                sheet['F89'] = 'SÍ'
+            else:
+                sheet['F89'] = 'NO'
+
+        if resultado['dirOtrosMonto2'] is None:
+            resultado['dirOtrosMonto2'] = 0
+
+        if resultado['dirOtrosMonto2'] > 0:
+            sheet['E90'] = resultado['dirOtrosMonto2']
+            sheet['C90'] = resultado['dirOtros2']
+            if resultado['dirOtrosDcto2'] == True:
+                sheet['F90'] = 'SÍ'
+            else:
+                sheet['F90'] = 'NO'
+
+        if resultado['dirOtrosMonto3'] is None:
+            resultado['dirOtrosMonto3'] = 0
+
+        if resultado['dirOtrosMonto3'] > 0:
+            sheet['E91'] = resultado['dirOtrosMonto3']
+            sheet['C91'] = resultado['dirOtros3']
+            if resultado['dirOtrosDcto3'] == True:
+                sheet['F91'] = 'SÍ'
+            else:
+                sheet['F91'] = 'NO'
+
+        if resultado['dirOtrosMonto4'] is None:
+            resultado['dirOtrosMonto4'] = 0
+
+
+        if resultado['dirOtrosMonto4'] > 0:
+            sheet['E92'] = resultado['dirOtrosMonto4']
+            sheet['C92'] = resultado['dirOtros4']
+            if resultado['dirOtrosDcto4'] == True:
+                sheet['F92'] = 'SÍ'
+            else:
+                sheet['F92'] = 'NO'
+
+        #pagos voluntarios
+        sheet['H87'] = resultado['pagoVoluntario1']
+        sheet['H88'] = resultado['pagoVoluntario2']
+        sheet['H89'] = resultado['pagoVoluntario3']
+        
+        sheet['H90'] = resultado['pagoVoluntario4']
+        
+        sheet['H91'] = resultado['pagoVoluntario5']
+        
+        sheet['H92'] = resultado['pagoVoluntario6']
+        
+        
+
+        #PARSE TRUE TO SI AND FALSE TO NO
+        if resultado ['pagoVoluntarioMonto1'] is None:
+            resultado['pagoVoluntarioMonto1'] = 0
+
+        if resultado['pagoVoluntarioMonto1'] > 0:
+            sheet['J87'] = resultado['pagoVoluntarioMonto1']
+            if resultado['pagoVoluntarioDcto1'] == True:
+                sheet['K87'] = 'SÍ'
+            else:
+                sheet['K87'] = 'NO'
+
+        if resultado['pagoVoluntarioMonto2'] is None:
+            resultado['pagoVoluntarioMonto2'] = 0
+        if resultado['pagoVoluntarioMonto2'] > 0:
+            sheet['J88'] = resultado['pagoVoluntarioMonto2']
+            if resultado['pagoVoluntarioDcto2'] == True:
+                sheet['K88'] = 'SÍ'
+            else:
+                sheet['K88'] = 'NO'
+
+        if resultado['pagoVoluntarioMonto3'] is None:
+            resultado['pagoVoluntarioMonto3'] = 0
+        if resultado['pagoVoluntarioMonto3'] > 0:
+            sheet['J89'] = resultado['pagoVoluntarioMonto3']
+            if resultado['pagoVoluntarioDcto3'] == True:
+                sheet['K89'] = 'SÍ'
+            else:
+                sheet['K89'] = 'NO'
+        if resultado['pagoVoluntarioMonto4'] is None:
+            resultado['pagoVoluntarioMonto4'] = 0
+
+        if resultado['pagoVoluntarioMonto4'] > 0:
+            sheet['J90'] = resultado['pagoVoluntarioMonto4']
+            if resultado['pagoVoluntarioDcto4'] == True:
+                sheet['K90'] = 'SÍ'
+            else:
+                sheet['K90'] = 'NO'
+
+        if resultado['pagoVoluntarioMonto5'] is None:
+            resultado['pagoVoluntarioMonto5'] = 0
+
+        if resultado['pagoVoluntarioMonto5'] > 0:
+            sheet['J91'] = resultado['pagoVoluntarioMonto5']
+            if resultado['pagoVoluntarioDcto5'] == True:
+                sheet['K91'] = 'SÍ'
+            else:
+                sheet['K91'] = 'NO'
+        
+        if resultado['pagoVoluntarioMonto6'] is None:
+            resultado['pagoVoluntarioMonto6'] = 0
+
+        if resultado['pagoVoluntarioMonto6'] > 0:
+            sheet['J92'] = resultado['pagoVoluntarioMonto6']
+            if resultado['pagoVoluntarioDcto6'] == True:
+                sheet['K92'] = 'SÍ'
+            else:
+                sheet['K92'] = 'NO'
+
+    
+        # Select the sheet with name "PRORRATEO"
+        if "PRORRATEO" in workbook.sheetnames:
+            prorrateo = workbook["PRORRATEO"]
+        else:
+            return HttpResponse("Sheet not found.", status=404)
+        
+        prorrateo['D6'] = resultado['mes0']
+        prorrateo['d7'] = resultado['mes1']
+        prorrateo['d8'] = resultado['mes2']
+        prorrateo['d9'] = resultado['mes3']
+        prorrateo['d10'] = resultado['mes4']
+        prorrateo['d11'] = resultado['mes5']
+        prorrateo['d12'] = resultado['mes6']
+        prorrateo['d13'] = resultado['mes7']
+        prorrateo['d14'] = resultado['mes8']
+        prorrateo['d15'] = resultado['mes9']
+        prorrateo['d16'] = resultado['mes10']
+        prorrateo['d17'] = resultado['mes11']
+        prorrateo['C6'] = resultado['primerMes']
+        print('prmer mes', resultado['primerMes'])
+
     
 
-    #DESCUENTO DIRECTO
+        
+        # Save the workbook to a temporary file
+        temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
+        workbook.save(temp_file)
+        
+        # Serve the file as a response
+        nombre_cliente = resultado['nombreCliente']
+        filename = f"Consulta - {numero_cotizacion} -{nombre_cliente}.xlsx"
+        with open(temp_file, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename={filename}'
+            return response
     
-    print('siacapMonto', resultado['siacapMonto'])
-    if resultado['siacapMonto'] is None:
-        resultado['siacapMonto'] = 0
-    if resultado['siacapMonto'] > 0:
-        sheet['E87'] = resultado['siacapMonto']
-        if resultado['siacapDcto'] == True:
-            sheet['F87'] = 'SÍ'
-        else:
-            sheet['F87'] = 'NO'
-
-    if resultado['praaMonto'] is None:
-        resultado['praaMonto'] = 0
-    if resultado['praaMonto'] > 0:
-        sheet['E88'] = resultado['praaMonto']
-        if resultado['praaDcto'] == True:
-            sheet['F88'] = 'SÍ'
-        else:
-            sheet['F88'] = 'NO'
-    
-    if resultado['dirOtrosMonto1'] is None:
-        resultado['dirOtrosMonto1'] = 0
-    if resultado['dirOtrosMonto1'] > 0:
-        sheet['E89'] = resultado['dirOtrosMonto1']
-        sheet['C89'] = resultado['dirOtros1']
-        if resultado['dirOtrosDcto1'] == True:
-            sheet['F89'] = 'SÍ'
-        else:
-            sheet['F89'] = 'NO'
-
-    if resultado['dirOtrosMonto2'] is None:
-        resultado['dirOtrosMonto2'] = 0
-
-    if resultado['dirOtrosMonto2'] > 0:
-        sheet['E90'] = resultado['dirOtrosMonto2']
-        sheet['C90'] = resultado['dirOtros2']
-        if resultado['dirOtrosDcto2'] == True:
-            sheet['F90'] = 'SÍ'
-        else:
-            sheet['F90'] = 'NO'
-
-    if resultado['dirOtrosMonto3'] is None:
-        resultado['dirOtrosMonto3'] = 0
-
-    if resultado['dirOtrosMonto3'] > 0:
-        sheet['E91'] = resultado['dirOtrosMonto3']
-        sheet['C91'] = resultado['dirOtros3']
-        if resultado['dirOtrosDcto3'] == True:
-            sheet['F91'] = 'SÍ'
-        else:
-            sheet['F91'] = 'NO'
-
-    if resultado['dirOtrosMonto4'] is None:
-        resultado['dirOtrosMonto4'] = 0
-
-
-    if resultado['dirOtrosMonto4'] > 0:
-        sheet['E92'] = resultado['dirOtrosMonto4']
-        sheet['C92'] = resultado['dirOtros4']
-        if resultado['dirOtrosDcto4'] == True:
-            sheet['F92'] = 'SÍ'
-        else:
-            sheet['F92'] = 'NO'
-
-    #pagos voluntarios
-    sheet['H87'] = resultado['pagoVoluntario1']
-    sheet['H88'] = resultado['pagoVoluntario2']
-    sheet['H89'] = resultado['pagoVoluntario3']
-    
-    sheet['H90'] = resultado['pagoVoluntario4']
-    
-    sheet['H91'] = resultado['pagoVoluntario5']
-    
-    sheet['H92'] = resultado['pagoVoluntario6']
-    
-       
-
-    #PARSE TRUE TO SI AND FALSE TO NO
-    if resultado ['pagoVoluntarioMonto1'] is None:
-        resultado['pagoVoluntarioMonto1'] = 0
-
-    if resultado['pagoVoluntarioMonto1'] > 0:
-        sheet['J87'] = resultado['pagoVoluntarioMonto1']
-        if resultado['pagoVoluntarioDcto1'] == True:
-            sheet['K87'] = 'SÍ'
-        else:
-            sheet['K87'] = 'NO'
-
-    if resultado['pagoVoluntarioMonto2'] is None:
-        resultado['pagoVoluntarioMonto2'] = 0
-    if resultado['pagoVoluntarioMonto2'] > 0:
-        sheet['J88'] = resultado['pagoVoluntarioMonto2']
-        if resultado['pagoVoluntarioDcto2'] == True:
-            sheet['K88'] = 'SÍ'
-        else:
-            sheet['K88'] = 'NO'
-
-    if resultado['pagoVoluntarioMonto3'] is None:
-        resultado['pagoVoluntarioMonto3'] = 0
-    if resultado['pagoVoluntarioMonto3'] > 0:
-        sheet['J89'] = resultado['pagoVoluntarioMonto3']
-        if resultado['pagoVoluntarioDcto3'] == True:
-            sheet['K89'] = 'SÍ'
-        else:
-            sheet['K89'] = 'NO'
-    if resultado['pagoVoluntarioMonto4'] is None:
-        resultado['pagoVoluntarioMonto4'] = 0
-
-    if resultado['pagoVoluntarioMonto4'] > 0:
-        sheet['J90'] = resultado['pagoVoluntarioMonto4']
-        if resultado['pagoVoluntarioDcto4'] == True:
-            sheet['K90'] = 'SÍ'
-        else:
-            sheet['K90'] = 'NO'
-
-    if resultado['pagoVoluntarioMonto5'] is None:
-        resultado['pagoVoluntarioMonto5'] = 0
-
-    if resultado['pagoVoluntarioMonto5'] > 0:
-        sheet['J91'] = resultado['pagoVoluntarioMonto5']
-        if resultado['pagoVoluntarioDcto5'] == True:
-            sheet['K91'] = 'SÍ'
-        else:
-            sheet['K91'] = 'NO'
-    
-    if resultado['pagoVoluntarioMonto6'] is None:
-        resultado['pagoVoluntarioMonto6'] = 0
-
-    if resultado['pagoVoluntarioMonto6'] > 0:
-        sheet['J92'] = resultado['pagoVoluntarioMonto6']
-        if resultado['pagoVoluntarioDcto6'] == True:
-            sheet['K92'] = 'SÍ'
-        else:
-            sheet['K92'] = 'NO'
-
-  
-     # Select the sheet with name "PRORRATEO"
-    if "PRORRATEO" in workbook.sheetnames:
-        prorrateo = workbook["PRORRATEO"]
-    else:
-        return HttpResponse("Sheet not found.", status=404)
-    
-    prorrateo['D6'] = resultado['mes0']
-    prorrateo['d7'] = resultado['mes1']
-    prorrateo['d8'] = resultado['mes2']
-    prorrateo['d9'] = resultado['mes3']
-    prorrateo['d10'] = resultado['mes4']
-    prorrateo['d11'] = resultado['mes5']
-    prorrateo['d12'] = resultado['mes6']
-    prorrateo['d13'] = resultado['mes7']
-    prorrateo['d14'] = resultado['mes8']
-    prorrateo['d15'] = resultado['mes9']
-    prorrateo['d16'] = resultado['mes10']
-    prorrateo['d17'] = resultado['mes11']
-    prorrateo['C6'] = resultado['primerMes']
-    print('prmer mes', resultado['primerMes'])
-
-  
-
-       
-    # Save the workbook to a temporary file
-    temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
-    workbook.save(temp_file)
-    
-    # Serve the file as a response
-    nombre_cliente = resultado['nombreCliente']
-    filename = f"Consulta - {numero_cotizacion} -{nombre_cliente}.xlsx"
-    with open(temp_file, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        return response
+    except Exception as e:
+        error_message = str(e)
+        log_error(error_message, request.user.username)
+        pass
 
 @login_required
 def main_menu(request):
