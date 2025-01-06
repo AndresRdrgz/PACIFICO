@@ -531,7 +531,7 @@ def generate_report(request, numero_cotizacion):
             'edad': cotizacion.edad,
             'sexo': cotizacion.sexo,
             'apcScore': cotizacion.apcScore,
-            'apcPI': cotizacion.apcPI / 100,
+            'apcPI': cotizacion.apcPI / 100 if cotizacion.apcPI is not None else '',
             'cotPlazoPago': cotizacion.plazoPago,
             'r1': cotizacion.r1,
             'abonoPorcentaje': cotizacion.abonoPorcentaje,
@@ -625,7 +625,7 @@ def generate_report(request, numero_cotizacion):
             'mes11': cotizacion.mes11,
             'primerMes': cotizacion.primerMes,
             'tipoProrrateo': cotizacion.tipoProrrateo,
-            'tasaInteres': cotizacion.tasaEstimada/100,
+            'tasaInteres': cotizacion.tasaEstimada / 100,
         }
         
         # Path to the static Excel file
