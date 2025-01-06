@@ -170,6 +170,8 @@ def cotizacionDetail(request, pk):
                 print("Guardando resultado en nueva instancia")
                 pp = pprint.PrettyPrinter(indent=4)
                 pp.pprint(resultado)
+                #resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
+                #resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
                 new_form.instance.tasaEstimada = resultado['tasaEstimada']
                 new_form.instance.tasaBruta = resultado['tasaBruta']
                 new_form.instance.r1 = resultado['r1']
@@ -230,6 +232,9 @@ def cotizacionDetail(request, pk):
                     new_instance.siacapDcto = resultado['siacapDcto']
                     new_instance.praaMonto = resultado['praaMonto']
                     new_instance.praaDcto = resultado['praaDcto']
+                    new_instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
+                    new_instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                    new_instance.tasaBruta = resultado['tasaBruta']
                     #resultado nivel de endeuamiento - real
                     new_instance.salarioBaseMensual = resultado['salarioBaseMensual']
                     new_instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
