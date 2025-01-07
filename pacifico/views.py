@@ -407,7 +407,7 @@ def download_cotizaciones_excel(request):
     for cotizacion in cotizaciones:
         row = [
             cotizacion.id,
-            cotizacion.fechaCotizacion,
+            cotizacion.created_at,
             cotizacion.oficial,
             cotizacion.sucursal,
             cotizacion.nombreCliente,
