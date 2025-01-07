@@ -381,7 +381,8 @@ class Cotizacion(models.Model):
     tablaTotalInteres = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     tablaTotalMontoCapital = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     manejo_5porc = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-
+    montoManejoT = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    monto_manejo_b = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     #resultado nivel - real
     salarioBaseMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     totalDescuentosLegales = models.DecimalField(max_digits=10, decimal_places=2, null=True)

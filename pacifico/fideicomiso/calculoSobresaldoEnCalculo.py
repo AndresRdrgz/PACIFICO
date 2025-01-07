@@ -156,7 +156,7 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
     #GASTO MANEJO
     wrk_monto21, monto_manejo_b, manejo_5porc = calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres)
     #print(f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
-
+    params['monto_manejo_b'] = monto_manejo_b
     sobresaldo = "Y"  # Example value
     aux_notaria_gasto = calcMontoNotaria  # Example value
     aux_monto2 = calcMonto2 # Example value

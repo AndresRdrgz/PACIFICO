@@ -214,6 +214,9 @@ def cotizacionDetail(request, pk):
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                      # Set the calculated values on the new instance
                     new_instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                    
+                    new_instance.montoManejoT = resultado['montoManejoT']
+                    new_instance.monto_manejo_b = resultado['montoManejoB']
                     new_instance.tasaEstimada = resultado['tasaEstimada']
                     new_instance.r1 = resultado['r1']
                     new_instance.auxMonto2 = resultado['auxMonto2']
@@ -631,6 +634,12 @@ def generate_report(request, numero_cotizacion):
             'primerMes': cotizacion.primerMes,
             'tipoProrrateo': cotizacion.tipoProrrateo,
             'tasaInteres': cotizacion.tasaEstimada / 100,
+            'tablaTotalSeguro': cotizacion.tablaTotalSeguro,
+            'tablaTotalInteres': cotizacion.tablaTotalInteres,
+            'tablaTotalFeci': cotizacion.tablaTotalFeci,
+            'numeroCotizacion': cotizacion.NumeroCotizacion,
+            'montoManejoT': cotizacion.montoManejoT,
+            'montoManejoB': cotizacion.monto_manejo_b,
         }
         
         # Path to the static Excel file
@@ -904,6 +913,34 @@ def generate_report(request, numero_cotizacion):
         prorrateo['C6'] = resultado['primerMes']
         print('prmer mes', resultado['primerMes'])
 
+         # Select the sheet with name "DESGLOSE"
+        if "DESGLOSE" in workbook.sheetnames:
+            desglose = workbook["DESGLOSE"]
+        else:
+            return HttpResponse("Sheet not found.", status=404)
+
+        print ('Desglose sra Raquel')
+        desglose['I4'] = resultado['numeroCotizacion']
+        desglose['C6'] = resultado['r1'] / 100
+        desglose['C7'] = resultado['tasaInteres']
+        desglose['I8'] = str(resultado['cotPlazoPago']) + '/' + str(resultado['cotPlazoPago'])
+        
+        desglose['D12'] = resultado['auxMonto2']
+        desglose['G16'] = resultado['manejo_5porc']
+
+        desglose['C14'] = resultado['calcMontoNotaria']
+        desglose['C15'] = resultado['cotMontoPrestamo']
+        
+        desglose['H12'] = resultado ['calcComiCierreFinal'] / 100
+        desglose['C13'] = resultado['montoManejoT']
+        desglose['G12'] = resultado['montoManejoT']
+        desglose['G15'] = resultado['montoManejoB']
+        desglose['G13'] = resultado['calcMontoTimbres']
+
+        desglose['D18'] = resultado['tablaTotalSeguro']
+        desglose['d19'] = resultado['tablaTotalInteres']
+        desglose['d20'] = resultado['tablaTotalFeci']
+        desglose['d21'] = resultado['tablaTotalPagos']
     
 
         
@@ -1026,11 +1063,11 @@ def fideicomiso_view(request):
                 #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso3(params)
                 
-                #print("--------finalizado---------")
+                print("--------finalizado---------")
                 resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra']/2,2) * 2
                 # print in ta table format reusltado
-                #pp = pprint.PrettyPrinter(indent=4)
-                #pp.pprint(resultado)
+                pp = pprint.PrettyPrinter(indent=4)
+                pp.pprint(resultado)
 
                 #print(form.cleaned_data)
                 #deserialize fechaCalculo in resultado
@@ -1183,6 +1220,8 @@ def fideicomiso_view(request):
                 form.instance.r1 = resultado['r1']
                 form.instance.montoPrestamo = resultado['cotMontoPrestamo']
                 form.instance.auxMonto2 = round(Decimal(resultado['auxMonto2']),2)
+                form.instance.montoManejoT = resultado['montoManejoT']
+                form.instance.monto_manejo_b = resultado['montoManejoB']
                 #form.instance.apcPI = resultado['apcPI']
                 form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
                 form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']

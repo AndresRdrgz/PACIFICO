@@ -993,6 +993,8 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['modelo'].required = False
         self.fields['yearCarro'].required = False
         self.fields['patronoCodigo'].required = False
+        self.fields['montoManejoT'].required = False
+        self.fields['monto_manejo_b'].required = False
         
 
         
