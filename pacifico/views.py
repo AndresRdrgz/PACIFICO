@@ -407,7 +407,7 @@ def download_cotizaciones_excel(request):
     for cotizacion in cotizaciones:
         row = [
             cotizacion.id,
-            cotizacion.created_at,
+            cotizacion.created_at.replace(tzinfo=None),
             cotizacion.oficial,
             cotizacion.sucursal,
             cotizacion.nombreCliente,
