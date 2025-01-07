@@ -392,7 +392,7 @@ def download_cotizaciones_excel(request):
     
     # Define the headers
     headers = [
-        "ID", "Oficial", "Sucursal", "Nombre Cliente", "Cédula Cliente", "Fecha Nacimiento", "Edad", "Sexo", 
+        "ID","Fecha Cotizacion", "Oficial", "Sucursal", "Nombre Cliente", "Cédula Cliente", "Fecha Nacimiento", "Edad", "Sexo", 
         "Jubilado", "Patrono", "Patrono Código", "Vendedor", "Vendedor Comisión", "Aseguradora", "Tasa Bruta", 
         "Marca", "Modelo", "Fecha Inicio Pago", "Monto Préstamo", "Comisión Cierre", 
         "Comisión Cierre Final", "Plazo Pago", "R Deseada", "Tasa Estimada", "R1", "Monto 2", "Monto Letra", 
@@ -407,6 +407,7 @@ def download_cotizaciones_excel(request):
     for cotizacion in cotizaciones:
         row = [
             cotizacion.id,
+            cotizacion.fechaCotizacion,
             cotizacion.oficial,
             cotizacion.sucursal,
             cotizacion.nombreCliente,
