@@ -533,6 +533,255 @@ class FideicomisoForm(forms.ModelForm):
             'tipoProrrateo': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            #CODEUDOR
+            'aplicaCodeudor:': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorNombre': forms.TextInput(attrs={
+                'placeholder': 'Nombre del Codeudor',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorCedula': forms.NumberInput(attrs={
+                'placeholder': 'Cédula del Codeudor',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',     
+
+            }),
+            'codeudorEstabilidad': forms.TextInput(attrs={
+                'placeholder': 'Estabilidad',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorIngresos': forms.NumberInput(attrs={
+                'placeholder': 'Ingresos',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+             'codeudorCartera': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'placeholder': 'Cartera',
+            }),
+             'codeudorPosicion': forms.TextInput(attrs={
+                'placeholder': 'Nombre del Codeudor',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorLicencia': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorEmpresa': forms.TextInput(attrs={
+                'placeholder': 'Nombre de la Empresa',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorReferenciasAPC': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorNombreEmpres1': forms.TextInput(attrs={
+                'placeholder': 'Nombre de la Empresa',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorPeriodo1': forms.TextInput(attrs={
+                'placeholder': 'Periodo',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorSalario1': forms.NumberInput(attrs={
+                'placeholder': 'Salario',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorNombreEmpres2': forms.TextInput(attrs={
+                'placeholder': 'Nombre de la Empresa',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorPeriodo2': forms.TextInput(attrs={
+                'placeholder': 'Periodo',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorSalario2': forms.NumberInput(attrs={
+                'placeholder': 'Salario',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorNombreEmpres3': forms.TextInput(attrs={
+                'placeholder': 'Nombre de la Empresa',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorPeriodo3': forms.TextInput(attrs={
+                'placeholder': 'Periodo',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'codeudorSalario3': forms.NumberInput(attrs={
+                'placeholder': 'Salario',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            #NIVEL DE ENDEUDAMIENTO - familiar
+            'cosalarioBaseMensual': forms.NumberInput(attrs={
+                'placeholder': 'Salario Base Mensual',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            'cohorasExtrasMonto': forms.NumberInput(attrs={
+                'placeholder': 'Horas Extras Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'cohorasExtrasDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'coprimaMonto': forms.NumberInput(attrs={
+                'placeholder': 'Prima Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'coprimaDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'cobonosMonto': forms.NumberInput(attrs={
+                'placeholder': 'Bonos Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'cobonosDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'cootrosMonto': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                
+            }),
+            'cootrosDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'cosiacapMonto'   : forms.NumberInput(attrs={
+                'placeholder': 'SIACAP Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+
+            }),
+            'cosiacapDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copraaMonto': forms.NumberInput(attrs={
+                'placeholder': 'PRAA Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copraaDcto': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'codirOtros1': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosMonto1': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosDcto1': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'codirOtros2': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosMonto2': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosDcto2': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'codirOtros3': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosMonto3': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosDcto3': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'codirOtros4': forms.TextInput(attrs={
+                'placeholder': 'Otros',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosMonto4': forms.NumberInput(attrs={
+                'placeholder': 'Otros Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'codirOtrosDcto4': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario1': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto1': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto1': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario2': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto2': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto2': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario3': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto3': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto3': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario4': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto4': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto4': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario5': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto5': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto5': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'copagoVoluntario6': forms.TextInput(attrs={
+                'placeholder': 'Descripción',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioMonto6': forms.NumberInput(attrs={
+                'placeholder': 'Pago Voluntario Monto',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'copagoVoluntarioDcto6': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
+            }),
+            'cototalIngresosAdicionales': forms.NumberInput(attrs={
+                'placeholder': 'Total Ingresos Adicionales',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            'cototalIngresosAdicionales': forms.NumberInput(attrs={
+                'placeholder': 'Total Ingresos Adicionales',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'readonly': 'readonly',
+            }),
+            
         }
 
     periodoPago = forms.ChoiceField(
@@ -756,130 +1005,7 @@ class FideicomisoForm(forms.ModelForm):
             'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
         })
     )
-    #Datos del Codeudor
-    codeudorEstabilidad = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Estabilidad',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorIngresos = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Ingresos',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorNombre = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Nombre del Codeudor',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorCedula = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Cédula del Codeudor',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    #codeudorLicencia select field with Si or No
-    codeudorLicencia = forms.ChoiceField(
-        choices=[
-            ('', 'Seleccione una opción'),
-            ('SI', 'Sí'),
-            ('NO', 'No')],
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorEmpresa = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Nombre de la Empresa',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorReferenciasAPC = forms.ChoiceField(
-        choices=[
-            ('', 'Seleccione una opción'),
-            ('BUENAS', 'BUENAS'),
-            ('REGULARES', 'REGULARES'),
-            ('MALAS', 'MALAS'),
-            ('PESIMAS', 'PESIMAS'),
-            ('SIN REFERENCIAS', 'SIN REFERENCIAS')
-        ],
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorNombreEmpres1 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Nombre de la Empresa',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorPeriodo1 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Periodo',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorSalario1 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Salario',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorNombreEmpres2 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Nombre de la Empresa',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorPeriodo2 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Periodo',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorSalario2 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Salario',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorNombreEmpres3 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Nombre de la Empresa',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorPeriodo3 = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Periodo',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
-    codeudorSalario3 = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'placeholder': 'Salario',
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
+   
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -901,6 +1027,7 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['abono'].required = False
         self.fields['abonoPorcentaje'].required = False
         self.fields['totalIngresosAdicionales'].required = False
+        self.fields['cototalIngresosAdicionales'].required = False
         self.fields['yearsFinanciamiento'].required = False
         self.fields['tasaEstimada'].required = False
         self.fields['tasaBruta'].required = False
@@ -995,6 +1122,69 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['patronoCodigo'].required = False
         self.fields['montoManejoT'].required = False
         self.fields['monto_manejo_b'].required = False
+        self.fields['codeudorNombre'].required = False
+        self.fields['codeudorCedula'].required = False
+        self.fields['codeudorEstabilidad'].required = False
+        self.fields['codeudorIngresos'].required = False
+        self.fields['codeudorLicencia'].required = False
+        self.fields['codeudorEmpresa'].required = False
+        self.fields['codeudorReferenciasAPC'].required = False
+        self.fields['codeudorNombreEmpres1'].required = False
+        self.fields['codeudorPeriodo1'].required = False
+        self.fields['codeudorSalario1'].required = False
+        self.fields['codeudorNombreEmpres2'].required = False
+        self.fields['codeudorPeriodo2'].required = False
+        self.fields['codeudorSalario2'].required = False
+        self.fields['codeudorNombreEmpres3'].required = False
+        self.fields['codeudorPeriodo3'].required = False
+        self.fields['codeudorSalario3'].required = False
+        self.fields['aplicaCodeudor'].required = False
+        #endeudamiento familiar
+        self.fields['cosiacapMonto'].required = False
+        self.fields['cosiacapDcto'].required = False
+        self.fields['copraaMonto'].required = False
+        self.fields['copraaDcto'].required = False
+        self.fields['codirOtros1'].required = False
+        self.fields['codirOtrosMonto1'].required = False
+        self.fields['codirOtrosDcto1'].required = False
+        self.fields['codirOtros2'].required = False
+        self.fields['codirOtrosMonto2'].required = False
+        self.fields['codirOtrosDcto2'].required = False
+        self.fields['codirOtros3'].required = False
+        self.fields['codirOtrosMonto3'].required = False
+        self.fields['codirOtrosDcto3'].required = False
+        self.fields['codirOtros4'].required = False
+        self.fields['codirOtrosMonto4'].required = False
+        self.fields['codirOtrosDcto4'].required = False
+        self.fields['copagoVoluntario1'].required = False
+        self.fields['copagoVoluntarioMonto1'].required = False
+        self.fields['copagoVoluntarioDcto1'].required = False
+        self.fields['copagoVoluntario2'].required = False
+        self.fields['copagoVoluntarioMonto2'].required = False
+        self.fields['copagoVoluntarioDcto2'].required = False
+        self.fields['copagoVoluntario3'].required = False
+        self.fields['copagoVoluntarioMonto3'].required = False
+        self.fields['copagoVoluntarioDcto3'].required = False
+        self.fields['copagoVoluntario4'].required = False
+        self.fields['copagoVoluntarioMonto4'].required = False
+        self.fields['copagoVoluntarioDcto4'].required = False
+        self.fields['copagoVoluntario5'].required = False
+        self.fields['copagoVoluntarioMonto5'].required = False
+        self.fields['copagoVoluntarioDcto5'].required = False
+        self.fields['copagoVoluntario6'].required = False
+        self.fields['copagoVoluntarioMonto6'].required = False
+        self.fields['copagoVoluntarioDcto6'].required = False
+        self.fields['cohorasExtrasMonto'].required = False
+        self.fields['cohorasExtrasDcto'].required = False
+        self.fields['cohorasExtrasMonto'].required = False
+        self.fields['coprimaMonto'].required = False
+        self.fields['cobonosMonto'].required = False
+        self.fields['cootrosMonto'].required = False
+        self.fields['codeudorCartera'].required = False
+        self.fields['codeudorPosicion'].required = False
+        
+
+
         
 
         

@@ -640,7 +640,72 @@ def generate_report(request, numero_cotizacion):
             'numeroCotizacion': cotizacion.NumeroCotizacion,
             'montoManejoT': cotizacion.montoManejoT,
             'montoManejoB': cotizacion.monto_manejo_b,
+            #codeudor
+            'codeudorNombre': cotizacion.codeudorNombre,
+            'codeudorCedula': cotizacion.codeudorCedula,
+            'codeudorEstabilidad': cotizacion.codeudorEstabilidad,
+            'codeudorIngresos': cotizacion.codeudorIngresos,
+            'codeudorLicencia': cotizacion.codeudorLicencia,
+            'codeudorEmpresa': cotizacion.codeudorEmpresa,
+            'codeudorReferenciasAPC': cotizacion.codeudorReferenciasAPC,
+            'codeudorNombreEmpres1': cotizacion.codeudorNombreEmpres1,
+            'codeudorPeriodo1': cotizacion.codeudorPeriodo1,
+            'codeudorSalario1': cotizacion.codeudorSalario1,
+            'codeudorNombreEmpres2': cotizacion.codeudorNombreEmpres2,
+            'codeudorPeriodo2': cotizacion.codeudorPeriodo2,
+            'codeudorSalario2': cotizacion.codeudorSalario2,
+            'codeudorNombreEmpres3': cotizacion.codeudorNombreEmpres3,
+            'codeudorPeriodo3': cotizacion.codeudorPeriodo3,
+            'codeudorSalario3': cotizacion.codeudorSalario3,
+            'cobonosMonto': cotizacion.cobonosMonto,
+            'cobonosDcto': cotizacion.cobonosDcto,
+            'cohorasExtrasMonto': cotizacion.cohorasExtrasMonto,
+            'cohorasExtrasDcto': cotizacion.cohorasExtrasDcto,
+            'codeudorCartera': cotizacion.codeudorCartera,
+            'codeudorPosicion': cotizacion.codeudorPosicion,
+            'coprimaMonto': cotizacion.coprimaMonto,
+            'coprimaDcto': cotizacion.coprimaDcto,
+            'cootrosMonto': cotizacion.cootrosMonto,
+            'cootrosDcto': cotizacion.cootrosDcto,
+            'cosiacapMonto': cotizacion.cosiacapMonto,
+            'cosiacapDcto': cotizacion.cosiacapDcto,
+            'copraaMonto': cotizacion.copraaMonto,
+            'copraaDcto': cotizacion.copraaDcto,
+            'codirOtros1': cotizacion.codirOtros1,
+            'codirOtrosMonto1': cotizacion.codirOtrosMonto1,
+            'codirOtrosDcto1': cotizacion.codirOtrosDcto1,
+            'codirOtros2': cotizacion.codirOtros2,
+            'codirOtrosMonto2': cotizacion.codirOtrosMonto2,
+            'codirOtrosDcto2': cotizacion.codirOtrosDcto2,
+            'codirOtros3': cotizacion.codirOtros3,
+            'codirOtrosMonto3': cotizacion.codirOtrosMonto3,
+            'codirOtrosDcto3': cotizacion.codirOtrosDcto3,
+            'codirOtros4': cotizacion.codirOtros4,
+            'codirOtrosMonto4': cotizacion.codirOtrosMonto4,
+            'codirOtrosDcto4': cotizacion.codirOtrosDcto4,
+            'copagoVoluntario1': cotizacion.copagoVoluntario1,
+            'copagoVoluntarioMonto1': cotizacion.copagoVoluntarioMonto1,
+            'copagoVoluntarioDcto1': cotizacion.copagoVoluntarioDcto1,
+            'copagoVoluntario2': cotizacion.copagoVoluntario2,
+            'copagoVoluntarioMonto2': cotizacion.copagoVoluntarioMonto2,
+            'copagoVoluntarioDcto2': cotizacion.copagoVoluntarioDcto2,
+            'copagoVoluntario3': cotizacion.copagoVoluntario3,
+            'copagoVoluntarioMonto3': cotizacion.copagoVoluntarioMonto3,
+            'copagoVoluntarioDcto3': cotizacion.copagoVoluntarioDcto3,
+            'copagoVoluntario4': cotizacion.copagoVoluntario4,
+            'copagoVoluntarioMonto4': cotizacion.copagoVoluntarioMonto4,
+            'copagoVoluntarioDcto4': cotizacion.copagoVoluntarioDcto4,
+            'copagoVoluntario5': cotizacion.copagoVoluntario5,
+            'copagoVoluntarioMonto5': cotizacion.copagoVoluntarioMonto5,
+            'copagoVoluntarioDcto5': cotizacion.copagoVoluntarioDcto5,
+            'copagoVoluntario6': cotizacion.copagoVoluntario6,
+            'copagoVoluntarioMonto6': cotizacion.copagoVoluntarioMonto6,
+            'copagoVoluntarioDcto6': cotizacion.copagoVoluntarioDcto6,
+
+
+
         }
+
         
         # Path to the static Excel file
         excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
@@ -891,8 +956,185 @@ def generate_report(request, numero_cotizacion):
             else:
                 sheet['K92'] = 'NO'
 
-    
-        # Select the sheet with name "PRORRATEO"
+        #Codeudor
+        sheet['E103'] = resultado['codeudorNombre']
+        sheet['E105'] = resultado['codeudorCedula']
+        sheet['J103'] = resultado['codeudorCartera']
+        sheet['J107'] = resultado['codeudorPosicion']
+
+        sheet['E56'] = resultado['codeudorEstabilidad']
+        sheet['E58'] = resultado['codeudorIngresos']
+        sheet['J57'] = resultado['codeudorLicencia']
+        sheet['E57'] = resultado['codeudorEmpresa']
+        sheet['J56'] = resultado['codeudorReferenciasAPC']
+
+        sheet['E61'] = resultado['codeudorNombreEmpres1']
+        sheet['I61'] = resultado['codeudorPeriodo1']
+        sheet['K61'] = resultado['codeudorSalario1']
+        sheet['E62'] = resultado['codeudorNombreEmpres2']
+        sheet['I62'] = resultado['codeudorPeriodo2']
+        sheet['K62'] = resultado['codeudorSalario2']
+        sheet['E63'] = resultado['codeudorNombreEmpres3']
+        sheet['I63'] = resultado['codeudorPeriodo3']
+        sheet['K63'] = resultado['codeudorSalario3']
+
+        #CODEUDOR - INGRESOS ADICIONALES
+        if resultado['cohorasExtrasMonto'] is None:
+            resultado['cohorasExtrasMonto'] = 0
+        if resultado['cohorasExtrasMonto'] > 0:
+            sheet['J114']=resultado['cohorasExtrasMonto']
+            if resultado['cohorasExtrasDcto'] == True:
+                sheet['K114'] = 'SÍ'
+            else:
+                sheet['K114'] = 'NO'
+
+        if resultado['coprimaMonto'] is None:
+            resultado['coprimaMonto'] = 0
+        if resultado['coprimaMonto'] > 0:
+            sheet['J115']=resultado['coprimaMonto']
+            if resultado['coprimaDcto'] == True:
+                sheet['K115'] = 'SÍ'
+            else:
+                sheet['K115'] = 'NO'
+
+        if resultado['cobonosMonto'] is None:
+            resultado['cobonosMonto'] = 0
+        if resultado['cobonosMonto'] > 0:
+            sheet['J116']=resultado['cobonosMonto']
+            if resultado['cobonosDcto'] == True:
+                sheet['K116'] = 'SÍ'
+            else:
+                sheet['K116'] = 'NO'
+
+        if resultado['cootrosMonto'] is None:
+            resultado['cootrosMonto'] = 0
+        if resultado['cootrosMonto'] > 0:
+            sheet['J117']=resultado['cootrosMonto']
+            if resultado['cootrosDcto'] == True:
+                sheet['K117'] = 'SÍ'
+            else:
+                sheet['K117'] = 'NO'
+    #codeudor - DEscuentos directos
+        if resultado['cosiacapMonto'] is None:
+                resultado['cosiacapMonto'] = 0
+        if resultado['cosiacapMonto'] > 0:
+                sheet['E123']=resultado['cosiacapMonto']
+                if resultado['cosiacapDcto'] == True:
+                    sheet['F123'] = 'SÍ'
+                else:
+                    sheet['F123'] = 'NO'
+
+        if resultado['copraaMonto'] is None:
+                resultado['copraaMonto'] = 0
+        if resultado['copraaMonto'] > 0:
+                sheet['E124']=resultado['copraaMonto']
+                if resultado['copraaDcto'] == True:
+                    sheet['F124'] = 'SÍ'
+                else:
+                    sheet['F124'] = 'NO'
+
+        if resultado['codirOtrosMonto1'] is None:
+                resultado['codirOtrosMonto1'] = 0
+        if resultado['codirOtrosMonto1'] > 0:
+                sheet['E125']=resultado['codirOtrosMonto1']
+                sheet['C125']=resultado['codirOtros1']
+                if resultado['codirOtrosDcto1'] == True:
+                    sheet['F125'] = 'SÍ'
+                else:
+                    sheet['F125'] = 'NO'
+        
+        if resultado['codirOtrosMonto2'] is None:
+                resultado['codirOtrosMonto2'] = 0
+        if resultado['codirOtrosMonto2'] > 0:
+                sheet['E126']=resultado['codirOtrosMonto2']
+                sheet['C126']=resultado['codirOtros2']
+                if resultado['codirOtrosDcto2'] == True:
+                    sheet['F126'] = 'SÍ'
+                else:
+                    sheet['F126'] = 'NO'
+
+        if resultado['codirOtrosMonto3'] is None:
+                resultado['codirOtrosMonto3'] = 0
+        if resultado['codirOtrosMonto3'] > 0:
+                sheet['E127']=resultado['codirOtrosMonto3']
+                sheet['C127']=resultado['codirOtros3']
+                if resultado['codirOtrosDcto3'] == True:
+                    sheet['F127'] = 'SÍ'
+                else:
+                    sheet['F127'] = 'NO'
+
+        if resultado['codirOtrosMonto4'] is None:
+                resultado['codirOtrosMonto4'] = 0
+        if resultado['codirOtrosMonto4'] > 0:
+                sheet['E128']=resultado['codirOtrosMonto4']
+                sheet['C128']=resultado['codirOtros4']
+                if resultado['codirOtrosDcto4'] == True:
+                    sheet['F128'] = 'SÍ'
+                else:
+                    sheet['F128'] = 'NO'
+    #CODEUDOR - PAGOS VOLUNTARIOS
+        if resultado['copagoVoluntarioMonto1'] is None:
+                resultado['copagoVoluntarioMonto1'] = 0
+        if resultado['copagoVoluntarioMonto1'] > 0:
+                sheet['J123']=resultado['copagoVoluntarioMonto1']
+                sheet['H123']=resultado['copagoVoluntario1']
+                if resultado['copagoVoluntarioDcto1'] == True:
+                    sheet['K123'] = 'SÍ'
+                else:
+                    sheet['K123'] = 'NO'
+        
+        if resultado['copagoVoluntarioMonto2'] is None:
+                resultado['copagoVoluntarioMonto2'] = 0
+        if resultado['copagoVoluntarioMonto2'] > 0:
+                sheet['J124']=resultado['copagoVoluntarioMonto2']
+                sheet['H124']=resultado['copagoVoluntario2']
+                if resultado['copagoVoluntarioDcto2'] == True:
+                    sheet['K124'] = 'SÍ'
+                else:
+                    sheet['K124'] = 'NO'
+        
+        if resultado['copagoVoluntarioMonto3'] is None:
+                resultado['copagoVoluntarioMonto3'] = 0
+        if resultado['copagoVoluntarioMonto3'] > 0:
+                sheet['J125']=resultado['copagoVoluntarioMonto3']
+                sheet['H125']=resultado['copagoVoluntario3']
+                if resultado['copagoVoluntarioDcto3'] == True:
+                    sheet['K125'] = 'SÍ'
+                else:
+                    sheet['K125'] = 'NO'
+
+        if resultado['copagoVoluntarioMonto4'] is None:
+                resultado['copagoVoluntarioMonto4'] = 0
+        if resultado['copagoVoluntarioMonto4'] > 0:
+                sheet['J126']=resultado['copagoVoluntarioMonto4']
+                sheet['H126']=resultado['copagoVoluntario4']
+                if resultado['copagoVoluntarioDcto4'] == True:
+                    sheet['K126'] = 'SÍ'
+                else:
+                    sheet['K126'] = 'NO'
+        
+        if resultado['copagoVoluntarioMonto5'] is None:
+                resultado['copagoVoluntarioMonto5'] = 0
+        if resultado['copagoVoluntarioMonto5'] > 0: 
+                sheet['J127']=resultado['copagoVoluntarioMonto5']
+                sheet['H127']=resultado['copagoVoluntario5']
+                if resultado['copagoVoluntarioDcto5'] == True:
+                    sheet['K127'] = 'SÍ'
+                else:
+                    sheet['K127'] = 'NO'
+
+        if resultado['copagoVoluntarioMonto6'] is None: 
+                resultado['copagoVoluntarioMonto6'] = 0
+        if resultado['copagoVoluntarioMonto6'] > 0:
+                sheet['J128']=resultado['copagoVoluntarioMonto6']
+                sheet['H128']=resultado['copagoVoluntario6']
+                if resultado['copagoVoluntarioDcto6'] == True:
+                    sheet['K128'] = 'SÍ'
+                else:
+                    sheet['K128'] = 'NO'
+
+
+     # Select the sheet with name "PRORRATEO"
         if "PRORRATEO" in workbook.sheetnames:
             prorrateo = workbook["PRORRATEO"]
         else:
