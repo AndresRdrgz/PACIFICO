@@ -483,6 +483,21 @@ class Cotizacion(models.Model):
     copagoVoluntarioMonto6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     copagoVoluntarioDcto6 = models.BooleanField(default=False)
     cototalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
+    #Codeudor - resultado nivel - real
+    cosalarioBaseMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cototalDescuentosLegales = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cototalDescuentoDirecto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cototalPagoVoluntario = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cosalarioNetoActual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cosalarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    coporSalarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    #Codeudor - resultado nivel - completo
+    cototalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
+    cototalIngresosMensualesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cototalDescuentosLegalesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cosalarioNetoActualCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cosalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    coporSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
            
     

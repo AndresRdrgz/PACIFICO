@@ -1,8 +1,12 @@
 def nivelEndeudamiento(resultado):
-    #print("------nivel de endeudamiento ------")
-  
+    print("------nivel de endeudamiento ------")
+    # print resultado with its field types
+    for key, value in resultado.items():
+        if value is None:
+            resultado[key] = 0
+        print(f"{key}: {type(resultado[key]).__name__}")
     
-    
+
     
     totalIngresosAdicionales =resultado['horasExtrasMonto'] + resultado['primaMonto'] + resultado['bonosMonto'] + resultado['otrosMonto']
     totalIngresosAdicionales = round(totalIngresosAdicionales,2)

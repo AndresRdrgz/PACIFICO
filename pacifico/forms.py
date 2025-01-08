@@ -1182,8 +1182,22 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['cootrosMonto'].required = False
         self.fields['codeudorCartera'].required = False
         self.fields['codeudorPosicion'].required = False
+        self.fields['cosalarioBaseMensual'].required = False
+        self.fields['cototalDescuentosLegales'].required = False
+        self.fields['cototalDescuentoDirecto'].required = False
+        self.fields['cototalPagoVoluntario'].required = False
+        self.fields['cosalarioNetoActual'].required = False
+        self.fields['cosalarioNeto'].required = False
+        self.fields['coporSalarioNeto'].required = False
+        self.fields['cototalIngresosAdicionales'].required = False
+        self.fields['cototalIngresosMensualesCompleto'].required = False
+        self.fields['cototalDescuentosLegalesCompleto'].required = False
+        self.fields['cosalarioNetoActualCompleto'].required = False
+        self.fields['cosalarioNetoCompleto'].required = False
+        self.fields['coporSalarioNetoCompleto'].required = False
+        self.fields['patrono'].required = False
+        self.fields['patronoCodigo'].required = False
         
-
 
         
 

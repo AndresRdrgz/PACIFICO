@@ -117,6 +117,7 @@ def cotizacionDetail(request, pk):
     }
     resultado = {
         'auxMonto2': cotizacion.auxMonto2,
+        'numero_cotizacion': cotizacion.NumeroCotizacion,
         'r1': cotizacion.r1,
         'tasaEstimada': cotizacion.tasaEstimada,
         'calcComiCierreFinal': cotizacion.calcComiCierreFinal,
@@ -143,7 +144,20 @@ def cotizacionDetail(request, pk):
         'salarioNetoActualCompleto': cotizacion.salarioNetoActualCompleto,
         'salarioNetoCompleto': cotizacion.salarioNetoCompleto,
         'porSalarioNetoCompleto': cotizacion.porSalarioNetoCompleto,
-        'numero_cotizacion': cotizacion.NumeroCotizacion
+        'cosalarioBaseMensual': cotizacion.cosalarioBaseMensual,
+        'cototalDescuentosLegales': cotizacion.cototalDescuentosLegales,
+        'cototalDescuentoDirecto': cotizacion.cototalDescuentoDirecto,
+        'cototalPagoVoluntario': cotizacion.cototalPagoVoluntario,
+        'cosalarioNetoActual': cotizacion.cosalarioNetoActual,
+        'cosalarioNeto': cotizacion.cosalarioNeto,
+        'coporSalarioNeto': cotizacion.coporSalarioNeto,
+        'cototalIngresosAdicionales': cotizacion.cototalIngresosAdicionales,
+        'cototalIngresosMensualesCompleto': cotizacion.cototalIngresosMensualesCompleto,
+        'cototalDescuentosLegalesCompleto': cotizacion.cototalDescuentosLegalesCompleto,
+        'cosalarioNetoActualCompleto': cotizacion.cosalarioNetoActualCompleto,
+        'cosalarioNetoCompleto': cotizacion.cosalarioNetoCompleto,
+        'coporSalarioNetoCompleto': cotizacion.coporSalarioNetoCompleto,
+        
 
  }
 
@@ -167,11 +181,55 @@ def cotizacionDetail(request, pk):
                 new_form = FideicomisoForm(request.POST)
                 #guardar resultado en nueva intancia
                 #save resultado['tasaEstimada'] in form instance
-                print("Guardando resultado en nueva instancia")
+                #print("Guardando resultado en nueva instancia")
                 pp = pprint.PrettyPrinter(indent=4)
-                pp.pprint(resultado)
+                #pp.pprint(resultado)
                 #resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
                 #resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
+                if form.cleaned_data['aplicaCodeudor'] == "si":
+                    print('aplica codeudor - CALCULAR NIVEL DE ENDEUDAMIENTO')
+                    codeudorResultado = {
+                        'primaMonto': form.cleaned_data['coprimaMonto'],
+                        'bonosMonto': form.cleaned_data['cobonosMonto'],
+                        'otrosMonto': form.cleaned_data['cootrosMonto'],
+                        'horasExtrasMonto': form.cleaned_data['cohorasExtrasMonto'],
+                        'siacapMonto': form.cleaned_data['cosiacapMonto'],
+                        'praaMonto': form.cleaned_data['copraaMonto'],
+                        'dirOtrosMonto1': form.cleaned_data['codirOtrosMonto1'],
+                        'dirOtrosMonto2': form.cleaned_data['codirOtrosMonto2'],
+                        'dirOtrosMonto3': form.cleaned_data['codirOtrosMonto3'],
+                        'dirOtrosMonto4': form.cleaned_data['codirOtrosMonto4'],
+                        'pagoVoluntarioMonto1' : form.cleaned_data['copagoVoluntarioMonto1'],
+                        'pagoVoluntarioMonto2' : form.cleaned_data['copagoVoluntarioMonto2'],
+                        'pagoVoluntarioMonto3' : form.cleaned_data['copagoVoluntarioMonto3'],
+                        'pagoVoluntarioMonto4' : form.cleaned_data['copagoVoluntarioMonto4'],
+                        'pagoVoluntarioMonto5' : form.cleaned_data['copagoVoluntarioMonto5'],
+                        'pagoVoluntarioMonto6' : form.cleaned_data['copagoVoluntarioMonto6'],
+                        'salarioBaseMensual' : form.cleaned_data['codeudorIngresos'],
+                        'cartera' : form.cleaned_data['codeudorCartera'],
+                        'wrkLetraConSeguros' : resultado['wrkLetraConSeguros'],
+
+                    }
+                    
+                    codeudorResultado = convert_decimal_to_float(codeudorResultado)
+                    print('iniciar nivel codeudor')
+                    resultadoNivelCodeudor = nivelEndeudamiento(codeudorResultado)
+                    print('resultadoNivelCodeudor', resultadoNivelCodeudor)
+                    new_form.instance.cosalarioBaseMensual = codeudorResultado['salarioBaseMensual']
+                    new_form.instance.cototalDescuentosLegales = resultadoNivelCodeudor['totalDescuentosLegales']
+                    new_form.instance.cototalDescuentoDirecto = resultadoNivelCodeudor['totalDescuentoDirecto']
+                    new_form.instance.cototalPagoVoluntario = resultadoNivelCodeudor['totalPagoVoluntario']
+                    new_form.instance.cosalarioNetoActual = resultadoNivelCodeudor['salarioNetoActual']
+                    new_form.instance.cosalarioNeto = resultadoNivelCodeudor['salarioNeto']
+                    new_form.instance.coporSalarioNeto = resultadoNivelCodeudor['porSalarioNeto']
+                    new_form.instance.cototalIngresosAdicionales = resultadoNivelCodeudor['totalIngresosAdicionales']
+                    new_form.instance.cototalIngresosMensualesCompleto = resultadoNivelCodeudor['totalIngresosMensualesCompleto']
+                    new_form.instance.cototalDescuentosLegalesCompleto = resultadoNivelCodeudor['totalDescuentosLegalesCompleto']
+                    new_form.instance.cosalarioNetoActualCompleto = resultadoNivelCodeudor['salarioNetoActualCompleto']
+                    new_form.instance.cosalarioNetoCompleto = resultadoNivelCodeudor['salarioNetoCompleto']
+                    new_form.instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
+
+                #---------
                 new_form.instance.tasaEstimada = resultado['tasaEstimada']
                 new_form.instance.tasaBruta = resultado['tasaBruta']
                 new_form.instance.r1 = resultado['r1']
@@ -252,6 +310,23 @@ def cotizacionDetail(request, pk):
                     new_instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
                     new_instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                     new_instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+                    #resultado codeudor nivel de endeudamiento
+                    if form.cleaned_data['aplicaCodeudor'] == "si":
+                        new_instance.cosalarioBaseMensual = codeudorResultado['salarioBaseMensual']
+                        new_instance.cototalDescuentosLegales = resultadoNivelCodeudor['totalDescuentosLegales']
+                        new_instance.cototalDescuentoDirecto = resultadoNivelCodeudor['totalDescuentoDirecto']
+                        new_instance.cototalPagoVoluntario = resultadoNivelCodeudor['totalPagoVoluntario']
+                        new_instance.cosalarioNetoActual = resultadoNivelCodeudor['salarioNetoActual']
+                        new_instance.cosalarioNeto = resultadoNivelCodeudor['salarioNeto']
+                        new_instance.coporSalarioNeto = resultadoNivelCodeudor['porSalarioNeto']
+                        new_instance.cototalIngresosAdicionales = resultadoNivelCodeudor['totalIngresosAdicionales']
+                        new_instance.cototalIngresosMensualesCompleto = resultadoNivelCodeudor['totalIngresosMensualesCompleto']
+                        new_instance.cototalDescuentosLegalesCompleto = resultadoNivelCodeudor['totalDescuentosLegalesCompleto']
+                        new_instance.cosalarioNetoActualCompleto = resultadoNivelCodeudor['salarioNetoActualCompleto']
+                        new_instance.cosalarioNetoCompleto = resultadoNivelCodeudor['salarioNetoCompleto']
+                        new_instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
+                    #-------                                                                                                                        
+
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     #------- SAFE SAVE ------------
                     for field in new_instance._meta.fields:
@@ -1457,6 +1532,14 @@ def fideicomiso_view(request):
                 resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
                 resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
                 resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
+                #CODEUDOR - NIVEL DE ENDEUDAMIENTO
+                
+                if form.cleaned_data['aplicaCodeudor'] == "si":
+                    print('aplica codeudor - CALCULAR NIVEL DE ENDEUDAMIENTO')
+                    #resultadoNivelCodeudor = nivelEndeudamiento(codeudorResultado)
+
+                
+                #---------------------
                 #save resultado['tasaEstimada'] in form instance
                 form.instance.tasaEstimada = resultado['tasaEstimada']
                 form.instance.tasaBruta = resultado['tasaBruta']
