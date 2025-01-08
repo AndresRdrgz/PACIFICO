@@ -868,7 +868,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            
+            const fechaNacimientoInput = document.getElementById('id_fechaNacimiento');
             const edadInput = document.getElementById('id_edad');
             const fechaInicioPagoInput = document.getElementById('id_fechaInicioPago');
             const vendedorInput = document.getElementById('id_vendedor');
@@ -947,6 +947,30 @@
                         jubilado.value = "NO";
                     }
                     console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", edad);
+                });
+            }
+
+            if (fechaNacimientoInput && edadInput) {
+                fechaNacimientoInput.addEventListener('change', function() {
+                    const fechaNacimiento = new Date(fechaNacimientoInput.value);
+                    const today = new Date();
+                    let age = today.getFullYear() - fechaNacimiento.getFullYear();
+                    const monthDiff = today.getMonth() - fechaNacimiento.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < fechaNacimiento.getDate())) {
+                        age--;
+                    }
+                    edadInput.value = age;
+                    const sexo = document.getElementById('id_sexo').value;
+                    const jubilado = document.getElementById('id_jubilado');
+                    console.log("fechaNacimientoInput: ", age);
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
+                    // Check if the person is jubilado, if sexo is masculino and edad is greater than 60 or if sexo is femenino and edad is greater than 55
+                    if (sexo == 'MASCULINO' && age >= 60 || sexo == 'FEMENINO' && age >= 55) {
+                        jubilado.value = "SI";
+                    } else {
+                        jubilado.value = "NO";
+                    }
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
                 });
             }
 
