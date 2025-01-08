@@ -45,7 +45,7 @@ class ClienteForm(forms.ModelForm):
             'edad': forms.NumberInput(attrs={
                 'placeholder': 'Edad',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-                'readonly': 'readonly',
+                
             }),
             'sexo': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -88,7 +88,7 @@ class FideicomisoForm(forms.ModelForm):
             'edad': forms.NumberInput(attrs={
                 'placeholder': 'Edad',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-                'readonly': 'readonly',
+                
             }),
             'sexo': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -1197,6 +1197,7 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['coporSalarioNetoCompleto'].required = False
         self.fields['patrono'].required = False
         self.fields['patronoCodigo'].required = False
+        self.fields['fechaNacimiento'].required = False
         
 
         
