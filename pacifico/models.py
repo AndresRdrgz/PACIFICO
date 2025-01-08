@@ -266,7 +266,7 @@ class Cotizacion(models.Model):
     #Parametros de la Cotizacion
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)
-    vendedor = models.CharField(max_length=255, null=True, default='1 - SIN VENDEDOR')
+    vendedor = models.CharField(max_length=255, null=True, default='2 - VENDEDOR EN TRAMITE DE CODIGO')
     vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
