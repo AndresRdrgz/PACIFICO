@@ -816,6 +816,82 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
             }),
+            #movimientos
+            'movPrimerMes': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'ingresosMes1': forms.NumberInput(attrs={
+                'placeholder': 'Mes 1',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'ingresosMes2': forms.NumberInput(attrs={
+                'placeholder': 'Mes 2',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'ingresosMes3': forms.NumberInput(attrs={
+                'placeholder': 'Mes 3',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'ingresosMes4': forms.NumberInput(attrs={
+                'placeholder': 'Mes 4',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'ingresosMes5': forms.NumberInput(attrs={
+                'placeholder': 'Mes 5',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'ingresosMes6': forms.NumberInput(attrs={
+                'placeholder': 'Mes 6',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes1': forms.NumberInput(attrs={
+                'placeholder': 'Mes 1',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes2': forms.NumberInput(attrs={
+                'placeholder': 'Mes 2',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes3': forms.NumberInput(attrs={
+                'placeholder': 'Mes 3',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes4': forms.NumberInput(attrs={
+                'placeholder': 'Mes 4',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes5': forms.NumberInput(attrs={
+                'placeholder': 'Mes 5',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
+            'egresosMes6': forms.NumberInput(attrs={
+                'placeholder': 'Mes 6',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+                'oninput': 'validateDecimal(this)',
+            }),
             
         }
 
@@ -1233,10 +1309,17 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['patrono'].required = False
         self.fields['patronoCodigo'].required = False
         self.fields['fechaNacimiento'].required = False
-        
-
-        
-
-        
-
+        self.fields['movPrimerMes'].required = False
+        self.fields['ingresosMes1'].required = False
+        self.fields['egresosMes1'].required = False
+        self.fields['ingresosMes2'].required = False
+        self.fields['egresosMes2'].required = False
+        self.fields['ingresosMes3'].required = False
+        self.fields['egresosMes3'].required = False
+        self.fields['ingresosMes4'].required = False
+        self.fields['egresosMes4'].required = False
+        self.fields['ingresosMes5'].required = False
+        self.fields['egresosMes5'].required = False
+        self.fields['ingresosMes6'].required = False
+        self.fields['egresosMes6'].required = False
 

@@ -1259,6 +1259,27 @@ def generate_report(request, numero_cotizacion):
         desglose['d19'] = resultado['tablaTotalInteres']
         desglose['d20'] = resultado['tablaTotalFeci']
         desglose['d21'] = resultado['tablaTotalPagos']
+
+        # Select the sheet with name "mov bancarios"
+        if "MOV. BANCARIOS" in workbook.sheetnames:
+            movimientos = workbook["MOV. BANCARIOS"]
+        else:
+            return HttpResponse("Sheet not found.", status=404)
+        
+        movimientos['C6'] = cotizacion.movPrimerMes if cotizacion.movPrimerMes is not None else "ENERO"
+        movimientos['C8'] = cotizacion.ingresosMes1 if cotizacion.ingresosMes1 is not None else 0
+        movimientos['D8'] = cotizacion.egresosMes1 if cotizacion.egresosMes1 is not None else 0
+        movimientos['f8'] = cotizacion.ingresosMes2 if cotizacion.ingresosMes2 is not None else 0
+        movimientos['g8'] = cotizacion.egresosMes2 if cotizacion.egresosMes2 is not None else 0
+        movimientos['i8'] = cotizacion.ingresosMes3 if cotizacion.ingresosMes3 is not None else 0
+        movimientos['j8'] = cotizacion.egresosMes3 if cotizacion.egresosMes3 is not None else 0
+        movimientos['l8'] = cotizacion.ingresosMes4 if cotizacion.ingresosMes4 is not None else 0
+        movimientos['m8'] = cotizacion.egresosMes4 if cotizacion.egresosMes4 is not None else 0
+        movimientos['o8'] = cotizacion.ingresosMes5 if cotizacion.ingresosMes5 is not None else 0
+        movimientos['p8'] = cotizacion.egresosMes5 if cotizacion.egresosMes5 is not None else 0
+        movimientos['r8'] = cotizacion.ingresosMes6 if cotizacion.ingresosMes6 is not None else 0
+        movimientos['s8'] = cotizacion.egresosMes6 if cotizacion.egresosMes6 is not None else 0
+        
     
 
         

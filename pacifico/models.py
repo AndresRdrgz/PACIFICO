@@ -244,6 +244,9 @@ class Cliente(models.Model):
     mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     primerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
     tipoProrrateo = models.CharField(max_length=20, choices=TIPO_PRORRATEO_OPCIONES, default='horas_extras')
+
+    #MOVIMIENTOS BANCARIOS
+    movPrimerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
     
     
        
@@ -511,6 +514,24 @@ class Cotizacion(models.Model):
     cosalarioNetoActualCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     cosalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     coporSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
+    #movimientos
+    
+    movPrimerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
+    ingresosMes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    ingresosMes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    ingresosMes3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    ingresosMes4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    ingresosMes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    ingresosMes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    egresosMes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
+ 
 
            
     
