@@ -266,8 +266,8 @@ class Cotizacion(models.Model):
     #Parametros de la Cotizacion
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)
-    vendedor = models.CharField(max_length=255, null=True, default='2 - VENDEDOR EN TRAMITE DE CODIGO')
-    vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
+    vendedor = models.CharField(max_length=255, null=True)
+    vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
@@ -276,13 +276,13 @@ class Cotizacion(models.Model):
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     comiCierre = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=13)
     plazoPago = models.IntegerField(null=True)
-    r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=14)
+    r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=True)
-    mesesFinanciaSeguro = models.IntegerField(null=True,default=0)
+    mesesFinanciaSeguro = models.IntegerField(null=True,default=3)
     montoanualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     montoMensualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
-    cantPagosSeguro = models.IntegerField(null=True,default=0)
+    cantPagosSeguro = models.IntegerField(null=True,default=12)
     # DATOS DEL AUTO
     valorAuto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     cashback = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
