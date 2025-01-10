@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from django.views.decorators.csrf import csrf_exempt
 from .fideicomiso.sura import cotizacionSeguroAuto
-from .models import Cotizacion, Cliente, Aseguradora
+from .models import Cotizacion, Cliente, Aseguradora, UserProfile
 import openpyxl
 import pprint
 from django.db.models import Count
@@ -1640,5 +1640,14 @@ def fideicomiso_view(request):
     else:
         form = FideicomisoForm()
     
+    #check user sucursal, is not none set form.sucursal to user.sucursal
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.sucursal is not None:
+            form.fields['sucursal'].initial = user_profile.sucursal
+        
+        if user_profile.oficial is not None:
+            form.fields['oficial'].initial = user_profile.oficial
+    
+
     return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
     

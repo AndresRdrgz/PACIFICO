@@ -50,6 +50,9 @@ OFICIAL_OPCIONES = [
         ('SHELUNSKA MASA', 'SHELUNSKA MASA'),
         ('ARGELIS GOMEZ', 'ARGELIS GOMEZ'),
         ('ROSMERY ANDRADE', 'ROSMERY ANDRADE'),
+        ('ANDRES RODRIGUEZ', 'ANDRES RODRIGUEZ'),
+        ('ODESSA TEJEIRA', 'ODESSA TEJEIRA'),
+        ('JAVIER CASTILLO', 'JAVIER CASTILLO'),
 
     ] 
 CARTERA_OPCIONES = [
@@ -105,6 +108,16 @@ TIPO_PRORRATEO_OPCIONES = [
         ('prima_produccion', 'Prima de Producción'),
     ]
 # Create your models here.
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES, null=True)
+    oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
+    auto_save_cotizaciones = models.BooleanField(default=False)
+    another_boolean_field = models.BooleanField(default=False)
+    # Add more boolean fields as needed
+
+    def __str__(self):
+        return self.user.username
 class FormPago(models.Model):
     descripcion = models.CharField(max_length=100, null=True)
     codigo = models.IntegerField(null=True)

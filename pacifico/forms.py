@@ -1,6 +1,7 @@
 import os
 from django import forms
-from .models import Cotizacion, Aseguradora, Cliente
+from .models import Cotizacion, Aseguradora, Cliente, UserProfile
+from django.contrib.auth.models import User
 from pathlib import Path
 import json
 from django.conf import settings
@@ -15,6 +16,40 @@ unique_marcas = list({item['MARCA'] for item in choices_data})
 
 # Convert unique "MARCA" values to choices format and add a default choice
 marca_choices = [('', 'Seleccione una marca')] + [(marca, marca) for marca in unique_marcas]
+
+#FORMAULRIOS AQUI
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['sucursal', 'oficial']
+        widgets = {
+            'sucursal': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'oficial': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+        }
+
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'placeholder': 'Nombre',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'last_name': forms.TextInput(attrs={
+                'placeholder': 'Apellido',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'email': forms.EmailInput(attrs={
+                'placeholder': 'Correo Electrónico',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+        }
 
 class AseguradoraForm(forms.ModelForm):
 

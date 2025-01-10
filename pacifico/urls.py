@@ -3,6 +3,7 @@ from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate
 from . import views
 from django.contrib.auth import views as auth_views
 from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
+from .usuarios.vistasUsuarios import edit_profile
 
 
 urlpatterns = [
@@ -23,6 +24,5 @@ urlpatterns = [
     path('password_change/done/', CustomPasswordChangeDoneView.as_view(), name='password_change_done'),
     path('active-sessions/', view_active_sessions, name='active_sessions'),
     path('terminate-sessions/', terminate_all_sessions, name='terminate_sessions'),
-   
-   
+    path('usuario/editar/', edit_profile, name='edit_profile'),
 ]
