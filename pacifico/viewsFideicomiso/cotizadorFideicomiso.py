@@ -14,7 +14,7 @@ def perform_fideicomiso_calculation(form):
     calcTasaInteres = 10 / 100
     calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
     auxPlazoPago = form.cleaned_data['plazoPago']
-    patrono = form.cleaned_data['patronoCodigo']
+    patrono = form.cleaned_data['patronoCodigo'] if form.cleaned_data['patronoCodigo'] is not None else 9999
     sucursal = 13
     auxPeriocidad = 1
     forma_pago = 4
