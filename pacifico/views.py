@@ -158,8 +158,38 @@ def cotizacionDetail(request, pk):
         'cosalarioNetoCompleto': cotizacion.cosalarioNetoCompleto,
         'coporSalarioNetoCompleto': cotizacion.coporSalarioNetoCompleto,
         'porcentajeLetraSeguro': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro) / cotizacion.salarioBaseMensual * 100), 2) if cotizacion.salarioBaseMensual not in [None, 0] else 0,
+        'coporcentajeLetraSeguro': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro) / cotizacion.cosalarioBaseMensual * 100), 2) if cotizacion.cosalarioBaseMensual not in [None, 0] else 0,
         'porcentajeLetraSeguroCompleto': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro)/cotizacion.totalIngresosMensualesCompleto * 100),2) if cotizacion.totalIngresosMensualesCompleto not in [None, 0] else 0,
+        'coporcentajeLetraSeguroCompleto': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro)/cotizacion.cototalIngresosMensualesCompleto * 100),2) if cotizacion.cototalIngresosMensualesCompleto not in [None, 0] else 0,
+        'familiarSalarioBaseMensual': (cotizacion.salarioNetoActual or 0) + (cotizacion.cosalarioNetoActual or 0),
+        'familiarSalarioNeto': ((cotizacion.salarioNetoActual or 0) + (cotizacion.cosalarioNetoActual or 0)) - ((cotizacion.wrkMontoLetra or 0) + (cotizacion.montoMensualSeguro or 0)),
     }
+    try:
+        familiarSalarioBaseMensual = resultado['familiarSalarioBaseMensual'] or 0
+        salarioBaseMensual = cotizacion.salarioBaseMensual or 0
+        cosalarioBaseMensual = cotizacion.cosalarioBaseMensual or 0
+        familiarSalarioNeto = resultado['familiarSalarioNeto'] or 0
+        familiarNetoActualCompleto = cotizacion.salarioNetoActualCompleto or 0
+        cosalarioNetoActualCompleto = cotizacion.cosalarioNetoActualCompleto or 0
+        wrkMontoLetra = cotizacion.wrkMontoLetra or 0
+        montoMensualSeguro = cotizacion.montoMensualSeguro or 0
+        totalIngresosMensualesCompleto = cotizacion.totalIngresosMensualesCompleto or 0
+        cototalIngresosMensualesCompleto = cotizacion.cototalIngresosMensualesCompleto or 0
+
+        resultado['familiarporNetoActual'] = round(familiarSalarioBaseMensual / (salarioBaseMensual + cosalarioBaseMensual) * 100, 2) if (salarioBaseMensual + cosalarioBaseMensual) != 0 else 0
+        resultado['familiarpoSalarioNeto'] = round(familiarSalarioNeto / (salarioBaseMensual + cosalarioBaseMensual) * 100, 2) if (salarioBaseMensual + cosalarioBaseMensual) != 0 else 0
+        resultado['familiarNetoActualCompleto'] = round(familiarNetoActualCompleto + cosalarioNetoActualCompleto, 2)
+        resultado['familiarporNetoActualCompleto'] = round(resultado['familiarNetoActualCompleto'] / cosalarioBaseMensual * 100, 2) if cosalarioBaseMensual != 0 else 0
+        resultado['familiarSalarioNetoCompleto'] = resultado['familiarNetoActualCompleto'] - (wrkMontoLetra + montoMensualSeguro)
+        resultado['familiarporSalarioNeto'] = round(resultado['familiarSalarioNetoCompleto'] / (totalIngresosMensualesCompleto + cototalIngresosMensualesCompleto) * 100, 2) if (totalIngresosMensualesCompleto + cototalIngresosMensualesCompleto) != 0 else 0
+        
+    except ZeroDivisionError:
+        resultado['familiarporNetoActual'] = 0
+        resultado['familiarpoSalarioNeto'] = 0
+        resultado['familiarNetoActualCompleto'] = 0
+        resultado['familiarporNetoActualCompleto'] = 0
+        resultado['familiarSalarioNetoCompleto'] = 0
+        resultado['familiarporSalarioNeto'] = 0
 
     print('resultado', resultado)
     context = {
