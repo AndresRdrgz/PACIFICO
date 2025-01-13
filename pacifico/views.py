@@ -157,9 +157,9 @@ def cotizacionDetail(request, pk):
         'cosalarioNetoActualCompleto': cotizacion.cosalarioNetoActualCompleto,
         'cosalarioNetoCompleto': cotizacion.cosalarioNetoCompleto,
         'coporSalarioNetoCompleto': cotizacion.coporSalarioNetoCompleto,
-        
-
- }
+        'porcentajeLetraSeguro': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro) / cotizacion.salarioBaseMensual * 100), 2) if cotizacion.salarioBaseMensual not in [None, 0] else 0,
+        'porcentajeLetraSeguroCompleto': round(((cotizacion.wrkMontoLetra + cotizacion.montoMensualSeguro)/cotizacion.totalIngresosMensualesCompleto * 100),2) if cotizacion.totalIngresosMensualesCompleto not in [None, 0] else 0,
+    }
 
     print('resultado', resultado)
     context = {
