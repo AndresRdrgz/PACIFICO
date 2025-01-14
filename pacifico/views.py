@@ -1323,8 +1323,13 @@ def generate_report(request, numero_cotizacion):
         movimientos['p8'] = cotizacion.egresosMes5 if cotizacion.egresosMes5 is not None else 0
         movimientos['r8'] = cotizacion.ingresosMes6 if cotizacion.ingresosMes6 is not None else 0
         movimientos['s8'] = cotizacion.egresosMes6 if cotizacion.egresosMes6 is not None else 0
-        
-    
+        try:
+            if cotizacion.movOpcion == "tomar_valor":
+                movimientos['U13'] = "TOMAR VALOR"
+            else:
+                movimientos['U13'] = cotizacion.movOpcion if cotizacion.movOpcion is not None else 'COLOCAR MANUAL'
+        except:
+                movimientos['U13'] = "COLOCAR MANUAL"
 
         
         # Save the workbook to a temporary file
