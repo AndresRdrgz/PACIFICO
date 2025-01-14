@@ -11,6 +11,54 @@
 
 
 <!---->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+
+    <div class="container mx-auto p-2">
+        <canvas id="cotizacionesChart" width="400" height="100" class="mb-2"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('cotizacionesChart').getContext('2d');
+        const cotizacionesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ dates|safe }},
+                datasets: [{
+                    label: 'Cotizaciones por Día',
+                    data: {{ counts|safe }},
+                    borderColor: '#22a650',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 5
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Total: ${context.raw}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+
 <div class="mb-4 flex flex-col sm:flex-row items-center justify-between">
     <div class="relative w-full sm:w-2/3 mb-2 sm:mb-0">
         <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">

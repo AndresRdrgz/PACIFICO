@@ -31,6 +31,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.sessions.models import Session
 from django.contrib.auth.models import User
+from datetime import timedelta
 
 
 
@@ -563,22 +564,36 @@ def download_cotizaciones_excel(request):
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()
 
-
-    #Filter cotizaciones by addedBy current user
+    # Filter cotizaciones by addedBy current user
     if request.user.is_authenticated:
-        cotizaciones = cotizaciones.filter(added_by=request.user
-        )
+        cotizaciones = cotizaciones.filter(added_by=request.user)
 
-    #If user is staff show all cotizaciones
+    # If user is staff show all cotizaciones
     if request.user.is_staff:
         cotizaciones = Cotizacion.objects.all()
 
-     #sort by newest first
+    # Sort by newest first
     cotizaciones = cotizaciones.order_by('-created_at')
-        
-    
-    return render(request, 'cotizacionesList.html', {'cotizaciones': cotizaciones})
 
+    # Get all cotizaciones done in the last 30 days
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=30)
+    cotizaciones_last_30_days = cotizaciones.filter(created_at__range=[start_date, end_date])
+
+    # Aggregate cotizaciones by day
+    cotizaciones_by_day = cotizaciones_last_30_days.extra({'day': "date(created_at)"}).values('day').annotate(count=Count('id')).order_by('day')
+
+    # Prepare data for the chart
+    dates = [entry['day'] for entry in cotizaciones_by_day]
+    counts = [entry['count'] for entry in cotizaciones_by_day]
+
+    context = {
+        'cotizaciones': cotizaciones,
+        'dates': dates,
+        'counts': counts,
+    }
+
+    return render(request, 'cotizacionesList.html', context)
 
 
 @csrf_exempt
