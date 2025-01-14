@@ -518,6 +518,11 @@ class Cotizacion(models.Model):
     #movimientos
     
     movPrimerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
+    movOpcion = models.CharField(
+        max_length=20,
+        choices=[('usar_valor', 'Usar valor'), ('ingresar_manual', 'Ingresar manual')],
+        default='ingresar_manual'
+    )
     ingresosMes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     egresosMes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     ingresosMes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -530,6 +535,7 @@ class Cotizacion(models.Model):
     egresosMes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     ingresosMes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     egresosMes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    averageIngresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
  
 

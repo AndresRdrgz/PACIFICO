@@ -820,6 +820,11 @@ class FideicomisoForm(forms.ModelForm):
             'movPrimerMes': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            'averageIngresos': forms.NumberInput(attrs={
+                'placeholder': 'Average Ingresos',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'readonly': 'readonly',
+            }),
             'ingresosMes1': forms.NumberInput(attrs={
                 'placeholder': 'Mes 1',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -891,6 +896,9 @@ class FideicomisoForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
                 'step': '0.01',
                 'oninput': 'validateDecimal(this)',
+            }),
+            'movOpcion': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
             
         }
@@ -1322,4 +1330,6 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['egresosMes5'].required = False
         self.fields['ingresosMes6'].required = False
         self.fields['egresosMes6'].required = False
+        self.fields['movOpcion'].required = False
+        self.fields['averageIngresos'].required = False
 

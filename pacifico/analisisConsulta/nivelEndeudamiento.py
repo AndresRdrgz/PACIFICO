@@ -1,5 +1,7 @@
 def nivelEndeudamiento(resultado):
     print("------nivel de endeudamiento ------")
+    
+
     # print resultado with its field types
     for key, value in resultado.items():
         if value is None:
@@ -18,6 +20,12 @@ def nivelEndeudamiento(resultado):
     #print("Total de pagos voluntarios: ", totalPagoVoluntario)
 
     #print(resultado)
+    print("movOpcion: ", resultado.get('movOpcion'))
+    # if 'movOpcion' is not in resultado or is None, set it to 'ingresar_manual'
+    if 'movOpcion' not in resultado or resultado['movOpcion'] is None:
+        resultado['movOpcion'] = 'ingresar_manual'
+
+    
     totalIngresosMensuales = resultado['salarioBaseMensual']
     totalIngresosMensualesCompleto = totalIngresosMensuales + totalIngresosAdicionales
 

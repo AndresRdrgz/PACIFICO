@@ -209,6 +209,9 @@ def perform_fideicomiso_calculation(form):
     resultado['abonoPorcentaje'] = form.cleaned_data['abonoPorcentaje'] if form.cleaned_data['abonoPorcentaje'] is not None else 0
     resultado['abonoPorcentaje'] = round(resultado['abonoPorcentaje'], 2)
     print('abonoporcentaje', resultado['abonoPorcentaje'])
+
+    resultado['movOpcion'] = form.cleaned_data['movOpcion'] if form.cleaned_data['movOpcion'] is not None else 0
+    resultado['averageIngresos'] = form.cleaned_data['averageIngresos'] if form.cleaned_data['averageIngresos'] is not None else 0
     
         # Convert Decimal fields to floats
         # Convert Decimal fields to floats
@@ -216,6 +219,7 @@ def perform_fideicomiso_calculation(form):
     resultado = convert_decimal_to_float(resultado)
     from ..views import nivelEndeudamiento
     #CALCULO NIVEL DE ENDEUDAMIENTO - REAL
+    
     resultadoNivel = nivelEndeudamiento(resultado)
     resultado['salarioNeto'] = resultadoNivel['salarioNeto']
     resultado['porSalarioNeto'] = resultadoNivel['porSalarioNeto']
