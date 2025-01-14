@@ -595,7 +595,6 @@ def cotizacionesList(request):
 
     return render(request, 'cotizacionesList.html', context)
 
-
 @csrf_exempt
 def cotizacion_seguro_auto(request):
     if request.method == 'POST':
