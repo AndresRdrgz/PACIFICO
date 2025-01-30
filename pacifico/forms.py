@@ -171,6 +171,10 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'R Deseada',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
+            'tasaInteres': forms.NumberInput(attrs={
+                'placeholder': 'Tasa de Interés',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
             'patrono': forms.TextInput(attrs={
                 'placeholder': 'Patrono',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -1332,4 +1336,5 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['egresosMes6'].required = False
         self.fields['movOpcion'].required = False
         self.fields['averageIngresos'].required = False
+        self.fields['tasaInteres'].required = False
 

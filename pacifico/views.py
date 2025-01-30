@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from .forms import FideicomisoForm, ClienteForm, AseguradoraForm
-from .fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3, generarFideicomiso4
+from .fideicomiso.fideicomiso import generarFideicomiso3, generarFideicomiso4
 from .analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
 import datetime
 import decimal
@@ -1720,4 +1720,210 @@ def fideicomiso_view(request):
     
 
     return render(request, 'fideicomiso_form.html', {'form': form, 'resultado': resultado})
+
+
+@login_required
+def calculoAppx(request):
+    resultado = None
+    if request.method == 'POST':
+        form = FideicomisoForm(request.POST)
+        if form.is_valid():
+            try:
+                # Extract form data
+                edad = form.cleaned_data['edad']
+                sexo = form.cleaned_data['sexo']
+                jubilado = form.cleaned_data['jubilado']
+                nombreCliente = form.cleaned_data['nombreCliente']
+                cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
+                calcTasaInteres = form.cleaned_data['tasaInteres'] / 100
+                calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
+                auxPlazoPago = form.cleaned_data['plazoPago']
+                patrono = form.cleaned_data['patronoCodigo']
+                #if patrono is None: patrono = 9999
+                if patrono is None: patrono = 9999
+
+                sucursal = 13
+                auxPeriocidad = 1
+                forma_pago = 4
+                #COLECTIVO DE CREDITO
+                aseguradora = form.cleaned_data['aseguradora']
+                #print('aseguradora', aseguradora)
+                codigoSeguro = aseguradora.codigo
+                r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
+                comisionVendedor = form.cleaned_data['vendedorComision']
+                #CAMPOS SEGURO AUTO
+                financiaSeguro = form.cleaned_data['financiaSeguro']
+                mesesFinanciaSeguro = form.cleaned_data['mesesFinanciaSeguro']
+                montoanualSeguro = form.cleaned_data['montoanualSeguro']
+                montoMensualSeguro = form.cleaned_data['montoMensualSeguro']
+                cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
+                sucursal = form.cleaned_data['sucursal']
+                montoLetraSeguroAdelantado = mesesFinanciaSeguro * montoMensualSeguro
+                montoLetraSeguroAdelantado = round(montoLetraSeguroAdelantado, 2)
+                if montoLetraSeguroAdelantado is None:
+                    montoLetraSeguroAdelantado = 0
+                    
+
+               
+                #parse cotMontoPRestamo to float
+                cotMontoPrestamo = float(cotMontoPrestamo)
+                calcTasaInteres = float(calcTasaInteres)
+                calcComiCierre = float(calcComiCierre)
+                r_deseada = float(r_deseada)
+                comisionVendedor = float(comisionVendedor)
+                montoanualSeguro = float(montoanualSeguro)
+                montoMensualSeguro = float(montoMensualSeguro)
+                sucursal = int(sucursal)
+                #print('Sucursal', sucursal)
+                # Call the generarFideicomiso2 function
+                params = {
+                    'edad': edad,
+                    'sucursal': sucursal,
+                    'sexo': sexo,
+                    'jubilado': jubilado,
+                    'cotMontoPrestamo': cotMontoPrestamo,
+                    'calcTasaInteres': calcTasaInteres,
+                    'calcComiCierre': calcComiCierre,
+                    'auxPlazoPago': auxPlazoPago,
+                    'patrono': patrono,
+                    'sucursal': sucursal,
+                    'auxPeriocidad': auxPeriocidad,
+                    'forma_pago': forma_pago,
+                    'codigoSeguro': codigoSeguro,
+                    'fechaCalculo': datetime.datetime.now(),
+                    'r_deseada': r_deseada,
+                    'comisionVendedor': comisionVendedor,
+                    'financiaSeguro': financiaSeguro,
+                    'mesesFinanciaSeguro': mesesFinanciaSeguro,
+                    'montoanualSeguro': montoanualSeguro,
+                    'montoMensualSeguro': montoMensualSeguro,
+                    'cantPagosSeguro': cantPagosSeguro,
+                    'gastoFideicomiso': 291.90,
+
+                }
+                #print('RESULTADO PARAMETROS', params)
+                resultado, iteration_data = generarFideicomiso4(params)
+                
+                print("--------finalizado---------")
+                resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra']/2,2) * 2
+                # print in ta table format reusltado
+               
+
+                #print(form.cleaned_data)
+                #deserialize fechaCalculo in resultado
+                resultado['fechaCalculo'] = resultado['fechaCalculo'].strftime('%Y-%m-%d')
+                resultado['cotFechaInicioPago'] = resultado['cotFechaInicioPago'].strftime('%Y-%m-%d')
+                resultado['calcFechaPromeCK'] = resultado['calcFechaPromeCK'].strftime('%Y-%m-%d')
+
+                #PASE DE CAMPOS
+                resultado['oficial'] = form.cleaned_data['oficial'] if form.cleaned_data['oficial'] is not None else "-"
+                resultado['sucursal'] = form.cleaned_data['sucursal'] if form.cleaned_data['sucursal'] is not None else "-"
+                resultado['sexo'] = sexo
+                resultado['nombreCliente'] = form.cleaned_data['nombreCliente'] if form.cleaned_data['nombreCliente'] is not None else "-"
+                resultado['cedulaCliente'] = form.cleaned_data['cedulaCliente'] if form.cleaned_data['cedulaCliente'] is not None else "-"
+                resultado['calcComiCierreFinal'] = resultado['calcComiCierreFinal'] * 100
+                
+                resultado['tipoDocumento'] = form.cleaned_data['tipoDocumento'] if form.cleaned_data['tipoDocumento'] is not None else "-"
+                resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else 0
+                resultado['apcPI'] = form.cleaned_data['apcPI'] / 100 if form.cleaned_data['apcPI'] is not None else 0
+                resultado['valorAuto'] = form.cleaned_data['valorAuto'] if form.cleaned_data['valorAuto'] is not None else 0
+                resultado['cotPlazoPago'] = auxPlazoPago if auxPlazoPago is not None else 0
+                resultado['vendedor'] = form.cleaned_data['vendedor'] if form.cleaned_data['vendedor'] is not None else "-"
+                #DATOS DEL AUTO
+                resultado['marcaAuto'] = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
+                resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
+                resultado['yearAuto'] = form.cleaned_data['yearCarro'] if form.cleaned_data['yearCarro'] is not None else "-"
+                resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
+                resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
+                resultado['promoPublicidad'] = 50  # Assuming this is a fixed value
+                
+                resultado['nuevoAuto'] = form.cleaned_data['nuevoAuto'] if form.cleaned_data['nuevoAuto'] is not None else "-"
+                resultado['kilometrajeAuto'] = form.cleaned_data['kilometrajeAuto'] if form.cleaned_data['kilometrajeAuto'] is not None else 0
+                resultado['observaciones'] = form.cleaned_data['observaciones'] if form.cleaned_data['observaciones'] is not None else "-"
+  
+                
+                # MONTO LETRA SIN SEGUROS
+                resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
+                resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
+                resultado['wrkLetraConSeguros'] = resultado['wrkMontoLetra'] + resultado['montoMensualSeguro']
+                resultado['wrkLetraConSeguros'] = round(resultado['wrkLetraConSeguros'], 2)
+                resultado['calcComiCierreFinal'] = round(resultado['calcComiCierreFinal'], 2)
+                resultado['montoLetraSeguroAdelantado'] =montoLetraSeguroAdelantado
+                resultado['cashback'] = form.cleaned_data['cashback'] if form.cleaned_data['cashback'] is not None else 0
+                resultado['cashback'] = round(resultado['cashback'], 2)
+                resultado['r1']=round(resultado['r1'],2)
+                resultado['abono'] = form.cleaned_data['abono'] if form.cleaned_data['abono'] is not None else 0
+                resultado['abono'] = round(resultado['abono'], 2)
+                resultado['abonoPorcentaje'] = form.cleaned_data['abonoPorcentaje'] if form.cleaned_data['abonoPorcentaje'] is not None else 0
+                resultado['abonoPorcentaje'] = round(resultado['abonoPorcentaje'], 2)
+                #print('abonoporcentaje', resultado['abonoPorcentaje'])
+                
+                 # Convert Decimal fields to floats
+                resultado = convert_decimal_to_float(resultado)
+                #print('resultado despues de funcion------', resultado)
+               
+                
+                
+
+                
+                #---------------------
+                #save resultado['tasaEstimada'] in form instance
+                form.instance.tasaEstimada = resultado['tasaEstimada']
+                form.instance.tasaBruta = resultado['tasaBruta']
+                form.instance.r1 = resultado['r1']
+                form.instance.montoPrestamo = resultado['cotMontoPrestamo']
+                form.instance.auxMonto2 = round(Decimal(resultado['auxMonto2']),2)
+                form.instance.montoManejoT = resultado['montoManejoT']
+                form.instance.monto_manejo_b = resultado['montoManejoB']
+                #form.instance.apcPI = resultado['apcPI']
+                form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
+                form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                form.instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                form.instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                form.instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                form.instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                form.instance.manejo_5porc = resultado['manejo_5porc']
+                form.instance.valorAuto = resultado['valorAuto']
+                #form.instance.aseguradora = aseguradora
+                
+                #resultado nivel de endeuamiento - real
+                
+
+                
+                resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
+                form.instance.lineaAuto = resultado['lineaAuto']
+   
+                
+                form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+            
+                return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado,
+                                                            'iteration_data': iteration_data})
+            
+            except Exception as e:
+                logger.error("Error in fideicomiso_view: %s", e)
+                messages.error(request, 'An error occurred while processing your request.')
+                print(e)
+     
+        else:
+            logger.warning("Form is not valid: %s", form.errors)
+            print(form.errors)
+    else:
+        form = FideicomisoForm()
+    
+    #check user sucursal, is not none set form.sucursal to user.sucursal
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile.sucursal is not None:
+            form.fields['sucursal'].initial = user_profile.sucursal
+        
+        if user_profile.oficial is not None:
+            form.fields['oficial'].initial = user_profile.oficial
+    
+
+    return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado,
+                                                'iteration_data': iteration_data})
     

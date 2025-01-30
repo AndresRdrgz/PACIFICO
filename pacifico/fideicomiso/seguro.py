@@ -23,16 +23,18 @@ def auxBusquedaSeguro(codigo, edad):
     print("No se encontró el seguro",codigo,edad)
     return None, None, None
 
-def seguroAdicional():
+def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
 
         def getLastDayOfMonth(date):
             next_month = date.replace(day=28) + timedelta(days=4)
             return next_month - timedelta(days=next_month.day)
 
-        wrkFechaUltDia1 = datetime(2024, 12, 11)
-        wrkFechaUltDia2 = datetime(2024, 12, 30)
+        wrkFechaUltDia1 = calcFechaPromeCK.date()
+        wrkFechaUltDia2 = cotFechaInicioPago.date()
+        #print("wrkFechaUltDia1:",wrkFechaUltDia1,"wrkFechaUltDia2:",wrkFechaUltDia2)
         wrkFechaUltDia2 = getLastDayOfMonth(wrkFechaUltDia2)
-
+        #print("wrkFechaUltDia2",wrkFechaUltDia2)
+        
         auxW = 1
         auxZ = 0
         auxBol = True
@@ -53,11 +55,13 @@ def seguroAdicional():
         if auxZ >= 1:
             auxZ -= 1
 
+        print("auxZ:",auxZ)
+        
         return auxZ
     
 
 
-def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres):
+def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres,calcFechaPromeCK,cotFechaInicioPago):
     
     
     
@@ -66,7 +70,7 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres):
     auxG = 0
     auxC = 0
     wrkC = 0
-    auxZ = seguroAdicional()
+    auxZ = seguroAdicional(calcFechaPromeCK,cotFechaInicioPago)
     
     auxX = 0
     wrkWorkD = auxTasaReal
@@ -93,7 +97,8 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres):
 
     auxA = ((auxA * auxB * auxC) / 1000)
     auxX = ((auxA * auxB * auxG) / 1000)
-    totalSeguro = auxA
+    totalSeguro = auxA 
+    totalSeguro = round(totalSeguro,2)
     wrkSaldo13 = auxX
 
     # CALCULO DEL SEGURO 5%
@@ -105,6 +110,6 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres):
     if agregado == "Y":
         montoSeguro = montoSeguro * descomponer2
     
+    #print("totalSeguro:",totalSeguro)
+    
     return totalSeguro, montoSeguro, auxZ
-
-    return

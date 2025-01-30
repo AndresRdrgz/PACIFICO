@@ -10,7 +10,7 @@ def add_one_month(dt):
 
 def calculate_fecha_vencimiento(plazo_pago, cot_fecha_inicio_pago, pagadiciembre1, forma_pago):
     aux_ai = plazo_pago
-    wrk_fecha = cot_fecha_inicio_pago
+    wrk_fecha = cot_fecha_inicio_pago.date()
 
     wrk_dia3 = wrk_fecha.day
     wrk_num2_4 = wrk_dia3

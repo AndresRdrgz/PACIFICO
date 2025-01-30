@@ -25,4 +25,5 @@ urlpatterns = [
     path('active-sessions/', view_active_sessions, name='active_sessions'),
     path('terminate-sessions/', terminate_all_sessions, name='terminate_sessions'),
     path('usuario/editar/', edit_profile, name='edit_profile'),
+    path('calculoAppx/', views.calculoAppx, name='calculoAppx'),
 ]

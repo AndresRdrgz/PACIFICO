@@ -33,7 +33,24 @@ def calculoTimbres(comis_cierre,monto2):
     if wrk_decimal != "":
         aux_b += 0.10
     
+    
+    print("monto2",monto2)
+    print('aux_b:', aux_b)
+    
+    #MODIFICACION ENERO 2025 CALCULO TIMBRES
+    timbresAndres = (monto2 // 100) * 0.10
+    print('timbresAndres:', timbresAndres)
+    integer_part = int(monto2 // 100)
+    decimal_part = monto2 % 100
+    print('integer_part:', integer_part)
+    print('decimal_part:', decimal_part)
     #print('aux_b:', aux_b)
+    timbres = integer_part * 0.10
+    if decimal_part > 0:
+        timbres += 0.10
+    timbres = round(timbres, 2)
+    aux_b = timbres
+    print('timbres:', timbres)
     return round(aux_b,2)
 
 def calculate_fecha_servicio_descuento(disket, tipo_prestamo, fecha_inicio_pago):

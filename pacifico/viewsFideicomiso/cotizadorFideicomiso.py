@@ -1,7 +1,7 @@
 from decimal import Decimal
 import pprint
 import datetime
-from ..fideicomiso.fideicomiso import generarFideicomiso2, generarFideicomiso3, generarFideicomiso
+from ..fideicomiso.fideicomiso import generarFideicomiso3, generarFideicomiso
 
 def perform_fideicomiso_calculation(form):
     # Extract form data
