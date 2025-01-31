@@ -1924,6 +1924,6 @@ def calculoAppx(request):
             form.fields['oficial'].initial = user_profile.oficial
     
 
-    return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado,
-                                                'iteration_data': iteration_data})
+    return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado
+                                                })
     

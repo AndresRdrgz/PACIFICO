@@ -191,7 +191,7 @@ def tablaAmortizacion(params):
         tablaTotalMontoCapital = 0
 
         wrkMontoLetraOfici = wrkMontoLetra
-        #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
+        print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
         wrkMontoLetraOfici = round(wrkMontoLetraOfici / 2 + 0.001, 2) * 2
        
         
@@ -521,6 +521,7 @@ def tablaAmortizacion(params):
                 calcsobtSaldo = calcsobtSaldo - calcsobtMontoCapital
             
             #fase final
+            calcsobtSaldo = round(calcsobtSaldo, 2)
             wrkSaldoAnterior = calcsobtSaldo
             wrkSaldoBruto = calcsobtSaldo
             wrkSaldoAnterior = round(wrkSaldoAnterior, 2)
