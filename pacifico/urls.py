@@ -4,6 +4,9 @@ from . import views
 from django.contrib.auth import views as auth_views
 from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 from .usuarios.vistasUsuarios import edit_profile
+from django.conf import settings
+from django.conf.urls.static import static
+
 
 
 urlpatterns = [
@@ -27,3 +30,6 @@ urlpatterns = [
     path('usuario/editar/', edit_profile, name='edit_profile'),
     path('calculoAppx/', views.calculoAppx, name='calculoAppx'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

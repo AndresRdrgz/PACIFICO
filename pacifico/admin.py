@@ -1,6 +1,6 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
-from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile
+from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -38,4 +38,8 @@ class FormPagoAdmin(ModelAdmin):
 
 @admin.register(PruebaDario)
 class PruebaDarioAdmin(ModelAdmin):
+    pass
+
+@admin.register(CotizacionDocumento)
+class CotizacionDocumentoAdmin(ModelAdmin):
     pass

@@ -1,0 +1,159 @@
+<!-- Nivel de Endeudamiento -->
+       
+<div class="flex-1 p-4 border rounded-lg mb-2">
+    <div class="flex items-center ">
+        <h1 class="text-lg font-bold">Documentos del Cliente</h1>
+        <div class="ml-auto">
+            <label class="inline-flex items-center ms-5 cursor-pointer">
+                <input type="checkbox" id="toggleDocumentosCliente" class="sr-only peer" onchange="toggleDocumentosClienteSection()">
+                <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+            </label>
+        </div>
+    </div>
+    <div id="sectionDocumentosCliente" class="flex-1 p-1 rounded-lg" style="display: none;">       
+
+        <button type="button" onclick="collectDocumentData()" class="inline-flex hover:bg-gray-100 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save h-4 w-4 mr-2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Guardar Documentos
+        </button>
+
+        {% if documentos %}
+            <h3>Documentos</h3>
+            <ul>
+            {% for documento in documentos %}
+                <li>
+                <strong>{{ documento.tipo_documento }}:</strong>
+                <a href="{{ documento.documento.url }}" target="_blank">{{ documento.documento.name }}</a>
+                <button type="button" onclick="previewDocument('{{ documento.documento.url }}')" class="inline-flex hover:bg-gray-100 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye h-4 w-4 mr-2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    Previsualizar
+                </button>
+                {% if documento.observaciones %}
+                    <p>Observaciones: {{ documento.observaciones }}</p>
+                {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- Modal for document preview -->
+        <div id="documentPreviewModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" style="display: none;">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Previsualización del Documento</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <iframe id="documentPreviewFrame" src="" width="100%" height="500px"></iframe>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button type="button" id="closeModalButton" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function previewDocument(url) {
+                const modal = document.getElementById('documentPreviewModal');
+                const iframe = document.getElementById('documentPreviewFrame');
+                iframe.src = url;
+                modal.style.display = 'block';
+            }
+
+            document.getElementById('closeModalButton').addEventListener('click', function() {
+                const modal = document.getElementById('documentPreviewModal');
+                modal.style.display = 'none';
+            });
+        </script>
+
+       
+        <!-- Table Wrapper -->
+        <div class="relative w-full overflow-x-auto text-gray-700 mt-6 bg-white">
+
+            <button type="button" onclick="addDocumentRow()" class="inline-flex hover:bg-gray-100 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus h-4 w-4 mr-2">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+            </svg>
+            Agregar Documento
+            </button>
+            <table id="documentosTable" class="min-w-max w-full text-left mt-5 border ">
+            <thead>
+                <tr>
+                <th scope="col" class="px-6 py-3 bg-black text-white text-center">Tipo de documento</th>
+                <th scope="col" class="px-6 py-3 bg-black text-white text-center">Documento</th>
+                <th scope="col" class="px-6 py-3 bg-black text-white text-center">Observaciones</th>
+                <th scope="col" class="px-6 py-3 bg-black text-white text-center">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dynamic rows will go here -->
+            </tbody>
+            </table>
+          </div>
+
+        <script>
+            function addDocumentRow() {
+            const table = document.getElementById('documentosTable').getElementsByTagName('tbody')[0];
+            const row = table.insertRow();
+            row.classList.add('mb-3'); // Add margin-bottom to each row
+
+            // Tipo de documento
+            const tipoDocumentoCell = row.insertCell(0);
+            tipoDocumentoCell.innerHTML = `
+            <select name="tipo_documento" class="w-full text-gray-700 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500">
+            <option value="Cédula">Cédula</option>
+            <option value="APC">APC</option>
+            <option value="Ficha CSS">Ficha CSS</option>
+            <option value="Comprobante de Pago">Comprobante de Pago</option>
+            <option value="Otros">Otros</option>
+            </select>
+            `;
+
+            // Documento
+            const documentoCell = row.insertCell(1);
+            documentoCell.innerHTML = `<input type="file" name="documento" accept=".pdf, .png, .jpg, .jpeg" class="w-full text-gray-700 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500">`;
+
+            // Observaciones
+            const observacionesCell = row.insertCell(2);
+            observacionesCell.innerHTML = `<input type="text" name="observaciones" class="w-full text-gray-700 text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="Observaciones">`;
+
+            // Acción - Delete button
+            const accionCell = row.insertCell(3);
+            accionCell.classList.add('text-center'); // Center the content of the cell
+            accionCell.innerHTML = `<button class="inline-flex center bg-red-400 hover:bg-red-500 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm text-white font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10" type="button" aria-label="Remove document" onclick="deleteDocumentRow(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>`;
+            }
+
+            function deleteDocumentRow(button) {
+            const row = button.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+            }
+        </script>
+
+        </div>
+    </div>
+
+    <script>
+        function toggleDocumentosClienteSection() {
+        const section = document.getElementById('sectionDocumentosCliente');
+        const checkbox = document.getElementById('toggleDocumentosCliente');
+        if (checkbox.checked) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+        }
+
+
+       
+    
+    </script>

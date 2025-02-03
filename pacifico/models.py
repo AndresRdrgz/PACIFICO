@@ -115,7 +115,7 @@ class UserProfile(models.Model):
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES, null=True)
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
     auto_save_cotizaciones = models.BooleanField(default=False)
-    another_boolean_field = models.BooleanField(default=False)
+    pruebaFuncionalidades = models.BooleanField(default=False)
     # Add more boolean fields as needed
 
     def __str__(self):
@@ -744,3 +744,19 @@ class Cotizacion(models.Model):
 
     def __str__(self):
         return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente}"
+    
+
+class CotizacionDocumento(models.Model):
+    cotizacion = models.ForeignKey(Cotizacion, on_delete=models.CASCADE)
+    documento = models.FileField(upload_to='documentos_cotizacion/')
+    def save(self, *args, **kwargs):
+        if self.documento:
+            self.documento.name = f"{self.cotizacion.NumeroCotizacion}/{self.documento.name}"
+        super(CotizacionDocumento, self).save(*args, **kwargs)
+    tipo_documento = models.CharField(max_length=255, null=True)
+    fecha = models.DateField(auto_now_add=True)
+    observaciones = models.TextField(null=True, blank=True)
+
+
+    def __str__(self):
+        return f"{self.cotizacion.NumeroCotizacion} - {self.tipo_documento}"

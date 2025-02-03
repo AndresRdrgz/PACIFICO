@@ -7,7 +7,7 @@
     <div class="text-center">
         <h1 class="text-3xl font-bold mb-4">Cotizador - Préstamo de Auto</h1>
     </div>
-    <form id="myForm" method="post" class="bg-white p-6 rounded-lg shadow-md">
+    <form id="myForm" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md">
         {% include 'partials/resultadoFideicomiso.html' %}
        
         {% csrf_token %}
@@ -666,6 +666,12 @@
     {% include 'partials/nivelFamiliar.html' %}
 
     {% include 'partials/movimientosBancarios.html' %}
+
+    {% if pruebaFuncionalidades %}
+        {% include 'partials/documentosCliente.html' %}
+    {% endif %}
+
+    <input type="hidden" name="documentos_data" id="documentos_data">
 
        </form>
     
@@ -1331,10 +1337,46 @@
             //Enviar valor a valor auto en Sura MODAL
             
         }
+        
+        function collectDocumentData() {
+            const table = document.getElementById('documentosTable').getElementsByTagName('tbody')[0];
+            const rows = table.getElementsByTagName('tr');
+            const documents = [];
+    
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const tipoDocumento = row.cells[0].getElementsByTagName('select')[0].value;
+                const documentoInput = row.cells[1].getElementsByTagName('input')[0];
+                const observaciones = row.cells[2].getElementsByTagName('input')[0].value;
+    
+                documents.push({
+                    tipoDocumento: tipoDocumento,
+                    documento: documentoInput.name,  // Use the input name to reference the file
+                    observaciones: observaciones
+                });
+            }
+    
+            return documents;
+        }
 
+    
+        document.getElementById('myForm').addEventListener('submit', function(event) {
+            document.getElementById('loading').classList.remove('hidden');
+            const documentosData = collectDocumentData();
+            const documentosDataInput = document.getElementById('documentos_data');
+            documentosDataInput.value = JSON.stringify(documentosData);
+        });
+   
+        /*
         document.getElementById('myForm').addEventListener('submit', function () {
             document.getElementById('loading').classList.remove('hidden');
-        });
+
+            //recolectar documentos del cliente
+            const documentosData = collectDocumentData();
+            const documentosDataInput = document.getElementById('documentos_data');
+            documentosDataInput.value = JSON.stringify(documentosData);
+       
+        });*/
        
         //Function to calculate the values of 2nd column in the table with id="tableIngresosAdicionales"
         function calculateTotalIngresosAdicionales() {
