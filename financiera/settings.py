@@ -21,7 +21,7 @@ if DEBUG:
 else:
     DATABASES = {
         'default': dj_database_url.config(
-            default='postgresql://postgres:postgres@localhost:5432/pacifico',
+            default='postgresql://backup_ykk0_user:password@dpg-cuh945btq21c73f8tkg0-a:5432/backup_ykk0',
             conn_max_age=600
         )
     }
