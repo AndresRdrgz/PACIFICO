@@ -1,0 +1,77 @@
+<div class="max-w-full w-full bg-white rounded-lg shadow p-4 md:p-6">
+    <div>
+      <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Vendedores</h5>
+      <p class="text-base font-normal text-gray-500">Cotizaciones por vendedor</p>
+    </div>
+    <div id="vendedor-chart"></div>
+  
+  
+  
+  
+</div>
+  
+  
+  
+  <script>
+  
+function renderVendedorChart(cotizaciones) {
+    const cotizacionesPorVendedor = cotizaciones.reduce((acc, cotizacion) => {
+        const vendedor = cotizacion.Vendedor;
+        if (!acc[vendedor]) {
+            acc[vendedor] = 0;
+        }
+        acc[vendedor]++;
+        return acc;
+    }, {});
+
+    const vendedores = Object.keys(cotizacionesPorVendedor);
+    const counts = vendedores.map(vendedor => cotizacionesPorVendedor[vendedor]);
+
+    const optionsBarChart = {
+        series: [{
+            name: 'Cotizaciones',
+            data: counts,
+            color: '#22a650'
+        }],
+        chart: {
+            type: 'bar',
+            height: 350,
+            zoom: {
+                enabled: true
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        xaxis: {
+            categories: vendedores,
+            title: {
+                text: 'Vendedor'
+            }
+        },
+        yaxis: {
+            title: {
+                text: 'Cantidad de Cotizaciones'
+            }
+        },
+        tooltip: {
+            y: {
+                formatter: function (val) {
+                    return val + " cotizaciones";
+                }
+            }
+        }
+    };
+
+    const chartContainer = document.getElementById("vendedor-chart");
+    if (chartContainer && typeof ApexCharts !== 'undefined') {
+        chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
+        const chart = new ApexCharts(chartContainer, optionsBarChart);
+        chart.render().then(() => {
+            chartContainer.innerHTML = ''; // Remove spinner
+            chart.render();
+        });
+        console.log("Rendering bar chart...");
+    }
+}
+</script>

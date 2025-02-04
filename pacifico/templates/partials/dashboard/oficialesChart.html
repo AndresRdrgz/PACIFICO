@@ -1,0 +1,80 @@
+<div class="max-w-full w-full bg-white rounded-lg shadow p-4 md:p-6">
+    <div>
+        <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Oficiales</h5>
+        <p class="text-base font-normal text-gray-500">Cotizaciones realizadas por oficial</p>
+    </div>
+    <div id="oficiales-chart"></div>
+</div>
+  
+  
+<script>
+    function renderOficialesChart(cotizaciones) {
+        const cotizacionesPorOficial = cotizaciones.reduce((acc, cotizacion) => {
+            const oficial = cotizacion.oficial;
+            if (!acc[oficial]) {
+                acc[oficial] = 0;
+            }
+            acc[oficial]++;
+            return acc;
+        }, {});
+
+        const oficiales = Object.keys(cotizacionesPorOficial);
+        const counts = oficiales.map(oficial => cotizacionesPorOficial[oficial]);
+
+        // Sort oficiales and counts by counts in descending order
+        const sortedData = oficiales.map((oficial, index) => ({
+            oficial,
+            count: counts[index]
+        })).sort((a, b) => b.count - a.count);
+
+        const sortedOficiales = sortedData.map(data => data.oficial);
+        const sortedCounts = sortedData.map(data => data.count);
+
+        const optionsBarChart = {
+            series: [{
+                name: 'Cotizaciones',
+                data: sortedCounts,
+                color: '#22a650'
+            }],
+            chart: {
+                type: 'bar',
+                height: 350,
+                zoom: {
+                    enabled: true
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            xaxis: {
+                categories: sortedOficiales,
+                title: {
+                    text: 'Oficial'
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Cantidad de Cotizaciones'
+                }
+            },
+            tooltip: {
+                x: {
+                    formatter: function(val) {
+                        return val;
+                    }
+                }
+            }
+        };
+
+        const chartContainer = document.getElementById("oficiales-chart");
+        if (chartContainer && typeof ApexCharts !== 'undefined') {
+            chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
+            const chart = new ApexCharts(chartContainer, optionsBarChart);
+            chart.render().then(() => {
+                chartContainer.innerHTML = ''; // Remove spinner
+                chart.render();
+            });
+            console.log("Rendering bar chart...");
+        }
+    }
+</script>

@@ -440,7 +440,54 @@ def get_lineas(request):
 
 @login_required
 def main_menu(request):
-    return render(request, 'main_menu.html')
+
+    #if user is not staff, filter cotizaciones by added_by 
+    if request.user.is_authenticated and not request.user.is_staff:
+        cotizaciones = Cotizacion.objects.filter(added_by=request.user)
+    else:
+        cotizaciones = Cotizacion.objects.all()
+    
+    #filter by create_at and get only of the past 15 days
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=15)
+    cotizaciones = cotizaciones.filter(created_at__range=[start_date, end_date])
+
+
+    #sort deudas by fecha vencimiento
+    cotizaciones = cotizaciones.order_by('created_at')
+
+    
+
+    cotizaciones_data = [
+        {
+            'numeroCotizacion': cotizacion.NumeroCotizacion if cotizacion.NumeroCotizacion is not None else "-",
+            'nombreCliente': cotizacion.nombreCliente if cotizacion.nombreCliente is not None else "-",
+            'cedulaCliente': cotizacion.cedulaCliente if cotizacion.cedulaCliente is not None else "-",
+            'sucursal': cotizacion.sucursal if cotizacion.sucursal is not None else "-",
+            'oficial': cotizacion.oficial if cotizacion.oficial is not None else "-",
+            'FechaCreacion': cotizacion.created_at.strftime('%Y-%m-%d'),
+            'Vendedor': cotizacion.vendedor if cotizacion.vendedor is not None else "-",
+            'marca': cotizacion.marca if cotizacion.marca is not None else "-",
+            'modelo': cotizacion.modelo if cotizacion.modelo is not None else "-",
+        }
+        for cotizacion in cotizaciones
+    ]
+
+    context = {
+        'cotizaciones_data': cotizaciones_data,
+    }
+    
+    context['is_staff'] = request.user.is_staff
+
+    #add to the context the user name
+    if request.user.is_authenticated:
+        context['username'] = request.user.username
+        user_profile = UserProfile.objects.get(user=request.user)
+        context['user_profile'] = user_profile
+        context['full_name'] = f"{request.user.first_name} {request.user.last_name}"
+    
+
+    return render(request, 'main_menu.html', context)
 
 def login_view(request):
     if request.method == 'POST':
@@ -931,3 +978,27 @@ def calculoAppx(request):
     return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado
                                                 })
     
+@login_required
+def reportesDashboard(request):
+   
+    cotizaciones = Cotizacion.objects.all()
+    
+    #sort deudas by fecha vencimiento
+    cotizaciones = cotizaciones.order_by('created_at')
+
+    cotizaciones_data = [
+        {
+            'numeroCotizacion': cotizacion.NumeroCotizacion,
+            'nombreCliente': cotizacion.nombreCliente,
+            'cedulaCliente': cotizacion.cedulaCliente,
+            'sucursal': cotizacion.sucursal,
+            'oficial': cotizacion.oficial,
+            'FechaCreacion': cotizacion.created_at.strftime('%Y-%m-%d'),
+            'vendedor': cotizacion.vendedor,
+            'Marca': cotizacion.marca,
+            'Modelo': cotizacion.modelo,
+        }
+        for cotizacion in cotizaciones
+    ]
+
+    return render(request, 'reportesDashboard.html', {'cotizaciones': cotizaciones_data})

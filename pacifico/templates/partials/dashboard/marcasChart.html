@@ -1,0 +1,95 @@
+<div class="max-w-full w-full bg-white rounded-lg shadow p-4 md:p-6">
+    <div>
+        <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Marcas</h5>
+        <p class="text-base font-normal text-gray-500">Marcas de vehículos más cotizadas</p>
+    </div>
+    <div id="marcas-chart"></div>
+</div>
+  
+  
+
+<script>
+    function renderMarcasChart(cotizaciones) {
+        const cotizacionesPorMarca = cotizaciones.reduce((acc, cotizacion) => {
+            const marca = cotizacion.marca;
+            if (!acc[marca]) {
+                acc[marca] = 0;
+            }
+            acc[marca]++;
+            return acc;
+        }, {});
+
+        const marcas = Object.keys(cotizacionesPorMarca);
+        const counts = marcas.map(marca => cotizacionesPorMarca[marca]);
+
+        const maxCount = Math.max(...counts);
+        const colors = counts.map(count => count === maxCount ? "#22a650" : "#1C64F2");
+
+        const optionsPieChart = {
+            series: counts,
+            colors: colors,
+            chart: {
+                height: 420,
+                width: "100%",
+                type: "pie",
+            },
+            stroke: {
+                colors: ["white"],
+                lineCap: "",
+            },
+            plotOptions: {
+                pie: {
+                    labels: {
+                        show: true,
+                    },
+                    size: "100%",
+                    dataLabels: {
+                        offset: -25
+                    }
+                },
+            },
+            labels: marcas,
+            dataLabels: {
+                enabled: true,
+                style: {
+                    fontFamily: "Inter, sans-serif",
+                },
+            },
+            legend: {
+                position: "bottom",
+                fontFamily: "Inter, sans-serif",
+            },
+            yaxis: {
+                labels: {
+                    formatter: function (value) {
+                        return value + "%"
+                    },
+                },
+            },
+            xaxis: {
+                labels: {
+                    formatter: function (value) {
+                        return value + "%"
+                    },
+                },
+                axisTicks: {
+                    show: false,
+                },
+                axisBorder: {
+                    show: false,
+                },
+            },
+        };
+
+        const chartContainer = document.getElementById("marcas-chart");
+        if (chartContainer && typeof ApexCharts !== 'undefined') {
+            chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
+            const chart = new ApexCharts(chartContainer, optionsPieChart);
+            chart.render().then(() => {
+                chartContainer.innerHTML = ''; // Remove spinner
+                chart.render();
+            });
+            console.log("Rendering pie chart...");
+        }
+    }
+</script>

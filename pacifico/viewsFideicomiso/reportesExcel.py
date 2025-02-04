@@ -6,6 +6,9 @@ from openpyxl import load_workbook
 from django.shortcuts import render, get_object_or_404
 import os
 from ..models import Cotizacion
+from openpyxl.utils.dataframe import dataframe_to_rows
+import pandas as pd
+from fpdf import FPDF
 
 
 
@@ -715,3 +718,52 @@ def generate_report(request, numero_cotizacion):
         print(f"Error: {error_message}, User: {request.user.username}")
         return JsonResponse({'status': 'error', 'message': str(e), 'resultado': resultado}, status=500)
   
+
+
+def generate_report_temp(numero_cotizacion):
+    # Retrieve the cotizacion record based on numero_cotizacion
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion) 
+    excel_path = os.path.join(settings.BASE_DIR, 'static/insumos', 'consultaPrestAuto.xlsx')
+    if not os.path.exists(excel_path):
+        raise FileNotFoundError("File not found.")
+    
+    workbook = load_workbook(excel_path)
+    sheet = workbook.active
+    
+    # Populate the Excel sheet with data from cotizacion
+    sheet['D6'] = cotizacion.oficial
+    sheet['C10'] = cotizacion.nombreCliente
+    sheet['G10'] = cotizacion.cedulaCliente
+    # Add more fields as needed
+    
+    # Save the workbook to a temporary file
+    temp_excel_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
+    workbook.save(temp_excel_file)
+    
+    # Convert the Excel file to PDF
+
+    # Load the workbook and select the active sheet
+    workbook = load_workbook(temp_excel_file)
+    sheet = workbook.active
+
+    # Convert sheet to DataFrame
+    data = sheet.values
+    columns = next(data)[0:]
+    df = pd.DataFrame(data, columns=columns)
+
+    # Create a PDF document
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Add data to PDF
+    for row in dataframe_to_rows(df, index=False, header=True):
+        for cell in row:
+            pdf.cell(40, 10, str(cell))
+        pdf.ln()
+
+    # Save the PDF to a temporary file
+    temp_pdf_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.pdf')
+    pdf.output(temp_pdf_file)
+
+    return temp_pdf_file

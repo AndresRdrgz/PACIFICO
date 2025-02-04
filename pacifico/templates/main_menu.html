@@ -3,55 +3,75 @@
 {% block title %}Main Menu{% endblock %}
 
 {% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.1/main.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.1/main.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.1/locales-all.min.js" defer></script>
+
 <!-- Main Container -->
-<div class="text-center">
+<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-8">
     <!-- Title Section -->
     {% load static %}
-    <div class="mb-8">
-        <h1 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-gray-800">Financiera Pacífico</h1>
+    <div class="mb-8 text-center">
+        <h1 class="mb-4 text-xl font-bold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-gray-800">¡Bienvenida, {{full_name}}!</h1>
         <!--<p class="text-gray-500 mt-2">¡Bienvenido otra vez! What would you like to do today?</p>-->
     </div>
+
+    <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-yellow-100 border border-yellow-400">
+        <span class="font-medium text-yellow-700 inline-block">
+        Actualmente estás viendo el resumen de los últimos 15 días. Próximamente se añadirá función con más filtros e información.
+        </span>
+    </div>
     
-    <!-- Grid for Options -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mx-4 sm:mx-6 lg:mx-8">
-        <!-- Create Course -->
-        <a href="{% url 'cotizacionesList' %}" class="block">
-            <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition duration-300">
-                <div class="flex justify-center mb-1 p-3">
-                   <img src="{% static 'car.png' %}" alt="Cursos" class="h-12 w-12">
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800">Cotizador Fideicomiso</h3>
-                <p class="text-gray-500 mt-2">Cotizaciones de Prestamos de Autos</p>
-            </div>
-        </a>
+   
 
+    
 
-         <!-- clientes-->
-         <a href="{% url 'clientesList' %}" class="block">
-         <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition duration-300">
-            <div class="flex justify-center mb-1 p-3">        
-                <img src="{% static 'profile.png' %}" alt="Cursos" class="h-12 w-12">
-            </div>
-            <h3 class="text-lg font-semibold text-gray-800">Clientes</h3>
-            <p class="text-gray-500 mt-2">Perfiles y cotizaciones generadas</p>
+    <!-- Table-->
+    <div id="cotizacionesChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
+
         
-        </div>
-        </a>
-
-          <!-- Mantenimiento-->
-          
-            <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition duration-300">
-                <div class="flex justify-center mb-1 p-3">        
-                    <img src="{% static 'mantenimiento.png' %}" alt="Cursos" class="h-12 w-12">
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800">Mantenimiento</h3>
-                <p class="text-gray-500 mt-2">Actualización de parámetros, usuarios, etc</p>
-            
+        {% include 'partials/dashboard/cotizacionesChart.html' %}
+        
+        {%if is_staff%}
+            <div id="oficialesChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
+                {% include 'partials/dashboard/oficialesChart.html' %}
             </div>
-           
-      
+        {%endif%}
+
+
+<div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-8 mb-8">
+    <!-- Marcas-->
+    <div id="marcasChart" class="overflow-x-auto border shadow-md rounded-lg">
+        {% include 'partials/dashboard/marcasChart.html' %}
     </div>
 
-   
+    <!-- Modelos-->
+    <div id="modelosChart" class="overflow-x-auto border shadow-md rounded-lg">
+        {% include 'partials/dashboard/modelosChart.html' %}
+    </div>
 </div>
+
+{% include 'partials/dashboard/vendedorChart.html' %}
+    
+
+
+<script>
+    
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const cotizacionesData = {{ cotizaciones_data|safe }};
+        
+
+        // Initial render
+        renderCotizacionesAreaChart(cotizacionesData);
+        {% if is_staff %}
+            renderOficialesChart(cotizacionesData);
+        {% endif %}
+        renderMarcasChart(cotizacionesData);
+        renderModelosChart(cotizacionesData);
+        renderVendedorChart(cotizacionesData);
+    });
+</script>
 {% endblock %}
