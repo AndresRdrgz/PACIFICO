@@ -21,7 +21,7 @@ if DEBUG:
 else:
     DATABASES = {
         'default': dj_database_url.config(
-            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
+            default='postgresql://postgres:postgres@localhost:5432/pacifico',
             conn_max_age=600
         )
     }
