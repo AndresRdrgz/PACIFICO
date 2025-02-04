@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import fideicomiso_view, login_view, main_menu, get_lineas, generate_report, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList, view_active_sessions, terminate_all_sessions
+from .views import fideicomiso_view, login_view, main_menu, get_lineas, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList, view_active_sessions, terminate_all_sessions, download_merged_pdf
 from . import views
 from django.contrib.auth import views as auth_views
 from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
+from .viewsFideicomiso.reportesExcel import generate_report
 
 
 
@@ -17,6 +18,7 @@ urlpatterns = [
     path('cotizacion_seguro_auto/', cotizacion_seguro_auto, name='cotizacion_seguro_auto'),
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),
+    path('cotizacion/<int:numero_cotizacion>/download/', download_merged_pdf, name='download_merged_pdf'),
     path('login/', login_view, name='login'),
     path('clientes/', clientesList, name="clientesList"),
     path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),

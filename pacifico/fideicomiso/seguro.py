@@ -55,7 +55,6 @@ def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
         if auxZ >= 1:
             auxZ -= 1
 
-        print("auxZ:",auxZ)
         
         return auxZ
     

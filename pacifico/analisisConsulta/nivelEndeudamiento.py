@@ -1,26 +1,26 @@
 def nivelEndeudamiento(resultado):
-    print("------nivel de endeudamiento ------")
+    #print("------nivel de endeudamiento ------")
     
 
     # print resultado with its field types
     for key, value in resultado.items():
         if value is None:
             resultado[key] = 0
-        print(f"{key}: {type(resultado[key]).__name__}")
+        #print(f"{key}: {type(resultado[key]).__name__}")
     
 
     
     totalIngresosAdicionales =resultado['horasExtrasMonto'] + resultado['primaMonto'] + resultado['bonosMonto'] + resultado['otrosMonto']
     totalIngresosAdicionales = round(totalIngresosAdicionales,2)
-    #print("Total de ingresos adicionales: ", totalIngresosAdicionales)
+    ##print("Total de ingresos adicionales: ", totalIngresosAdicionales)
     totalDescuentoDirecto = resultado['siacapMonto'] + resultado['praaMonto'] + resultado['dirOtrosMonto1'] + resultado['dirOtrosMonto2'] + resultado['dirOtrosMonto3'] + resultado['dirOtrosMonto4']
-    #print("Total de descuentos directos: ", totalDescuentoDirecto)
+    ##print("Total de descuentos directos: ", totalDescuentoDirecto)
 
     totalPagoVoluntario = resultado['pagoVoluntarioMonto1'] + resultado['pagoVoluntarioMonto2'] + resultado['pagoVoluntarioMonto3'] + resultado['pagoVoluntarioMonto4'] + resultado['pagoVoluntarioMonto5'] + resultado['pagoVoluntarioMonto6']
-    #print("Total de pagos voluntarios: ", totalPagoVoluntario)
+    ##print("Total de pagos voluntarios: ", totalPagoVoluntario)
 
-    #print(resultado)
-    print("movOpcion: ", resultado.get('movOpcion'))
+    ##print(resultado)
+    #print("movOpcion: ", resultado.get('movOpcion'))
     # if 'movOpcion' is not in resultado or is None, set it to 'ingresar_manual'
     if 'movOpcion' not in resultado or resultado['movOpcion'] is None:
         resultado['movOpcion'] = 'ingresar_manual'
@@ -31,7 +31,7 @@ def nivelEndeudamiento(resultado):
 
     totalIngresosMensuales = round(totalIngresosMensuales,2)
     totalIngresosMensualesCompleto = round(totalIngresosMensualesCompleto,2)
-    #print("Total de ingresos mensuales: ", totalIngresosMensuales)
+    ##print("Total de ingresos mensuales: ", totalIngresosMensuales)
 
      
      #SEGURO SOCIAL
@@ -45,7 +45,7 @@ def nivelEndeudamiento(resultado):
         seguroSocial = (totalIngresosMensuales * 9.75) / 100
         seguroSocialCompleto = (totalIngresosMensualesCompleto * 9.75) / 100
 
-    #print("Seguro Social: ", seguroSocial)
+    ##print("Seguro Social: ", seguroSocial)
 
     #SEGURO EDUCATIVO
     if resultado['cartera'] in ['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE']:
@@ -55,7 +55,7 @@ def nivelEndeudamiento(resultado):
         seguroEducativo = (totalIngresosMensuales * 1.25) / 100
         seguroEducativoCompleto = (totalIngresosMensualesCompleto * 1.25) / 100
 
-    #print("Seguro Educativo: ", seguroEducativo)
+    ##print("Seguro Educativo: ", seguroEducativo)
 
     #IMPUESTO SOBRE LA RENTAa
     if resultado['cartera'] in ['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE']:
@@ -89,7 +89,7 @@ def nivelEndeudamiento(resultado):
         
 
 
-    #print("Impuesto Sobre la Renta: ", impuestoSobreLaRenta)
+    ##print("Impuesto Sobre la Renta: ", impuestoSobreLaRenta)
 
 
     totalDescuentosLegales = seguroSocial + seguroEducativo + impuestoSobreLaRenta
@@ -99,7 +99,7 @@ def nivelEndeudamiento(resultado):
     granTotalDescontado = totalDescuentoDirecto + totalPagoVoluntario + totalDescuentosLegales
     granTotalDescontado = round(granTotalDescontado,2)
     granTotalDescontadoCompleto = totalDescuentoDirecto + totalPagoVoluntario + totalDescuentosLegalesCompleto 
-    #print("Gran Total Descontado:", granTotalDescontado)
+    ##print("Gran Total Descontado:", granTotalDescontado)
     
     salarioNetoActual = totalIngresosMensuales - granTotalDescontado
     salarioNetoActual = round(salarioNetoActual,2)
@@ -110,7 +110,7 @@ def nivelEndeudamiento(resultado):
     salarioNeto = round(salarioNeto, 2)
     salarioNetoCompleto = salarioNetoActualCompleto - letraMensual
     salarioNetoCompleto = round(salarioNetoCompleto, 2)
-    #print("Cartera:", resultado['cartera'])
+    ##print("Cartera:", resultado['cartera'])
     
     # porcentajes
     try:
@@ -138,13 +138,13 @@ def nivelEndeudamiento(resultado):
     except ZeroDivisionError:
         porSalarioNetoCompleto = 0
 
-    #print("Porcentaje Salario Neto Actual Completo:", porSalarioNetoActualCompleto)
+    ##print("Porcentaje Salario Neto Actual Completo:", porSalarioNetoActualCompleto)
 
 
 
-    #print("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
-    #print("Porcentaje Letra Mensual:", porLetraMensual)
-    #print("Porcentaje Salario Neto:", porSalarioNeto)
+    ##print("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
+    ##print("Porcentaje Letra Mensual:", porLetraMensual)
+    ##print("Porcentaje Salario Neto:", porSalarioNeto)
 
     resultadoNivel = {
         'salarioNeto': salarioNeto,
