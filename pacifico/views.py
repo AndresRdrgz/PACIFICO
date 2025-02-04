@@ -33,7 +33,6 @@ from django.contrib.sessions.models import Session
 from django.contrib.auth.models import User
 from datetime import timedelta
 
-from PIL import Image
 from django.core.files.base import ContentFile
 from reportlab.lib.units import inch
 from io import BytesIO
