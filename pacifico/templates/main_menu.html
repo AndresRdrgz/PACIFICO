@@ -40,7 +40,7 @@
             </div>
         {% endif %}
         
-        <div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-4 mb-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4 mb-4">
             <div id="carteraChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
                 {% include 'partials/dashboard/carteraChart.html' %}
             </div>
@@ -50,15 +50,15 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-4 mb-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4 mb-4">
             <!-- Marcas-->
             <div id="marcasChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
-                {% include 'partials/dashboard/marcasChart.html' %}
+            {% include 'partials/dashboard/marcasChart.html' %}
             </div>
 
             <!-- Modelos-->
             <div id="modelosChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
-                {% include 'partials/dashboard/modelosChart.html' %}
+            {% include 'partials/dashboard/modelosChart.html' %}
             </div>
         </div>
 
@@ -87,22 +87,27 @@
         renderCarteraChart(cotizacionesData);
         renderRangoMontoChart(cotizacionesData);
 
-         // Calculate total and average values
-    const totalCotizaciones = cotizacionesData.length;
-    const totalClientes = new Set(cotizacionesData.map(cotizacion => cotizacion.cedulaCliente)).size;
-    const days = new Set(cotizacionesData.map(cotizacion => cotizacion.FechaCreacion)).size;
-    const promedioCotizaciones = (totalCotizaciones / days).toFixed(2);
-    const promedioClientes = (totalClientes / days).toFixed(2);
+        // Calculate total and average values
+        const totalCotizaciones = cotizacionesData.length;
+        const totalClientes = new Set(cotizacionesData.map(cotizacion => cotizacion.cedulaCliente)).size;
+        const days = new Set(cotizacionesData.map(cotizacion => cotizacion.FechaCreacion)).size;
+        const promedioCotizaciones = (totalCotizaciones / days).toFixed(2);
+        const promedioClientes = (totalClientes / days).toFixed(2);
 
-    // Render the calculated values
-    renderKPIs({
+        // Calculate cotizaciones and clientes made today
+        const today = new Date().toISOString().split('T')[0];
+        const cotizacionesHoy = cotizacionesData.filter(cotizacion => cotizacion.FechaCreacion.startsWith(today)).length;
+        const clientesHoy = new Set(cotizacionesData.filter(cotizacion => cotizacion.FechaCreacion.startsWith(today)).map(cotizacion => cotizacion.cedulaCliente)).size;
+
+        // Render the calculated values
+        renderKPIs({
         cotizacionesTotal: totalCotizaciones,
         cotizacionesPromedio: promedioCotizaciones,
         clientesTotal: totalClientes,
-        clientesPromedio: promedioClientes
-    });
-
-        
+        clientesPromedio: promedioClientes,
+        cotizacionesHoy: cotizacionesHoy,
+        clientesHoy: clientesHoy
+        });
        
     });
 </script>
