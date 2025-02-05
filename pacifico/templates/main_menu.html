@@ -10,63 +10,63 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.10.1/locales-all.min.js" defer></script>
 
 <!-- Main Container -->
-<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-8">
+<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-4">
     <!-- Title Section -->
     {% load static %}
-    <div class="mb-8 text-center">
-        <h1 class="mb-4 text-xl font-bold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-gray-800">¡Bienvenida, {{full_name}}!</h1>
+    <div class="mb-4 text-center">
+        <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">¡Bienvenida, {{full_name}}!</h5>
         <!--<p class="text-gray-500 mt-2">¡Bienvenido otra vez! What would you like to do today?</p>-->
+        <div class="flex items-center justify-center p-4 mb-3 text-sm rounded-lg bg-yellow-100 border border-yellow-400">
+            <span class="font-medium text-yellow-700 text-center">
+            Actualmente estás viendo el resumen de los últimos 15 días. Próximamente se añadirá función con más filtros e información.
+            </span>
+        </div>
     </div>
 
-    <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-yellow-100 border border-yellow-400">
-        <span class="font-medium text-yellow-700 inline-block">
-        Actualmente estás viendo el resumen de los últimos 15 días. Próximamente se añadirá función con más filtros e información.
-        </span>
+    
+    
+    <!-- KPI CARDS  -->
+    <div id="kpiCards" class="overflow-x-auto mt-4 mb-4">
+        {% include 'partials/dashboard/kpiCards.html' %}
     </div>
-    
-   
-
-    
 
     <!-- Table-->
-    <div id="cotizacionesChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
-
-        
+    <div id="cotizacionesChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
         {% include 'partials/dashboard/cotizacionesChart.html' %}
         
-        {%if is_staff%}
-            <div id="oficialesChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
+        {% if is_staff %}
+            <div id="oficialesChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
                 {% include 'partials/dashboard/oficialesChart.html' %}
             </div>
-        {%endif%}
+        {% endif %}
         
-        <div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-8 mb-8">
-        <div id="carteraChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
-            {% include 'partials/dashboard/carteraChart.html' %}
+        <div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-4 mb-4">
+            <div id="carteraChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
+                {% include 'partials/dashboard/carteraChart.html' %}
+            </div>
+
+            <div id="rangoMontoChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
+                {% include 'partials/dashboard/rangoMontoChart.html' %}
+            </div>
         </div>
 
-        <div id="rangoMontoChart" class=" mt-8 overflow-x-auto border shadow-md rounded-lg">
-            {% include 'partials/dashboard/rangoMontoChart.html' %}
+        <div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-4 mb-4">
+            <!-- Marcas-->
+            <div id="marcasChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
+                {% include 'partials/dashboard/marcasChart.html' %}
+            </div>
+
+            <!-- Modelos-->
+            <div id="modelosChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
+                {% include 'partials/dashboard/modelosChart.html' %}
+            </div>
         </div>
+
+        <div id="vendedorChart" class="overflow-x-auto border shadow-md rounded-lg mt-4 mb-4">
+            {% include 'partials/dashboard/vendedorChart.html' %}
         </div>
-
-        
-
-
-<div class="grid grid-cols-2 lg:grid-cols-2 gap-6 mt-8 mb-8">
-    <!-- Marcas-->
-    <div id="marcasChart" class="overflow-x-auto border shadow-md rounded-lg">
-        {% include 'partials/dashboard/marcasChart.html' %}
-    </div>
-
-    <!-- Modelos-->
-    <div id="modelosChart" class="overflow-x-auto border shadow-md rounded-lg">
-        {% include 'partials/dashboard/modelosChart.html' %}
     </div>
 </div>
-
-{% include 'partials/dashboard/vendedorChart.html' %}
-    
 
 
 <script>
@@ -86,6 +86,24 @@
         renderVendedorChart(cotizacionesData);
         renderCarteraChart(cotizacionesData);
         renderRangoMontoChart(cotizacionesData);
+
+         // Calculate total and average values
+    const totalCotizaciones = cotizacionesData.length;
+    const totalClientes = new Set(cotizacionesData.map(cotizacion => cotizacion.cedulaCliente)).size;
+    const days = new Set(cotizacionesData.map(cotizacion => cotizacion.FechaCreacion)).size;
+    const promedioCotizaciones = (totalCotizaciones / days).toFixed(2);
+    const promedioClientes = (totalClientes / days).toFixed(2);
+
+    // Render the calculated values
+    renderKPIs({
+        cotizacionesTotal: totalCotizaciones,
+        cotizacionesPromedio: promedioCotizaciones,
+        clientesTotal: totalClientes,
+        clientesPromedio: promedioClientes
+    });
+
+        
+       
     });
 </script>
 {% endblock %}
