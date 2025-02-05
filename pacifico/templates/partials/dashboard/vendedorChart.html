@@ -4,16 +4,9 @@
       <p class="text-base font-normal text-gray-500">Cotizaciones por vendedor</p>
     </div>
     <div id="vendedor-chart"></div>
-  
-  
-  
-  
 </div>
-  
-  
-  
-  <script>
-  
+
+<script>
 function renderVendedorChart(cotizaciones) {
     const cotizacionesPorVendedor = cotizaciones.reduce((acc, cotizacion) => {
         const vendedor = cotizacion.Vendedor;
@@ -24,8 +17,15 @@ function renderVendedorChart(cotizaciones) {
         return acc;
     }, {});
 
-    const vendedores = Object.keys(cotizacionesPorVendedor);
-    const counts = vendedores.map(vendedor => cotizacionesPorVendedor[vendedor]);
+    // Convert the object to an array of [vendedor, count] pairs
+    const vendedoresArray = Object.entries(cotizacionesPorVendedor);
+
+    // Sort the array by count in descending order and take the top 10
+    const topVendedores = vendedoresArray.sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    // Separate the vendedores and counts
+    const vendedores = topVendedores.map(item => item[0]);
+    const counts = topVendedores.map(item => item[1]);
 
     const optionsBarChart = {
         series: [{

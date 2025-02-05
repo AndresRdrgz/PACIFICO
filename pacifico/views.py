@@ -468,6 +468,8 @@ def main_menu(request):
             'Vendedor': cotizacion.vendedor if cotizacion.vendedor is not None else "-",
             'marca': cotizacion.marca if cotizacion.marca is not None else "-",
             'modelo': cotizacion.modelo if cotizacion.modelo is not None else "-",
+            'cartera': cotizacion.cartera if cotizacion.cartera is not None else "-",
+            'montoPrestamo': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo is not None else 0.0,
         }
         for cotizacion in cotizaciones
     ]

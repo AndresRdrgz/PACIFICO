@@ -10,7 +10,7 @@ STATIC_URL = '/static/'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = False
+DEBUG = True
 if DEBUG:
    DATABASES = {
         'default': dj_database_url.config(

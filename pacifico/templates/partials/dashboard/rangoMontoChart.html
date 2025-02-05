@@ -1,42 +1,53 @@
 <div class="max-w-full w-full bg-white rounded-lg shadow p-4 md:p-6">
     <div>
-      <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Modelos</h5>
-    <p class="text-base font-normal text-gray-500">Modelos de vehículos más cotizados</p>
+      <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Rango de monto financiado</h5>
+    <p class="text-base font-normal text-gray-500">Cotizaciones por rango de monto financiado</p>
     </div>
-        <div id="modelos-chart"></div>
+        <div id="rangomonto-chart"></div>
     </div>
 
   
   
 
 <script>
-    function renderModelosChart(cotizaciones) {
-        const cotizacionesPorMarca = cotizaciones.reduce((acc, cotizacion) => {
-            const marca = cotizacion.modelo;
-            if (!acc[marca]) {
-                acc[marca] = 0;
+    function renderRangoMontoChart(cotizaciones) {
+        const ranges = {
+            "1. <10000": 0,
+            "2. de 10000 a 15000": 0,
+            "3. de 15000 a 20000": 0,
+            "4. de 20000 a 25000": 0,
+            "5. mayor que 25000": 0
+        };
+
+        cotizaciones.forEach(cotizacion => {
+            const monto = cotizacion.montoPrestamo;
+            if (monto < 10000) {
+                ranges["1. <10000"]++;
+            } else if (monto >= 10000 && monto < 15000) {
+                ranges["2. de 10000 a 15000"]++;
+            } else if (monto >= 15000 && monto < 20000) {
+                ranges["3. de 15000 a 20000"]++;
+            } else if (monto >= 20000 && monto < 25000) {
+                ranges["4. de 20000 a 25000"]++;
+            } else {
+                ranges["5. mayor que 25000"]++;
             }
-            acc[marca]++;
-            return acc;
-        }, {});
+        });
 
-        const sortedMarcas = Object.entries(cotizacionesPorMarca)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        const marcas = sortedMarcas.map(entry => entry[0]);
-        const counts = sortedMarcas.map(entry => entry[1]);
+        const categories = Object.keys(ranges);
+        const data = Object.values(ranges);
 
         const optionsBarChart = {
             series: [{
                 name: "Cotizaciones",
-                data: counts,
+                data: data,
                 color: "#22a650",
             }],
             chart: {
                 type: "bar",
                 height: 400,
                 width: "100%",
+                stacked: true,
                 toolbar: {
                     show: false,
                 }
@@ -55,7 +66,7 @@
                 enabled: false,
             },
             xaxis: {
-                categories: marcas,
+                categories: categories,
                 labels: {
                     show: true,
                     style: {
@@ -104,7 +115,7 @@
             },
         };
 
-        const chartContainer = document.getElementById("modelos-chart");
+        const chartContainer = document.getElementById("rangomonto-chart");
         if (chartContainer && typeof ApexCharts !== 'undefined') {
             chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
             const chart = new ApexCharts(chartContainer, optionsBarChart);
@@ -112,7 +123,7 @@
                 chartContainer.innerHTML = ''; // Remove spinner
                 chart.render();
             });
-            console.log("Rendering bar chart...");
+            console.log("Rendering stacked bar chart...");
         }
     }
 </script>

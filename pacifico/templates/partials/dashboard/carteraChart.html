@@ -1,0 +1,83 @@
+<div class="max-w-full w-full bg-white rounded-lg shadow p-4 md:p-6">
+    <div>
+        <h5 class="leading-none text-3xl font-bold text-gray-900 pb-2">Cartera</h5>
+        <p class="text-base font-normal text-gray-500">Cotizaciones por tipo de cartera</p>
+    </div>
+    <div id="cartera-chart"></div>
+</div>
+  
+<script>
+    function renderCarteraChart(cotizaciones) {
+        const cotizacionesPorMarca = cotizaciones.reduce((acc, cotizacion) => {
+            const marca = cotizacion.cartera;
+            if (!acc[marca]) {
+                acc[marca] = 0;
+            }
+            acc[marca]++;
+            return acc;
+        }, {});
+
+        const marcas = Object.keys(cotizacionesPorMarca);
+        const counts = marcas.map(marca => cotizacionesPorMarca[marca]);
+
+        const colors = ['#1ab7ea', '#0084ff', '#39539E', '#0077B5', '#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#A133FF', '#33FFA1'];
+
+        const optionsRadialChart = {
+            series: counts,
+            chart: {
+                height: 390,
+                type: 'radialBar',
+            },
+            plotOptions: {
+                radialBar: {
+                    offsetY: 0,
+                    startAngle: 0,
+                    endAngle: 270,
+                    hollow: {
+                        margin: 5,
+                        size: '30%',
+                        background: 'transparent',
+                    },
+                    dataLabels: {
+                        name: {
+                            show: false,
+                        },
+                        value: {
+                            show: false,
+                        }
+                    },
+                    barLabels: {
+                        enabled: true,
+                        useSeriesColors: true,
+                        offsetX: -8,
+                        fontSize: '16px',
+                        formatter: function(seriesName, opts) {
+                            return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex];
+                        },
+                    },
+                }
+            },
+            colors: colors.slice(0, counts.length),
+            labels: marcas,
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    legend: {
+                        show: false
+                    }
+                }
+            }]
+        };
+
+        const chartContainer = document.getElementById("cartera-chart");
+        if (chartContainer && typeof ApexCharts !== 'undefined') {
+            chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
+            const chart = new ApexCharts(chartContainer, optionsRadialChart);
+            chart.render().then(() => {
+                chartContainer.innerHTML = ''; // Remove spinner
+                chart.render();
+            });
+            console.log("Rendering radial chart...");
+        }
+    }
+</script>
