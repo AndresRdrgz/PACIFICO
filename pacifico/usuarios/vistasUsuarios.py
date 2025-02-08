@@ -22,6 +22,7 @@ def edit_profile(request):
     else:
         user_form = UserForm(instance=user)
         profile_form = UserProfileForm(instance=user_profile)
+        
 
     return render(request, 'edit_profile.html', {
         'user_form': user_form,

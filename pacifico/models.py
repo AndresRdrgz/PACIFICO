@@ -113,9 +113,10 @@ TIPO_PRORRATEO_OPCIONES = [
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES, null=True)
-    oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
+    oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES, null=True)
     auto_save_cotizaciones = models.BooleanField(default=False)
     pruebaFuncionalidades = models.BooleanField(default=False)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     # Add more boolean fields as needed
 
     def __str__(self):

@@ -22,7 +22,7 @@ marca_choices = [('', 'Seleccione una marca')] + [(marca, marca) for marca in un
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['sucursal', 'oficial','pruebaFuncionalidades']
+        fields = ['sucursal', 'oficial','pruebaFuncionalidades','profile_picture']
         widgets = {
             'sucursal': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -32,6 +32,9 @@ class UserProfileForm(forms.ModelForm):
             }),
             'pruebaFuncionalidades': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600',
+            }),
+            'profile_picture': forms.FileInput(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
             }),
         }
 

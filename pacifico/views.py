@@ -604,7 +604,7 @@ def main_menu(request):
         user_profile = UserProfile.objects.get(user=request.user)
         context['user_profile'] = user_profile
         context['full_name'] = f"{request.user.first_name} {request.user.last_name}"
-    
+        context['profile_picture'] = user_profile.profile_picture.url if user_profile.profile_picture else None
 
     return render(request, 'main_menu.html', context)
 
