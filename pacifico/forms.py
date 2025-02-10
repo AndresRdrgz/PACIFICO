@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 from django.conf import settings
 
+
 # Load the JSON file
 BASE_DIR = Path(__file__).resolve().parent.parent
 with open(BASE_DIR / 'static/insumos/autos.json') as f:
@@ -17,7 +18,7 @@ unique_marcas = list({item['MARCA'] for item in choices_data})
 # Convert unique "MARCA" values to choices format and add a default choice
 marca_choices = [('', 'Seleccione una marca')] + [(marca, marca) for marca in unique_marcas]
 
-#FORMAULRIOS AQUI
+
 
 class UserProfileForm(forms.ModelForm):
     class Meta:

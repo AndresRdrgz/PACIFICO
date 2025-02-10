@@ -41,6 +41,7 @@ from reportlab.pdfgen import canvas
 from PyPDF2 import PdfMerger
 from reportlab.lib.units import mm
 
+from .filters import CotizacionFilter
 
 
 
@@ -555,25 +556,22 @@ def get_lineas(request):
 
       
 
+
 @login_required
 def main_menu(request):
-
-    #if user is not staff, filter cotizaciones by added_by 
     if request.user.is_authenticated and not request.user.is_staff:
         cotizaciones = Cotizacion.objects.filter(added_by=request.user)
     else:
         cotizaciones = Cotizacion.objects.all()
     
-    #filter by create_at and get only of the past 15 days
+    # Apply filters
+    cotizacion_filter = CotizacionFilter(request.GET, queryset=cotizaciones)
+    filtered_cotizaciones = cotizacion_filter.qs
+
+    # Filter by created_at and get only the past 15 days
     end_date = timezone.now()
-    start_date = end_date - timedelta(days=15)
-    cotizaciones = cotizaciones.filter(created_at__range=[start_date, end_date])
-
-
-    #sort deudas by fecha vencimiento
-    cotizaciones = cotizaciones.order_by('created_at')
-
-    
+    start_date = end_date - timedelta(days=30)
+    filtered_cotizaciones = filtered_cotizaciones.filter(created_at__range=[start_date, end_date]).order_by('created_at')
 
     cotizaciones_data = [
         {
@@ -589,25 +587,22 @@ def main_menu(request):
             'cartera': cotizacion.cartera if cotizacion.cartera is not None else "-",
             'montoPrestamo': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo is not None else 0.0,
         }
-        for cotizacion in cotizaciones
+        for cotizacion in filtered_cotizaciones
     ]
 
     context = {
         'cotizaciones_data': cotizaciones_data,
+        'filter': cotizacion_filter,
+        'is_staff': request.user.is_staff,
+        'username': request.user.username,
+        'user_profile': UserProfile.objects.get(user=request.user),
+        'full_name': f"{request.user.first_name} {request.user.last_name}",
     }
     
-    context['is_staff'] = request.user.is_staff
-
-    #add to the context the user name
-    if request.user.is_authenticated:
-        context['username'] = request.user.username
-        user_profile = UserProfile.objects.get(user=request.user)
-        context['user_profile'] = user_profile
-        context['full_name'] = f"{request.user.first_name} {request.user.last_name}"
-        
     return render(request, 'main_menu.html', context)
 
 def login_view(request):
+    
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -1098,11 +1093,9 @@ def calculoAppx(request):
     
 @login_required
 def reportesDashboard(request):
-   
     cotizaciones = Cotizacion.objects.all()
-    
-    #sort deudas by fecha vencimiento
-    cotizaciones = cotizaciones.order_by('created_at')
+    cotizacion_filter = CotizacionFilter(request.GET, queryset=cotizaciones)
+    filtered_cotizaciones = cotizacion_filter.qs
 
     cotizaciones_data = [
         {
@@ -1116,7 +1109,12 @@ def reportesDashboard(request):
             'Marca': cotizacion.marca,
             'Modelo': cotizacion.modelo,
         }
-        for cotizacion in cotizaciones
+        for cotizacion in filtered_cotizaciones
     ]
 
-    return render(request, 'reportesDashboard.html', {'cotizaciones': cotizaciones_data})
+    context = {
+        'cotizaciones': cotizaciones_data,
+        'filter': cotizacion_filter,
+    }
+
+    return render(request, 'reportesDashboard.html', context)
