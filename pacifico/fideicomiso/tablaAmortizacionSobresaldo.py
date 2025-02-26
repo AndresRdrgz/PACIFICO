@@ -1,5 +1,6 @@
 import datetime
 
+
 def calculoInteres_F(wrkSaldoAnterior, tasaInteres, wrkDiasCalc):
     auxM = wrkSaldoAnterior
     auxN = tasaInteres
@@ -136,20 +137,23 @@ def verificaDiferencia_F(wrkMontoLetra,wrkDiferencia):
 
 
 
-def tablaAmortizacion(params):
+def tablaAmortizacionSobresaldo(params):
     # PASE DE PARAMETROS
     #print(params)
     auxMonto2 = params['auxMonto2']
     auxPlazoPago = params['auxPlazoPago']
-    auxPlazoInteres = auxPlazoPago
+    auxPlazoInteres = params['auxPlazoInteres'] - 1 #revisar
     cotTasaInteres = params['calcTasaInteres']
     auxA_seguro = params['totalSeguro']
     totalSeguro = params['totalSeguro']
     wrkMontoLetra = params['wrkMontoLetra']
     seguroAndres = params['seguroAdicional']
     jubilado = params['jubilado']
+    cotFechaInicioPago = params['cotFechaInicioPago']
+    fechaProemsaCK = params['calcFechaPromeCK']
 
-    wrkMontoLetra = 276.38
+    print ("-----AMORTIZACION SOBRE SALDO -----")
+    
     #-------
     #print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
     auxRecrear = True
@@ -162,7 +166,7 @@ def tablaAmortizacion(params):
         auxAndres += 1
         if auxAndres > 999:
             return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data
-        pagaDiciembre = "Y"
+        pagaDiciembre = "N" #REVISAR 
         wrkDiasCalcAnt =0
         wrkSaldo13 = 0
         wrkMontoNetoBruto = auxMonto2
@@ -195,16 +199,19 @@ def tablaAmortizacion(params):
         #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
         wrkMontoLetraOfici = round(wrkMontoLetraOfici / 2 + 0.001, 2) * 2
        
-        
-        
         auxL = auxPlazoInteres
+        auxJ = auxPlazoInteres
         auxXI = 0
         
         #SALDO ANTERIOR IGUAL A MONTO AMORTIZAR
         wrkSaldoAnterior = wrkMontoNetoBruto
 
-        auxZ = seguroAndres    
+        auxZ = seguroAndres   
 
+        #CALCULO DEL SEGURO ADICIONAL
+        auxA = auxA_seguro
+        auxS = wrkSaldo13 
+        auxB = 0    # VERIFICAR
 
         if pagaDiciembre == "Y":
             auxD = auxPlazoPago
@@ -212,11 +219,6 @@ def tablaAmortizacion(params):
             auxD = auxPlazoInteres
         
         auxD = auxD + auxZ
-
-        #CALCULO DEL SEGURO ADICIONAL
-        auxA = auxA_seguro
-        auxB = 0    # VERIFICAR
-        auxS = wrkSaldo13
 
         if auxB != auxD:
             auxB = auxD - auxB
@@ -256,50 +258,31 @@ def tablaAmortizacion(params):
             wrkCredito3 = 0
         
         # GENERACION DE DISTRIBUCION DE PAGO
-        if cantidadBol == 0:
-            cantidadBol = parametrMesesPromoc
         
-        if wrkfechaCalculo == "":
-            fechaProemsaCK = ""
-            cotFechaInicioPago = ""
-        else:
-            fechaProemsaCK = wrkfechaCalculo
-            cotFechaInicioPago = wrkfechaCalculo
-        
-       
-        wrkDiasenteros = 30
-        wrkDiasenteros = wrkDiasenteros * cantidadBol
-        wrkDiasEnteros2 = wrkDiasenteros
-        wrkDiasEnteros2 = wrkDiasEnteros2 + 15
-        
-
-        fechaProemsaCK = fechaProemsaCK + datetime.timedelta(days=1)
-        cotFechaInicioPago = cotFechaInicioPago + datetime.timedelta(days=wrkDiasenteros)
-        cotFechaInicioPago = cotFechaInicioPago + datetime.timedelta(days=1)
-       
-        fechaValidez = fechaProemsaCK + datetime.timedelta(days=parametrValidezCL)
-        inicioPago = cotFechaInicioPago
-
         wrkDia = cotFechaInicioPago.day
-        
         auxLI = 0
+        if wrkDia > 15:
+            auxLI = 2
+            auxL = auxL + 1
 
         for i in range(1, auxL + 1):
             auxXI = auxXI + 1
             calcsobtSecuencia = auxXI
-
+            
+            # CALCULO DE PERIODO DE VENCIMIENTO
             if (i == 1):
-                wrkFechaFICI = fechaProemsaCK
-                wrkfecha = cotFechaInicioPago
+                wrkFechaFICI = fechaProemsaCK.date()
+                wrkfecha = cotFechaInicioPago.date()
                 wrkDiasTrans = (wrkfecha - wrkFechaFICI).days
-                #print("wrkDiasTrans: ", wrkDiasTrans)
-               
+                
             else:
                 wrkfecha = wrkfecha + datetime.timedelta(days=30)
 
             if (auxXI == 1):
                 calcsobtFechaVenc = fechaProemsaCK
+                calcsobtFechaVenc += datetime.timedelta(days=1)
                 calcsobtFechaFin = cotFechaInicioPago
+                
             else:
                 calcsobtFechaVenc = wrkfechaCalculo
                 calcsobtFechaFin = calcsobtFechaVenc
@@ -307,18 +290,19 @@ def tablaAmortizacion(params):
 
             #print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin)
             wrkMes = calcsobtFechaFin.month
-            
-            if (auxXI == auxL or auxXI == 1):
-                fecha1 = calcsobtFechaFin
-                wrkDia = calcsobtFechaFin.day
-                if 1 <= wrkDia <= 5:
-                    calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month, 5)
-                elif 6 <= wrkDia <= 20:
-                    calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month, 20)
-                else:
-                    calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month + 1, 5)
 
-                if auxXI == auxL:
+            #LABEL :SUMA
+            auxBolSuma = True
+            while auxBolSuma:
+                if (auxXI == auxL or auxXI == 1):
+                    calcsobtFechaFin += datetime.timedelta(days=1)
+                    wrkMes2 = calcsobtFechaFin.month
+                    if wrkMes2 == wrkMes:
+                        continue
+                    else:
+                        auxBolSuma = False
+
+            if auxXI == auxL:
                     calcsobtFechaFin = calcsobtFechaFin + datetime.timedelta(days=30)
                     calcsobtFechaVenc = calcsobtFechaFin
             else:

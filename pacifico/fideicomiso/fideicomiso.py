@@ -1,6 +1,7 @@
 import datetime
 
 from .tablaAmortizacion import tablaAmortizacion
+from .tablaAmortizacionSobresaldo import tablaAmortizacionSobresaldo
 from .determinaMontoAmortizar import calculate_tasa_interes_mensual, determinar_monto_amortizar
 from .calculoMensualidadSobresaldo import calculoMensualidadSobresaldo
 from .rentabilidad import calculoRentabilidad
@@ -14,6 +15,7 @@ import logging
 import datetime
 from decimal import Decimal
 import traceback
+from datetime import datetime, timedelta
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -321,10 +323,14 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     plazoInteres = plazoPago    
     tipopagoPeriocidad = auxPeriocidad
     pagadiciembre1 = "Y"
+    tipo_prestamo = params['tipoPrestamo']
 
     params["calcMontoTimbres"] = calcMontoTimbres
+    if tipo_prestamo == "PREST AUTO":
+        tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data = tablaAmortizacion(params)
+    else:
+        tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data = tablaAmortizacionSobresaldo(params)
 
-    tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data = tablaAmortizacion(params)
 
     
     params['tablaTotalPagos'] = tablaTotalPagos
@@ -376,7 +382,96 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     #print("total pagos: ",tablaTotalPagos," total seguro: ",tablaTotalSeguro," total feci: ",tablaTotalFeci," total interes: ",tablaTotalInteres," total monto capital: ",tablaTotalMontoCapital," monto letra: ",wrkMontoLetra)
     return r1, iteration_data
 
+
+def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, paga_diciembre2, sobresaldo):
+    
+    auxN = cot_plazo
+    #print date type of aux_fecha_promesa_ck and cot_fecha_inicio_pago
+    #print("aux_fecha_promesa_ck: ",type(aux_fecha_promesa_ck)," cot_fecha_inicio_pago: ",type(cot_fecha_inicio_pago),"paga_diciembre2",paga_diciembre2)
+    wrk_fecha = aux_fecha_promesa_ck
+    wrk_fecha2 = cot_fecha_inicio_pago
+
+    #print("wrkfecha: ",wrk_fecha," wrkfecha2: ",wrk_fecha2)
+    
+    # Add one day to wrk_fecha
+    wrk_fecha += timedelta(days=1)
+    #print("wrkfecha: ",wrk_fecha)
+    
+    # Add one month if the first payment is after the 16th
+    day_of_month = wrk_fecha2.day
+    if day_of_month <= 15:
+        wrk_fecha2 = wrk_fecha2.replace(day=1)
+        #print("primero del mes",wrk_fecha2)
+    else:
+        wrk_fecha2 = wrk_fecha2.replace(day=16)
+        auxN += 1
+        #print("se adiciona un mes",auxN,wrk_fecha2)
+
+
+    
+    # Calculate the difference in days
+    #print("CALCULO DIFERENCIA ---------")
+    #print("wrk_fecha2: ",wrk_fecha2," wrk_fecha: ",wrk_fecha)
+    time_difference = (wrk_fecha2 - wrk_fecha).days + 1
+    dias_antes_primer_pg = time_difference
+    #print("Dias antes del primer pago: ",dias_antes_primer_pg)
+    
+    # Calculate auxC
+    aux_a = dias_antes_primer_pg
+    aux_b = 30.4
+    aux_c = aux_a / aux_b
+    
+    
+
+    if aux_c < 0.5:
+        aux_c = 0
+    elif 0.5 <= aux_c < 1.5:
+        aux_c = 1
+    elif 1.5 <= aux_c < 2.5:
+        aux_c = 2
+    elif 2.5 <= aux_c < 3.5:
+        aux_c = 3
+    elif 3.5 <= aux_c < 4.5:
+        aux_c = 4
+    elif 4.5 <= aux_c < 5.5:
+        aux_c = 5
+    elif 5.5 <= aux_c < 6.5:
+        aux_c = 6
+
+    # Calculate contDiciembre
+    wrk_fecha_diciembre = cot_fecha_inicio_pago
+    cont_diciembre = 0
+    #print("wrk_fecha_diciembre: ",wrk_fecha_diciembre,"auxc: ",aux_c)
+    
+    for aux_u in range(1, auxN + 1):
+        if wrk_fecha_diciembre.month == 12:
+            cont_diciembre += 1
+            aux_u -= 1
+        wrk_fecha_diciembre += timedelta(days=30)  # Add 1 month
+
+    auxN += cont_diciembre
+    print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
+    #cont_diciembre = 0
+    """
+    if paga_diciembre2 == "Y":
+        for aux_u in range(1, auxN + 1):
+            if wrk_fecha.month == 12:
+                cont_diciembre += 1
+            wrk_fecha += timedelta(days=30)  # Add 1 month
+    """
+
+    if sobresaldo == "Y":
+        calc_plazo_interes = cot_plazo + cont_diciembre
+    else:
+        calc_plazo_interes = cot_plazo + cont_diciembre
+        if aux_c > 0:
+            aux_c = round(aux_c)
+            calc_plazo_interes += aux_c
+
+    #print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
    
+
+    return calc_plazo_interes
     
 def rutinaCalculo(params):
    
@@ -388,6 +483,7 @@ def rutinaCalculo(params):
     patrono = params['patrono']
     calcMontoNotaria = params['calcMontoNotaria']
     calcFechaPromeCK = params['calcFechaPromeCK']
+    tipoPrestamo = params['tipoPrestamo']
   
     
     auxPeriocidad = 1
@@ -396,25 +492,36 @@ def rutinaCalculo(params):
     
     #manejo_5porc=148.40
     fechaInicioPago = params['fechaCalculo']
-    tempPrimerDiaHabil = datetime.datetime(2024, 11, 1)
+    tempPrimerDiaHabil = datetime(2024, 11, 1)
     cotFechaInicioPago = params['cotFechaInicioPago']
+
     
-    pagadiciembre1 = "Y"
+    pagadiciembre1 = "N"
     forma_pago = 4
     codigoSeguro = params['codigoSeguro']
     
     auxPlazoInteres = auxPlazoPago
     #Neto Cancelacion
-    if params['financiaSeguro'] == True:
-        calcNetoCancelacion = params['montoMensualSeguro'] * params['mesesFinanciaSeguro']
-        params['calcNetoCancelacion'] = calcNetoCancelacion
+    if tipoPrestamo == "PREST AUTO":
+        if params['financiaSeguro'] == True:
+            calcNetoCancelacion = params['montoMensualSeguro'] * params['mesesFinanciaSeguro']
+            params['calcNetoCancelacion'] = calcNetoCancelacion
+        else:
+            calcNetoCancelacion = 0
+            params['calcNetoCancelacion'] = calcNetoCancelacion
     else:
         calcNetoCancelacion = 0
         params['calcNetoCancelacion'] = calcNetoCancelacion
 
 
+    #Calculo diciembres
+    auxPlazoInteres = calculo_diciembres(auxPlazoPago, calcFechaPromeCK, cotFechaInicioPago, pagadiciembre1, "Y")
+    params['auxPlazoInteres'] = auxPlazoInteres
+    print("Plazo Interes: ",auxPlazoInteres)
+    
+
     #determinar monto amortizar
-    aux_l, aux_z, aux_x, calcComiCierre,tasaBruta,tasaReal = determinar_monto_amortizar(cotMontoPrestamo, calcMontoNotaria, calcComiCierre, "PREST AUTO",codigoSeguro,edad,calcNetoCancelacion)
+    aux_l, aux_z, aux_x, calcComiCierre,tasaBruta,tasaReal = determinar_monto_amortizar(cotMontoPrestamo, calcMontoNotaria, calcComiCierre, tipoPrestamo,codigoSeguro,edad,calcNetoCancelacion, params)
     #print("aux_l: ",aux_l," aux_z: ",aux_z," aux_x: ",aux_x," calcComiCierre: ",calcComiCierre)
     params['calcComiCierreFinal'] = calcComiCierre
     params['tasaBruta'] = tasaBruta
@@ -422,11 +529,11 @@ def rutinaCalculo(params):
     params['auxMonto2'] = calcMonto2
 
     #CALCULO MENSUALIDAD SOBRESALDO
-    wrkMontoLetra=calculoMensualidadSobresaldo(auxPlazoPago,calcMonto2,calcTasaInteres)
+    wrkMontoLetra = calculoMensualidadSobresaldo(auxPlazoPago,calcMonto2,calcTasaInteres)
     params['wrkMontoLetra'] = wrkMontoLetra
 
     #CALCULO SOBRESALDO EN CALCULO
-    params =calculoSobresaldoEnCalculo(auxPlazoPago,cotMontoPrestamo,calcTasaInteres,calcMonto2,calcComiCierre,calcMontoNotaria,params)
+    params = calculoSobresaldoEnCalculo(auxPlazoPago,cotMontoPrestamo,calcTasaInteres,calcMonto2,calcComiCierre,calcMontoNotaria,params)
     
     #print(params)
     #PENDIENTE TOTAL SEGURO
@@ -444,7 +551,6 @@ def rutinaCalculo(params):
     
     #FECHA VENCIMIENTO
     fecha_vencimiento = calculate_fecha_vencimiento(auxPlazoPago, cotFechaInicioPago, pagadiciembre1, forma_pago)
-   
     #RECREAR SOBRESALDO
     calcMontoTimbres = params['calcMontoTimbres']
     r1, iteration_data= recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calcMonto2,auxPeriocidad,calcMontoTimbres,calcMontoNotaria,fechaInicioPago,tempPrimerDiaHabil,cotFechaInicioPago,calcFechaPromeCK,params)
@@ -514,7 +620,7 @@ def generarFideicomiso3(params):
         sucursal = params['sucursal']
         forma_pago = params['forma_pago']
 
-        fechaCalculo = datetime.datetime.now() + datetime.timedelta(days=31)
+        fechaCalculo = datetime.now() + timedelta(days=31)
         params['cotFechaInicioPago'] = fechaCalculo
 
         logger.info("Fecha Calculo set to: %s", fechaCalculo)

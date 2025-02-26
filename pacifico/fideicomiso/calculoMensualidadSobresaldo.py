@@ -4,8 +4,9 @@ from .determinaMontoAmortizar import calculate_tasa_interes_mensual
 def calculoMensualidadSobresaldo(cotPlazo,auxMonto2,cotTasaInteres):
     auxA = cotPlazo
     auxB = auxMonto2
+    wrk_logic5 = "NO"
     #print('cotTasaInteres = ',cotTasaInteres,'auxB = ',auxB)
-    auxC = calculate_tasa_interes_mensual("NO", "Y",cotTasaInteres, auxB)
+    auxC = calculate_tasa_interes_mensual(wrk_logic5, "Y",cotTasaInteres, auxB)
 
     auxC = auxC / 100
     #auxC = round(auxC,6)
@@ -16,4 +17,5 @@ def calculoMensualidadSobresaldo(cotPlazo,auxMonto2,cotTasaInteres):
     auxX = round(auxX,2)
     
     #print("Mensualidad = ",auxX)
+    
     return auxX

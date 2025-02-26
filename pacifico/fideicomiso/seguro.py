@@ -9,6 +9,13 @@ def auxBusquedaSeguro(codigo, edad):
         {"CODIGO": 8, "DESCRIPCION": "INTERNACIONAL DE SEGUROS - FIDEICOMISO M", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 57, "TASABRUTA": 0.75, "SOBRETASA": None, "TASAREAL": 0.75},
         {"CODIGO": 8, "DESCRIPCION": "INTERNACIONAL DE SEGUROS - FIDEICOMISO M", "SECUENCIA": 2, "EDAD MIN": 58, "EDAD MAX": 99, "TASABRUTA": 0, "SOBRETASA": None, "TASAREAL": None},
         {"CODIGO": 10, "DESCRIPCION": "SOBRETASA 2%", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 99, "TASABRUTA": 2, "SOBRETASA": 2, "TASAREAL": 2},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 49, "TASABRUTA": 2, "SOBRETASA": 0.5, "TASAREAL": 1.5},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 2, "EDAD MIN": 50, "EDAD MAX": 66, "TASABRUTA": 2.5, "SOBRETASA": 1, "TASAREAL": 1.5},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 3, "EDAD MIN": 67, "EDAD MAX": 69, "TASABRUTA": 3.5, "SOBRETASA": 1, "TASAREAL": 2.5},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 4, "EDAD MIN": 70, "EDAD MAX": 70, "TASABRUTA": 4.5, "SOBRETASA": 1.5, "TASAREAL": 3},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 5, "EDAD MIN": 71, "EDAD MAX": 72, "TASABRUTA": 6.5, "SOBRETASA": 2, "TASAREAL": 4.5},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 6, "EDAD MIN": 73, "EDAD MAX": 75, "TASABRUTA": 7.5, "SOBRETASA": 3, "TASAREAL": 4.5},
+        {"CODIGO": 19, "DESCRIPCION": "ASEGURADORA MUNDIAL (ENE-2005)", "SECUENCIA": 7, "EDAD MIN": 76, "EDAD MAX": 79, "TASABRUTA": 8.5, "SOBRETASA": 3, "TASAREAL": 5.5},
         {"CODIGO": 99, "DESCRIPCION": "SIN SEGURO", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 99, "TASABRUTA": 0, "SOBRETASA": 0, "TASAREAL": 0},
     ]
 
@@ -16,11 +23,13 @@ def auxBusquedaSeguro(codigo, edad):
     # Find the matching row in the table
     for row in table:
         if row["CODIGO"] == codigo and row["EDAD MIN"] <= edad <= row["EDAD MAX"]:
-            #print("Seguro encontrado:", row["DESCRIPCION"], row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"])
+            print("Seguro encontrado:", row["DESCRIPCION"], row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"])
+            
             return row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"]
 
     # Return None if no match is found
     print("No se encontró el seguro",codigo,edad)
+    
     return None, None, None
 
 def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):

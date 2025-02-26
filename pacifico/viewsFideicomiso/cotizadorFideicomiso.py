@@ -293,6 +293,7 @@ def perform_fideicomiso_calculation(form):
     #print('Sucursal', sucursal)
     # Call the generarFideicomiso2 function
     params = {
+        'tipoPrestamo': 'PREST AUTO',
         'edad': edad,
         'sucursal': sucursal,
         'sexo': sexo,

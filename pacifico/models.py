@@ -269,7 +269,13 @@ class Cotizacion(models.Model):
     #OFICIAL
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES,null=True)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES,null=True)
-
+    tipoPrestamo = models.CharField(
+        max_length=20,
+        choices=[('auto', 'Préstamo de Auto'), ('personal', 'Préstamo Personal')],
+        default='',
+        blank=True,
+        null=True
+    )
     #Datos del cliente
     nombreCliente = models.CharField(max_length=100, null=True)
     cedulaCliente = models.CharField(max_length=10, null=True,default='')
@@ -289,6 +295,21 @@ class Cotizacion(models.Model):
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
+    pagaDiciembre = models.CharField(
+        max_length=10,
+        choices=[('NO', 'NO'), ('SI', 'SI')],
+        default='NO',
+        null=True,
+        blank=True
+    )
+    selectDescuento = models.CharField(
+        max_length=1,
+        choices=[('Y', 'Y'), ('N', 'N')],
+        default='N',
+        blank=True,
+        null=True
+    )
+    porServDesc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     # Datos de la cotización
     fechaInicioPago = models.DateField(null=True)
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -298,12 +319,12 @@ class Cotizacion(models.Model):
     r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=True)
-    mesesFinanciaSeguro = models.IntegerField(null=True,default=3)
-    montoanualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
+    mesesFinanciaSeguro = models.IntegerField(null=True,default=3,blank=True)
+    montoanualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0,blank=True)
     montoMensualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
-    cantPagosSeguro = models.IntegerField(null=True,default=12)
+    cantPagosSeguro = models.IntegerField(null=True,default=12,blank=True)
     # DATOS DEL AUTO
-    valorAuto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    valorAuto = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
     cashback = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     abono = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     abonoPorcentaje = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
@@ -314,14 +335,16 @@ class Cotizacion(models.Model):
         max_length=20,
         choices=[('MANUAL', 'Manual'), ('AUTOMÁTICO', 'Automático')],
         default='AUTOMÁTICO',
-        null=True
+        null=True,
+        blank=True
     )
-    kilometrajeAuto = models.IntegerField(null=True, default=0)
+    kilometrajeAuto = models.IntegerField(null=True, default=0,blank=True)
     nuevoAuto = models.CharField(
         max_length=10,
         choices=[('AUTO NUEVO', 'Auto Nuevo'), ('AUTO USADO', 'Auto Usado')],
         default='AUTO NUEVO',
-        null=True
+        null=True,
+        blank=True
     )
     yearsFinanciamiento = models.IntegerField(null=True,default=1)
     #DATOS DE LA CONSULTA
@@ -419,18 +442,18 @@ class Cotizacion(models.Model):
     porSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
     #PRORRATEO
-    mes0 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes7 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes8 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes9 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes10 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    mes0 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes7 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes8 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes9 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes10 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     primerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
     tipoProrrateo = models.CharField(max_length=20, choices=TIPO_PRORRATEO_OPCIONES, default='horas_extras')
 

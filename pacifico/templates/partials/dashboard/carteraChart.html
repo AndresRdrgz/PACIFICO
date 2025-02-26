@@ -20,64 +20,52 @@
         const marcas = Object.keys(cotizacionesPorMarca);
         const counts = marcas.map(marca => cotizacionesPorMarca[marca]);
 
-        const colors = ['#1ab7ea', '#0084ff', '#39539E', '#0077B5', '#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#A133FF', '#33FFA1'];
-
-        const optionsRadialChart = {
-            series: counts,
+        const options = {
+            series: [{
+                data: counts
+            }],
             chart: {
-                height: 390,
-                type: 'radialBar',
-            },
-            plotOptions: {
-                radialBar: {
-                    offsetY: 0,
-                    startAngle: 0,
-                    endAngle: 270,
-                    hollow: {
-                        margin: 5,
-                        size: '30%',
-                        background: 'transparent',
-                    },
-                    dataLabels: {
-                        name: {
-                            show: false,
-                        },
-                        value: {
-                            show: false,
-                        }
-                    },
-                    barLabels: {
-                        enabled: true,
-                        useSeriesColors: true,
-                        offsetX: -8,
-                        fontSize: '16px',
-                        formatter: function(seriesName, opts) {
-                            return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex];
-                        },
-                    },
-                }
-            },
-            colors: colors.slice(0, counts.length),
-            labels: marcas,
-            responsive: [{
-                breakpoint: 480,
-                options: {
-                    legend: {
-                        show: false
+                height: 350,
+                type: 'bar',
+                events: {
+                    click: function(chart, w, e) {
+                        // console.log(chart, w, e)
                     }
                 }
-            }]
+            },
+            colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#546E7A', '#26a69a', '#D10CE8'],
+            plotOptions: {
+                bar: {
+                    columnWidth: '45%',
+                    distributed: true,
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            legend: {
+                show: false
+            },
+            xaxis: {
+                categories: marcas,
+                labels: {
+                    style: {
+                        colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#546E7A', '#26a69a', '#D10CE8'],
+                        fontSize: '12px'
+                    }
+                }
+            }
         };
 
         const chartContainer = document.getElementById("cartera-chart");
         if (chartContainer && typeof ApexCharts !== 'undefined') {
             chartContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
-            const chart = new ApexCharts(chartContainer, optionsRadialChart);
+            const chart = new ApexCharts(chartContainer, options);
             chart.render().then(() => {
                 chartContainer.innerHTML = ''; // Remove spinner
                 chart.render();
             });
-            console.log("Rendering radial chart...");
+            console.log("Rendering column chart...");
         }
     }
 </script>

@@ -672,6 +672,7 @@ def fideicomiso_view(request):
                 #print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
                 params = {
+                    'tipoPrestamo': 'PREST AUTO',
                     'edad': edad,
                     'sucursal': sucursal,
                     'sexo': sexo,

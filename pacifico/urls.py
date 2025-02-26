@@ -7,12 +7,13 @@ from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
 from .viewsFideicomiso.reportesExcel import generate_report
-
+from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
 
 
 urlpatterns = [
     path('', main_menu, name='main_menu'),
     path('cotizador/prestAuto/', fideicomiso_view, name='fideicomiso'),
+    path('cotizador/prestPersonal/', cotizacionPrestamoPersonal, name='prestPersonal'),
     path('get_lineas/', views.get_lineas, name='get_lineas'),
     path('generate_report/<int:numero_cotizacion>/', generate_report, name='generate_report'),
     path('cotizacion_seguro_auto/', cotizacion_seguro_auto, name='cotizacion_seguro_auto'),

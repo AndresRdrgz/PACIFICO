@@ -53,17 +53,58 @@ def calculoTimbres(comis_cierre,monto2):
     #print('timbres:', timbres)
     return round(aux_b,2)
 
-def calculate_fecha_servicio_descuento(disket, tipo_prestamo, fecha_inicio_pago):
-    # Check if disket is "Y"
-    if disket == "Y":
-        # Set fecha_ad_sdev to fecha_inicio_pago
-        fecha_ad_sdev = fecha_inicio_pago
-        return fecha_ad_sdev
+def calculo_servicio_descuento(params):
+    servDesc = 0
+    montoServDesc = 0
+    edad = params['edad']
+    sexo = params['sexo']
+    jubilado = params['jubilado']
+    patrono = params['patrono']
+    selectDescuento = params['selectDescuento']
+    porServDesc = params['porServDesc']
+    edadJubFem = 55
+    edadJubMas = 60
+    auxA = 0
+    auxB = 0
+    montoLetra = params['wrkMontoLetra']
+    noLetras = params['auxPeriocidad'] * params['auxPlazoPago']
+    print(params, 'noLetras:', noLetras)
 
-    # Check if tipo_prestamo is "4"
-    if tipo_prestamo == "4":
-        return None
 
+    if edad >= edadJubFem and sexo == "FEMENINO":
+        return montoServDesc
+    elif edad >= edadJubMas and sexo == "MASCULINO":
+        return montoServDesc
+    
+    if jubilado != "NO":
+        #METER TIPO DE JUB JCC AND JCS
+        return montoServDesc
+    
+    if patrono != "9999":
+        if selectDescuento == "Y":
+           pass
+
+    if porServDesc > 0:
+        auxA = noLetras * montoLetra
+        auxb = porServDesc
+        auxb = auxb / 100
+        auxA = auxA * float(auxb)
+        montoServDesc = auxA
+
+    return montoServDesc
+    
+
+    
+    #NO APLICA SERVICIO DE DESCUENTO SE GUARDA CALCULI PARA APLICAR COMO GASTO
+
+
+
+
+
+
+
+
+   
     return None
 
 
@@ -74,6 +115,8 @@ def calculate_comision_manejo(sobresaldo, comis_cierre, monto2, monto1):
     aux_b = 0
     monto_manejo_t = 0
     agregado = "N"
+
+    print('sobresaldo:', sobresaldo, 'comis_cierre:', comis_cierre, 'monto2:', monto2, 'monto1:', monto1)
 
     if sobresaldo == "Y":
         aux_f = comis_cierre
@@ -93,14 +136,14 @@ def calculate_comision_manejo(sobresaldo, comis_cierre, monto2, monto1):
     
     return round(monto_manejo_t, 2)
 
-def calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres):
+def calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres, tipo_prestamo):
     # Calculate initial monto_manejo_b
     porcentaje_manejo = 0.0654205
-    tipo_prestamo = "PREST AUTO"
+    
     monto_manejo_b = monto_manejo_t - monto_serv_des - monto_timbres
     if tipo_prestamo == "PREST AUTO":
         monto_manejo_b = monto_manejo_b - 291.90
-
+    monto_manejo_b = round(monto_manejo_b, 2)
     
     if sobresaldo == "Y":
         wrk_monto21 = monto_manejo_b
@@ -115,7 +158,6 @@ def calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_tim
 
     # Round manejo_5porc to 2 decimal places
     manejo_5porc = round(manejo_5porc, 2)
-
     return wrk_monto21, round(monto_manejo_b,2), manejo_5porc
 
 
@@ -151,14 +193,17 @@ def calculate_monto_obligacion(sobresaldo, tipo_prestamo, aux_monto_manejo_t, au
 def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcMonto2,calcComiCierre,calcMontoNotaria,params):
 
    # Example usage
-    monto_manejo_t = calculate_comision_manejo("Y",calcComiCierre,calcMonto2,cotMontoPrestamo)  # Example value
-    ##print('monto_manejo_t:', monto_manejo_t)
+    monto_manejo_t = calculate_comision_manejo("Y",calcComiCierre,calcMonto2,cotMontoPrestamo)
+    print('monto_manejo_t:', monto_manejo_t)
+    
     params['montoManejoT'] = monto_manejo_t
     sobresaldo = "Y"  # Example value
-    monto_serv_des = 0  # Example value
-    tipo_prestamo = "PREST AUTO"  # Example value
+    montoServDesc = 0  #inicializando
+    tipo_prestamo = params['tipoPrestamo']
     pagadiciembre1 = "Y"
     forma_pago = 1  # Example value
+
+    print(params)
 
     #calculo neto cancelacion
       
@@ -168,10 +213,16 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
     params['calcMontoTimbres'] = monto_timbres
     ##print(f"Monto Timbres: {monto_timbres}")
 
-    #Servicio Descuneto (NO VA)
+    #Servicio Descuneto PRESTAMO PERSONAL
+    if tipo_prestamo == "PERSONAL":
+        montoServDesc = calculo_servicio_descuento(params)
+        montoServDesc =round(montoServDesc,2)
+        ##print(f"Fecha Servicio Descuento: {fecha_servicio
 
+    print ("servicio descuento fin",montoServDesc)
+    
     #GASTO MANEJO
-    wrk_monto21, monto_manejo_b, manejo_5porc = calculate_gasto_manejo(monto_manejo_t, sobresaldo, monto_serv_des, monto_timbres)
+    wrk_monto21, monto_manejo_b, manejo_5porc = calculate_gasto_manejo(monto_manejo_t, sobresaldo, montoServDesc, monto_timbres,tipo_prestamo)
     ##print(f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
     params['monto_manejo_b'] = monto_manejo_b
     sobresaldo = "Y"  # Example value
