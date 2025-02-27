@@ -400,7 +400,7 @@ def clientesList(request):
     return render(request, 'clientesList.html', {'clientes': clientes})
 
 
-@login_required
+
 def download_cotizaciones_excel(request):
     cotizaciones = Cotizacion.objects.all()
 
