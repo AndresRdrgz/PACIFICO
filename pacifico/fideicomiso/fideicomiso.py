@@ -519,6 +519,9 @@ def rutinaCalculo(params):
     params['auxPlazoInteres'] = auxPlazoInteres
     print("Plazo Interes: ",auxPlazoInteres)
     
+    if tipoPrestamo == "PREST AUTO":
+        params['auxPlazoInteres'] = auxPlazoPago
+        auxPlazoInteres = auxPlazoPago
 
     #determinar monto amortizar
     aux_l, aux_z, aux_x, calcComiCierre,tasaBruta,tasaReal = determinar_monto_amortizar(cotMontoPrestamo, calcMontoNotaria, calcComiCierre, tipoPrestamo,codigoSeguro,edad,calcNetoCancelacion, params)
@@ -551,6 +554,7 @@ def rutinaCalculo(params):
     
     #FECHA VENCIMIENTO
     fecha_vencimiento = calculate_fecha_vencimiento(auxPlazoPago, cotFechaInicioPago, pagadiciembre1, forma_pago)
+    params['fechaVencimiento'] = fecha_vencimiento
     #RECREAR SOBRESALDO
     calcMontoTimbres = params['calcMontoTimbres']
     r1, iteration_data= recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calcMonto2,auxPeriocidad,calcMontoTimbres,calcMontoNotaria,fechaInicioPago,tempPrimerDiaHabil,cotFechaInicioPago,calcFechaPromeCK,params)
@@ -655,6 +659,7 @@ def generarFideicomiso3(params):
         upper_bound = 1.0
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
+        #params['calcTasaInteres'] = 0.0965
         #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
         #print(params)
           #count all fields in params

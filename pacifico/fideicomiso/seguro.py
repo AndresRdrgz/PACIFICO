@@ -40,9 +40,10 @@ def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
 
         wrkFechaUltDia1 = calcFechaPromeCK.date()
         wrkFechaUltDia2 = cotFechaInicioPago.date()
-        #print("wrkFechaUltDia1:",wrkFechaUltDia1,"wrkFechaUltDia2:",wrkFechaUltDia2)
+        print("wrkFechaUltDia1:",wrkFechaUltDia1,"wrkFechaUltDia2:",wrkFechaUltDia2)
+       
         wrkFechaUltDia2 = getLastDayOfMonth(wrkFechaUltDia2)
-        #print("wrkFechaUltDia2",wrkFechaUltDia2)
+        print("wrkFechaUltDia2",wrkFechaUltDia2)
         
         auxW = 1
         auxZ = 0
@@ -52,6 +53,8 @@ def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
             wrkFechaUltDia1_aux = wrkFechaUltDia1
             wrkFechaUltDia1 = wrkFechaUltDia1.replace(day=28) + timedelta(days=4)
             wrkFechaUltDia1 = wrkFechaUltDia1.replace(day=1) + timedelta(days=auxW * 30)
+            print("wrkFechaUltDia1:",wrkFechaUltDia1,"<= wrkFechaUltDia2:",wrkFechaUltDia2)
+            
             
             if wrkFechaUltDia1 <= wrkFechaUltDia2:
                 auxW += 1
@@ -102,7 +105,8 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres,calcFe
     auxB = wrkPorcSeguroTotal
     auxC = auxPlazoInteres
     auxC = auxC + auxZ
-
+    print("auxa:",auxA,"auxB:",auxB,"auxC:",auxC)
+    
     auxA = ((auxA * auxB * auxC) / 1000)
     auxX = ((auxA * auxB * auxG) / 1000)
     totalSeguro = auxA 
@@ -118,6 +122,7 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres,calcFe
     if agregado == "Y":
         montoSeguro = montoSeguro * descomponer2
     
-    #print("totalSeguro:",totalSeguro)
+    print("totalSeguro:",totalSeguro)
+   
     
     return totalSeguro, montoSeguro, auxZ

@@ -1,17 +1,23 @@
 import datetime
+import calendar
 
 
-def calculoInteres_F(wrkSaldoAnterior, tasaInteres, wrkDiasCalc):
+def get_last_day_of_month(date):
+    last_day = calendar.monthrange(date.year, date.month)[1]
+    return date.replace(day=last_day)
+
+
+def calculoInteres_PP(wrkSaldoAnterior, tasaInteres, wrkDiasCalc):
     auxM = wrkSaldoAnterior
     auxN = tasaInteres
     auxO = wrkDiasCalc
     
-    auxX = (((auxM * auxN) / 360) * auxO)
+    auxX = (((auxM * auxN) / 365) * auxO)
     auxX = round(auxX, 2)
     
     return auxX
 
-def calculoFECI_F(calcLogic, wrkSaldoAnterior, auxMonto2, i, calcsobtFechaVenc, calcsobtFechaFin, auxLI, auxL, jubilado, wrkDiasEnteros2):
+def calculoFECI_PP(calcLogic, wrkSaldoAnterior, auxMonto2, i, calcsobtFechaVenc, calcsobtFechaFin, auxLI, auxL, jubilado, wrkDiasEnteros2):
     tasaFeci = 1 / 100
     
     if calcLogic == "Y":
@@ -38,7 +44,7 @@ def calculoFECI_F(calcLogic, wrkSaldoAnterior, auxMonto2, i, calcsobtFechaVenc, 
             else:
                 auxH = 30
 
-            auxX = (((auxM * auxN) / 360) * auxH)
+            auxX = (((auxM * auxN) / 365) * auxH)
             calcsobtMontoFECI = round(auxX, 2)
         else:
             calcsobtMontoFECI = 0
@@ -151,6 +157,7 @@ def tablaAmortizacionSobresaldo(params):
     jubilado = params['jubilado']
     cotFechaInicioPago = params['cotFechaInicioPago']
     fechaProemsaCK = params['calcFechaPromeCK']
+    fecha_vencimiento = params['fechaVencimiento']
 
     print ("-----AMORTIZACION SOBRE SALDO -----")
     
@@ -274,6 +281,7 @@ def tablaAmortizacionSobresaldo(params):
                 wrkFechaFICI = fechaProemsaCK.date()
                 wrkfecha = cotFechaInicioPago.date()
                 wrkDiasTrans = (wrkfecha - wrkFechaFICI).days
+                wrkDiasCalc = wrkDiasTrans
                 
             else:
                 wrkfecha = wrkfecha + datetime.timedelta(days=30)
@@ -292,45 +300,31 @@ def tablaAmortizacionSobresaldo(params):
             wrkMes = calcsobtFechaFin.month
 
             #LABEL :SUMA
-            auxBolSuma = True
-            while auxBolSuma:
-                if (auxXI == auxL or auxXI == 1):
-                    calcsobtFechaFin += datetime.timedelta(days=1)
-                    wrkMes2 = calcsobtFechaFin.month
-                    if wrkMes2 == wrkMes:
-                        continue
-                    else:
-                        auxBolSuma = False
-
-            if auxXI == auxL:
-                    calcsobtFechaFin = calcsobtFechaFin + datetime.timedelta(days=30)
-                    calcsobtFechaVenc = calcsobtFechaFin
+        
+            if (auxXI == auxL or auxXI == 1):
+                calcsobtFechaFin += datetime.timedelta(days=1)
+                calcsobtFechaFin = get_last_day_of_month(calcsobtFechaFin)
+                if auxXI == auxL:
+                    calcsobtFechaFin = fecha_vencimiento
             else:
-                            
-                
-                calcsobtFechaFin = calcsobtFechaFin + datetime.timedelta(days=30)
-                #print("calcsobtFechaFin: ", calcsobtFechaFin)
-                #calcsobtFechaFin = calcsobtFechaFin - datetime.timedelta(days=1)
-            
-            calcsobtFechaFin = calcsobtFechaFin
-            #print("calcsobtFechaFin: ", calcsobtFechaFin)
-            
+                calcsobtFechaFin = get_last_day_of_month(calcsobtFechaFin)
+                 
+            #calcsobtFechaVenc = calcsobtFechaVenc.date()
             wrkfecha2 = calcsobtFechaVenc
             wrkfechaCalculo = calcsobtFechaFin
             wrkfechaCalculo = wrkfechaCalculo + datetime.timedelta(days=1)
             
             calcsobtSaldoAnter = wrkSaldoAnterior
-            #usar como base
+            print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin,"vencimiento: ", fecha_vencimiento, "FechaCalculo: ", wrkfechaCalculo,"wrkSaldoAnterior: ", wrkSaldoAnterior)
 
-            if (auxXI == 1):
-                cotFechaInicioPago = calcsobtFechaFin
-                wrkDiasTrans = wrkDiasEnteros2
-                wrkDiasCalc = wrkDiasEnteros2
-            else:
-                wrkDiasTrans = 30
-                wrkDiasCalc = 30
-            
-            calcsobtDiasCalc = wrkDiasCalc
+            wrkDiasTrans = (calcsobtFechaFin.date() - calcsobtFechaVenc.date()).days + 1
+            wrkDiasTrans = wrkDiasTrans
+            wrkDiasCalc = wrkDiasTrans
+            print("wrkDiasTrans: ", wrkDiasTrans)
+            #
+            calcsobtDiasCalc = wrkDiasTrans
+            calcsobtDiasTrans = wrkDiasTrans
+            #
             if wrkDiasCalcAnt == 0:
                 pass  # T
             else:
@@ -338,15 +332,15 @@ def tablaAmortizacionSobresaldo(params):
                 wrkDiasCalcAnt = 0
 
             #CALCULO DE INTERES
-            calcsobtMontoInteres = calculoInteres_F(wrkSaldoAnterior,cotTasaInteres,wrkDiasCalc)
-
+            calcsobtMontoInteres = calculoInteres_PP(wrkSaldoAnterior,cotTasaInteres,wrkDiasCalc)
             #print("WrksaldoAnterior: ", wrkSaldoAnterior, "cotTasaInteres: ", cotTasaInteres, "wrkDiasCalc: ", wrkDiasCalc, "calcsobtMontoInteres: ", calcsobtMontoInteres)
             if wrkSaldoInteresAnt == 0:
                 pass  # T
             else:
                 calcsobtMontoInteres = calcsobtMontoInteres + wrkSaldoInteresAnt
                 wrkSaldoInteresAnt = 0
-            
+            #-----------------------------------------------------
+
             #CALCULO DEL FECI
             calcsobtMontoFECI = 0
             if wrkLogic5 == "SI":
@@ -361,7 +355,7 @@ def tablaAmortizacionSobresaldo(params):
                 pass
             else:
                 if(auxMonto2 > 5000 and jubilado == "NO"):
-                    calcsobtMontoFECI= calculoFECI_F(calcLogic,wrkSaldoAnterior,auxMonto2,i,calcsobtFechaVenc,calcsobtFechaFin,auxLI,auxL,wrkLogic5,wrkDiasEnteros2)
+                    calcsobtMontoFECI= calculoFECI_PP(calcLogic,wrkSaldoAnterior,auxMonto2,i,calcsobtFechaVenc,calcsobtFechaFin,auxLI,auxL,wrkLogic5,wrkDiasEnteros2)
                 else:
                     calcsobtMontoFECI = 0
             
@@ -383,11 +377,12 @@ def tablaAmortizacionSobresaldo(params):
             
             calcsobtMontoSeguro = wrkSaldoSeguro
             calcsobtMontoSeguro = round(calcsobtMontoSeguro, 2)
-
+            print("calcsobtMontoSeguro: ", calcsobtMontoSeguro, "wrkSaldoSeguro: ", wrkSaldoSeguro)
             if (i ==auxB):
                 wrkSaldo13 = wrkSaldo13 + wrkcredito3
                 wrkCredito3 = 0
             
+            # MONTO SEGURO ACUMULADO POR PAGA DICIEMBRE NO
             calcsobtMontoSeguro2 = 0
             calcMesesSegPago = 0
             wrkSaldoSeguro4 = 0

@@ -149,7 +149,7 @@ def tablaAmortizacion(params):
     seguroAndres = params['seguroAdicional']
     jubilado = params['jubilado']
 
-    wrkMontoLetra = 276.38
+    #wrkMontoLetra = 276.38
     #-------
     #print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
     auxRecrear = True
@@ -194,6 +194,7 @@ def tablaAmortizacion(params):
         wrkMontoLetraOfici = wrkMontoLetra
         #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
         wrkMontoLetraOfici = round(wrkMontoLetraOfici / 2 + 0.001, 2) * 2
+        print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
        
         
         
@@ -217,6 +218,8 @@ def tablaAmortizacion(params):
         auxA = auxA_seguro
         auxB = 0    # VERIFICAR
         auxS = wrkSaldo13
+        print("auxA: ", auxA, "auxB: ", auxB, "auxS: ", auxS)
+       
 
         if auxB != auxD:
             auxB = auxD - auxB

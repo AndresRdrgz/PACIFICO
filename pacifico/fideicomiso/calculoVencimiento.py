@@ -48,4 +48,7 @@ def calculate_fecha_vencimiento(plazo_pago, cot_fecha_inicio_pago, pagadiciembre
             aux_a += 1
 
     fecha_vencimiento = wrk_fecha.strftime("%Y-%m-%d")
+    print(fecha_vencimiento)
+    print("-----------")
+    
     return fecha_vencimiento
