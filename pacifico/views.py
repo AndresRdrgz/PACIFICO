@@ -479,6 +479,62 @@ def download_cotizaciones_excel(request):
 
     return response
 
+
+def download_cotizaciones_json(request):
+    cotizaciones = Cotizacion.objects.all()
+
+    # Filter cotizaciones by addedBy current user
+    if request.user.is_authenticated and not request.user.is_staff:
+        cotizaciones = cotizaciones.filter(added_by=request.user)
+        
+    cotizaciones = cotizaciones.order_by('-created_at')
+
+    # Serialize the data
+    cotizaciones_data = [
+        {
+            "ID": cotizacion.id,
+            "Fecha Cotizacion": cotizacion.created_at.replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S'),
+            "Oficial": cotizacion.oficial,
+            "Sucursal": cotizacion.sucursal,
+            "Nombre Cliente": cotizacion.nombreCliente,
+            "Cédula Cliente": cotizacion.cedulaCliente,
+            "Fecha Nacimiento": cotizacion.fechaNacimiento.strftime('%Y-%m-%d') if cotizacion.fechaNacimiento else None,
+            "Edad": cotizacion.edad,
+            "Sexo": cotizacion.sexo,
+            "Jubilado": cotizacion.jubilado,
+            "Patrono": cotizacion.patrono,
+            "Patrono Código": cotizacion.patronoCodigo,
+            "Vendedor": cotizacion.vendedor,
+            "Vendedor Comisión": cotizacion.vendedorComision,
+            "Aseguradora": str(cotizacion.aseguradora),  # Convert aseguradora to string
+            "Tasa Bruta": cotizacion.tasaBruta,
+            "Marca": cotizacion.marca,
+            "Modelo": cotizacion.modelo,
+            "Fecha Inicio Pago": cotizacion.fechaInicioPago.strftime('%Y-%m-%d') if cotizacion.fechaInicioPago else None,
+            "Monto Préstamo": cotizacion.montoPrestamo,
+            "Comisión Cierre": cotizacion.comiCierre,
+            "Comisión Cierre Final": cotizacion.calcComiCierreFinal,
+            "Plazo Pago": cotizacion.plazoPago,
+            "R Deseada": cotizacion.r_deseada,
+            "Tasa Estimada": cotizacion.tasaEstimada,
+            "R1": cotizacion.r1,
+            "Monto 2": cotizacion.auxMonto2,
+            "Monto Letra": cotizacion.wrkMontoLetra,
+            "Monto Notaría": cotizacion.calcMontoNotaria,
+            "Monto Timbres": cotizacion.calcMontoTimbres,
+            "Manejo 5%": cotizacion.manejo_5porc,
+            "Total Pagos": cotizacion.tablaTotalPagos,
+            "Total Seguro": cotizacion.tablaTotalSeguro,
+            "Total Feci": cotizacion.tablaTotalFeci,
+            "Total Interés": cotizacion.tablaTotalInteres,
+            "Total Monto Capital": cotizacion.tablaTotalMontoCapital,
+        }
+        for cotizacion in cotizaciones
+    ]
+
+    # Return the data as a JSON response
+    return JsonResponse(cotizaciones_data, safe=False)
+
 @login_required
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()

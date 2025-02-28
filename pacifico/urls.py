@@ -32,6 +32,7 @@ urlpatterns = [
     path('terminate-sessions/', terminate_all_sessions, name='terminate_sessions'),
     path('usuario/editar/', edit_profile, name='edit_profile'),
     path('calculoAppx/', views.calculoAppx, name='calculoAppx'),
+    path('download_cotizaciones_json/', views.download_cotizaciones_json, name='download_cotizaciones_json'),
 ]
 
 if settings.DEBUG:
