@@ -269,7 +269,7 @@ def generate_report(request, numero_cotizacion):
         sheet['j28'] = resultado['kilometrajeAuto']
 
         #motivo consulta
-        sheet['H42'] = resultado['observaciones']
+        sheet['I44'] = resultado['observaciones']
 
         #DATOS DEL DEudor
         sheet['e77'] = resultado['salarioBaseMensual']
