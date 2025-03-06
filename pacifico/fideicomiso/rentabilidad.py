@@ -214,6 +214,28 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     return TasaEfectiva
 
+def calcular_promocion(params):
+    calcMontoNetoBruto = params['cotMontoPrestamo']
+    calcNetoCancelacion = params['calcNetoCancelacion']
+    tipoPrestamo = params['tipoPrestamo']
+    print("Calcular promocion")
+    print("calcMontoNetoBruto:", calcMontoNetoBruto, params)
+    comisionTotal8 = 0
+    wrkMontoPedido = calcMontoNetoBruto + calcNetoCancelacion
+    print("wrkMontoPedido:", wrkMontoPedido)
+    if tipoPrestamo == "PREST AUTO":
+        comisionTotal8 = 300
+    else:
+        comisionTotal8 = 0
+
+    return comisionTotal8
+
+    
+
+    
+
+    
+
 def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     
@@ -245,6 +267,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     calcFechaPromeCK = params['calcFechaPromeCK']
     cotFechaInicioPago = params['cotFechaInicioPago']
     plazoInteres = plazoPago
+    comisionTotal8 = 0 #comision de promocion
     
     ##print(params)
     
@@ -255,17 +278,18 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         comisionTotal10 = 10
 
 
-
+    #CALCULO DE PROMOCION
     promoActiva = "Y"
     if promoActiva == "Y":
-        promo_ini = datetime.datetime(2024, 1, 5)
-        promo_fin = datetime.datetime(2024, 10, 31)
+        promo_ini = datetime.datetime(2025, 2, 28)
+        promo_fin = datetime.datetime(2025, 3, 31)
         fecha_calculo = datetime.datetime.strptime(auxFechaCalculo, "%Y-%m-%d")
 
         if promo_ini <= fecha_calculo <= promo_fin:
             # CALCULA PROMOCION
-            #wrk_monto_pedido = calcular_promocion()
-            #print("Calcular promocion")
+            comisionTotal8 = calcular_promocion(params)
+            print("Calcular promocion", promo_ini, promo_fin, fecha_calculo, comisionTotal8)
+            
             pass
         else:
             pass
@@ -285,9 +309,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
     #Se le adiciona el 7% agencias promotoras
     comisionMonto = calcMontoNetoBruto
-    comisionMonto = comisionMonto - calcNetoCanc
+    comisionMonto = comisionMonto + calcNetoCanc
     comisionMonto = comisionMonto - wrkMontoCancelAnt
     comisionGastoComisio = 0
+    print("comisionMonto:",comisionMonto)
+    
     comisionComision = [0] * 11  # Assuming a list with 11 elements
     comisionTotal = [0] * 11  # Assuming a list with 11 elements
     
@@ -349,11 +375,16 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         wrkMonto21 *= 0.07
     
     wrkNetoTotal -= wrkMonto21
+    # 6 DE MARZO, 2025 - SUMA GASTO COMISION PROMOCION
+    print("wrkNetoTotal:",wrkNetoTotal)
+    print("parmgralComisionPers:",parmgralComisionPers,"comisionVendedor:",comisionVendedor,"comisionTotal8:",comisionTotal8)
+    
     wrkNetoTotal += parmgralComisionPers
     wrkNetoTotal += comisionVendedor
-    #print("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
-    #print("wrkNetoTotal =", wrkNetoTotal)
+    wrkNetoTotal += comisionTotal8
+    print("wrkNetoTotal =", wrkNetoTotal)
     
+    #print("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
     wrkNetoTotal2 = wrkNetoTotal
     auxP = tipopagoPeriocidad
     auxW = 0
@@ -412,11 +443,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
          # Ensure wrkFecha2 is a datetime object
         if isinstance(wrkFecha2, str):
             wrkFecha2 = datetime.datetime.strptime(wrkFecha2, "%Y-%m-%d")
-
         
         wrkFecha2 += datetime.timedelta(days=1)
         ##print("wrkFecha2 =", wrkFecha2)
-        
 
         wrkFechaMesYear1 = wrkFecha2
         wrkFechaMesYear2 = calcInicioPago
