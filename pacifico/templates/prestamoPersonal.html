@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Cotizador - Préstamo de Auto{% endblock %}
+{% block title %}Cotizador - Préstamo Personal{% endblock %}
 
 {% block content %}
    
@@ -31,6 +31,7 @@
             <label for="id_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
             {{ form.sucursal }}
         </div>
+       
     </div>
 
 
@@ -53,6 +54,10 @@
 
          <!-- Parametros del calculo -->
          <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <div class="flex-1 mb-4">
+                <label for="id_tasaInteres" class="block text-sm font-medium text-red-700 mb-1">Tasa de interes (%)</label>
+                {{ form.tasaInteres }}
+            </div>
             <h1 class="text-lg font-bold mb-4">Parámetros del Cálculo</h1>
             {% include 'partials/cotParametrosCalculo.html' %}
            
@@ -136,6 +141,46 @@
     {% if not resultado%}
        <!--Validacion campos-->
     {% endif %}
+
+    {% if iteration_data %}
+    <div class="flex-1 p-4 border rounded-lg mb-2">
+        <h1 class="text-lg font-bold mb-2">Amortizacion</h1>
+        <div class="relative overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">Secuencia</th>
+                        <th scope="col" class="px-6 py-3">Fecha Vencimiento</th>
+                        <th scope="col" class="px-6 py-3">Fecha Fin</th>
+                        <th scope="col" class="px-6 py-3">Saldo Anterior</th>
+                        <th scope="col" class="px-6 py-3">Monto Letra</th>
+                        <th scope="col" class="px-6 py-3">Monto Seguro</th>
+                        <th scope="col" class="px-6 py-3">Monto FECI</th>
+                        <th scope="col" class="px-6 py-3">Monto Interes</th>
+                        <th scope="col" class="px-6 py-3">Monto Capital</th>
+                        <th scope="col" class="px-6 py-3">Saldo Actual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in iteration_data %}
+                        <tr class="bg-white border-b border-gray-200 {% if item.Secuencia == '1' %}bg-red-500{% endif %}">
+                            <td class="px-6 py-4">{{ item.Secuencia }}</td>
+                            <td class="px-6 py-4">{{ item.FechaVencimiento }}</td>
+                            <td class="px-6 py-4">{{ item.FechaFin }}</td>
+                            <td class="px-6 py-4">{{ item.Saldoanterior }}</td>
+                            <td class="px-6 py-4">{{ item.MontoLetra }}</td>
+                            <td class="px-6 py-4">{{ item.MontoSeguro }}</td>
+                            <td class="px-6 py-4">{{ item.MontoFECI }}</td>
+                            <td class="px-6 py-4">{{ item.MontoInteres }}</td>
+                            <td class="px-6 py-4">{{ item.MontoCapital }}</td>
+                            <td class="px-6 py-4">{{ item.SaldoActual }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
 
 </div>
     <script>

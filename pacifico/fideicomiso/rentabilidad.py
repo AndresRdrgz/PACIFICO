@@ -219,7 +219,7 @@ def calcular_promocion(params):
     calcNetoCancelacion = params['calcNetoCancelacion']
     tipoPrestamo = params['tipoPrestamo']
     print("Calcular promocion")
-    print("calcMontoNetoBruto:", calcMontoNetoBruto, params)
+    #print("calcMontoNetoBruto:", calcMontoNetoBruto, params)
     comisionTotal8 = 0
     wrkMontoPedido = calcMontoNetoBruto + calcNetoCancelacion
     print("wrkMontoPedido:", wrkMontoPedido)
@@ -269,6 +269,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     plazoInteres = plazoPago
     comisionTotal8 = 0 #comision de promocion
     
+    
     ##print(params)
     
 
@@ -279,8 +280,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
 
     #CALCULO DE PROMOCION
-    promoActiva = "Y"
-    if promoActiva == "Y":
+    promoActiva = params['aplicaPromocion']
+    
+    if promoActiva == True:
         promo_ini = datetime.datetime(2025, 2, 28)
         promo_fin = datetime.datetime(2025, 3, 31)
         fecha_calculo = datetime.datetime.strptime(auxFechaCalculo, "%Y-%m-%d")

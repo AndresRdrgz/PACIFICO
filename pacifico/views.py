@@ -270,6 +270,7 @@ def cotizacionDetail(request, pk):
                 if new_form.is_valid():
                     new_instance = new_form.save(commit=False)
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                    new_instance.tipoPrestamo = 'auto'
                      # Set the calculated values on the new instance
                     new_instance.wrkMontoLetra = resultado['wrkMontoLetra']
                     
@@ -328,6 +329,7 @@ def cotizacionDetail(request, pk):
                     #-------                                                                                                                        
 
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                    new_instance.tipoPrestamo = 'auto'
                     #------- SAFE SAVE ------------
                     for field in new_instance._meta.fields:
                         print(field.name, field.value_from_object(new_instance))
@@ -690,6 +692,9 @@ def fideicomiso_view(request):
                 calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
                 auxPlazoPago = form.cleaned_data['plazoPago']
                 patrono = form.cleaned_data['patronoCodigo']
+                print('patrono', patrono)
+                aplicaPromocion = form.cleaned_data['aplicaPromocion']
+                print('aplicaPromocion', aplicaPromocion)
                 #if patrono is None: patrono = 9999
                 if patrono is None: patrono = 9999
 
@@ -751,6 +756,7 @@ def fideicomiso_view(request):
                     'montoMensualSeguro': montoMensualSeguro,
                     'cantPagosSeguro': cantPagosSeguro,
                     'gastoFideicomiso': 291.90,
+                    'aplicaPromocion': aplicaPromocion,
 
                 }
                 #print('RESULTADO PARAMETROS', params)
@@ -839,6 +845,7 @@ def fideicomiso_view(request):
                 form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
                 form.instance.patrono = resultado['nombreEmpresa']
                 form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                form.instance.tipoPrestamo = 'auto'
                 
                 #------SAFE-------
                 try:
@@ -1121,6 +1128,7 @@ def calculoAppx(request):
    
                 
                 form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                form.instance.tipoPrestamo = 'auto'
             
                 return render(request, 'calculoAppx.html', {'form': form, 'resultado': resultado,
                                                             'iteration_data': iteration_data})

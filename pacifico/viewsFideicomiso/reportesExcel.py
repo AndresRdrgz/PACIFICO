@@ -36,6 +36,7 @@ def generate_report(request, numero_cotizacion):
             'valorAuto': cotizacion.valorAuto,
             'calcMontoTimbres': cotizacion.calcMontoTimbres,
             'tasaBruta': cotizacion.tasaBruta,
+            'aplicaPromocion': cotizacion.aplicaPromocion,
             'cotMontoPrestamo': cotizacion.montoPrestamo,
             'calcMontoNotaria': cotizacion.calcMontoNotaria,
             'promoPublicidad': 50,
@@ -270,6 +271,12 @@ def generate_report(request, numero_cotizacion):
 
         #motivo consulta
         sheet['I44'] = resultado['observaciones']
+
+        #promocion
+        if resultado['aplicaPromocion'] == True:
+             sheet['J42'] = 300
+        else:
+             sheet['J42'] = ''
 
         #DATOS DEL DEudor
         sheet['e77'] = resultado['salarioBaseMensual']

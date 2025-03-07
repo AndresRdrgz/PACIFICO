@@ -49,7 +49,7 @@ def calculoFECI_PP(calcLogic, wrkSaldoAnterior, auxMonto2, i, calcsobtFechaVenc,
         else:
             calcsobtMontoFECI = 0
 
-        #print("calcsobtMontoFECI: ", calcsobtMontoFECI)
+        ##print("calcsobtMontoFECI: ", calcsobtMontoFECI)
     
         return calcsobtMontoFECI
 
@@ -119,8 +119,8 @@ def calculoCapitalPagar_F(auxLI, auxXI, auxL, wrkMontoLetra, calcsobtMontoSeguro
             calcsobtMontoCapital = round(calcsobtMontoCapital, 2)
             calcsobtInteresPend = round(calcsobtInteresPend, 2)
             wrkM = round(wrkM, 2)
-
-            return calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres, wrkSaldoCapital,calcsobtMontoCapital, calcsobtInteresPend, wrkM
+            #print("wrkMontoLetra Capital:",wrkMontoLetra)
+            return calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres, wrkSaldoCapital,calcsobtMontoCapital, calcsobtInteresPend, wrkM, wrkMontoLetra
 
 def verificaDiferencia_F(wrkMontoLetra,wrkDiferencia):
     if wrkMontoLetra is None:
@@ -145,10 +145,10 @@ def verificaDiferencia_F(wrkMontoLetra,wrkDiferencia):
 
 def tablaAmortizacionSobresaldo(params):
     # PASE DE PARAMETROS
-    #print(params)
+    ##print(params)
     auxMonto2 = params['auxMonto2']
     auxPlazoPago = params['auxPlazoPago']
-    auxPlazoInteres = params['auxPlazoInteres'] - 1 #revisar
+    auxPlazoInteres = params['auxPlazoInteres']
     cotTasaInteres = params['calcTasaInteres']
     auxA_seguro = params['totalSeguro']
     totalSeguro = params['totalSeguro']
@@ -158,22 +158,23 @@ def tablaAmortizacionSobresaldo(params):
     cotFechaInicioPago = params['cotFechaInicioPago']
     fechaProemsaCK = params['calcFechaPromeCK']
     fecha_vencimiento = params['fechaVencimiento']
-
-    print ("-----AMORTIZACION SOBRE SALDO -----")
+    pagaDiciembre = params['pagaDiciembre']
+    print ("-----AMORTIZACION SOBRE SALDO -----","Paga Diciembre: ", pagaDiciembre)
     
     #-------
-    #print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
+    ##print("jubi: ", jubilado,"cotTasaInteres",cotTasaInteres)
     auxRecrear = True
     auxAndres = 1
-    iteration_data = []
+    
     #while auxRecrear = true
     while auxRecrear == True:
+        iteration_data = []
         auxRecrear = False
-        #print("auxAndres: ", auxAndres)
+        ##print("auxAndres: ", auxAndres)
         auxAndres += 1
         if auxAndres > 999:
             return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data
-        pagaDiciembre = "N" #REVISAR 
+       
         wrkDiasCalcAnt =0
         wrkSaldo13 = 0
         wrkMontoNetoBruto = auxMonto2
@@ -203,9 +204,9 @@ def tablaAmortizacionSobresaldo(params):
         tablaTotalMontoCapital = 0
 
         wrkMontoLetraOfici = wrkMontoLetra
-        #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
+        ##print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
         wrkMontoLetraOfici = round(wrkMontoLetraOfici / 2 + 0.001, 2) * 2
-       
+        print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
         auxL = auxPlazoInteres
         auxJ = auxPlazoInteres
         auxXI = 0
@@ -219,14 +220,15 @@ def tablaAmortizacionSobresaldo(params):
         auxA = auxA_seguro
         auxS = wrkSaldo13 
         auxB = 0    # VERIFICAR
+        print("auxA: ", auxA, "auxS: ", auxS, "auxB: ", auxB)
 
-        if pagaDiciembre == "Y":
+        if pagaDiciembre == "SI":
             auxD = auxPlazoPago
         else:
             auxD = auxPlazoInteres
         
         auxD = auxD + auxZ
-
+        print("auxD: ", auxD,"plazoPago: ", auxPlazoPago, "plazoInteres: ", auxPlazoInteres, "auxZ: ", auxZ)
         if auxB != auxD:
             auxB = auxD - auxB
             auxC = (auxA / auxB)
@@ -284,7 +286,9 @@ def tablaAmortizacionSobresaldo(params):
                 wrkDiasCalc = wrkDiasTrans
                 
             else:
-                wrkfecha = wrkfecha + datetime.timedelta(days=30)
+                wrkfecha = wrkfecha + datetime.timedelta(days=calendar.monthrange(wrkfecha.year, wrkfecha.month)[1])
+                
+              
 
             if (auxXI == 1):
                 calcsobtFechaVenc = fechaProemsaCK
@@ -292,13 +296,14 @@ def tablaAmortizacionSobresaldo(params):
                 calcsobtFechaFin = cotFechaInicioPago
                 
             else:
+                #F
                 calcsobtFechaVenc = wrkfechaCalculo
                 calcsobtFechaFin = calcsobtFechaVenc
-                #print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin)
+                ##print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin)
 
-            #print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin)
+            ##print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin)
             wrkMes = calcsobtFechaFin.month
-
+           
             #LABEL :SUMA
         
             if (auxXI == auxL or auxXI == 1):
@@ -312,15 +317,19 @@ def tablaAmortizacionSobresaldo(params):
             #calcsobtFechaVenc = calcsobtFechaVenc.date()
             wrkfecha2 = calcsobtFechaVenc
             wrkfechaCalculo = calcsobtFechaFin
+            if isinstance(wrkfechaCalculo, str):
+                wrkfechaCalculo = datetime.datetime.strptime(wrkfechaCalculo, '%Y-%m-%d')
             wrkfechaCalculo = wrkfechaCalculo + datetime.timedelta(days=1)
             
             calcsobtSaldoAnter = wrkSaldoAnterior
-            print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin,"vencimiento: ", fecha_vencimiento, "FechaCalculo: ", wrkfechaCalculo,"wrkSaldoAnterior: ", wrkSaldoAnterior)
+            #print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin,"vencimiento: ", fecha_vencimiento, "FechaCalculo: ", wrkfechaCalculo,"wrkSaldoAnterior: ", wrkSaldoAnterior)
 
+            if isinstance(calcsobtFechaFin, str):
+                calcsobtFechaFin = datetime.datetime.strptime(calcsobtFechaFin, '%Y-%m-%d')
             wrkDiasTrans = (calcsobtFechaFin.date() - calcsobtFechaVenc.date()).days + 1
             wrkDiasTrans = wrkDiasTrans
             wrkDiasCalc = wrkDiasTrans
-            print("wrkDiasTrans: ", wrkDiasTrans)
+            #print("wrkDiasTrans: ", wrkDiasTrans)
             #
             calcsobtDiasCalc = wrkDiasTrans
             calcsobtDiasTrans = wrkDiasTrans
@@ -359,7 +368,7 @@ def tablaAmortizacionSobresaldo(params):
                 else:
                     calcsobtMontoFECI = 0
             
-            #print("calcsobtMontoInteres",calcsobtMontoInteres,"calcsobtmontoFECI: ", calcsobtMontoFECI)
+            ##print("calcsobtMontoInteres",calcsobtMontoInteres,"calcsobtmontoFECI: ", calcsobtMontoFECI)
             if wrkSaldoFeciAnt == 0:
                 pass
             else:
@@ -377,7 +386,7 @@ def tablaAmortizacionSobresaldo(params):
             
             calcsobtMontoSeguro = wrkSaldoSeguro
             calcsobtMontoSeguro = round(calcsobtMontoSeguro, 2)
-            print("calcsobtMontoSeguro: ", calcsobtMontoSeguro, "wrkSaldoSeguro: ", wrkSaldoSeguro)
+            #print("calcsobtMontoSeguro: ", calcsobtMontoSeguro, "wrkSaldoSeguro: ", wrkSaldoSeguro)
             if (i ==auxB):
                 wrkSaldo13 = wrkSaldo13 + wrkcredito3
                 wrkCredito3 = 0
@@ -427,15 +436,16 @@ def tablaAmortizacionSobresaldo(params):
             
             #Suma si se trata de la primera letra
             if(i==1):
-                #print("calcsobtMontoSeguro: ",calcsobtMontoSeguro, "wrkpd: ", wrkPD)
+                ##print("calcsobtMontoSeguro: ",calcsobtMontoSeguro, "wrkpd: ", wrkPD)
                 calcsobtMontoSeguro=calcsobtMontoSeguro + wrkPD
                 
             
             wrkIndicadorFracc = ""
 
             pagaDiciembre2 = "N"  # Example value, replace with actual logic
-            #print("wrkmes: ", wrkMes, "pagaDiciembre2: ", pagaDiciembre2, "wrkIndicadorFracc: ", wrkIndicadorFracc)
+            ##print("wrkmes: ", wrkMes, "pagaDiciembre2: ", pagaDiciembre2, "wrkIndicadorFracc: ", wrkIndicadorFracc)
             if ((wrkMes == 12 and pagaDiciembre2 == "Y") or wrkIndicadorFracc == "Y"):
+                #T
                 wrkSaldoCapital = 0
                 wrkSaldoInteresAnt = calcsobtMontoInteres
                 wrkSaldoFeciAnt = calcsobtMontoFECI
@@ -453,35 +463,47 @@ def tablaAmortizacionSobresaldo(params):
                     wrkSaldoInteresAnt = 0
                 
             else:
+                #F
                 calcsobtMontoCapital = 0
-                calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres, wrkSaldoCapital,calcsobtMontoCapital, calcsobtInteresPend, wrkM = calculoCapitalPagar_F(auxLI,auxXI,auxL,wrkMontoLetra,calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres,calcsobtMontoCapital)
+                calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres, wrkSaldoCapital,calcsobtMontoCapital, calcsobtInteresPend, wrkM, wrkMontoLetra = calculoCapitalPagar_F(auxLI,auxXI,auxL,wrkMontoLetra,calcsobtMontoSeguro,calcsobtMontoFECI,calcsobtMontoInteres,calcsobtMontoCapital)
 
                 calcsobtMontoLetra = wrkMontoLetra
                 calcsobtMontoLetra = round(calcsobtMontoLetra, 2)
                 calcsobtMontoLetra = calcsobtMontoLetra / 2
                 calcsobtMontoLetra = round(calcsobtMontoLetra, 2)
-            
+                #print("calcsobtMontoLetra: ", calcsobtMontoLetra)
 
                 if (auxXI == 1 or auxXI == auxL):
-                    wrkDia = inicioPago.day
-                    calcsobtMontoLetra =calcsobtMontoLetra + calcsobtMontoLetra 
+                    #FT
+                    wrkDia = cotFechaInicioPago.day
+                    if wrkDia > 15:
+                        #FTT
+                        calcsobtMontoLetra = wrkMontoLetra
+                    else:
+                        #FTF
+                        calcsobtMontoLetra += calcsobtMontoLetra
+
+                    print ("calcsobtMontoLetra: ", calcsobtMontoLetra,"wrkDia: ", wrkDia)
+                   
                 else:
+                    #FF
                     calcsobtMontoLetra = calcsobtMontoLetra + calcsobtMontoLetra
 
-                wrkMontoLetra = wrkMontoLetraOfici
-                calcsobtMontoLetra = wrkMontoLetra
+                wrkMontoLetra = calcsobtMontoLetra
                 
-               
             #desgose de seguro en la tabla
+            
             wrkSaldoSeguro = round(wrkSaldoSeguro, 2)
             wrkMontoTotal2 = wrkMontoTotal2 + calcsobtMontoSeguro
             wrkMontoTotal2 = round(wrkMontoTotal2, 2)
+           
 
             if (totalSeguro == wrkMontoTotal2):
                 wrkSaldoSeguro = 0
             
             calcsobtMontoCapital = calcsobtMontoLetra - calcsobtMontoSeguro - calcsobtMontoFECI - calcsobtMontoInteres 
             calcsobtMontoCapital = round(calcsobtMontoCapital, 2)
+            #print("calcsobtMontoCapital: ", calcsobtMontoCapital)
             
             if (calcsobtMontoCapital == 0.01):
                 calcsobtMontoCapital = 0
@@ -530,6 +552,7 @@ def tablaAmortizacionSobresaldo(params):
             wrkSecuencia = calcsobtSecuencia
             wrkMontoLetra = wrkMontoLetraOfici
             #ajuste ultima letra
+            '''
             if (i == auxL):
                 calcsobtSaldo = 0
                 calcsobtMontoCapital = calcsobtSaldoAnter
@@ -539,7 +562,7 @@ def tablaAmortizacionSobresaldo(params):
                 calcsobtMontoInteres = calcsobtMontoInteres - calcsobtMontoLetra
                 calcsobtMontoInteres = calcsobtMontoInteres * (-1)
                 calcsobtMontoInteres = round(calcsobtMontoInteres, 2)
-            
+            '''
             #FIN TABLA
              #GUARDAR LETRA SEGURO
             if(i==1):
@@ -556,7 +579,7 @@ def tablaAmortizacionSobresaldo(params):
                 calcFechaInicio = calcsobtFechaFin
                 calcFechaPromeCK = calcsobtFechaVenc
 
-            #print("Secuencia: ", wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital)
+            print("Secuencia: ", wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital)
             iteration_data.append({
                 'Secuencia': wrkSecuencia,
                 'FechaVencimiento': calcsobtFechaVenc.strftime('%d/%m/%Y'),
@@ -573,13 +596,15 @@ def tablaAmortizacionSobresaldo(params):
             
 
             wrkMontoLetra = wrkMontoLetraOfici
+            
         
         #FIN DE LOOP
         #print(iteration_data)
+        return asjds
         calcMontoLetra = wrkMontoLetra
         wrkMontoLetraOfici = wrkMontoLetra
-        #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
-
+        ##print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
+        #return hasdsd
         #LABEL SALIDA A RECREAR F
         wrkMontoExceso = auxPlazoPago
         wrkMontoExceso = wrkMontoExceso * 0.02
@@ -593,7 +618,7 @@ def tablaAmortizacionSobresaldo(params):
         tablaTotalMontoCapital = round(tablaTotalMontoCapital, 2)
         wrkMontoLetra = round(wrkMontoLetra, 2)
 
-        print("wrkMontoLetraOfici",wrkMontoLetraOfici,"wrkmontoexceso: ", wrkMontoExceso,"wrkSaldoBruto",wrkSaldoBruto)
+        #print("wrkMontoLetraOfici",wrkMontoLetraOfici,"wrkmontoexceso: ", wrkMontoExceso,"wrkSaldoBruto",wrkSaldoBruto)
         #ojo - ajuste para minimizar el CR de colchon
         if wrkSaldoBruto < 0:
             wrkMontoBaloom = wrkSaldoBruto
@@ -601,7 +626,7 @@ def tablaAmortizacionSobresaldo(params):
             if wrkMontoBaloom > wrkMontoExceso:
                 pass
             else:
-                #print("Salida 1")
+                ##print("Salida 1")
                 return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data
 
         if wrkSaldoAnterior > 0:
@@ -616,14 +641,14 @@ def tablaAmortizacionSobresaldo(params):
                 wrkDiferencia = 0.01
             wrkMontoLetra = wrkMontoLetra + wrkDiferencia
             wrkMontoLetra = round(wrkMontoLetra, 2)
-            #print("wrkMontoLetra: ", wrkMontoLetra)
+            ##print("wrkMontoLetra: ", wrkMontoLetra)
            
             
             auxRecrear = True
         
         
         if (wrkSaldoBruto < wrkValorSumar2):
-            #print("ofi")
+            ##print("ofi")
             wrkValorSumar2 -= wrkValorSumar
             wrkValorSumar = 0
 
@@ -635,9 +660,9 @@ def tablaAmortizacionSobresaldo(params):
        
             
         if(auxRecrear == False):
-            #print("Salida 2")
+            ##print("Salida 2")
             return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra, wrkLetraSeguro, iteration_data
-        #print("Salida 2")
+        ##print("Salida 2")
         #return tablaTotalPagos, tablaTotalSeguro, tablaTotalFeci, tablaTotalInteres, tablaTotalMontoCapital, wrkMontoLetra
 
                 

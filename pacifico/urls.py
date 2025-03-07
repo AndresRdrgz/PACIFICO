@@ -7,7 +7,7 @@ from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
 from .viewsFideicomiso.reportesExcel import generate_report
-from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
+from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal, cotizacionDetail_pp
 
 
 urlpatterns = [
@@ -24,6 +24,7 @@ urlpatterns = [
     path('clientes/', clientesList, name="clientesList"),
     path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),
     path('cotizacion/<int:pk>/', views.cotizacionDetail, name='cotizacion_detail'),
+    path('cotizacionPP/<int:pk>/', cotizacionDetail_pp, name='cotizacionDetail_pp'),
     path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),
     path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),
     path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),

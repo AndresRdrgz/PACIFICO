@@ -351,7 +351,9 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
         #GASTO DE MANEJO
     montoManejoB = params['montoManejoT']
     montoManejoB = montoManejoB - params['calcMontoTimbres']
-    montoManejoB = montoManejoB - params['gastoFideicomiso']
+    if tipo_prestamo == "PREST AUTO":
+        montoManejoB = montoManejoB - params['gastoFideicomiso']
+    
     #print("Monto Manejo B: ",montoManejoB)
     #if sobresaldo
     wrkMonto21 = montoManejoB
