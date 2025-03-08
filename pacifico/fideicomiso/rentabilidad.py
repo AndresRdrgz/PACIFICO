@@ -280,7 +280,12 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
 
     #CALCULO DE PROMOCION
-    promoActiva = params['aplicaPromocion']
+    try:
+        promoActiva = params['aplicaPromocion']
+    except:
+        promoActiva = False
+
+    
     
     if promoActiva == True:
         promo_ini = datetime.datetime(2025, 2, 28)

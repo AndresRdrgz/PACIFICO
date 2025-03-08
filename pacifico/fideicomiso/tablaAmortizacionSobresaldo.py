@@ -220,7 +220,7 @@ def tablaAmortizacionSobresaldo(params):
         auxA = auxA_seguro
         auxS = wrkSaldo13 
         auxB = 0    # VERIFICAR
-        print("auxA: ", auxA, "auxS: ", auxS, "auxB: ", auxB)
+        print("auxA: ", auxA, "auxS: ", auxS, "auxB: ", auxB,"pagaDiciembre: ", pagaDiciembre)
 
         if pagaDiciembre == "SI":
             auxD = auxPlazoPago
@@ -273,6 +273,9 @@ def tablaAmortizacionSobresaldo(params):
         if wrkDia > 15:
             auxLI = 2
             auxL = auxL + 1
+        
+        #print("wrkDia: ", wrkDia, "auxLI: ", auxLI, "auxL: ", auxL)
+        
 
         for i in range(1, auxL + 1):
             auxXI = auxXI + 1
@@ -294,7 +297,7 @@ def tablaAmortizacionSobresaldo(params):
                 calcsobtFechaVenc = fechaProemsaCK
                 calcsobtFechaVenc += datetime.timedelta(days=1)
                 calcsobtFechaFin = cotFechaInicioPago
-                
+            
             else:
                 #F
                 calcsobtFechaVenc = wrkfechaCalculo
@@ -322,6 +325,7 @@ def tablaAmortizacionSobresaldo(params):
             wrkfechaCalculo = wrkfechaCalculo + datetime.timedelta(days=1)
             
             calcsobtSaldoAnter = wrkSaldoAnterior
+           
             #print("calcsobtFechaVenc: ", calcsobtFechaVenc, "calcsobtFechaFin: ", calcsobtFechaFin,"vencimiento: ", fecha_vencimiento, "FechaCalculo: ", wrkfechaCalculo,"wrkSaldoAnterior: ", wrkSaldoAnterior)
 
             if isinstance(calcsobtFechaFin, str):
@@ -329,7 +333,7 @@ def tablaAmortizacionSobresaldo(params):
             wrkDiasTrans = (calcsobtFechaFin.date() - calcsobtFechaVenc.date()).days + 1
             wrkDiasTrans = wrkDiasTrans
             wrkDiasCalc = wrkDiasTrans
-            #print("wrkDiasTrans: ", wrkDiasTrans)
+            #print("wrkDiasTrans: ", wrkDiasTrans,"calcsobtFechaFin: ", calcsobtFechaFin, "calcsobtFechaVenc: ", calcsobtFechaVenc)
             #
             calcsobtDiasCalc = wrkDiasTrans
             calcsobtDiasTrans = wrkDiasTrans
@@ -337,6 +341,9 @@ def tablaAmortizacionSobresaldo(params):
             if wrkDiasCalcAnt == 0:
                 pass  # T
             else:
+
+
+
                 calcsobtDiasCalc = calcsobtDiasCalc + wrkDiasCalcAnt
                 wrkDiasCalcAnt = 0
 
@@ -600,7 +607,7 @@ def tablaAmortizacionSobresaldo(params):
         
         #FIN DE LOOP
         #print(iteration_data)
-        return asjds
+       
         calcMontoLetra = wrkMontoLetra
         wrkMontoLetraOfici = wrkMontoLetra
         ##print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)

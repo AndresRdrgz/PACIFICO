@@ -176,7 +176,7 @@ def cotizacionDetail(request, pk):
                 aseguradora = form.cleaned_data['aseguradora']
                 form_data = form.cleaned_data
                 resultado = perform_fideicomiso_calculation(form)
-
+               
                 # Create a new form instance to save a new record
                 new_form = FideicomisoForm(request.POST)
                 #guardar resultado en nueva intancia
@@ -348,16 +348,20 @@ def cotizacionDetail(request, pk):
                     logger.warning("New form is not valid: %s", new_form.errors)
                     messages.error(request, 'An error occurred while creating a new record.')
                     error_message = str(e)
+                    context['errors'] = error_message
                     log_error(error_message, request.user.username)
                
             except Exception as e:
                 print('Error:', e)
                 error_message = str(e)
                 log_error(error_message, request.user.username)
+                context['errors'] = error_message
                 pass
                 
         else:
             logger.warning("Form is not valid: %s", form.errors)
+            #add to context the errors
+            context['errors'] = form.errors
             print(form.errors)
             
             
