@@ -347,8 +347,7 @@ def cotizacionDetail(request, pk):
                 else:
                     logger.warning("New form is not valid: %s", new_form.errors)
                     messages.error(request, 'An error occurred while creating a new record.')
-                    error_message = str(e)
-                    context['errors'] = error_message
+                    context['errors'] = new_form.errors
                     log_error(error_message, request.user.username)
                
             except Exception as e:
