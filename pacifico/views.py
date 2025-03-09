@@ -823,12 +823,9 @@ def fideicomiso_view(request):
                 form.instance.valorAuto = resultado['valorAuto']
                 #form.instance.aseguradora = aseguradora
                 
-                #resultado nivel de endeuamiento - real
-                
-
-                
-                resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
-                form.instance.lineaAuto = resultado['lineaAuto']
+                #resultado nivel de endeuamiento - real                
+                #resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
+                #form.instance.lineaAuto = resultado['lineaAuto']
    
                 form.instance.otrosMonto = resultado['otrosMonto']
                 form.instance.bonosMonto = resultado['bonosMonto']
@@ -1062,7 +1059,7 @@ def calculoAppx(request):
                 resultado['vendedor'] = form.cleaned_data['vendedor'] if form.cleaned_data['vendedor'] is not None else "-"
                 #DATOS DEL AUTO
                 resultado['marcaAuto'] = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
-                resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
+                #resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
                 resultado['yearAuto'] = form.cleaned_data['yearCarro'] if form.cleaned_data['yearCarro'] is not None else "-"
                 resultado['montoMensualSeguro'] = montoMensualSeguro if montoMensualSeguro is not None else 0
                 resultado['montoanualSeguro'] = montoanualSeguro if montoanualSeguro is not None else 0
@@ -1126,8 +1123,8 @@ def calculoAppx(request):
                 
 
                 
-                resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
-                form.instance.lineaAuto = resultado['lineaAuto']
+                #resultado['lineaAuto'] = form.cleaned_data.get('lineaAuto', '-')
+                #form.instance.lineaAuto = resultado['lineaAuto']
    
                 
                 form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
