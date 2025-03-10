@@ -222,7 +222,7 @@ def cotizacionDetail(request, pk):
                     new_form.instance.cosalarioNetoActual = resultadoNivelCodeudor['salarioNetoActual']
                     new_form.instance.cosalarioNeto = resultadoNivelCodeudor['salarioNeto']
                     new_form.instance.coporSalarioNeto = resultadoNivelCodeudor['porSalarioNeto']
-                    new_form.instance.cototalIngresosAdicionales = resultadoNivelCodeudor['totalIngresosAdicionales']
+                    new_form.instance.cototalIngresosAdicionales = round(resultadoNivelCodeudor['totalIngresosAdicionales'], 2)
                     new_form.instance.cototalIngresosMensualesCompleto = resultadoNivelCodeudor['totalIngresosMensualesCompleto']
                     new_form.instance.cototalDescuentosLegalesCompleto = resultadoNivelCodeudor['totalDescuentosLegalesCompleto']
                     new_form.instance.cosalarioNetoActualCompleto = resultadoNivelCodeudor['salarioNetoActualCompleto']
@@ -260,14 +260,18 @@ def cotizacionDetail(request, pk):
                 new_form.instance.salarioNetoActual = resultado['salarioNetoActual']
                 new_form.instance.salarioNeto = resultado['salarioNeto']
                 new_form.instance.porSalarioNeto = resultado['porSalarioNeto']
-                new_form.instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                #print data type of totalIngresosAdicionales
+                print(type(resultado['totalIngresosAdicionales']))
+                #new_form.instance.totalIngresosAdicionales = round(resultado['totalIngresosAdicionales'] if resultado['totalIngresosAdicionales'] is not None else 0, 2)
                 new_form.instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
                 new_form.instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
                 new_form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
                 new_form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
                 new_form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
                 # ------------------- Save the new record -------------------
+                print("intentando guardar","totalIngresosAdicionales",resultado['totalIngresosAdicionales'])            
                 if new_form.is_valid():
+                    print("formulario es valido")
                     new_instance = new_form.save(commit=False)
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     new_instance.tipoPrestamo = 'auto'
@@ -305,7 +309,7 @@ def cotizacionDetail(request, pk):
                     new_instance.salarioNetoActual = resultado['salarioNetoActual']
                     new_instance.salarioNeto = resultado['salarioNeto']
                     new_instance.porSalarioNeto = resultado['porSalarioNeto']
-                    new_instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                    new_instance.totalIngresosAdicionales = round(resultado['totalIngresosAdicionales'],2)
                     new_instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
                     new_instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
                     new_instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
@@ -345,16 +349,22 @@ def cotizacionDetail(request, pk):
                     return redirect('cotizacion_detail', pk=int(new_form.instance.NumeroCotizacion))
                     
                 else:
-                    logger.warning("New form is not valid: %s", new_form.errors)
-                    messages.error(request, 'An error occurred while creating a new record.')
-                    context['errors'] = new_form.errors
-                    log_error(error_message, request.user.username)
-               
+                    
+                    print("aNew form is not valid: %s", new_form.errors)
+                    #print all fields of new_form
+                    for field in new_form:
+                        print(f"{field.name}: {field.value()}")
+                    
+                    context['errors'] = f"New form is not valid: {new_form.errors}"
+                    log_error(f"New form is not valid: {new_form.errors}", request.user.username)
+                    
+                    
+
             except Exception as e:
                 print('Error:', e)
                 error_message = str(e)
                 log_error(error_message, request.user.username)
-                context['errors'] = error_message
+                #context['errors'] = 'Error:' + error_message
                 pass
                 
         else:
@@ -780,7 +790,7 @@ def fideicomiso_view(request):
                 resultado['salarioNeto'] = resultadoNivel['salarioNeto']
                 resultado['porSalarioNeto'] = resultadoNivel['porSalarioNeto']
                 resultado['salarioNetoActual'] = resultadoNivel['salarioNetoActual']
-                resultado['totalIngresosAdicionales'] = resultadoNivel['totalIngresosAdicionales']
+                resultado['totalIngresosAdicionales'] = round(resultadoNivel['totalIngresosAdicionales'],2)
                 resultado['totalIngresosMensuales'] = resultadoNivel['totalIngresosMensuales']
                 resultado['totalDescuentoDirecto'] = resultadoNivel['totalDescuentoDirecto']
                 resultado['totalPagoVoluntario'] = resultadoNivel['totalPagoVoluntario']

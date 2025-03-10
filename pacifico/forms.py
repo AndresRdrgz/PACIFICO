@@ -306,11 +306,12 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Salario Base Mensual',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
+                'step': '0.01',
             }),
             'horasExtrasMonto': forms.NumberInput(attrs={
                 'placeholder': 'Horas Extras Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-                
+                'step': '0.01',
             }),
             'horasExtrasDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -319,6 +320,7 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Prima Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
+                'step': '0.01',
             }),
             'primaDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -326,7 +328,7 @@ class FideicomisoForm(forms.ModelForm):
             'bonosMonto': forms.NumberInput(attrs={
                 'placeholder': 'Bonos Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-                
+                'step': '0.01',
             }),
             'bonosDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -334,15 +336,15 @@ class FideicomisoForm(forms.ModelForm):
             'otrosMonto': forms.NumberInput(attrs={
                 'placeholder': 'Otros Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-                
+                'step': '0.01',
             }),
             'otrosDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
             }),
-            'siacapMonto'   : forms.NumberInput(attrs={
+            'siacapMonto': forms.NumberInput(attrs={
                 'placeholder': 'SIACAP Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
-
+                'step': '0.01',
             }),
             'siacapDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -350,6 +352,7 @@ class FideicomisoForm(forms.ModelForm):
             'praaMonto': forms.NumberInput(attrs={
                 'placeholder': 'PRAA Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'praaDcto': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -361,6 +364,7 @@ class FideicomisoForm(forms.ModelForm):
             'dirOtrosMonto1': forms.NumberInput(attrs={
                 'placeholder': 'Otros Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'dirOtrosDcto1': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -372,6 +376,7 @@ class FideicomisoForm(forms.ModelForm):
             'dirOtrosMonto2': forms.NumberInput(attrs={
                 'placeholder': 'Otros Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'dirOtrosDcto2': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -383,6 +388,7 @@ class FideicomisoForm(forms.ModelForm):
             'dirOtrosMonto3': forms.NumberInput(attrs={
                 'placeholder': 'Otros Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'dirOtrosDcto3': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -394,6 +400,7 @@ class FideicomisoForm(forms.ModelForm):
             'dirOtrosMonto4': forms.NumberInput(attrs={
                 'placeholder': 'Otros Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'dirOtrosDcto4': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -405,6 +412,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto1': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto1': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -416,6 +424,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto2': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto2': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -427,6 +436,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto3': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto3': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -438,6 +448,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto4': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto4': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -449,6 +460,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto5': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto5': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -460,6 +472,7 @@ class FideicomisoForm(forms.ModelForm):
             'pagoVoluntarioMonto6': forms.NumberInput(attrs={
                 'placeholder': 'Pago Voluntario Monto',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
             }),
             'pagoVoluntarioDcto6': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded',
@@ -468,6 +481,7 @@ class FideicomisoForm(forms.ModelForm):
                 'placeholder': 'Total Ingresos Adicionales',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'readonly': 'readonly',
+               
             }),
             #DATOS DEL AUTO
             'valorAuto': forms.NumberInput(attrs={

@@ -145,24 +145,21 @@ def nivelEndeudamiento(resultado):
     ##print("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
     ##print("Porcentaje Letra Mensual:", porLetraMensual)
     ##print("Porcentaje Salario Neto:", porSalarioNeto)
-
     resultadoNivel = {
-        'salarioNeto': salarioNeto,
+        'salarioNeto': round(salarioNeto, 2),
         'porSalarioNeto': round(porSalarioNeto, 2),
-        'totalDescuentoDirecto': totalDescuentoDirecto,
-        'totalPagoVoluntario': totalPagoVoluntario,
-        'salarioNetoActual': salarioNetoActual,
-        'totalIngresosAdicionales': totalIngresosAdicionales,
-        'totalIngresosMensuales': totalIngresosMensuales,
-        'totalDescuentosLegales': totalDescuentosLegales,
+        'totalDescuentoDirecto': round(totalDescuentoDirecto, 2),
+        'totalPagoVoluntario': round(totalPagoVoluntario, 2),
+        'salarioNetoActual': round(salarioNetoActual, 2),
+        'totalIngresosAdicionales': round(totalIngresosAdicionales, 2),
+        'totalIngresosMensuales': round(totalIngresosMensuales, 2),
+        'totalDescuentosLegales': round(totalDescuentosLegales, 2),
         # NIVEL COMPLETO
-        'salarioNetoCompleto': salarioNetoCompleto,
-        'salarioNetoActualCompleto': salarioNetoActualCompleto,
+        'salarioNetoCompleto': round(salarioNetoCompleto, 2),
+        'salarioNetoActualCompleto': round(salarioNetoActualCompleto, 2),
         'porSalarioNetoCompleto': round(porSalarioNetoCompleto, 2),
-        'totalDescuentosLegalesCompleto': totalDescuentosLegalesCompleto,
-        'salarioNetoActualCompleto': salarioNetoActualCompleto,
-        'totalIngresosMensualesCompleto': totalIngresosMensualesCompleto,
-        
+        'totalDescuentosLegalesCompleto': round(totalDescuentosLegalesCompleto, 2),
+        'totalIngresosMensualesCompleto': round(totalIngresosMensualesCompleto, 2),
     }
 
     return resultadoNivel
