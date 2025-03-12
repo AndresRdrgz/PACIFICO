@@ -445,12 +445,15 @@ def tablaAmortizacionSobresaldo(params):
             if(i==1):
                 ##print("calcsobtMontoSeguro: ",calcsobtMontoSeguro, "wrkpd: ", wrkPD)
                 calcsobtMontoSeguro=calcsobtMontoSeguro + wrkPD
-                
-            
+                     
             wrkIndicadorFracc = ""
-
-            pagaDiciembre2 = "N"  # Example value, replace with actual logic
+            if pagaDiciembre == "SI":
+                pagaDiciembre2 ="N"
+            else:
+                pagaDiciembre2 ="Y"
+            
             ##print("wrkmes: ", wrkMes, "pagaDiciembre2: ", pagaDiciembre2, "wrkIndicadorFracc: ", wrkIndicadorFracc)
+            # ------- RESTAR SEGURO, INTERES YFECI DEL CAPITAL --------
             if ((wrkMes == 12 and pagaDiciembre2 == "Y") or wrkIndicadorFracc == "Y"):
                 #T
                 wrkSaldoCapital = 0
@@ -498,7 +501,7 @@ def tablaAmortizacionSobresaldo(params):
 
                 wrkMontoLetra = calcsobtMontoLetra
                 
-            #desgose de seguro en la tabla
+            #desglose de seguro en la tabla
             
             wrkSaldoSeguro = round(wrkSaldoSeguro, 2)
             wrkMontoTotal2 = wrkMontoTotal2 + calcsobtMontoSeguro
@@ -586,7 +589,7 @@ def tablaAmortizacionSobresaldo(params):
                 calcFechaInicio = calcsobtFechaFin
                 calcFechaPromeCK = calcsobtFechaVenc
 
-            print("Secuencia: ", wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital)
+            print("Secuencia: ", wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital,calcsobtFechaVenc.strftime('%d/%m/%Y'),calcsobtFechaFin.strftime('%d/%m/%Y'))
             iteration_data.append({
                 'Secuencia': wrkSecuencia,
                 'FechaVencimiento': calcsobtFechaVenc.strftime('%d/%m/%Y'),
@@ -611,7 +614,7 @@ def tablaAmortizacionSobresaldo(params):
         calcMontoLetra = wrkMontoLetra
         wrkMontoLetraOfici = wrkMontoLetra
         ##print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
-        #return hasdsd
+        
         #LABEL SALIDA A RECREAR F
         wrkMontoExceso = auxPlazoPago
         wrkMontoExceso = wrkMontoExceso * 0.02

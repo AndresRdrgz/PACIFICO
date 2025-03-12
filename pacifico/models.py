@@ -320,7 +320,7 @@ class Cotizacion(models.Model):
     r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=True)
-    mesesFinanciaSeguro = models.IntegerField(null=True,default=3,blank=True)
+    mesesFinanciaSeguro = models.IntegerField(null=True,default=2,blank=True)
     montoanualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0,blank=True)
     montoMensualSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
     cantPagosSeguro = models.IntegerField(null=True,default=12,blank=True)
