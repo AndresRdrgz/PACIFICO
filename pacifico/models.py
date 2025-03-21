@@ -116,7 +116,12 @@ class UserProfile(models.Model):
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES, null=True)
     auto_save_cotizaciones = models.BooleanField(default=False)
     pruebaFuncionalidades = models.BooleanField(default=False)
-   
+    rol = models.CharField(
+        max_length=20,
+        choices=[('Oficial', 'Oficial'), ('Administrador', 'Administrador'), ('Supervisor', 'Supervisor')],
+        default='Oficial'
+    )
+    profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
 
     def __str__(self):
         return self.user.username
@@ -299,7 +304,7 @@ class Cotizacion(models.Model):
     pagaDiciembre = models.CharField(
         max_length=10,
         choices=[('NO', 'NO'), ('SI', 'SI')],
-        default='NO',
+        default='SI',
         null=True,
         blank=True
     )
@@ -768,7 +773,7 @@ class Cotizacion(models.Model):
         super(Cotizacion, self).save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente}"
+        return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente} - {self.tipoPrestamo}"
     
 
 class CotizacionDocumento(models.Model):

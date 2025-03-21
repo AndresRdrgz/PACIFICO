@@ -15,6 +15,8 @@ def calculate_fecha_vencimiento(plazo_pago, cot_fecha_inicio_pago, pagadiciembre
     wrk_dia3 = wrk_fecha.day
     wrk_num2_4 = wrk_dia3
 
+    print("forma_pago: ", forma_pago)
+
     if forma_pago == 3:
         wrk_fecha -= datetime.timedelta(days=15)
 

@@ -217,6 +217,9 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
     if tipo_prestamo == "PERSONAL":
         montoServDesc = calculo_servicio_descuento(params)
         montoServDesc =round(montoServDesc,2)
+        params['montoServDesc'] = montoServDesc
+        print('montoServDesc:', montoServDesc)
+        
         ##print(f"Fecha Servicio Descuento: {fecha_servicio
 
     print ("servicio descuento fin",montoServDesc)

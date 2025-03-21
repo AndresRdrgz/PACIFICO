@@ -7,7 +7,7 @@ from .calculoMensualidadSobresaldo import calculoMensualidadSobresaldo
 from .rentabilidad import calculoRentabilidad
 from .calculoVencimiento import  calculate_fecha_vencimiento
 from .diasFECI import calculoDiasFECI
-from .calculoSobresaldoEnCalculo import calculoSobresaldoEnCalculo
+from .calculoSobresaldoEnCalculo import calculoSobresaldoEnCalculo, calculo_servicio_descuento
 from .seguro import calculoSeguroTotal
 from .notaria import search_gasto
 from .fechaPromesaCK import calculoFechaPromesa
@@ -16,6 +16,7 @@ import datetime
 from decimal import Decimal
 import traceback
 from datetime import datetime, timedelta
+
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -347,14 +348,22 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     auxMontoLetra2 = auxMensualidad / auxPeriocidad
     wrkMontoLetra = round(auxMontoLetra2,2)
     calcMontoLetra = wrkMontoLetra
+    
     #GOSUB CRE CALCULO SOBRESALDO EN CALCULO:
+    #CALCULAR SERVICIO DE DESCUENTO
+    params['wrkMontoLetra'] = wrkMontoLetra
+    montoServDesc = round(calculo_servicio_descuento(params),2)
+    params['montoServDesc'] = round(montoServDesc,2)
+    print('montoServDesc:', montoServDesc)
+    
         #GASTO DE MANEJO
     montoManejoB = params['montoManejoT']
-    montoManejoB = montoManejoB - params['calcMontoTimbres']
+    montoManejoB = montoManejoB - params['montoServDesc'] - params['calcMontoTimbres']
     if tipo_prestamo == "PREST AUTO":
         montoManejoB = montoManejoB - params['gastoFideicomiso']
     
-    #print("Monto Manejo B: ",montoManejoB)
+    print("Monto Manejo B: ",montoManejoB)
+    
     #if sobresaldo
     wrkMonto21 = montoManejoB
     presvari5Manejo = montoManejoB
@@ -370,15 +379,18 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
         wrkMonto15 = wrkMonto21
         wrkMonto15 = wrkMonto15 - wrkMonto20
         montoManejoB = wrkMonto15
-    #print("Monto Manejo B: ",montoManejoB)
+    print("Monto Manejo B: ",montoManejoB,"presvari5Manejo: ",presvari5Manejo)
     params['montoManejoB'] = montoManejoB
+    params['manejo_5porc'] = presvari5Manejo
+   
+   
     calcTasaEfectiva = calculoTasaEfectiva(wrkMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoPrestamo,auxPlazoPago,params)
     params['calcTasaEfectiva'] = calcTasaEfectiva
     #print("Tasa Efectiva: ",calcTasaEfectiva)
     wrkLogic10 = "Y"
     if(wrkLogic10=="Y"):
         
-        TasaEfectiva,r1 = calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params)
+        r1 = calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params)
 
     #print("Tasa Efectiva: ",round(TasaEfectiva*100,2)," r1: ",round(r1*100,2))
     #print("total pagos: ",tablaTotalPagos," total seguro: ",tablaTotalSeguro," total feci: ",tablaTotalFeci," total interes: ",tablaTotalInteres," total monto capital: ",tablaTotalMontoCapital," monto letra: ",wrkMontoLetra)
@@ -488,7 +500,13 @@ def rutinaCalculo(params):
     tipoPrestamo = params['tipoPrestamo']
   
     
-    auxPeriocidad = 1
+    if params['forma_pago'] == 3:
+        auxPeriocidad = 2
+    else:
+        auxPeriocidad = 1
+    
+    
+
     #calcMontoTimbres=17.60
     
     
@@ -499,7 +517,7 @@ def rutinaCalculo(params):
 
     
     pagadiciembre1 = "N"
-    forma_pago = 4
+    forma_pago = params['forma_pago']
     codigoSeguro = params['codigoSeguro']
     
     auxPlazoInteres = auxPlazoPago

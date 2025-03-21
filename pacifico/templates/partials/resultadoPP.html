@@ -1,0 +1,242 @@
+{% load static %}
+{% if resultado %}
+    
+    
+
+    <div class="flex-1 p-4 border bg-white rounded-lg mb-2">
+        <h1 class="text-lg font-bold mb-2">Resultado del Cálculo</h1>
+        <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-green-100 border border-green-400">
+            <span class="font-medium text-green-700 inline-block w-full md:w-2/3">
+                ✅ ¡Cálculo #{{resultado.numero_cotizacion}} guardado con éxito! Puede modificar esta cotización editando los parámetros y haciendo clic en el botón "Calcular 💰".
+            </span>
+            <div class="ml-auto flex space-x-2">
+                {% if resultado.numero_cotizacion %}
+                    <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
+                        Reporte de Consulta 📄
+                    </a>
+                    {% if pruebaFuncionalidades %}
+                        <a href="{% url 'download_merged_pdf' resultado.numero_cotizacion %}" class="bg-[#f57722] text-white px-4 py-2 rounded border border-black hover:bg-[#f57722] inline-block">
+                            <img src="{% static 'pdf.svg' %}" alt="PDF Icon" class="inline-block w-4 h-4 mr-2">
+                            Descargar PDF de consulta
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <span class="text-red-500">Número de cotización no disponible.</span>
+                {% endif %}
+            </div>
+        </div>
+        <p class="mt-1 text-sm font-normal text-gray-500">Este resultado es una estimación según los datos ingresados, pueden existir pequeñas diferencias en la rentabilidad con el cálculo de APPX.</p>
+        
+        <div class="overflow-x-auto mt-2">
+            <table class="w-full text-sm text-center border text-gray-500 mb-3">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">
+                            DESEMBOLSO TOTAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            RENTABILIDAD (ESTIMADA)
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            Tasa de Interés
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            Comisión de Cierre
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            Plazo
+                        </th>
+                       
+                       
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Monto Letra
+                        </th>
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Total a Pagar
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-white border-b">
+                        <td class="px-6 py-4">
+                            ${{resultado.auxMonto2}}
+                        </td>
+                        <td class="px-6 py-4">
+                            %{{resultado.r1}} 
+                        </td>
+                        <td class="px-6 py-4">
+                            %{{resultado.tasaEstimada}} 
+                        </td>
+                        <td class="px-6 py-4">
+                            %{{resultado.calcComiCierreFinal}} 
+                        </td>
+                        <td class="px-6 py-4">
+                            {{resultado.auxPlazoPago}} MESES
+                        </td>
+                       
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            ${{resultado.wrkMontoLetra}}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            ${{resultado.tablaTotalPagos}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h1 class="text-lg font-bold mb-2">Deudor - Nivel de Endeudamiento - Real</h1>
+        <p class="mt-1 text-sm font-normal text-gray-500">Nivel calculado según los parámetros ingresados. En caso de modificar el abono, debe hacer clic en el botón Cotizar 💰 de la sección "Parámetros del Cálculo".</p>
+        <div class="overflow-x-auto mt-2">
+            <table class="w-full text-sm text-center border text-gray-500 mb-3">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">
+                            SALARIO MENSUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - DESCUENTOS LEGALES
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - DESCUENTO DIRECTO
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - PAGO VOLUNTARIO
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            SALARIO NETO ACTUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            LETRA MENSUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            PORCENTAJE DE LETRA
+                        </th>
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Salario Neto
+                        </th>
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Nivel de Endeudamiento - Real
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-white border-b">
+                        <td class="px-6 py-4">
+                            ${{resultado.salarioBaseMensual}}
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalDescuentosLegales}} 
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalDescuentoDirecto}}
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalPagoVoluntario}}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.salarioNetoActual}}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.wrkLetraConSeguros}}
+                        </td>
+                        <td class="px-6 py-4">
+                            %{{resultado.porcentajeLetraSeguro}}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            ${{resultado.salarioNeto}}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            %{{resultado.porSalarioNeto}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h1 class="text-lg font-bold mb-2">Deudor - Nivel de Endeudamiento - Completo</h1>
+        <div class="overflow-x-auto mt-2">
+            <table class="w-full text-sm text-center border text-gray-500 mb-3">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">
+                            SALARIO MENSUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - INGRESOS ADICIONALES
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - INGRESOS Mensuales
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - DESCUENTOS LEGALES
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - DESCUENTO DIRECTO
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            TOTAL - PAGO VOLUNTARIO
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            SALARIO NETO ACTUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            LETRA MENSUAL
+                        </th>
+                        <th scope="col" class="px-6 py-3">
+                            PORCENTAJE DE LETRA
+                        </th>
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Salario Neto
+                        </th>
+                        <th scope="col" class="px-6 py-3 bg-black text-white">
+                            Nivel de Endeudamiento - Completo
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-white border-b">
+                        <td class="px-6 py-4">
+                            ${{resultado.salarioBaseMensual}}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.totalIngresosAdicionales}} 
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.totalIngresosMensualesCompleto}} 
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalDescuentosLegalesCompleto}} 
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalDescuentoDirecto}}
+                        </td>
+                        <td class="px-6 py-4 text-red-700">
+                            ${{resultado.totalPagoVoluntario}}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.salarioNetoActualCompleto}}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${{resultado.wrkLetraConSeguros}}
+                        </td>
+                        <td class="px-6 py-4">
+                            %{{resultado.porcentajeLetraSeguroCompleto}}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            ${{resultado.salarioNetoCompleto}}
+                        </td>
+                        <td class="px-6 py-4 font-bold text-green-700">
+                            %{{resultado.porSalarioNetoCompleto}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {% if form.aplicaCodeudor.value == 'si' %}
+            {% include 'partials/nivelCodeudor.html' %}
+        {% endif %}
+
+    </div>
+{% endif %}

@@ -5,130 +5,139 @@
 
 {% block content %}
    
-<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-4">
-    <form id="myForm" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md border border-gray-400">
-        <div class="text-center">
-            <h1 class="text-xl font-bold mb-4">Cotizador - Préstamo de Auto</h1>
+<div class="flex-1 flex flex-col">
+    <form id="myForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+    <header class="bg-white border-b p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Cotizador - Préstamo de Auto</h1>
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3" type="button" id="radix-:r0:" aria-haspopup="menu" aria-expanded="false" data-state="closed">
+                <span class="relative flex shrink-0 overflow-hidden rounded-full h-6 w-6 mr-2">
+                    <span class="flex h-full w-full items-center justify-center rounded-full bg-muted">FP</span>
+                </span>
+                {{ user.username }}
+            </button>
         </div>
-        {% if pruebaFuncionalidades%}
-            <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-blue-100 border border-blue-400">
-                <span class="font-medium text-blue-700 inline-block">
-                    Actualmente posee acceso anticipado a las nuevas funciones del sistema. Favor de reportar cualquier error o sugerencia al departamento de procesos.
-                </span>
-            </div>
-        {% endif %}
-
-        {% if errors%}
-            <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-red-100 border border-red-400">
-                <span class="font-medium text-red-700 inline-block">
-                    {{ errors }}
-                </span>
-            </div>
-        {% endif %}
-
-      
-
+       
+        
+    </header>
+    {% include 'partials/cotBarraAccion.html' %}
+    <main class="flex-1 overflow-auto p-6">
+        
 
         {% include 'partials/resultadoFideicomiso.html' %}
-       
-        {% csrf_token %}
-        <div class="flex space-x-4 mt-4 mb-4">
-            <div class="flex-1 mb-4">
-                <label for="id_oficial" class="block text-sm font-medium text-gray-700 mb-1">Oficial</label>
-                {{ form.oficial }}
-            </div>
-        <div class="flex-1 mb-4">
-            <label for="id_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
-            {{ form.sucursal }}
-        </div>
-    </div>
 
+        
 
-         <!-- Datos generales Section -->
-        <!-- Datos del Cliente Section -->
-        <div class="flex-1 p-4  border border-gray-400  rounded-lg mb-4">
-            <h1 class="text-lg font-bold mb-4">Datos del cliente</h1>
-            {% include 'partials/cotDatosCliente.html' %}
-        </div>
-       
-           
-          <!-- Datos del vehiculo -->
-          <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+        <!-- Div datos Generales-->
+        {% include 'partials/cotDatosCliente.html' %}
+
+        <!-- Datos del vehiculo -->
+        <div class="flex-1 p-4 border border  bg-white rounded-lg mb-4">
             
-                <h1 class="text-lg font-bold mb-4">Datos del Vehículo</h1>
-                <p class="mt-1 text-sm mb-4 font-normal text-gray-500">En caso que el auto no se encuentre en el cotizador de SURA, puede realizar la cobertura manual ingresando directamente los datos en los campos requeridos.</p>
-                {% include 'partials/cotDatosVehiculo.html' %}
-            </div>
-      
+            <h1 class="text-lg font-bold mb-4">Datos del Vehículo</h1>
+            <p class="mt-1 text-sm mb-4 font-normal text-gray-500">En caso que el auto no se encuentre en el cotizador de SURA, puede realizar la cobertura manual ingresando directamente los datos en los campos requeridos.</p>
+            {% include 'partials/cotDatosVehiculo.html' %}
+        </div>
 
-         <!-- Parametros de la cotizacion -->
-         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
-            <h1 class="text-lg font-bold mb-4">Parámetros de la Cotización</h1>
-            <p class="mt-1 text-sm font-normal text-gray-500">De no encontrar el patrono en el listado, puede escribir directamente el nombre en el campo "Patrono".</p>
-            {% include 'partials/cotParametrosCotizacion.html' %}
-         </div>
-
-      
+        <!-- Parametros de la cotizacion -->
+        {% include 'partials/cotParametrosCotizacion.html' %}
 
          <!-- Parametros del calculo -->
-         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
-            <h1 class="text-lg font-bold mb-4">Parámetros del Cálculo</h1>
-            {% include 'partials/cotParametrosCalculo.html' %}
-           
-         </div>
+        {% include 'partials/cotParametrosCalculoAuto.html' %}
 
-         <!-- Motivo de la consulta -->
-         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
-            <div class="flex items-center ">
-                <h1 class="text-lg font-bold">Motivo de la Consulta</h1>
-                <div class="ml-auto">
-                    <label class="inline-flex items-center ms-5 cursor-pointer">
-                        <input type="checkbox" id="toggleMotivoConsulta" class="sr-only peer" onchange="toggleMotivoConsultaSection()">
-                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                    </label>
-                </div>
+        {% if iteration_data %}
+        <!-- Totales-->
+        <div class="flex-1 p-4 border bg-white rounded-lg mb-2">
+            <h1 class="text-lg font-bold mb-2">Totales</h1>
+            <div class="relative overflow-x-auto border my-2">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                           
+                            <th scope="col" class="px-6 py-3">Total - Pagos</th>
+                            <th scope="col" class="px-6 py-3">Total - Seguro</th>
+                            <th scope="col" class="px-6 py-3">Total - FECI</th>
+                            <th scope="col" class="px-6 py-3">Total - Interes</th>
+                            <th scope="col" class="px-6 py-3">Total - Capital</th>
+                            
+                    </thead>
+                    <tbody>
+                        <tr class="bg-white border-b border-gray-200">
+                          
+                            <td class="px-6 py-4">{{ resultado.tablaTotalPagos }}</td>
+                            <td class="px-6 py-4">{{ resultado.tablaTotalSeguro }}</td>
+                            <td class="px-6 py-4">{{ resultado.tablaTotalFeci }}</td>
+                            <td class="px-6 py-4">{{ resultado.tablaTotalInteres }}</td>
+                            <td class="px-6 py-4">{{ resultado.tablaTotalMontoCapital }}</td>
+                            
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div id="sectionMotivoConsulta" class="flex-1 p-1 rounded-lg mb-1">
-                    <div class="flex-1 mb-1">
-                        <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Motivo de la Consulta</label>
-                        {{ form.observaciones }}
-                    </div>  
+        <div class="flex-1 p-4 border rounded-lg mb-2">
+            <h1 class="text-lg font-bold mb-2">Amortizacion</h1>
+            <div class="relative overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Secuencia</th>
+                            <th scope="col" class="px-6 py-3">Fecha Vencimiento</th>
+                            <th scope="col" class="px-6 py-3">Fecha Fin</th>
+                            <th scope="col" class="px-6 py-3">Saldo Anterior</th>
+                            <th scope="col" class="px-6 py-3">Monto Letra</th>
+                            <th scope="col" class="px-6 py-3">Monto Seguro</th>
+                            <th scope="col" class="px-6 py-3">Monto FECI</th>
+                            <th scope="col" class="px-6 py-3">Monto Interes</th>
+                            <th scope="col" class="px-6 py-3">Monto Capital</th>
+                            <th scope="col" class="px-6 py-3">Saldo Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in iteration_data %}
+                            <tr class="bg-white border-b border-gray-200 {% if item.Secuencia == '1' %}bg-red-500{% endif %}">
+                                <td class="px-6 py-4">{{ item.Secuencia }}</td>
+                                <td class="px-6 py-4">{{ item.FechaVencimiento }}</td>
+                                <td class="px-6 py-4">{{ item.FechaFin }}</td>
+                                <td class="px-6 py-4">{{ item.Saldoanterior }}</td>
+                                <td class="px-6 py-4">{{ item.MontoLetra }}</td>
+                                <td class="px-6 py-4">{{ item.MontoSeguro }}</td>
+                                <td class="px-6 py-4">{{ item.MontoFECI }}</td>
+                                <td class="px-6 py-4">{{ item.MontoInteres }}</td>
+                                <td class="px-6 py-4">{{ item.MontoCapital }}</td>
+                                <td class="px-6 py-4">{{ item.SaldoActual }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-
-        
         </div>
-
-       <!--Detalles del deudor-->
-       {% include 'partials/cotDeudor.html' %}
-
-
-       <!-- Prorrateo section-->
-        {% include 'partials/prorrateo.html' %}
-        
-        
-        <!-- Nivel de Endeudamiento -->
-        {% include 'partials/cotNivelEndeudamiento.html' %}
-       
-             
-            
-        {% include 'partials/nivelFamiliar.html' %}
-
-           
-          
-             <!-- Detalles del deudor -->
-         
-
-        {% include 'partials/movimientosBancarios.html' %}
-    
-     
-    {% if pruebaFuncionalidades %}
-        {% include 'partials/documentosCliente.html' %}
     {% endif %}
 
-    <input type="hidden" name="documentos_data" id="documentos_data">
+        <!-- Motivo de la consulta Modal -->
+        {% include 'partials/modals/motivoConsulta.html' %}
 
-</form>
-    
+         <!-- Detalles del deudor Modal -->
+         {% include 'partials/modals/deudor.html' %}
+
+         <!-- Nivel de Endeudamiento Modal -->
+         {% include 'partials/modals/codeudor.html' %}
+
+         <!-- Prorrateo Modal -->
+          {% include 'partials/modals/prorrateo.html' %}
+
+           <!-- Movimientos Modal -->
+           {% include 'partials/modals/movimientosBancarios.html' %}
+
+          
+         
+       
+
+    </main>
+
+    </form>
+</div>
+
    
     <!-- Modal Abono-->
       <!-- Button to open the modal -->
@@ -235,88 +244,15 @@
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-[#22a650] border-solid"></div>
     </div>
 
-    {% include 'partials/sura.html' %}
-
-
-    {% if not resultado%}
-       <!--Validacion campos-->
-    {% endif %}
-
-</div>
+{% include 'partials/sura.html' %}
     <script>
 
-        function toggleSeguroAutoSection() {
-            const section = document.getElementById('sectionSeguroAuto');
-            const checkbox = document.getElementById('toggleSeguroAuto');
-            if (checkbox.checked) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-
-        function toggleDetallesDeudorSection() {
-            const section = document.getElementById('sectionDetallesDeudor');
-            const checkbox = document.getElementById('toggleDetallesDeudor');
-            if (checkbox.checked) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-
-        function toggleProrrateoSection() {
-            const section = document.getElementById('sectionProrrateo');
-            const checkbox = document.getElementById('toggleProrrateo');
-            if (checkbox.checked) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-
-
-        function toggleNivelEndeudamientoSection() {
-            const section = document.getElementById('sectionNivelEndeudamiento');
-            const checkbox = document.getElementById('toggleNivelEndeudamiento');
-            if (checkbox.checked) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-
-        function toggleMotivoConsultaSection() {
-            const section = document.getElementById('sectionMotivoConsulta');
-            const checkbox = document.getElementById('toggleMotivoConsulta');
-            if (checkbox.checked) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-        
         // Initialize the section to be hidden by default
+    
+        document.getElementById('divPatronoCodigo').style.display = 'block';
         
-        document.getElementById('sectionDetallesDeudor').style.display = 'block';
-        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
-        document.getElementById('divPatronoCodigo').style.display = 'none';
-        document.getElementById('sectionProrrateo').style.display = 'block';
-        document.getElementById('toggleProrrateo').checked = true;
-        document.getElementById('toggleDetallesDeudor').checked = true;
-        {% if resultado %}
-        //document.getElementById('sectionSeguroAuto').style.display = 'block';
-        document.getElementById('sectionDetallesDeudor').style.display = 'block';
-        document.getElementById('sectionNivelEndeudamiento').style.display = 'block';
-        //document.getElementById('sectionMotivoConsulta').style.display = 'block';
-        document.getElementById('sectionProrrateo').style.display = 'block';
-        {% else %}
         
-        document.getElementById('sectionDetallesDeudor').style.display = 'block';
-        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
-        document.getElementById('sectionMotivoConsulta').style.display = 'none';
-        {% endif %}
-        document.getElementById('sectionMotivoConsulta').style.display = 'none';
+     
         
         function highlightEmptyRequiredFields() {
             const form = document.getElementById('myForm');
@@ -541,27 +477,7 @@
 
             
 
-            //  #if sexo = masculino set colectivoCredito to "7 - INTERNACIONAL DE SEGUROS - FIDEICOMISO H" otherwise set it to "8 - INTERNACIONAL DE SEGUROS - FIDEICOMISO M"
-            /*if (sexoField) {
-                sexoField.addEventListener('change', function() {
-                    if (sexoField.value == 'Femenino') {
-                        colectivoCreditoField.value = 8;
-                    } else {
-                        colectivoCreditoField.value = 7;
-                    }
-                });
-            }*/
-
-           
-
-    
-            if (vendedorInput && comisionVendedorInput) {
-                //vendedorInput.value = "SIN VENDEDOR";
-                //comisionVendedorInput.value = 0;
-                //comisionVendedorInput.readOnly = true;
-                //comisionVendedorInput.className = "w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2";
-            }
-    
+          
             function calculateMontoMensualSeguro() {
                 const montoAnualSeguro = parseFloat(montoAnualSeguroInput.value);
                 const cantidadPagosSeguro = parseInt(cantidadPagosSeguroInput.value);
@@ -598,28 +514,7 @@
                     }
                 });
             }
-            
-            
-            /*
-            if (financiaSeguroCheckbox) {
-                financiaSeguroCheckbox.addEventListener('change', function() {
-                    if (financiaSeguroCheckbox.checked) {
-                        
-                        divCamposFinanciar1.classList.remove('hidden');
-                        divCamposFinanciar2.classList.remove('hidden');
-                        
-                        
-                    } else {
-                        divCamposFinanciar1.classList.add('hidden');
-                        divCamposFinanciar2.classList.add('hidden');
-                        
-                        
-                    }
-                });
-            }*/
-            
-       
-    
+  
             const today = new Date();
             const fechaInicioPago = new Date(today);
             fechaInicioPago.setDate(today.getDate() + 31);
@@ -627,19 +522,6 @@
             if (fechaInicioPagoInput) {
                 fechaInicioPagoInput.value = formattedDate;
             }
-    
-           /* if (fechaNacimientoInput && edadInput) {
-                fechaNacimientoInput.addEventListener('change', function() {
-                    const fechaNacimiento = new Date(fechaNacimientoInput.value);
-                    let age = today.getFullYear() - fechaNacimiento.getFullYear();
-                    const monthDiff = today.getMonth() - fechaNacimiento.getMonth();
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < fechaNacimiento.getDate())) {
-                        age--;
-                    }
-                    edadInput.value = age;
-                    console.log("age: ",age);
-                });
-            }*/
     
             fetch("{% static 'patronos.json' %}")
                 .then(response => response.json())
@@ -822,190 +704,6 @@
             const documentosDataInput = document.getElementById('documentos_data');
             documentosDataInput.value = JSON.stringify(documentosData);
         });
-   
-        /*
-        document.getElementById('myForm').addEventListener('submit', function () {
-            document.getElementById('loading').classList.remove('hidden');
-
-            //recolectar documentos del cliente
-            const documentosData = collectDocumentData();
-            const documentosDataInput = document.getElementById('documentos_data');
-            documentosDataInput.value = JSON.stringify(documentosData);
-       
-        });*/
-       
-        //Function to calculate the values of 2nd column in the table with id="tableIngresosAdicionales"
-        function calculateTotalIngresosAdicionales() {
-            const table = document.getElementById('tableIngresosAdicionales');
-            const rows = table.getElementsByTagName('tr');
-            let total = 0;
-            for (let i = 1; i < rows.length - 1; i++) {
-                const row = rows[i];
-                const cells = row.getElementsByTagName('td');
-                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
-                total += monto;
-            }
-            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
-            console.log("Total:", total);
-            total = total.toFixed(2);
-            document.getElementById('id_totalIngresosAdicionales').value = total;
-   
-            
-            console.log("Total:", total);
-            return total;
-        }
-        
-       
-        function calculateTotalDescuentoDirecto() {
-            const table = document.getElementById('tableDescuentoDirecto');
-            const rows = table.getElementsByTagName('tr');
-            let total = 0;
-            for (let i = 1; i < rows.length - 1; i++) {
-                const row = rows[i];
-                const cells = row.getElementsByTagName('td');
-                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
-                total += monto;
-            }
-            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
-            console.log("Total:", total);
-            return total;
-        }
-        function calculatetotalPagosVoluntarios() {
-            const table = document.getElementById('tablePagosVoluntarios');
-            const rows = table.getElementsByTagName('tr');
-            let total = 0;
-            for (let i = 1; i < rows.length - 1; i++) {
-                const row = rows[i];
-                const cells = row.getElementsByTagName('td');
-                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
-                total += monto;
-            }
-            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
-            console.log("Total:", total);
-            return total;
-        }
-        function calculateNivelDeEndeudamiento(){
-            var cartera = document.getElementById('id_cartera').value;
-            const salarioBaseMensual = parseFloat(document.getElementById('id_salarioBaseMensual').value) || 0;
-            var totalIngresosAdicionales = 0
-            var totalDescuentosDirectos = 0
-            var totalPagosVoluntarios = 0
-            var totalDescuentosLegales = 0
-            var letraMensual = 468.78
-            var impuestoSobreLaRenta = 0
-            var seguroEducativo = 0
-            var seguroSocial = 0 
-            var auxISR15 = 0
-            var auxISR25 = 0
-            totalIngresosAdicionales = calculateTotalIngresosAdicionales()
-            totalDescuentosDirectos = calculateTotalDescuentoDirecto()
-            totalPagosVoluntarios = calculatetotalPagosVoluntarios()
-
-            totalIngresosMensuales = salarioBaseMensual + totalIngresosAdicionales
-            console.log("Total Ingresos Mensuales:", totalIngresosMensuales)
-            
-            //SEGURO SOCIAL
-            if (cartera == 'INDEPENDIENTE'){
-                seeguroSocial = 0
-            }else{
-                if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS'].includes(cartera)) {
-
-                    seguroSocial = (totalIngresosMensuales*6.75)/100;
-                    
-                
-                }else{
-                    seguroSocial = (totalIngresosMensuales*9.75)/100;
-                }
-
-            }
-            console.log("Seguro Social:", seguroSocial)
-           
-           //SEGURO EDUCATIVO
-           if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
-                seguroEducativo = 0;
-            }else{
-                seguroEducativo = (totalIngresosMensuales*1.25)/100;
-            }
-
-            //IMPUESTO SOBRE LA RENTA
-            //
-            if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
-                impuestoSobreLaRenta = 0;
-            }else{
-                var salarioAnual = totalIngresosMensuales * 13
-                if (salarioAnual < 11000) {
-                    auxISR15 = 0;
-                } else if (salarioAnual >= 11000 && salarioAnual < 50000) {
-                    auxISR15 = (salarioAnual - 11000) * 0.15;
-                } else if (salarioAnual >= 50000) {
-                    auxISR15 = (50000-11000)*0.15;
-                    auxISR25 = (salarioAnual - 50000) * 0.25;
-                }
-                impuestoSobreLaRentaAnual = auxISR15 + auxISR25;
-                impuestoSobreLaRenta = impuestoSobreLaRentaAnual / 13;
-                //console.log("Impuesto Sobre la Renta:", auxISR15);
-                //console.log("Impuesto Sobre la Renta:", auxISR25);
-                console.log("Impuesto Sobre la Renta:", impuestoSobreLaRenta);
-
-            }
-            console.log("Seguro Educativo:", seguroEducativo)
-            //total descuentos totalDescuentosLegales 
-            totalDescuentosLegales = impuestoSobreLaRenta + seguroEducativo + seguroSocial;
-
-             //NIVEL REAL
-             var granTotalDescontado = totalDescuentosDirectos + totalPagosVoluntarios + totalDescuentosLegales
-             console.log("Gran Total Descontado:", granTotalDescontado);
-             var salarioNetoActual = totalIngresosMensuales - granTotalDescontado;
-             var salarioNeto  = salarioNetoActual - letraMensual;
-
-            console.log("Cartera:", cartera)
-            //porcentajes
-            var porSalarioNetoActual = (salarioNetoActual / totalIngresosMensuales) * 100
-            var porLetraMensual = (letraMensual / totalIngresosMensuales) * 100
-            var porSalarioNeto = (salarioNeto / totalIngresosMensuales) * 100
-
-            
-            console.log("Salario Neto Actual:", salarioNetoActual)
-            console.log("Salario Neto:", salarioNeto)
-            console.log("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
-            console.log("Porcentaje Letra Mensual:", porLetraMensual)
-            console.log("Porcentaje Salario Neto:", porSalarioNeto)
-
-            document.getElementById('salarioNeto').value = salarioNeto.toFixed(2)
-            document.getElementById('nivelEndeudamiento').value = porSalarioNeto.toFixed(2);
-
-
-
-        }
-
-
-        //Event Listeners - tablas nivel de endeudamiento
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('#tableIngresosAdicionales input');
-            inputs.forEach(function(input) {
-                input.addEventListener('input', calculateTotalIngresosAdicionales);
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('#tableDescuentoDirecto input');
-            inputs.forEach(function(input) {
-                input.addEventListener('input', calculateTotalDescuentoDirecto);
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputs = document.querySelectorAll('#tablePagosVoluntarios input');
-            inputs.forEach(function(input) {
-                input.addEventListener('input', calculatetotalPagosVoluntarios);
-            });
-        });
-
-
-        calculateTotalDescuentoDirecto();
-        calculateTotalIngresosAdicionales();
-        calculatetotalPagosVoluntarios();
-
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('id_patrono').addEventListener('change', function() {

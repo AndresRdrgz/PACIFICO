@@ -1,0 +1,522 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cotizador - Préstamo Personal{% endblock %}
+
+{% block content %}
+
+
+<div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Cotizador - Préstamo Personal</h1>
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3" type="button" id="radix-:r0:" aria-haspopup="menu" aria-expanded="false" data-state="closed">
+                <span class="relative flex shrink-0 overflow-hidden rounded-full h-6 w-6 mr-2">
+                    <span class="flex h-full w-full items-center justify-center rounded-full bg-muted">FP</span>
+                </span>
+                {{ user.username }}
+            </button>
+        </div>
+    </header>
+    <main class="flex-1 overflow-auto p-6">
+        
+
+    </main>
+</div>
+
+
+<div class="container  py-6 px-4 w-full" style="height: 100vh;">
+    <form id="myForm" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md border border-gray-400">
+        <div class="text-center">
+            <h1 class="text-xl font-bold mb-4">Cotizador - Préstamo Personal</h1>
+        </div>
+        {% if pruebaFuncionalidades%}
+            <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-blue-100 border border-blue-400">
+                <span class="font-medium text-blue-700 inline-block">
+                    Actualmente posee acceso anticipado a las nuevas funciones del sistema. Favor de reportar cualquier error o sugerencia al departamento de procesos.
+                </span>
+            </div>
+        {% endif %}
+
+
+
+       
+        {% csrf_token %}
+        <div class="flex space-x-4 mt-4 mb-4">
+            <div class="flex-1 mb-4">
+                <label for="id_oficial" class="block text-sm font-medium text-gray-700 mb-1">Oficial</label>
+                {{ form.oficial }}
+            </div>
+        <div class="flex-1 mb-4">
+            <label for="id_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+            {{ form.sucursal }}
+        </div>
+       
+    </div>
+
+
+         <!-- Datos generales Section -->
+        <!-- Datos del Cliente Section -->
+        <div class="flex-1 p-4  border border-gray-400  rounded-lg mb-4">
+            <h1 class="text-lg font-bold mb-4">Datos del cliente</h1>
+            {% include 'partials/cotDatosCliente.html' %}
+        </div>
+       
+
+         <!-- Parametros de la cotizacion -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <h1 class="text-lg font-bold mb-4">Parámetros de la Cotización</h1>
+            <p class="mt-1 text-sm font-normal text-gray-500">De no encontrar el patrono en el listado, puede escribir directamente el nombre en el campo "Patrono".</p>
+            {% include 'partials/cotParametrosCotizacion.html' %}
+         </div>
+
+      
+
+         <!-- Parametros del calculo -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <div class="flex-1 mb-4">
+                <label for="id_tasaInteres" class="block text-sm font-medium text-red-700 mb-1">Tasa de interes (%)</label>
+                {{ form.tasaInteres }}
+            </div>
+            <h1 class="text-lg font-bold mb-4">Parámetros del Cálculo</h1>
+            {% include 'partials/cotParametrosCalculo.html' %}
+           
+         </div>
+
+         {% if iteration_data %}
+         <!-- Totales-->
+         <div class="flex-1 p-4 border rounded-lg mb-2">
+             <h1 class="text-lg font-bold mb-2">Totales</h1>
+             <div class="relative overflow-x-auto">
+                 <table class="w-full text-sm text-left text-gray-500">
+                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                         <tr>
+                            
+                             <th scope="col" class="px-6 py-3">Total - Pagos</th>
+                             <th scope="col" class="px-6 py-3">Total - Seguro</th>
+                             <th scope="col" class="px-6 py-3">Total - FECI</th>
+                             <th scope="col" class="px-6 py-3">Total - Interes</th>
+                             <th scope="col" class="px-6 py-3">Total - Capital</th>
+                             
+                     </thead>
+                     <tbody>
+                         <tr class="bg-white border-b border-gray-200">
+                           
+                             <td class="px-6 py-4">{{ resultado.tablaTotalPagos }}</td>
+                             <td class="px-6 py-4">{{ resultado.tablaTotalSeguro }}</td>
+                             <td class="px-6 py-4">{{ resultado.tablaTotalFeci }}</td>
+                             <td class="px-6 py-4">{{ resultado.tablaTotalInteres }}</td>
+                             <td class="px-6 py-4">{{ resultado.tablaTotalMontoCapital }}</td>
+                             
+                         </tr>
+                     </tbody>
+                 </table>
+             </div>
+         <div class="flex-1 p-4 border rounded-lg mb-2">
+             <h1 class="text-lg font-bold mb-2">Amortizacion</h1>
+             <div class="relative overflow-x-auto">
+                 <table class="w-full text-sm text-left text-gray-500">
+                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                         <tr>
+                             <th scope="col" class="px-6 py-3">Secuencia</th>
+                             <th scope="col" class="px-6 py-3">Fecha Vencimiento</th>
+                             <th scope="col" class="px-6 py-3">Fecha Fin</th>
+                             <th scope="col" class="px-6 py-3">Saldo Anterior</th>
+                             <th scope="col" class="px-6 py-3">Monto Letra</th>
+                             <th scope="col" class="px-6 py-3">Monto Seguro</th>
+                             <th scope="col" class="px-6 py-3">Monto FECI</th>
+                             <th scope="col" class="px-6 py-3">Monto Interes</th>
+                             <th scope="col" class="px-6 py-3">Monto Capital</th>
+                             <th scope="col" class="px-6 py-3">Saldo Actual</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         {% for item in iteration_data %}
+                             <tr class="bg-white border-b border-gray-200 {% if item.Secuencia == '1' %}bg-red-500{% endif %}">
+                                 <td class="px-6 py-4">{{ item.Secuencia }}</td>
+                                 <td class="px-6 py-4">{{ item.FechaVencimiento }}</td>
+                                 <td class="px-6 py-4">{{ item.FechaFin }}</td>
+                                 <td class="px-6 py-4">{{ item.Saldoanterior }}</td>
+                                 <td class="px-6 py-4">{{ item.MontoLetra }}</td>
+                                 <td class="px-6 py-4">{{ item.MontoSeguro }}</td>
+                                 <td class="px-6 py-4">{{ item.MontoFECI }}</td>
+                                 <td class="px-6 py-4">{{ item.MontoInteres }}</td>
+                                 <td class="px-6 py-4">{{ item.MontoCapital }}</td>
+                                 <td class="px-6 py-4">{{ item.SaldoActual }}</td>
+                             </tr>
+                         {% endfor %}
+                     </tbody>
+                 </table>
+             </div>
+         </div>
+     {% endif %}
+
+         <!-- Motivo de la consulta -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold">Motivo de la Consulta</h1>
+                <div class="ml-auto">
+                    <label class="inline-flex items-center ms-5 cursor-pointer">
+                        <input type="checkbox" id="toggleMotivoConsulta" class="sr-only peer" onchange="toggleMotivoConsultaSection()">
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+            </div>
+            <div id="sectionMotivoConsulta" class="flex-1 p-1 rounded-lg mb-1" style="display: none;">
+                <div class="flex-1 mb-1">
+                    <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Motivo de la Consulta</label>
+                    {{ form.observaciones }}
+                </div>  
+            </div>
+
+        
+        </div>
+
+         <!--Detalles del deudor-->
+       {% include 'partials/cotDeudor.html' %}
+
+
+       <!-- Prorrateo section-->
+        {% include 'partials/prorrateo.html' %}
+        
+        
+        <!-- Nivel de Endeudamiento -->
+        {% include 'partials/cotNivelEndeudamiento.html' %}
+       
+             
+            
+        {% include 'partials/nivelFamiliar.html' %}
+
+           
+          
+             <!-- Detalles del deudor -->
+         
+
+        {% include 'partials/movimientosBancarios.html' %}
+    
+
+       
+     
+    {% if pruebaFuncionalidades %}
+        {% include 'partials/documentosCliente.html' %}
+    {% endif %}
+
+    <input type="hidden" name="documentos_data" id="documentos_data">
+
+</form>
+    
+   
+   
+     
+    <div id="patronoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="flex space-x-4">
+                    <div class="flex-1 mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Buscar Patrono</h3>                      
+                    </div>
+                    <div class="flex-1 mb-4">
+                        <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModal()">Cerrar</button>
+                    </div>
+     
+                
+            </div>
+                <div class="mt-2">
+                    <input type="text" id="searchPatrono" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" placeholder="Buscar...">
+                </div>
+                <div class="mt-4">
+                    <ul id="patronoList" class="text-left">
+                        <!-- Patrono list will be populated here -->
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vendedor-->
+    <div id="vendedorModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="flex space-x-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Buscar Vendedor</h3>
+                <div class="mt-4">
+                    <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModalVendedor()">Cerrar</button>
+                </div>
+            </div>
+                <div class="mt-2">
+                    <input type="text" id="searchVendedor" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" placeholder="Buscar...">
+                </div>
+                <div class="mt-4">
+                    <ul id="vendedorList" class="text-left">
+                        <!-- Patrono list will be populated here -->
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Loading Animation -->
+    <div 
+        id="loading" 
+        class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-[#22a650] border-solid"></div>
+    </div>
+
+    {% include 'partials/sura.html' %}
+
+
+    {% if not resultado%}
+       <!--Validacion campos-->
+    {% endif %}
+
+   
+
+</div>
+    <script>
+
+      
+        //ocultar campos
+        //document.getElementById('divPatronoCodigo').style.display = 'none';
+    
+        function highlightEmptyRequiredFields() {
+            const form = document.getElementById('myForm');
+            const requiredFields = form.querySelectorAll('[required]');
+    
+            requiredFields.forEach(function(field) {
+                if (!field.value.trim()) {
+                    field.classList.add('border-yellow-500', 'bg-yellow-100');
+                } else {
+                    field.classList.remove('border-yellow-500', 'bg-yellow-100');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const fechaNacimientoInput = document.getElementById('id_fechaNacimiento');
+            const edadInput = document.getElementById('id_edad');
+            const fechaInicioPagoInput = document.getElementById('id_fechaInicioPago');
+            const vendedorInput = document.getElementById('id_vendedor');
+            const comisionVendedorInput = document.getElementById('id_vendedorComision');
+          
+            const sexoField = document.getElementById('id_sexo');
+            const colectivoCreditoField = document.getElementById('id_colectivoCredito');
+
+            
+            const patronoField = document.getElementById('id_patrono');
+
+
+            highlightEmptyRequiredFields();
+
+            const form = document.getElementById('myForm');
+            form.addEventListener('input', function() {
+                highlightEmptyRequiredFields();
+            });
+    
+    
+            window.addEventListener('load', function() {
+                document.getElementById('loading').classList.add('hidden');
+            });
+
+                        if (patronoField) {
+                            patronoField.addEventListener('change', function() {
+                                deudorEmpresa.value = patronoField.value;
+                            });
+                        }
+
+
+            if (edadInput) {
+                edadInput.addEventListener('input', function() {
+                    const edad = parseInt(edadInput.value);
+                    const sexo = document.getElementById('id_sexo').value;
+                    const jubilado = document.getElementById('id_jubilado');
+                    console.log("edadInput: ", edad);
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", edad);
+                    // Check if the person is jubilado, if sexo is masculino and edad is greater than 60 or if sexo is femenino and edad is greater than 55
+                    if (sexo == 'MASCULINO' && edad >= 60 || sexo == 'FEMENINO' && edad >= 55) {
+                        jubilado.value = "SI";
+                    } else {
+                        jubilado.value = "NO";
+                    }
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", edad);
+                });
+            }
+
+            if (fechaNacimientoInput && edadInput) {
+                fechaNacimientoInput.addEventListener('change', function() {
+                    const fechaNacimiento = new Date(fechaNacimientoInput.value);
+                    const today = new Date();
+                    let age = today.getFullYear() - fechaNacimiento.getFullYear();
+                    const monthDiff = today.getMonth() - fechaNacimiento.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < fechaNacimiento.getDate())) {
+                        age--;
+                    }
+                    edadInput.value = age;
+                    const sexo = document.getElementById('id_sexo').value;
+                    const jubilado = document.getElementById('id_jubilado');
+                    console.log("fechaNacimientoInput: ", age);
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
+                    // Check if the person is jubilado, if sexo is masculino and edad is greater than 60 or if sexo is femenino and edad is greater than 55
+                    if (sexo == 'MASCULINO' && age >= 60 || sexo == 'FEMENINO' && age >= 55) {
+                        jubilado.value = "SI";
+                    } else {
+                        jubilado.value = "NO";
+                    }
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
+                });
+            }
+
+            if (fechaInicioPagoInput) {
+                fechaInicioPagoInput.addEventListener('change', function() {
+                    const fechaInicioPago = new Date(fechaInicioPagoInput.value);
+                    const hoy = new Date();
+                    const meses = (hoy.getFullYear() - fechaInicioPago.getFullYear()) * 12 + (hoy.getMonth() - fechaInicioPago.getMonth());
+                    mesesFinanciarSeguroInput.value = meses;
+                });
+           }
+
+            const today = new Date();
+            const fechaInicioPago = new Date(today);
+            fechaInicioPago.setDate(today.getDate() + 31);
+            const formattedDate = fechaInicioPago.toISOString().split('T')[0];
+            if (fechaInicioPagoInput) {
+                fechaInicioPagoInput.value = formattedDate;
+            }
+    
+    
+            fetch("{% static 'cotizadorPatronos.json' %}")
+                .then(response => response.json())
+                .then(data => {
+                    const patronoList = document.getElementById('patronoList');
+                    data.forEach(patrono => {
+                        const li = document.createElement('li');
+                        li.textContent = patrono.codigo + " - " + patrono.descripcion;
+                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
+                        li.addEventListener('click', () => {
+                            document.getElementById('id_patrono').value = patrono.descripcion;
+                            document.getElementById('id_patronoCodigo').value = patrono.codigo;
+                            document.getElementById('id_porServDesc').value = patrono.porServDesc;
+                            document.getElementById('id_selectDescuento').value = patrono.selectDescuento;
+                            //document.getElementById('id_nombreEmpresa').value = patrono.descripcion;
+                            console.log("Patrono seleccionado:", patrono);
+                            closeModal();
+                        });
+                        patronoList.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error loading patronos:', error));
+    
+            fetch("{% static 'vendedores.json' %}")
+                .then(response => response.json())
+                .then(dataVendedores => {
+                    const vendedorList = document.getElementById('vendedorList');
+                    dataVendedores.forEach(vendedor => {
+                        const li = document.createElement('li');
+                        li.textContent = vendedor.codigo + " - " + vendedor.nombre;
+                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
+                        li.addEventListener('click', () => {
+                            document.getElementById('id_vendedor').value = vendedor.nombre;
+                            if (vendedor.codigo == 1) {
+                                document.getElementById('id_vendedorComision').value = 0;
+                                //document.getElementById('id_vendedorComision').readOnly = true;
+                                document.getElementById('id_vendedorComision').className = "w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2";
+                            } else {
+                                comisionVendedorInput.readOnly = false;
+                                comisionVendedorInput.className = "w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow";
+                            }
+                            closeModalVendedor();
+                        });
+                        vendedorList.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error loading vendedores:', error));
+    
+            const searchPatrono = document.getElementById('searchPatrono');
+            if (searchPatrono) {
+                searchPatrono.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    const patronoList = document.getElementById('patronoList');
+                    const items = patronoList.getElementsByTagName('li');
+                    Array.from(items).forEach(item => {
+                        if (item.textContent.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+    
+            const searchVendedor = document.getElementById('searchVendedor');
+            if (searchVendedor) {
+                searchVendedor.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    const vendedorList = document.getElementById('vendedorList');
+                    const items = vendedorList.getElementsByTagName('li');
+                    Array.from(items).forEach(item => {
+                        if (item.textContent.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+    
+        function openModal() {
+            document.getElementById('patronoModal').classList.remove('hidden');
+        }
+    
+        function closeModal() {
+            document.getElementById('patronoModal').classList.add('hidden');
+        }
+    
+        function openModalVendedor() {
+            document.getElementById('vendedorModal').classList.remove('hidden');
+        }
+    
+        function closeModalVendedor() {
+            document.getElementById('vendedorModal').classList.add('hidden');
+        }
+
+         
+
+    
+        document.getElementById('myForm').addEventListener('submit', function(event) {
+            document.getElementById('loading').classList.remove('hidden');
+            const documentosData = collectDocumentData();
+            const documentosDataInput = document.getElementById('documentos_data');
+            documentosDataInput.value = JSON.stringify(documentosData);
+        });
+   
+  
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_patrono').addEventListener('change', function() {
+                document.getElementById('id_patronoCodigo').value = 9999;
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_cartera').addEventListener('change', function() {
+                document.getElementById('cartera').value = document.getElementById('id_cartera').value;
+            });
+        });
+
+
+        function toggleMotivoConsultaSection() {
+            const section = document.getElementById('sectionMotivoConsulta');
+            const checkbox = document.getElementById('toggleMotivoConsulta');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+
+
+    </script>
+{% endblock %}

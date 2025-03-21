@@ -62,7 +62,7 @@ def calculoFechaPromesa_PP():
 
 def generarPP(params):
     try:
-        print("Starting generarFideicomiso3 with params:", params)
+        print("Starting generarPP with params:", params)
         
         patrono = params['patrono']
         sucursal = params['sucursal']

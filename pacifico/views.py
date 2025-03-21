@@ -553,37 +553,30 @@ def download_cotizaciones_json(request):
 @login_required
 def cotizacionesList(request):
     cotizaciones = Cotizacion.objects.all()
+    cotizacion_filter = CotizacionFilter(request.GET, queryset=cotizaciones)
+
+    filtered_cotizaciones = cotizacion_filter.qs
 
     # Filter cotizaciones by addedBy current user
-    if request.user.is_authenticated:
-        cotizaciones = cotizaciones.filter(added_by=request.user)
+    if request.user.is_authenticated and not request.user.is_staff:
+        filtered_cotizaciones = filtered_cotizaciones.filter(added_by=request.user)
 
-    # If user is staff show all cotizaciones
-    if request.user.is_staff:
-        cotizaciones = Cotizacion.objects.all()
+    # Filter by current month
+    current_month = timezone.now().month
+    current_year = timezone.now().year
+    filtered_cotizaciones = filtered_cotizaciones.filter(created_at__year=current_year, created_at__month=current_month)
 
     # Sort by newest first
-    cotizaciones = cotizaciones.order_by('-created_at')
-
-    # Get all cotizaciones done in the last 30 days
-    end_date = timezone.now()
-    start_date = end_date - timedelta(days=30)
-    cotizaciones_last_30_days = cotizaciones.filter(created_at__range=[start_date, end_date])
-
-    # Aggregate cotizaciones by day
-    cotizaciones_by_day = cotizaciones_last_30_days.extra({'day': "date(created_at)"}).values('day').annotate(count=Count('id')).order_by('day')
-
-    # Prepare data for the chart
-    dates = [entry['day'] for entry in cotizaciones_by_day]
-    counts = [entry['count'] for entry in cotizaciones_by_day]
-
+    filtered_cotizaciones = filtered_cotizaciones.order_by('-created_at')
+    
     context = {
-        'cotizaciones': cotizaciones,
-        'dates': dates,
-        'counts': counts,
+        'cotizaciones': filtered_cotizaciones,
+        'filter': cotizacion_filter,
     }
 
-    return render(request, 'cotizacionesList.html', context)
+    return render(request, 'cotizacionesListv2.html', context)
+
+
 
 @csrf_exempt
 def cotizacion_seguro_auto(request):
@@ -700,6 +693,7 @@ def fideicomiso_view(request):
                 sexo = form.cleaned_data['sexo']
                 jubilado = form.cleaned_data['jubilado']
                 nombreCliente = form.cleaned_data['nombreCliente']
+                selectDescuento = form.cleaned_data['selectDescuento']
                 cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
                 calcTasaInteres = 10 / 100
                 calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
@@ -727,6 +721,9 @@ def fideicomiso_view(request):
                 montoMensualSeguro = form.cleaned_data['montoMensualSeguro']
                 cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
                 sucursal = form.cleaned_data['sucursal']
+                selectDescuento = form.cleaned_data['selectDescuento']
+                porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
+                pagaDiciembre = form.cleaned_data['pagaDiciembre']
                 montoLetraSeguroAdelantado = mesesFinanciaSeguro * montoMensualSeguro
                 montoLetraSeguroAdelantado = round(montoLetraSeguroAdelantado, 2)
                 if montoLetraSeguroAdelantado is None:
@@ -770,6 +767,9 @@ def fideicomiso_view(request):
                     'cantPagosSeguro': cantPagosSeguro,
                     'gastoFideicomiso': 291.90,
                     'aplicaPromocion': aplicaPromocion,
+                    'selectDescuento': selectDescuento,
+                    'porServDesc': porServDesc,
+                    'pagaDiciembre': pagaDiciembre,
 
                 }
                 #print('RESULTADO PARAMETROS', params)
@@ -996,6 +996,9 @@ def calculoAppx(request):
                 montoMensualSeguro = form.cleaned_data['montoMensualSeguro']
                 cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
                 sucursal = form.cleaned_data['sucursal']
+                selectDescuento = form.cleaned_data['selectDescuento']
+                porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
+                pagaDiciembre = form.cleaned_data['pagaDiciembre']
                 montoLetraSeguroAdelantado = mesesFinanciaSeguro * montoMensualSeguro
                 montoLetraSeguroAdelantado = round(montoLetraSeguroAdelantado, 2)
                 if montoLetraSeguroAdelantado is None:
@@ -1015,6 +1018,7 @@ def calculoAppx(request):
                 #print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
                 params = {
+                    'tipoPrestamo': 'PREST AUTO',
                     'edad': edad,
                     'sucursal': sucursal,
                     'sexo': sexo,
@@ -1037,6 +1041,9 @@ def calculoAppx(request):
                     'montoMensualSeguro': montoMensualSeguro,
                     'cantPagosSeguro': cantPagosSeguro,
                     'gastoFideicomiso': 291.90,
+                    'selectDescuento': selectDescuento,
+                    'porServDesc': porServDesc,
+                    'pagaDiciembre': pagaDiciembre,
 
                 }
                 #print('RESULTADO PARAMETROS', params)

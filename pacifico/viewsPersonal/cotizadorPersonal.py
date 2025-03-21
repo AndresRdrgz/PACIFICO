@@ -1,10 +1,10 @@
 
 import logging
+import sys
 from ..models import CotizacionDocumento, UserProfile, Cotizacion
 from django.shortcuts import get_object_or_404
 
-def log_error(message, username):
-    logger.error(f"User: {username}, Error: {message}")
+
 from decimal import Decimal
 import datetime
 from django.shortcuts import render, redirect
@@ -14,7 +14,10 @@ from django.contrib import messages
 from .personalForms import PrestamoPersonalForm
 from ..prestamoPersonal.calculoPP import generarPP
 import pprint
-from ..viewsFideicomiso.cotizadorFideicomiso import perform_fideicomiso_calculation, prepResultado, aplicaCodeudor, set_calculated_values, convert_decimal_to_float, set_calculated_values2, calculoInicial
+from ..viewsFideicomiso.cotizadorFideicomiso import prepResultado, aplicaCodeudor, set_calculated_values, convert_decimal_to_float, set_calculated_values2, calculoInicial
+
+from ..analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Corrected import statement
+from ..views import log_error
 
 
 
@@ -42,8 +45,6 @@ def cotizacionDetail_pp(request, pk):
     documentos = CotizacionDocumento.objects.filter(cotizacion=cotizacion)
     context['documentos'] = documentos
 
-    if request.user.userprofile.pruebaFuncionalidades:
-        context['pruebaFuncionalidades'] = True
 
     if request.method == 'POST':
         form = PrestamoPersonalForm(request.POST, request.FILES, instance=cotizacion)
@@ -51,7 +52,7 @@ def cotizacionDetail_pp(request, pk):
             try:
                 aseguradora = form.cleaned_data['aseguradora']
                 form_data = form.cleaned_data
-                resultado = perform_fideicomiso_calculation(form)
+                resultado, iteration_data= perform_pp_calculation(form)
 
                 # Create a new form instance to save a new record
                 new_form = PrestamoPersonalForm(request.POST)
@@ -109,9 +110,10 @@ def cotizacionDetail_pp(request, pk):
                 new_form.instance.tasaEstimada = resultado['tasaEstimada']
                 new_form.instance.tasaBruta = resultado['tasaBruta']
                 new_form.instance.r1 = resultado['r1']
+                
                 new_form.instance.auxMonto2 = resultado['auxMonto2']
                 new_form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
-                new_form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                new_form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro'] 
                 new_form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
                 new_form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
                 new_form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
@@ -149,6 +151,7 @@ def cotizacionDetail_pp(request, pk):
                      # Set the calculated values on the new instance
                     new_instance.wrkMontoLetra = resultado['wrkMontoLetra']
                     
+                    
                     new_instance.montoManejoT = resultado['montoManejoT']
                     new_instance.monto_manejo_b = resultado['montoManejoB']
                     new_instance.tasaEstimada = resultado['tasaEstimada']
@@ -170,7 +173,7 @@ def cotizacionDetail_pp(request, pk):
                     new_instance.praaMonto = resultado['praaMonto']
                     new_instance.praaDcto = resultado['praaDcto']
                     new_instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
-                    new_instance.wrkLetraSeguro = resultado['wrkLetraSeguro']
+                    new_instance.wrkLetraSeguro = resultado['wrkLetraSeguro'] 
                     new_instance.tasaBruta = resultado['tasaBruta']
                     #resultado nivel de endeuamiento - real
                     new_instance.salarioBaseMensual = resultado['salarioBaseMensual']
@@ -203,10 +206,9 @@ def cotizacionDetail_pp(request, pk):
                         new_instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
                     #-------                                                                                                                        
 
+                    new_instance.tipoPrestamo = 'personal'
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
-                    #------- SAFE SAVE ------------
-                    for field in new_instance._meta.fields:
-                        print(field.name, field.value_from_object(new_instance))
+                    #------- SAFE SAVE -----------
                     print("intentando guardar")
                     new_instance.save()
                     print("se guardo -",new_form.instance.NumeroCotizacion)
@@ -214,13 +216,17 @@ def cotizacionDetail_pp(request, pk):
                     numero_cotizacion = int(new_form.instance.NumeroCotizacion)
                     resultado['numero_cotizacion'] = numero_cotizacion
                     print('numero_cotizacion -',numero_cotizacion)
+                    # Convert date objects to strings
+                    for key, value in resultado.items():
+                        if isinstance(value, datetime.date):
+                            resultado[key] = value.strftime('%Y-%m-%d')
                     request.session['resultado'] = resultado
                     print("resultados guardados")
-                    return redirect('cotizacion_detail', pk=int(new_form.instance.NumeroCotizacion))
+                    return redirect('cotizacionDetail_pp', pk=int(new_form.instance.NumeroCotizacion))
                     
                 else:
-                    logger.warning("New form is not valid: %s", new_form.errors)
-                    messages.error(request, 'An error occurred while creating a new record.')
+                   
+                    print(new_form.errors)
                     error_message = str(e)
                     log_error(error_message, request.user.username)
                
@@ -241,6 +247,7 @@ def cotizacionDetail_pp(request, pk):
 
 @login_required
 def cotizacionPrestamoPersonal(request):
+
     resultado = None
     if request.method == 'POST':
         form = PrestamoPersonalForm(request.POST, request.FILES)
@@ -261,7 +268,7 @@ def cotizacionPrestamoPersonal(request):
                 auxPlazoPago = form.cleaned_data['plazoPago']
                 patrono = form.cleaned_data['patronoCodigo']
                 fecha_inicioPago = form.cleaned_data['fechaInicioPago']
-                porServDesc = form.cleaned_data['porServDesc']
+                porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
                 selectDescuento = form.cleaned_data['selectDescuento']
                 periodoPago = form.cleaned_data['periodoPago']
 
@@ -269,7 +276,14 @@ def cotizacionPrestamoPersonal(request):
 
                 sucursal = 13
                 auxPeriocidad = int(periodoPago)
-                forma_pago = 4  # verificar
+                formaPago = form.cleaned_data['formaPago']
+                print("formaPago", formaPago, type(formaPago))
+                if formaPago == '2':
+                    forma_pago = 3
+                else:
+                    forma_pago = 4
+
+                print("forma_pago",forma_pago)
                 aseguradora = form.cleaned_data['aseguradora']
                 codigoSeguro = aseguradora.codigo
                 r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
@@ -398,3 +412,248 @@ def cotizacionPrestamoPersonal(request):
         context['pruebaFuncionalidades'] = True
 
     return render(request, 'prestamoPersonal.html', context)
+
+
+
+def perform_pp_calculation(form):
+    print("-----------------perform_pp_calculation-----------------")
+    # Extract form data
+    try:
+        # Extract form data
+        edad = form.cleaned_data['edad']
+        sexo = form.cleaned_data['sexo']
+        jubilado = form.cleaned_data['jubilado']
+        nombreCliente = form.cleaned_data['nombreCliente']
+        cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
+        
+        calcTasaInteres = 10 / 100
+        if form.cleaned_data['tasaInteres'] is not None:
+            calcTasaInteres = Decimal(form.cleaned_data['tasaInteres']) / 100
+        print("tasa interes",calcTasaInteres)
+        calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
+        auxPlazoPago = form.cleaned_data['plazoPago']
+        patrono = form.cleaned_data['patronoCodigo'] if form.cleaned_data['patronoCodigo'] is not None else 9999
+        fecha_inicioPago = form.cleaned_data['fechaInicioPago']
+        sucursal = 13
+        auxPeriocidad = 1
+        forma_pago = 4
+        # COLECTIVO DE CREDITO
+        aseguradora = form.cleaned_data['aseguradora']
+        # print('aseguradora', aseguradora)
+        codigoSeguro = aseguradora.codigo
+        r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
+        comisionVendedor = form.cleaned_data['vendedorComision']
+        
+        selectDescuento = form.cleaned_data['selectDescuento']
+        pagaDiciembre = form.cleaned_data['pagaDiciembre']
+        porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
+        sucursal = form.cleaned_data['sucursal']
+        aplicaPromocion = form.cleaned_data['aplicaPromocion']
+        
+
+        # parse cotMontoPRestamo to float
+        cotMontoPrestamo = float(cotMontoPrestamo)
+        calcTasaInteres = float(calcTasaInteres)
+        calcComiCierre = float(calcComiCierre)
+        r_deseada = float(r_deseada)
+        comisionVendedor = float(comisionVendedor)
+       
+        sucursal = int(sucursal)
+    
+        #print('Sucursal', sucursal)
+        # Call the generarFideicomiso2 function
+        print("--------iniciando---------")
+        params = {
+                'tipoPrestamo': 'PERSONAL',
+                'edad': edad,
+                'sucursal': sucursal,
+                'sexo': sexo,
+                'jubilado': jubilado,
+                'cotMontoPrestamo': cotMontoPrestamo,
+                'fecha_inicioPago': fecha_inicioPago,
+                'calcTasaInteres': calcTasaInteres,
+                'calcComiCierre': calcComiCierre,
+                'auxPlazoPago': auxPlazoPago,
+                'patrono': patrono,
+                'sucursal': sucursal,
+                'auxPeriocidad': auxPeriocidad,
+                'forma_pago': forma_pago,
+                'codigoSeguro': codigoSeguro,
+                'fechaCalculo': datetime.datetime.now(),
+                'r_deseada': r_deseada,
+                'comisionVendedor': comisionVendedor,
+                'porServDesc': porServDesc,
+                'selectDescuento': selectDescuento,
+                'pagaDiciembre': pagaDiciembre,
+                }
+        #print('RESULTADO PARAMETROS', params)
+        
+        resultado, iteration_data = generarPP(params)
+        print("--------finalizado---------")
+   
+        #print("--------finalizado---------")
+        resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra']/2,2) * 2
+        # #print in ta table format reusltado
+        
+
+        ##print(form.cleaned_data)
+        #deserialize fechaCalculo in resultado
+        resultado['fechaCalculo'] = resultado['fechaCalculo'].strftime('%Y-%m-%d')
+        resultado['cotFechaInicioPago'] = resultado['cotFechaInicioPago'].strftime('%Y-%m-%d')
+        resultado['calcFechaPromeCK'] = resultado['calcFechaPromeCK'].strftime('%Y-%m-%d')
+
+        #PASE DE CAMPOS
+        resultado['oficial'] = form.cleaned_data['oficial'] if form.cleaned_data['oficial'] is not None else "-"
+        resultado['sucursal'] = form.cleaned_data['sucursal'] if form.cleaned_data['sucursal'] is not None else "-"
+        resultado['sexo'] = sexo
+        resultado['nombreCliente'] = form.cleaned_data['nombreCliente'] if form.cleaned_data['nombreCliente'] is not None else "-"
+        resultado['cedulaCliente'] = form.cleaned_data['cedulaCliente'] if form.cleaned_data['cedulaCliente'] is not None else "-"
+        
+        resultado['calcComiCierreFinal'] = resultado['calcComiCierreFinal'] * 100
+        
+        resultado['tipoDocumento'] = form.cleaned_data['tipoDocumento'] if form.cleaned_data['tipoDocumento'] is not None else "-"
+        resultado['apcScore'] = form.cleaned_data['apcScore'] if form.cleaned_data['apcScore'] is not None else "-"
+        resultado['apcPI'] = form.cleaned_data['apcPI'] / 100 if form.cleaned_data['apcPI'] is not None else 0
+        resultado['valorAuto'] = form.cleaned_data['valorAuto'] if form.cleaned_data['valorAuto'] is not None else 0
+        resultado['cotPlazoPago'] = auxPlazoPago if auxPlazoPago is not None else 0
+        resultado['vendedor'] = form.cleaned_data['vendedor'] if form.cleaned_data['vendedor'] is not None else "-"
+        #DATOS DEL AUTO
+        resultado['marcaAuto'] = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
+        resultado['lineaAuto'] = form.cleaned_data['modelo'] if form.cleaned_data['modelo'] is not None else "-"
+        resultado['yearAuto'] = form.cleaned_data['yearCarro'] if form.cleaned_data['yearCarro'] is not None else "-"
+        
+        resultado['promoPublicidad'] = 50  # Assuming this is a fixed value
+        resultado['transmision'] = form.cleaned_data['transmisionAuto'] if form.cleaned_data['transmisionAuto'] is not None else "-"
+        resultado['nuevoAuto'] = form.cleaned_data['nuevoAuto'] if form.cleaned_data['nuevoAuto'] is not None else "-"
+        resultado['kilometrajeAuto'] = form.cleaned_data['kilometrajeAuto'] if form.cleaned_data['kilometrajeAuto'] is not None else 0
+        resultado['observaciones'] = form.cleaned_data['observaciones'] if form.cleaned_data['observaciones'] is not None else "-"
+
+        #Datos del deudor
+        resultado['tiempoServicio'] = form.cleaned_data['tiempoServicio'] if form.cleaned_data['tiempoServicio'] is not None else "-"
+        resultado['ingresos'] = form.cleaned_data['ingresos'] if form.cleaned_data['ingresos'] is not None else "-"
+        resultado['nombreEmpresa'] = form.cleaned_data['nombreEmpresa'] if form.cleaned_data['nombreEmpresa'] is not None else "-"
+        resultado['referenciasAPC'] = form.cleaned_data['referenciasAPC'] if form.cleaned_data['referenciasAPC'] is not None else "-"
+        resultado['cartera'] = form.cleaned_data['cartera'] if form.cleaned_data['cartera'] is not None else "-"
+        resultado['licencia'] = form.cleaned_data['licencia'] if form.cleaned_data['licencia'] is not None else "-"
+        resultado['posicion'] = form.cleaned_data['posicion'] if form.cleaned_data['posicion'] is not None else "-"
+        resultado['perfilUniversitario'] = form.cleaned_data['perfilUniversitario'] if form.cleaned_data['perfilUniversitario'] is not None else "-"
+
+        #DATOS NIVEL DE ENDEUDAMIENTO
+        resultado['salarioBaseMensual'] = form.cleaned_data['salarioBaseMensual'] if form.cleaned_data['salarioBaseMensual'] is not None else 0
+        resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0
+        resultado['horasExtrasDcto'] = form.cleaned_data['horasExtrasDcto'] if form.cleaned_data['horasExtrasDcto'] is not None else 0
+        resultado['primaMonto'] = form.cleaned_data['primaMonto'] if form.cleaned_data['primaMonto'] is not None else 0
+        resultado['primaDcto'] = form.cleaned_data['primaDcto'] if form.cleaned_data['primaDcto'] is not None else 0
+        resultado['bonosMonto'] = form.cleaned_data['bonosMonto'] if form.cleaned_data['bonosMonto'] is not None else 0
+        resultado['bonosDcto'] = form.cleaned_data['bonosDcto'] if form.cleaned_data['bonosDcto'] is not None else 0
+        resultado['otrosMonto'] = form.cleaned_data['otrosMonto'] if form.cleaned_data['otrosMonto'] is not None else 0
+        resultado['otrosDcto'] = form.cleaned_data['otrosDcto'] if form.cleaned_data['otrosDcto'] is not None else 0
+
+        #DESCUENTO DIRECTO
+        resultado['siacapMonto'] = form.cleaned_data['siacapMonto'] if form.cleaned_data['siacapMonto'] is not None else 0
+        resultado['siacapDcto'] = form.cleaned_data['siacapDcto'] if form.cleaned_data['siacapDcto'] is not None else False
+        resultado['praaMonto'] = form.cleaned_data['praaMonto'] if form.cleaned_data['praaMonto'] is not None else 0
+        resultado['praaDcto'] = form.cleaned_data['praaDcto'] if form.cleaned_data['praaDcto'] is not None else False
+        resultado['dirOtrosMonto1'] = form.cleaned_data['dirOtrosMonto1'] if form.cleaned_data['dirOtrosMonto1'] is not None else 0
+        resultado['dirOtros1'] = form.cleaned_data['dirOtros1'] if form.cleaned_data['dirOtros1'] is not None else "-"
+        resultado['dirOtrosDcto1'] = form.cleaned_data['dirOtrosDcto1'] if form.cleaned_data['dirOtrosDcto1'] is not None else False
+        resultado['dirOtrosMonto2'] = form.cleaned_data['dirOtrosMonto2'] if form.cleaned_data['dirOtrosMonto2'] is not None else 0
+        resultado['dirOtros2'] = form.cleaned_data['dirOtros2'] if form.cleaned_data['dirOtros2'] is not None else "-"
+        resultado['dirOtrosDcto2'] = form.cleaned_data['dirOtrosDcto2'] if form.cleaned_data['dirOtrosDcto2'] is not None else False
+        resultado['dirOtrosMonto3'] = form.cleaned_data['dirOtrosMonto3'] if form.cleaned_data['dirOtrosMonto3'] is not None else 0
+        resultado['dirOtros3'] = form.cleaned_data['dirOtros3'] if form.cleaned_data['dirOtros3'] is not None else "-"
+        resultado['dirOtrosDcto3'] = form.cleaned_data['dirOtrosDcto3'] if form.cleaned_data['dirOtrosDcto3'] is not None else False
+        resultado['dirOtrosMonto4'] = form.cleaned_data['dirOtrosMonto4'] if form.cleaned_data['dirOtrosMonto4'] is not None else 0
+        resultado['dirOtros4'] = form.cleaned_data['dirOtros4'] if form.cleaned_data['dirOtros4'] is not None else "-"
+        resultado['dirOtrosDcto4'] = form.cleaned_data['dirOtrosDcto4'] if form.cleaned_data['dirOtrosDcto4'] is not None else False
+
+
+        #PAGO VOLUNTARIO
+        resultado['pagoVoluntario1'] = form.cleaned_data['pagoVoluntario1'] if form.cleaned_data['pagoVoluntario1'] is not None else 0
+        resultado['pagoVoluntarioMonto1'] = form.cleaned_data['pagoVoluntarioMonto1'] if form.cleaned_data['pagoVoluntarioMonto1'] is not None else 0
+        resultado['pagoVoluntarioDcto1'] = form.cleaned_data['pagoVoluntarioDcto1'] if form.cleaned_data['pagoVoluntarioDcto1'] is not None else 0
+        resultado['pagoVoluntario2'] = form.cleaned_data['pagoVoluntario2'] if form.cleaned_data['pagoVoluntario2'] is not None else 0
+        resultado['pagoVoluntarioMonto2'] = form.cleaned_data['pagoVoluntarioMonto2'] if form.cleaned_data['pagoVoluntarioMonto2'] is not None else 0
+        resultado['pagoVoluntarioDcto2'] = form.cleaned_data['pagoVoluntarioDcto2'] if form.cleaned_data['pagoVoluntarioDcto2'] is not None else 0
+        resultado['pagoVoluntario3'] = form.cleaned_data['pagoVoluntario3'] if form.cleaned_data['pagoVoluntario3'] is not None else 0
+        resultado['pagoVoluntarioMonto3'] = form.cleaned_data['pagoVoluntarioMonto3'] if form.cleaned_data['pagoVoluntarioMonto3'] is not None else 0
+        resultado['pagoVoluntarioDcto3'] = form.cleaned_data['pagoVoluntarioDcto3'] if form.cleaned_data['pagoVoluntarioDcto3'] is not None else 0
+        resultado['pagoVoluntario4'] = form.cleaned_data['pagoVoluntario4'] if form.cleaned_data['pagoVoluntario4'] is not None else 0
+        resultado['pagoVoluntarioMonto4'] = form.cleaned_data['pagoVoluntarioMonto4'] if form.cleaned_data['pagoVoluntarioMonto4'] is not None else 0
+        resultado['pagoVoluntarioDcto4'] = form.cleaned_data['pagoVoluntarioDcto4'] if form.cleaned_data['pagoVoluntarioDcto4'] is not None else 0
+        resultado['pagoVoluntario5'] = form.cleaned_data['pagoVoluntario5'] if form.cleaned_data['pagoVoluntario5'] is not None else 0
+        resultado['pagoVoluntarioMonto5'] = form.cleaned_data['pagoVoluntarioMonto5'] if form.cleaned_data['pagoVoluntarioMonto5'] is not None else 0
+        resultado['pagoVoluntarioDcto5'] = form.cleaned_data['pagoVoluntarioDcto5'] if form.cleaned_data['pagoVoluntarioDcto5'] is not None else 0
+        resultado['pagoVoluntario6'] = form.cleaned_data['pagoVoluntario6'] if form.cleaned_data['pagoVoluntario6'] is not None else 0
+        resultado['pagoVoluntarioMonto6'] = form.cleaned_data['pagoVoluntarioMonto6'] if form.cleaned_data['pagoVoluntarioMonto6'] is not None else 0
+        resultado['pagoVoluntarioDcto6'] = form.cleaned_data['pagoVoluntarioDcto6'] if form.cleaned_data['pagoVoluntarioDcto6'] is not None else 0
+        
+        resultado['horasExtrasMonto'] = form.cleaned_data['horasExtrasMonto'] if form.cleaned_data['horasExtrasMonto'] is not None else 0  
+        #PRORRATEO
+        resultado['mes0'] = form.cleaned_data['mes0'] if form.cleaned_data['mes0'] is not None else ""
+        resultado['mes1'] = form.cleaned_data['mes1'] if form.cleaned_data['mes1'] is not None else ""
+        resultado['mes2'] = form.cleaned_data['mes2'] if form.cleaned_data['mes2'] is not None else ""
+        resultado['mes3'] = form.cleaned_data['mes3'] if form.cleaned_data['mes3'] is not None else ""
+        resultado['mes4'] = form.cleaned_data['mes4'] if form.cleaned_data['mes4'] is not None else ""
+        resultado['mes5'] = form.cleaned_data['mes5'] if form.cleaned_data['mes5'] is not None else ""
+        resultado['mes6'] = form.cleaned_data['mes6'] if form.cleaned_data['mes6'] is not None else ""
+        resultado['mes7'] = form.cleaned_data['mes7'] if form.cleaned_data['mes7'] is not None else ""
+        resultado['mes8'] = form.cleaned_data['mes8'] if form.cleaned_data['mes8'] is not None else ""
+        resultado['mes9'] = form.cleaned_data['mes9'] if form.cleaned_data['mes9'] is not None else ""
+        resultado['mes10'] = form.cleaned_data['mes10'] if form.cleaned_data['mes10'] is not None else ""
+        resultado['mes11'] = form.cleaned_data['mes11'] if form.cleaned_data['mes11'] is not None else ""
+        resultado['primerMes'] = form.cleaned_data['primerMes'] if form.cleaned_data['primerMes'] is not None else ""
+        resultado['tipoProrrateo'] = form.cleaned_data['tipoProrrateo'] if form.cleaned_data['tipoProrrateo'] is not None else ""
+        #print('primer mes', resultado['primerMes'],form.cleaned_data['primerMes'])
+        
+        # MONTO LETRA SIN SEGUROS
+        resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
+        resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
+        resultado['wrkLetraConSeguros'] = round(resultado['wrkMontoLetra'], 2)
+        
+
+        resultado['calcComiCierreFinal'] = round(resultado['calcComiCierreFinal'], 2)
+       
+        resultado['cashback'] = form.cleaned_data['cashback'] if form.cleaned_data['cashback'] is not None else 0
+        resultado['cashback'] = round(resultado['cashback'], 2)
+        resultado['r1']=round(resultado['r1'],2)
+        resultado['abono'] = form.cleaned_data['abono'] if form.cleaned_data['abono'] is not None else 0
+        resultado['abono'] = round(resultado['abono'], 2)
+        resultado['abonoPorcentaje'] = form.cleaned_data['abonoPorcentaje'] if form.cleaned_data['abonoPorcentaje'] is not None else 0
+        resultado['abonoPorcentaje'] = round(resultado['abonoPorcentaje'], 2)
+        #print('abonoporcentaje', resultado['abonoPorcentaje'])
+
+        resultado['movOpcion'] = form.cleaned_data['movOpcion'] if form.cleaned_data['movOpcion'] is not None else 0
+        resultado['averageIngresos'] = form.cleaned_data['averageIngresos'] if form.cleaned_data['averageIngresos'] is not None else 0
+
+    except Exception as e:
+        print(f"Error: {e} at line {sys.exc_info()[-1].tb_lineno}")
+    
+        # Convert Decimal fields to floats
+        # Convert Decimal fields to floats
+    from ..views import convert_decimal_to_float
+    resultado = convert_decimal_to_float(resultado)
+    from ..views import nivelEndeudamiento
+    #CALCULO NIVEL DE ENDEUDAMIENTO - REAL
+    print("-----Nivel Endeudamiento-----")
+    resultadoNivel = nivelEndeudamiento(resultado)
+    resultado['salarioNeto'] = resultadoNivel['salarioNeto']
+    resultado['porSalarioNeto'] = resultadoNivel['porSalarioNeto']
+    resultado['salarioNetoActual'] = resultadoNivel['salarioNetoActual']
+    resultado['totalIngresosAdicionales'] = resultadoNivel['totalIngresosAdicionales']
+    resultado['totalIngresosMensuales'] = resultadoNivel['totalIngresosMensuales']
+    resultado['totalDescuentoDirecto'] = resultadoNivel['totalDescuentoDirecto']
+    resultado['totalPagoVoluntario'] = resultadoNivel['totalPagoVoluntario']
+    resultado['totalDescuentosLegales'] = resultadoNivel['totalDescuentosLegales']
+    #nivel de endeudamiento - completo
+    resultado['totalIngresosMensualesCompleto'] = resultadoNivel['totalIngresosMensualesCompleto']
+    resultado['totalDescuentosLegalesCompleto'] = resultadoNivel['totalDescuentosLegalesCompleto']
+    resultado['salarioNetoActualCompleto'] = resultadoNivel['salarioNetoActualCompleto']
+    resultado['salarioNetoCompleto'] = resultadoNivel['salarioNetoCompleto']
+    resultado['porSalarioNetoCompleto'] = resultadoNivel['porSalarioNetoCompleto']
+    # Perform the calculation logic here
+    # ...
+    print("-----Nivel Endeudamiento FIn-----")
+    
+    return resultado, iteration_data
+

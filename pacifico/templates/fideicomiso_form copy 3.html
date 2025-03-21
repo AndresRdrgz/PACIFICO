@@ -1,0 +1,1037 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cotizador - Préstamo de Auto{% endblock %}
+
+{% block content %}
+   
+<div class="container  py-6 px-4 w-full" style="height: 100vh;">
+    <form id="myForm" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md border border-gray-400">
+        <div class="text-center">
+            <h1 class="text-xl font-bold mb-4">Cotizador - Préstamo de Auto</h1>
+        </div>
+        {% if pruebaFuncionalidades%}
+            <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-blue-100 border border-blue-400">
+                <span class="font-medium text-blue-700 inline-block">
+                    Actualmente posee acceso anticipado a las nuevas funciones del sistema. Favor de reportar cualquier error o sugerencia al departamento de procesos.
+                </span>
+            </div>
+        {% endif %}
+
+        {% if errors%}
+            <div class="flex items-center p-4 mb-3 text-sm rounded-lg bg-red-100 border border-red-400">
+                <span class="font-medium text-red-700 inline-block">
+                    {{ errors }}
+                </span>
+            </div>
+        {% endif %}
+
+      
+
+
+        {% include 'partials/resultadoFideicomiso.html' %}
+       
+        {% csrf_token %}
+        <div class="flex space-x-4 mt-4 mb-4">
+            <div class="flex-1 mb-4">
+                <label for="id_oficial" class="block text-sm font-medium text-gray-700 mb-1">Oficial</label>
+                {{ form.oficial }}
+            </div>
+        <div class="flex-1 mb-4">
+            <label for="id_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+            {{ form.sucursal }}
+        </div>
+    </div>
+
+
+         <!-- Datos generales Section -->
+        <!-- Datos del Cliente Section -->
+        <div class="flex-1 p-4  border border-gray-400  rounded-lg mb-4">
+            <h1 class="text-lg font-bold mb-4">Datos del cliente</h1>
+            {% include 'partials/cotDatosCliente.html' %}
+        </div>
+       
+           
+          <!-- Datos del vehiculo -->
+          <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            
+                <h1 class="text-lg font-bold mb-4">Datos del Vehículo</h1>
+                <p class="mt-1 text-sm mb-4 font-normal text-gray-500">En caso que el auto no se encuentre en el cotizador de SURA, puede realizar la cobertura manual ingresando directamente los datos en los campos requeridos.</p>
+                {% include 'partials/cotDatosVehiculo.html' %}
+            </div>
+      
+
+         <!-- Parametros de la cotizacion -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <h1 class="text-lg font-bold mb-4">Parámetros de la Cotización</h1>
+            <p class="mt-1 text-sm font-normal text-gray-500">De no encontrar el patrono en el listado, puede escribir directamente el nombre en el campo "Patrono".</p>
+            {% include 'partials/cotParametrosCotizacion.html' %}
+         </div>
+
+      
+
+         <!-- Parametros del calculo -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <h1 class="text-lg font-bold mb-4">Parámetros del Cálculo</h1>
+            {% include 'partials/cotParametrosCalculo.html' %}
+           
+         </div>
+
+         <!-- Motivo de la consulta -->
+         <div class="flex-1 p-4 border border-gray-400 rounded-lg mb-4">
+            <div class="flex items-center ">
+                <h1 class="text-lg font-bold">Motivo de la Consulta</h1>
+                <div class="ml-auto">
+                    <label class="inline-flex items-center ms-5 cursor-pointer">
+                        <input type="checkbox" id="toggleMotivoConsulta" class="sr-only peer" onchange="toggleMotivoConsultaSection()">
+                        <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+            </div>
+            <div id="sectionMotivoConsulta" class="flex-1 p-1 rounded-lg mb-1">
+                    <div class="flex-1 mb-1">
+                        <label for="id_observaciones" class="block text-sm font-medium text-gray-700 mb-1">Motivo de la Consulta</label>
+                        {{ form.observaciones }}
+                    </div>  
+            </div>
+
+        
+        </div>
+
+       <!--Detalles del deudor-->
+       {% include 'partials/cotDeudor.html' %}
+
+
+       <!-- Prorrateo section-->
+        {% include 'partials/prorrateo.html' %}
+        
+        
+        <!-- Nivel de Endeudamiento -->
+        {% include 'partials/cotNivelEndeudamiento.html' %}
+       
+             
+            
+        {% include 'partials/nivelFamiliar.html' %}
+
+           
+          
+             <!-- Detalles del deudor -->
+         
+
+        {% include 'partials/movimientosBancarios.html' %}
+    
+     
+    {% if pruebaFuncionalidades %}
+        {% include 'partials/documentosCliente.html' %}
+    {% endif %}
+
+    <input type="hidden" name="documentos_data" id="documentos_data">
+
+</form>
+    
+   
+    <!-- Modal Abono-->
+      <!-- Button to open the modal -->
+   
+    <!-- Modal -->
+    <div id="abonoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h2 class="text-xl font-bold mb-4">Calcular Abono</h2>
+            <div class="mb-4">
+                <label for="totalValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Total del Auto</label>
+                <input type="number" id="totalValue" class="w-full p-2 border rounded">
+            </div>
+           
+            <div class="mb-4">
+                <!--add a select with two options Porcentaje and Monto-->
+                <label for="abonoType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Abono</label>
+                <select id="abonoType" class="w-full p-2 border rounded">
+                    <option value="-">-</option>
+                    <option value="percentage">Porcentaje (%)</option>
+                    <option value="amount">Monto</option>
+                </select>
+
+            </div>
+            <div class="mb-4">
+                <label for="percentage" class="block text-sm font-medium text-gray-700 mb-1">Porcentaje (%)</label>
+                <input type="number" id="percentage" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                <input type="number" id="amount" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <label for="cashbackModal" class="block text-sm font-medium text-gray-700 mb-1">Cashback</label>
+                <input type="number" id="cashbackModal" class="w-full p-2 border rounded">
+            </div>
+            <div class="mb-4">
+                <button type="button" class="bg-green-500 text-white px-4 py-2 rounded" onclick="calculateAbono()">Calcular</button>
+            </div>
+            <div class="mb-4">
+                <label for="montoFinanciado" class="block text-sm font-medium text-gray-700 mb-1">Monto Financiado</label>
+                <input type="number" id="montoFinanciado" class="w-full p-2 border rounded" readonly>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" onclick="closeModalAbono()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Patrono-->
+     
+    <div id="patronoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="flex space-x-4">
+                    <div class="flex-1 mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Buscar Patrono</h3>                      
+                    </div>
+                    <div class="flex-1 mb-4">
+                        <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModal()">Cerrar</button>
+                    </div>
+     
+                
+            </div>
+                <div class="mt-2">
+                    <input type="text" id="searchPatrono" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" placeholder="Buscar...">
+                </div>
+                <div class="mt-4">
+                    <ul id="patronoList" class="text-left">
+                        <!-- Patrono list will be populated here -->
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vendedor-->
+    <div id="vendedorModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="flex space-x-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Buscar Vendedor</h3>
+                <div class="mt-4">
+                    <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModalVendedor()">Cerrar</button>
+                </div>
+            </div>
+                <div class="mt-2">
+                    <input type="text" id="searchVendedor" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" placeholder="Buscar...">
+                </div>
+                <div class="mt-4">
+                    <ul id="vendedorList" class="text-left">
+                        <!-- Patrono list will be populated here -->
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Loading Animation -->
+    <div 
+        id="loading" 
+        class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-[#22a650] border-solid"></div>
+    </div>
+
+    {% include 'partials/sura.html' %}
+
+
+    {% if not resultado%}
+       <!--Validacion campos-->
+    {% endif %}
+
+</div>
+    <script>
+
+        function toggleSeguroAutoSection() {
+            const section = document.getElementById('sectionSeguroAuto');
+            const checkbox = document.getElementById('toggleSeguroAuto');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleDetallesDeudorSection() {
+            const section = document.getElementById('sectionDetallesDeudor');
+            const checkbox = document.getElementById('toggleDetallesDeudor');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleProrrateoSection() {
+            const section = document.getElementById('sectionProrrateo');
+            const checkbox = document.getElementById('toggleProrrateo');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+
+        function toggleNivelEndeudamientoSection() {
+            const section = document.getElementById('sectionNivelEndeudamiento');
+            const checkbox = document.getElementById('toggleNivelEndeudamiento');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function toggleMotivoConsultaSection() {
+            const section = document.getElementById('sectionMotivoConsulta');
+            const checkbox = document.getElementById('toggleMotivoConsulta');
+            if (checkbox.checked) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        // Initialize the section to be hidden by default
+        
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        document.getElementById('divPatronoCodigo').style.display = 'none';
+        document.getElementById('sectionProrrateo').style.display = 'block';
+        document.getElementById('toggleProrrateo').checked = true;
+        document.getElementById('toggleDetallesDeudor').checked = true;
+        {% if resultado %}
+        //document.getElementById('sectionSeguroAuto').style.display = 'block';
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'block';
+        //document.getElementById('sectionMotivoConsulta').style.display = 'block';
+        document.getElementById('sectionProrrateo').style.display = 'block';
+        {% else %}
+        
+        document.getElementById('sectionDetallesDeudor').style.display = 'block';
+        document.getElementById('sectionNivelEndeudamiento').style.display = 'none';
+        document.getElementById('sectionMotivoConsulta').style.display = 'none';
+        {% endif %}
+        document.getElementById('sectionMotivoConsulta').style.display = 'none';
+        
+        function highlightEmptyRequiredFields() {
+            const form = document.getElementById('myForm');
+            const requiredFields = form.querySelectorAll('[required]');
+    
+            requiredFields.forEach(function(field) {
+                if (!field.value.trim()) {
+                    field.classList.add('border-yellow-500', 'bg-yellow-100');
+                } else {
+                    field.classList.remove('border-yellow-500', 'bg-yellow-100');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const fechaNacimientoInput = document.getElementById('id_fechaNacimiento');
+            const edadInput = document.getElementById('id_edad');
+            const fechaInicioPagoInput = document.getElementById('id_fechaInicioPago');
+            const vendedorInput = document.getElementById('id_vendedor');
+            const comisionVendedorInput = document.getElementById('id_vendedorComision');
+            const montoAnualSeguroInput = document.getElementById('id_montoanualSeguro');
+            const cantidadPagosSeguroInput = document.getElementById('id_cantPagosSeguro');
+            const mesesFinanciarSeguroInput = document.getElementById('id_mesesFinancia');
+            const montoMensualSeguroInput = document.getElementById('id_montoMensualSeguro');
+            const financiaSeguroCheckbox = document.getElementById('id_financiaSeguro');
+            const corredorField = document.getElementById('div_id_Corredor');
+            const montoMensualField = document.getElementById('div_id_montoMensualSeguro');
+            const montoAnualField = document.getElementById('div_id_montoanualSeguro');
+            const cantidadPagosField = document.getElementById('div_id_cantPagosSeguro');
+            const sexoField = document.getElementById('id_sexo');
+            const colectivoCreditoField = document.getElementById('id_colectivoCredito');
+
+            const divCamposFinanciar1 = document.getElementById('id_CamposFinanciar1');
+            const divCamposFinanciar2 = document.getElementById('id_CamposFinanciar2');
+
+            const marcaField = document.getElementById('id_marcaAuto');
+            const lineaField = document.getElementById('lineasAutos');
+            const hiddenLineaField = document.getElementById('id_lineaAuto');
+
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const totalValueInput = document.getElementById('totalValue');
+
+            const abonoTypeInput = document.getElementById('abonoType');
+            const montoAbonoInput = document.getElementById('amount');
+            const percentageAbonoInput = document.getElementById('percentage');
+
+            const ingresosInput = document.getElementById('id_ingresos');
+            const salarioBaseMensualInput = document.getElementById('id_salarioBaseMensual');
+            const prorrateoSalarioInput = document.getElementById('prorrateoSalario');
+
+            //CAMPOS SURA
+            const suraMarca = document.getElementById('id_marcaAuto');
+            const suraLinea = document.getElementById('lineasAutos');
+            const suraValor = document.getElementById('valor');
+            const suraYear = document.getElementById('id_yearAuto');
+
+            //nombre de la empresa
+            const deudorEmpresa = document.getElementById('id_nombreEmpresa');
+            const patronoField = document.getElementById('id_patrono');
+
+
+            highlightEmptyRequiredFields();
+
+            const form = document.getElementById('myForm');
+            form.addEventListener('input', function() {
+                highlightEmptyRequiredFields();
+            });
+    
+    
+            window.addEventListener('load', function() {
+                document.getElementById('loading').classList.add('hidden');
+            });
+
+                        if (patronoField) {
+                            patronoField.addEventListener('change', function() {
+                                deudorEmpresa.value = patronoField.value;
+                            });
+                        }
+
+
+            if (edadInput) {
+                edadInput.addEventListener('input', function() {
+                    const edad = parseInt(edadInput.value);
+                    const sexo = document.getElementById('id_sexo').value;
+                    const jubilado = document.getElementById('id_jubilado');
+                    console.log("edadInput: ", edad);
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", edad);
+                    // Check if the person is jubilado, if sexo is masculino and edad is greater than 60 or if sexo is femenino and edad is greater than 55
+                    if (sexo == 'MASCULINO' && edad >= 60 || sexo == 'FEMENINO' && edad >= 55) {
+                        jubilado.value = "SI";
+                    } else {
+                        jubilado.value = "NO";
+                    }
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", edad);
+                });
+            }
+
+            if (fechaNacimientoInput && edadInput) {
+                fechaNacimientoInput.addEventListener('change', function() {
+                    const fechaNacimiento = new Date(fechaNacimientoInput.value);
+                    const today = new Date();
+                    let age = today.getFullYear() - fechaNacimiento.getFullYear();
+                    const monthDiff = today.getMonth() - fechaNacimiento.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < fechaNacimiento.getDate())) {
+                        age--;
+                    }
+                    edadInput.value = age;
+                    const sexo = document.getElementById('id_sexo').value;
+                    const jubilado = document.getElementById('id_jubilado');
+                    console.log("fechaNacimientoInput: ", age);
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
+                    // Check if the person is jubilado, if sexo is masculino and edad is greater than 60 or if sexo is femenino and edad is greater than 55
+                    if (sexo == 'MASCULINO' && age >= 60 || sexo == 'FEMENINO' && age >= 55) {
+                        jubilado.value = "SI";
+                    } else {
+                        jubilado.value = "NO";
+                    }
+                    console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
+                });
+            }
+
+            if (fechaInicioPagoInput) {
+                fechaInicioPagoInput.addEventListener('change', function() {
+                    const fechaInicioPago = new Date(fechaInicioPagoInput.value);
+                    const hoy = new Date();
+                    const meses = (hoy.getFullYear() - fechaInicioPago.getFullYear()) * 12 + (hoy.getMonth() - fechaInicioPago.getMonth());
+                    mesesFinanciarSeguroInput.value = meses;
+                });
+           }
+           
+            if (totalValueInput) {
+                totalValueInput.addEventListener('input', function() {
+                    const id_valorAuto = document.getElementById('id_valorAuto');
+                    const montoAbono = document.getElementById('amount')
+                    id_valorAuto.value = totalValueInput.value;
+                    if(abonoTypeInput.value == 'percentage'){
+                        
+                    }else if(abonoTypeInput.value == 'amount'){
+                        document.getElementById('montoFinanciado').value = totalValueInput.value - montoAbono.value;
+                    }else{
+                        document.getElementById('montoFinanciado').value = 0;
+                    }
+                });
+            }
+
+            if(suraMarca){
+                suraMarca.addEventListener('change', function() {
+                    
+                    document.getElementById('id_marca').value = suraMarca.value;
+                   
+                });
+            }
+            if(suraLinea){
+                suraLinea.addEventListener('change', function() {
+                    console.log("Linea:", suraLinea.value);
+                    document.getElementById('id_modelo').value = suraLinea.value;
+                });
+            }
+            if(suraValor){
+                suraValor.addEventListener('input', function() {
+                    document.getElementById('id_valorAuto').value = suraValor.value;
+                });
+            }
+            if(suraYear){
+                suraYear.addEventListener('input', function() {
+                    document.getElementById('id_yearCarro').value = suraYear.value;
+                });
+            }
+
+            if(abonoTypeInput){
+                abonoTypeInput.addEventListener('change', function() {
+                    if (abonoTypeInput.value == 'percentage') {
+                        document.getElementById('percentage').parentElement.style.display = 'block';
+                        document.getElementById('amount').value = 0;
+                        document.getElementById('amount').parentElement.style.display = 'none';
+                        document.getElementById('percentage').value = 0;
+                        document.getElementById('montoFinanciado').value = 0;
+                    } else {
+                        document.getElementById('percentage').value = 0;
+                        document.getElementById('percentage').parentElement.style.display = 'none';
+                        document.getElementById('amount').parentElement.style.display = 'block';
+                        document.getElementById('montoFinanciado').value = 0;
+                    }
+                });
+            }
+            lineaField.addEventListener('change', function() {
+                hiddenLineaField.value = this.value;
+            });
+
+            //const form = document.querySelector('form');
+
+            //use fetch("{% static 'autos.json' %}") in order to load the lineas based on selected marca
+            fetch("{% static 'autos.json' %}")
+                .then(response => response.json())
+                .then(data => {
+                    const marcaAutoField = document.getElementById('id_marcaAuto');
+                    const lineaAutoField = document.getElementById('lineasAutos');
+                    marcaAutoField.addEventListener('change', function() {
+                        const selectedMarca = marcaAutoField.value;
+                        const lineas = data.filter(auto => auto.MARCA === selectedMarca).map(auto => auto.LINEA);
+                        lineaAutoField.innerHTML = ''; // Clear the existing options
+                       
+                        const defaultOption = document.createElement('option');
+                        defaultOption.value = '';
+                        defaultOption.textContent = 'Seleccione una línea';
+                        lineaAutoField.appendChild(defaultOption);
+
+                        lineas.forEach(linea => {
+                            const option = document.createElement('option');
+                            option.value = linea;
+                            option.textContent = linea;
+                            lineaAutoField.appendChild(option);
+                        });
+                    });
+                })
+                .catch(error => console.error('Error loading autos:', error));
+                {% if resultado %}
+                const lineaAutoField = document.getElementById('id_lineaAuto');
+                lineaAutoField.value = "{{ resultado.lineaAuto }}";
+                console.log("Resultado:", "{{ resultado.lineaAuto }}");
+                {% endif %}
+
+            
+
+            //  #if sexo = masculino set colectivoCredito to "7 - INTERNACIONAL DE SEGUROS - FIDEICOMISO H" otherwise set it to "8 - INTERNACIONAL DE SEGUROS - FIDEICOMISO M"
+            /*if (sexoField) {
+                sexoField.addEventListener('change', function() {
+                    if (sexoField.value == 'Femenino') {
+                        colectivoCreditoField.value = 8;
+                    } else {
+                        colectivoCreditoField.value = 7;
+                    }
+                });
+            }*/
+
+           
+
+    
+            if (vendedorInput && comisionVendedorInput) {
+                //vendedorInput.value = "SIN VENDEDOR";
+                //comisionVendedorInput.value = 0;
+                //comisionVendedorInput.readOnly = true;
+                //comisionVendedorInput.className = "w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2";
+            }
+    
+            function calculateMontoMensualSeguro() {
+                const montoAnualSeguro = parseFloat(montoAnualSeguroInput.value);
+                const cantidadPagosSeguro = parseInt(cantidadPagosSeguroInput.value);
+    
+                console.log("Monto anual seguro:", montoAnualSeguro, "Cantidad de pagos:", cantidadPagosSeguro);
+    
+                if (!isNaN(montoAnualSeguro) && !isNaN(cantidadPagosSeguro) && cantidadPagosSeguro > 0) {
+                    const montoMensualSeguro = montoAnualSeguro / cantidadPagosSeguro;
+                    montoMensualSeguroInput.value = montoMensualSeguro.toFixed(2);
+                } else {
+                    montoMensualSeguroInput.value = '';
+                }
+            }
+    
+            if (montoAnualSeguroInput) {
+                montoAnualSeguroInput.addEventListener('input', calculateMontoMensualSeguro);
+            }
+            
+            if (cantidadPagosSeguroInput) {
+                cantidadPagosSeguroInput.addEventListener('change', calculateMontoMensualSeguro);
+            }
+            
+            if(financiaSeguroCheckbox){
+                financiaSeguroCheckbox.addEventListener('change', function() {
+                    if (financiaSeguroCheckbox.checked) {
+
+                        cantidadPagosSeguroInput.value = 12;
+                        document.getElementById('id_mesesFinanciaSeguro').value = 2;
+                        
+                    } else {
+                        cantidadPagosSeguroInput.value = 0;
+                        document.getElementById('id_mesesFinanciaSeguro').value = 0;
+                        
+                    }
+                });
+            }
+            
+            
+            /*
+            if (financiaSeguroCheckbox) {
+                financiaSeguroCheckbox.addEventListener('change', function() {
+                    if (financiaSeguroCheckbox.checked) {
+                        
+                        divCamposFinanciar1.classList.remove('hidden');
+                        divCamposFinanciar2.classList.remove('hidden');
+                        
+                        
+                    } else {
+                        divCamposFinanciar1.classList.add('hidden');
+                        divCamposFinanciar2.classList.add('hidden');
+                        
+                        
+                    }
+                });
+            }*/
+            
+       
+    
+            const today = new Date();
+            const fechaInicioPago = new Date(today);
+            fechaInicioPago.setDate(today.getDate() + 31);
+            const formattedDate = fechaInicioPago.toISOString().split('T')[0];
+            if (fechaInicioPagoInput) {
+                fechaInicioPagoInput.value = formattedDate;
+            }
+    
+           /* if (fechaNacimientoInput && edadInput) {
+                fechaNacimientoInput.addEventListener('change', function() {
+                    const fechaNacimiento = new Date(fechaNacimientoInput.value);
+                    let age = today.getFullYear() - fechaNacimiento.getFullYear();
+                    const monthDiff = today.getMonth() - fechaNacimiento.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < fechaNacimiento.getDate())) {
+                        age--;
+                    }
+                    edadInput.value = age;
+                    console.log("age: ",age);
+                });
+            }*/
+    
+            fetch("{% static 'patronos.json' %}")
+                .then(response => response.json())
+                .then(data => {
+                    const patronoList = document.getElementById('patronoList');
+                    data.forEach(patrono => {
+                        const li = document.createElement('li');
+                        li.textContent = patrono.codigo + " - " + patrono.descripcion;
+                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
+                        li.addEventListener('click', () => {
+                            document.getElementById('id_patrono').value = patrono.descripcion;
+                            document.getElementById('id_patronoCodigo').value = patrono.codigo;
+                            document.getElementById('id_nombreEmpresa').value = patrono.descripcion;
+                            console.log("Patrono seleccionado:", patrono);
+                            closeModal();
+                        });
+                        patronoList.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error loading patronos:', error));
+    
+            fetch("{% static 'vendedores.json' %}")
+                .then(response => response.json())
+                .then(dataVendedores => {
+                    const vendedorList = document.getElementById('vendedorList');
+                    dataVendedores.forEach(vendedor => {
+                        const li = document.createElement('li');
+                        li.textContent = vendedor.codigo + " - " + vendedor.nombre;
+                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
+                        li.addEventListener('click', () => {
+                            document.getElementById('id_vendedor').value = vendedor.nombre;
+                            if (vendedor.codigo == 1) {
+                                document.getElementById('id_vendedorComision').value = 0;
+                                //document.getElementById('id_vendedorComision').readOnly = true;
+                                document.getElementById('id_vendedorComision').className = "w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2";
+                            } else {
+                                comisionVendedorInput.readOnly = false;
+                                comisionVendedorInput.className = "w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow";
+                            }
+                            closeModalVendedor();
+                        });
+                        vendedorList.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error loading vendedores:', error));
+    
+            const searchPatrono = document.getElementById('searchPatrono');
+            if (searchPatrono) {
+                searchPatrono.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    const patronoList = document.getElementById('patronoList');
+                    const items = patronoList.getElementsByTagName('li');
+                    Array.from(items).forEach(item => {
+                        if (item.textContent.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+    
+            const searchVendedor = document.getElementById('searchVendedor');
+            if (searchVendedor) {
+                searchVendedor.addEventListener('input', function() {
+                    const searchValue = this.value.toLowerCase();
+                    const vendedorList = document.getElementById('vendedorList');
+                    const items = vendedorList.getElementsByTagName('li');
+                    Array.from(items).forEach(item => {
+                        if (item.textContent.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        });
+    
+        function openModal() {
+            document.getElementById('patronoModal').classList.remove('hidden');
+        }
+    
+        function closeModal() {
+            document.getElementById('patronoModal').classList.add('hidden');
+        }
+    
+        function openModalVendedor() {
+            document.getElementById('vendedorModal').classList.remove('hidden');
+        }
+    
+        function closeModalVendedor() {
+            document.getElementById('vendedorModal').classList.add('hidden');
+        }
+
+        function openModalAbono() {
+            document.getElementById('abonoModal').classList.remove('hidden');
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const totalValue = document.getElementById('totalValue');
+
+            document.getElementById('percentage').parentElement.style.display = 'none';
+            document.getElementById('amount').parentElement.style.display = 'none';
+            
+            console.log("Valor total del auto:", totalValue.value, "Valor del auto:", id_valorAuto);
+            totalValue.value = id_valorAuto;
+        }
+    
+        function closeModalAbono() {
+            document.getElementById('abonoModal').classList.add('hidden');
+        }
+
+        function openModalSura(){
+            document.getElementById('suraModal').classList.remove('hidden');
+
+            //Get valor from id_valorAuto
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const valor = document.getElementById('valor');
+
+            valor.value = id_valorAuto; 
+        }
+        function closeModalSura(){
+            document.getElementById('suraModal').classList.add('hidden');
+        }
+    
+        function calculateAbono() {
+            const totalValue = parseFloat(document.getElementById('totalValue').value) || 0;
+            const id_valorAuto = document.getElementById('id_valorAuto').value;
+            const percentage = parseFloat(document.getElementById('percentage').value) || 0;
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const abonoType = document.getElementById('abonoType').value;
+            const cashbackValue = parseFloat(document.getElementById('cashbackModal').value) || 0;
+            console.log("cashbackValue:", cashbackValue);
+            let abono = 0;
+
+            if (abonoType == 'percentage') {
+                abono = totalValue * (percentage / 100);
+            } else {
+                abono = amount;
+            }
+            console.log("abono:", abono);
+
+            const montoFinanciado = totalValue - abono - cashbackValue;
+            document.getElementById('montoFinanciado').value = montoFinanciado.toFixed(2);
+            document.getElementById('id_montoPrestamo').value = montoFinanciado.toFixed(2);
+            document.getElementById('id_cashback').value = cashbackValue.toFixed(2);
+            document.getElementById('id_abono').value = abono.toFixed(2);
+            //Calculate % of abono
+            const porcentajeAbono = (abono / totalValue) * 100;
+            document.getElementById('id_abonoPorcentaje').value = porcentajeAbono.toFixed(2);
+
+            //Enviar valor a valor auto en Sura MODAL
+            
+        }
+        
+        function collectDocumentData() {
+            const table = document.getElementById('documentosTable').getElementsByTagName('tbody')[0];
+            const rows = table.getElementsByTagName('tr');
+            const documents = [];
+    
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const tipoDocumento = row.cells[0].getElementsByTagName('select')[0].value;
+                const documentoInput = row.cells[1].getElementsByTagName('input')[0];
+                const observaciones = row.cells[2].getElementsByTagName('input')[0].value;
+    
+                documents.push({
+                    tipoDocumento: tipoDocumento,
+                    documento: documentoInput.name,  // Use the input name to reference the file
+                    observaciones: observaciones
+                });
+            }
+    
+            return documents;
+        }
+
+    
+        document.getElementById('myForm').addEventListener('submit', function(event) {
+            document.getElementById('loading').classList.remove('hidden');
+            const documentosData = collectDocumentData();
+            const documentosDataInput = document.getElementById('documentos_data');
+            documentosDataInput.value = JSON.stringify(documentosData);
+        });
+       
+        //Function to calculate the values of 2nd column in the table with id="tableIngresosAdicionales"
+        function calculateTotalIngresosAdicionales() {
+            const table = document.getElementById('tableIngresosAdicionales');
+            const rows = table.getElementsByTagName('tr');
+            let total = 0;
+            for (let i = 1; i < rows.length - 1; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+                total += monto;
+            }
+            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+            console.log("Total:", total);
+            total = total.toFixed(2);
+            document.getElementById('id_totalIngresosAdicionales').value = total;
+   
+            
+            console.log("Total:", total);
+            return total;
+        }
+        
+        function calculateTotalDescuentoDirecto() {
+            const table = document.getElementById('tableDescuentoDirecto');
+            const rows = table.getElementsByTagName('tr');
+            let total = 0;
+            for (let i = 1; i < rows.length - 1; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+                total += monto;
+            }
+            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+            console.log("Total:", total);
+            return total;
+        }
+        function calculatetotalPagosVoluntarios() {
+            const table = document.getElementById('tablePagosVoluntarios');
+            const rows = table.getElementsByTagName('tr');
+            let total = 0;
+            for (let i = 1; i < rows.length - 1; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+                total += monto;
+            }
+            rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+            console.log("Total:", total);
+            return total;
+        }
+        function calculateNivelDeEndeudamiento(){
+            var cartera = document.getElementById('id_cartera').value;
+            const salarioBaseMensual = parseFloat(document.getElementById('id_salarioBaseMensual').value) || 0;
+            var totalIngresosAdicionales = 0
+            var totalDescuentosDirectos = 0
+            var totalPagosVoluntarios = 0
+            var totalDescuentosLegales = 0
+            var letraMensual = 468.78
+            var impuestoSobreLaRenta = 0
+            var seguroEducativo = 0
+            var seguroSocial = 0 
+            var auxISR15 = 0
+            var auxISR25 = 0
+            totalIngresosAdicionales = calculateTotalIngresosAdicionales()
+            totalDescuentosDirectos = calculateTotalDescuentoDirecto()
+            totalPagosVoluntarios = calculatetotalPagosVoluntarios()
+
+            totalIngresosMensuales = salarioBaseMensual + totalIngresosAdicionales
+            console.log("Total Ingresos Mensuales:", totalIngresosMensuales)
+            
+            //SEGURO SOCIAL
+            if (cartera == 'INDEPENDIENTE'){
+                seeguroSocial = 0
+            }else{
+                if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS'].includes(cartera)) {
+
+                    seguroSocial = (totalIngresosMensuales*6.75)/100;
+                    
+                
+                }else{
+                    seguroSocial = (totalIngresosMensuales*9.75)/100;
+                }
+
+            }
+            console.log("Seguro Social:", seguroSocial)
+           
+           //SEGURO EDUCATIVO
+           if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
+                seguroEducativo = 0;
+            }else{
+                seguroEducativo = (totalIngresosMensuales*1.25)/100;
+            }
+
+            //IMPUESTO SOBRE LA RENTA
+            //
+            if (['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE'].includes(cartera)) {
+                impuestoSobreLaRenta = 0;
+            }else{
+                var salarioAnual = totalIngresosMensuales * 13
+                if (salarioAnual < 11000) {
+                    auxISR15 = 0;
+                } else if (salarioAnual >= 11000 && salarioAnual < 50000) {
+                    auxISR15 = (salarioAnual - 11000) * 0.15;
+                } else if (salarioAnual >= 50000) {
+                    auxISR15 = (50000-11000)*0.15;
+                    auxISR25 = (salarioAnual - 50000) * 0.25;
+                }
+                impuestoSobreLaRentaAnual = auxISR15 + auxISR25;
+                impuestoSobreLaRenta = impuestoSobreLaRentaAnual / 13;
+                //console.log("Impuesto Sobre la Renta:", auxISR15);
+                //console.log("Impuesto Sobre la Renta:", auxISR25);
+                console.log("Impuesto Sobre la Renta:", impuestoSobreLaRenta);
+
+            }
+            console.log("Seguro Educativo:", seguroEducativo)
+            //total descuentos totalDescuentosLegales 
+            totalDescuentosLegales = impuestoSobreLaRenta + seguroEducativo + seguroSocial;
+
+             //NIVEL REAL
+             var granTotalDescontado = totalDescuentosDirectos + totalPagosVoluntarios + totalDescuentosLegales
+             console.log("Gran Total Descontado:", granTotalDescontado);
+             var salarioNetoActual = totalIngresosMensuales - granTotalDescontado;
+             var salarioNeto  = salarioNetoActual - letraMensual;
+
+            console.log("Cartera:", cartera)
+            //porcentajes
+            var porSalarioNetoActual = (salarioNetoActual / totalIngresosMensuales) * 100
+            var porLetraMensual = (letraMensual / totalIngresosMensuales) * 100
+            var porSalarioNeto = (salarioNeto / totalIngresosMensuales) * 100
+
+            
+            console.log("Salario Neto Actual:", salarioNetoActual)
+            console.log("Salario Neto:", salarioNeto)
+            console.log("Porcentaje Salario Neto Actual:", porSalarioNetoActual)
+            console.log("Porcentaje Letra Mensual:", porLetraMensual)
+            console.log("Porcentaje Salario Neto:", porSalarioNeto)
+
+            document.getElementById('salarioNeto').value = salarioNeto.toFixed(2)
+            document.getElementById('nivelEndeudamiento').value = porSalarioNeto.toFixed(2);
+
+
+
+        }
+
+
+        //Event Listeners - tablas nivel de endeudamiento
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tableIngresosAdicionales input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculateTotalIngresosAdicionales);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tableDescuentoDirecto input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculateTotalDescuentoDirecto);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('#tablePagosVoluntarios input');
+            inputs.forEach(function(input) {
+                input.addEventListener('input', calculatetotalPagosVoluntarios);
+            });
+        });
+
+
+        calculateTotalDescuentoDirecto();
+        calculateTotalIngresosAdicionales();
+        calculatetotalPagosVoluntarios();
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_patrono').addEventListener('change', function() {
+                document.getElementById('id_patronoCodigo').value = 9999;
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('id_cartera').addEventListener('change', function() {
+                document.getElementById('cartera').value = document.getElementById('id_cartera').value;
+            });
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const ingresosInput = document.getElementById('id_ingresos');
+            const salarioBaseMensualInput = document.getElementById('id_salarioBaseMensual');
+            const prorrateoSalarioInput = document.getElementById('prorrateoSalario');
+        
+            if (ingresosInput) {
+                ingresosInput.addEventListener('input', function() {
+                    const ingresos = parseFloat(ingresosInput.value) || 0;
+                    console.log("Ingresos:", ingresos);
+        
+                    prorrateoSalarioInput.value = ingresos;
+                    salarioBaseMensualInput.value = ingresos;
+        
+                    console.log("Prorrateo Salario:", prorrateoSalarioInput.value);
+                    console.log("Salario Base Mensual:", salarioBaseMensualInput.value);
+                });
+            }
+        });
+        
+
+      
+
+            
+
+
+
+    </script>
+{% endblock %}

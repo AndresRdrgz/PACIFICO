@@ -273,6 +273,9 @@ def perform_fideicomiso_calculation(form):
     montoanualSeguro = form.cleaned_data['montoanualSeguro']
     montoMensualSeguro = form.cleaned_data['montoMensualSeguro']
     cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
+    selectDescuento = form.cleaned_data['selectDescuento']
+    pagaDiciembre = form.cleaned_data['pagaDiciembre']
+    porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
     sucursal = form.cleaned_data['sucursal']
     aplicaPromocion = form.cleaned_data['aplicaPromocion']
     montoLetraSeguroAdelantado = mesesFinanciaSeguro * montoMensualSeguro
@@ -318,6 +321,10 @@ def perform_fideicomiso_calculation(form):
         'cantPagosSeguro': cantPagosSeguro,
         'gastoFideicomiso': 291.90,
         'aplicaPromocion': aplicaPromocion,
+        'selectDescuento': selectDescuento,
+        'porServDesc': porServDesc,
+        'pagaDiciembre': pagaDiciembre,
+        
 
     }
     ##print('RESULTADO PARAMETROS', params)
