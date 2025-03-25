@@ -6,7 +6,7 @@ from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
-from .viewsFideicomiso.reportesExcel import generate_report
+from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
 from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal, cotizacionDetail_pp
 
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('cotizador/prestPersonal/', cotizacionPrestamoPersonal, name='prestPersonal'),
     path('get_lineas/', views.get_lineas, name='get_lineas'),
     path('generate_report/<int:numero_cotizacion>/', generate_report, name='generate_report'),
+    path('generate_report_pp/<int:numero_cotizacion>/', generate_report_pp, name='generate_report_pp'),
     path('cotizacion_seguro_auto/', cotizacion_seguro_auto, name='cotizacion_seguro_auto'),
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),

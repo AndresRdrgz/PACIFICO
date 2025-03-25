@@ -399,6 +399,7 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
 
 def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, paga_diciembre2, sobresaldo):
     
+    print("--------CALCULO DICIEMBRES--------")
     auxN = cot_plazo
     #print date type of aux_fecha_promesa_ck and cot_fecha_inicio_pago
     #print("aux_fecha_promesa_ck: ",type(aux_fecha_promesa_ck)," cot_fecha_inicio_pago: ",type(cot_fecha_inicio_pago),"paga_diciembre2",paga_diciembre2)
@@ -410,6 +411,7 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     # Add one day to wrk_fecha
     wrk_fecha += timedelta(days=1)
     #print("wrkfecha: ",wrk_fecha)
+    print("auxn: ",auxN," wrk_fecha: ",wrk_fecha," wrk_fecha2: ",wrk_fecha2)
     
     # Add one month if the first payment is after the 16th
     day_of_month = wrk_fecha2.day
@@ -419,7 +421,7 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     else:
         wrk_fecha2 = wrk_fecha2.replace(day=16)
         auxN += 1
-        #print("se adiciona un mes",auxN,wrk_fecha2)
+        print("se adiciona un mes",auxN,wrk_fecha2)
 
 
     
@@ -453,11 +455,12 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
         aux_c = 6
 
     # Calculate contDiciembre
+    wrk_fecha = cot_fecha_inicio_pago
     wrk_fecha_diciembre = cot_fecha_inicio_pago
     cont_diciembre = 0
     #print("wrk_fecha_diciembre: ",wrk_fecha_diciembre,"auxc: ",aux_c)
-    
-    for aux_u in range(1, auxN + 1):
+    print("antes de empezar el ciclo auxN: ",auxN)
+    for aux_u in range(1, auxN):
         if wrk_fecha_diciembre.month == 12:
             cont_diciembre += 1
             aux_u -= 1
@@ -466,14 +469,8 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     auxN += cont_diciembre
     print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
     #cont_diciembre = 0
-    """
-    if paga_diciembre2 == "Y":
-        for aux_u in range(1, auxN + 1):
-            if wrk_fecha.month == 12:
-                cont_diciembre += 1
-            wrk_fecha += timedelta(days=30)  # Add 1 month
-    """
-
+    calc_plazo_interes = auxN
+    
     if sobresaldo == "Y":
         calc_plazo_interes = cot_plazo + cont_diciembre
     else:
@@ -481,8 +478,9 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
         if aux_c > 0:
             aux_c = round(aux_c)
             calc_plazo_interes += aux_c
+    
 
-    #print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
+    print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
    
 
     return calc_plazo_interes
