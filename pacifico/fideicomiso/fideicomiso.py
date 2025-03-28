@@ -421,22 +421,23 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     else:
         wrk_fecha2 = wrk_fecha2.replace(day=16)
         auxN += 1
+        
         print("se adiciona un mes",auxN,wrk_fecha2)
 
-
+    AuxN2 = auxN
     
     # Calculate the difference in days
     #print("CALCULO DIFERENCIA ---------")
     #print("wrk_fecha2: ",wrk_fecha2," wrk_fecha: ",wrk_fecha)
     time_difference = (wrk_fecha2 - wrk_fecha).days + 1
     dias_antes_primer_pg = time_difference
-    #print("Dias antes del primer pago: ",dias_antes_primer_pg)
+    print("Dias antes del primer pago: ",dias_antes_primer_pg," dias: ",time_difference)
     
     # Calculate auxC
     aux_a = dias_antes_primer_pg
     aux_b = 30.4
     aux_c = aux_a / aux_b
-    
+    print("aux_c: ",aux_c)
     
 
     if aux_c < 0.5:
@@ -459,29 +460,66 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     wrk_fecha_diciembre = cot_fecha_inicio_pago
     cont_diciembre = 0
     #print("wrk_fecha_diciembre: ",wrk_fecha_diciembre,"auxc: ",aux_c)
-    print("antes de empezar el ciclo auxN: ",auxN)
-    for aux_u in range(1, auxN):
+    #print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha_diciembre,wrk_fecha)
+    auxAndres =1
+    auxU = 1
+    while auxN > 0:
+        #print(auxAndres, "AuxU: ", auxU, " auxN: ", auxN, " - wrk_fecha_diciembre: ", wrk_fecha_diciembre)
+        auxAndres += 1
+        auxU += 1
         if wrk_fecha_diciembre.month == 12:
             cont_diciembre += 1
-            aux_u -= 1
-        wrk_fecha_diciembre += timedelta(days=30)  # Add 1 month
+            auxN += 1  # Add 1 more month for each December found
+            auxU = auxU - 1
+        # Add one month to wrk_fecha_diciembre
+        new_month = wrk_fecha_diciembre.month + 1
+        new_year = wrk_fecha_diciembre.year + (new_month - 1) // 12
+        new_month = (new_month - 1) % 12 + 1
+        try:
+            # Handle February specifically to ensure the last day of the month
+            if new_month == 2:
+                wrk_fecha_diciembre = wrk_fecha_diciembre.replace(year=new_year, month=new_month, day=28)
+            else:
+                wrk_fecha_diciembre = wrk_fecha_diciembre.replace(year=new_year, month=new_month)
+        except ValueError:
+            # Handle overflow by setting to the last day of the overflown month
+            wrk_fecha_diciembre = wrk_fecha_diciembre.replace(year=new_year, month=new_month, day=1) - timedelta(days=1)
+        auxN -= 1
 
-    auxN += cont_diciembre
-    print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
-    #cont_diciembre = 0
-    calc_plazo_interes = auxN
+    print("auxn: ",auxN," cont_diciembre: ",cont_diciembre,"wrk_fecha_diciembre: ",wrk_fecha_diciembre)
+    auxN += cont_diciembre + AuxN2
+    #print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
+    
+    
+    #IF PAGA DICIEMBRE = NO
+    
+    """
+    cont_diciembre = 0
+    if paga_diciembre2 == "Y":
+        aux_u = 1
+        #T
+        print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha)
+        for aux_u in range(1, auxN):
+            if wrk_fecha.month == 12:
+                cont_diciembre = cont_diciembre + 1
+                aux_u -= 1
+            wrk_fecha += timedelta(days=30)
+            #END LOOP
+    #END IF"
+    
+    """
+    print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre,"wrk_fecha: ",wrk_fecha)
+
+    
     
     if sobresaldo == "Y":
         calc_plazo_interes = cot_plazo + cont_diciembre
-    else:
-        calc_plazo_interes = cot_plazo + cont_diciembre
-        if aux_c > 0:
-            aux_c = round(aux_c)
-            calc_plazo_interes += aux_c
+   
     
 
     print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
-   
+    
+    
 
     return calc_plazo_interes
     
@@ -513,8 +551,15 @@ def rutinaCalculo(params):
     tempPrimerDiaHabil = datetime(2024, 11, 1)
     cotFechaInicioPago = params['cotFechaInicioPago']
 
+    pagaDiciembre = params['pagaDiciembre']
+    if pagaDiciembre == 'NO':
+        pagadiciembre1 = "N"
+        pagadiciembre2 = "Y"
+    else:
+        pagadiciembre1 = "Y"
+        pagadiciembre2 = "N"
+        
     
-    pagadiciembre1 = "N"
     forma_pago = params['forma_pago']
     codigoSeguro = params['codigoSeguro']
     
@@ -533,7 +578,7 @@ def rutinaCalculo(params):
 
 
     #Calculo diciembres
-    auxPlazoInteres = calculo_diciembres(auxPlazoPago, calcFechaPromeCK, cotFechaInicioPago, pagadiciembre1, "Y")
+    auxPlazoInteres = calculo_diciembres(auxPlazoPago, calcFechaPromeCK, cotFechaInicioPago, pagadiciembre2, "Y")
     params['auxPlazoInteres'] = auxPlazoInteres
     print("Plazo Interes: ",auxPlazoInteres)
     
