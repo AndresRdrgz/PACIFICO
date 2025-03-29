@@ -280,8 +280,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     comisionTotal8 = 0 #comision de promocion
     
     
-    ###print(params)
-    
+    print(params)
+    print("------ CALCULANDO RENTABILIDAD ------")
+   
 
     comisionTotal10 = parmgralComisionPers
     
@@ -314,16 +315,57 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     #SI ES CARTERA ACP
     if 630 <= patrono <= 660:
         wrkLogic4 = "Y"
+    else:
+        wrkLogic4 = "N"
 
     
     wrkMontoCancelAnt = 0
     wrkMontoPedido = 0
-    claseVend = "SIN VENDEDOR"  # Example value, replace with actual value retrieval logic
+    claseVend = params['vendedorTipo']
+    comisionComision = [0] * 11  # Assuming a list with 11 elements
+    comisionPorcentaje = [0] * 11  # Assuming a list with 11 elements
+    comisionTotal = [0] * 11  # Assuming a list with 11 elements
 
-    if claseVend == "CHISPA" and tipo_prestamo != "LEASING":
+    if claseVend != "CHISPA" and tipo_prestamo != "PREST AUTO":
+        comisionPorcentaje[2] = params['vendedorComisionPorcentaje']
+        comisionComision[2] = "Y"
+
+    if claseVend == "CHISPA" and tipo_prestamo != "PREST AUTO":
         # Add your logic here
-        pass
+        wrkMontoPedido = calcMontoNetoBruto
+        wrkMontoPedido = wrkMontoPedido + calcNetoCanc
+        wrkMontoPedido = wrkMontoPedido - wrkMontoCancelAnt
+        porcentaje3 = 0
+        comision3 = "Y"
+        total3 = 0
+        porcentaje2 = 0
+        comision2 = "N"
+        total2 = 0
 
+        #Check acp
+        if wrkLogic4 == "Y":
+            comisionComision[3] = "Y"
+            comisionPorcentaje[3] = 3
+        else:
+            # No es ACP
+            thresholds = [
+                (1000, 1500, 25),
+                (1500, 3000, 50),
+                (3000, 5000, 100),
+                (5000, 10000, 150),
+                (10000, float('inf'), 200)
+            ]
+            for lower, upper, total in thresholds:
+                if lower <= wrkMontoPedido < upper:
+                    total3 = total
+                    comisionComision[3] = "Y"
+                    comisionTotal[3] = total3
+                    print("Comision 3:", comisionComision[3], "Total 3:", total3)
+                    break
+
+        
+        #FIN LOGICA CHISPA
+            
     #Se le adiciona el 7% agencias promotoras
     comisionMonto = calcMontoNetoBruto
     comisionMonto = comisionMonto + calcNetoCanc
@@ -331,19 +373,30 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     comisionGastoComisio = 0
     #print("comisionMonto:",comisionMonto)
     
-    comisionComision = [0] * 11  # Assuming a list with 11 elements
-    comisionTotal = [0] * 11  # Assuming a list with 11 elements
-    
     for auxH in range(1, 11):
         if auxH <= 6:
             if comisionComision[auxH] == "Y":
-                # TT
+                # TTT
+                if comisionPorcentaje[auxH] > 0:
+                    comisionTotal[auxH] = comisionMonto
+                    comisionTotal[auxH] = comisionTotal[auxH] * comisionPorcentaje[auxH]
+                    comisionTotal[auxH] = comisionTotal[auxH] / 100
+                    comisionTotal[auxH] = round(comisionTotal[auxH], 2)
+                    # TTTT
+                    pass
+                else:
+                    # TTTF
+                    wrkMontoComision = comisionTotal[auxH]
+                    wrkMontoComision = wrkMontoComision * 100
+                    wrkMontoComision = wrkMontoComision / comisionMonto
+                    comisionPorcentaje[auxH] = wrkMontoComision
                 pass
             else:
                 # FF
                 comisionTotal[auxH] = 0
             comisionGastoComisio += comisionTotal[auxH]
     
+    print("comisionGastoComisio:", comisionGastoComisio)
     
     if sobresaldo == "Y":
         wrkMontoFECI=0
@@ -397,7 +450,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     #print("parmgralComisionPers:",parmgralComisionPers,"comisionVendedor:",comisionVendedor,"comisionTotal8:",comisionTotal8)
     
     wrkNetoTotal += parmgralComisionPers
-    wrkNetoTotal += comisionVendedor
+    if tipo_prestamo == "PREST AUTO":
+        wrkNetoTotal += comisionVendedor
+    else:
+        wrkNetoTotal += comisionGastoComisio
+    
     wrkNetoTotal += comisionTotal8
     #print("wrkNetoTotal =", wrkNetoTotal)
     

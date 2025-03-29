@@ -287,7 +287,15 @@ def cotizacionPrestamoPersonal(request):
                 aseguradora = form.cleaned_data['aseguradora']
                 codigoSeguro = aseguradora.codigo
                 r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
-                comisionVendedor = form.cleaned_data['vendedorComision']
+                #datos comision vendedor
+                comisionVendedor = form.cleaned_data['vendedorComision'] if form.cleaned_data['vendedorComision'] is not None else 0
+                vendedorOtroComision = form.cleaned_data['vendedorOtroComision'] if form.cleaned_data['vendedorOtroComision'] is not None else 0
+                vendedorTipo = form.cleaned_data['vendedorTipo']
+                vendedorComisionPorcentaje = form.cleaned_data['vendedorComisionPorcentaje'] if form.cleaned_data['vendedorComisionPorcentaje'] is not None else 0
+                vendedorOtroPorcentaje = form.cleaned_data['vendedorOtroPorcentaje'] if form.cleaned_data['vendedorOtroPorcentaje'] is not None else 0
+                
+
+
                 cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
                 sucursal = form.cleaned_data['sucursal']
 
@@ -321,6 +329,10 @@ def cotizacionPrestamoPersonal(request):
                     'porServDesc': porServDesc,
                     'selectDescuento': selectDescuento,
                     'pagaDiciembre': pagaDiciembre,
+                    'vendedorTipo': vendedorTipo,
+                    'vendedorOtroComision': vendedorOtroComision,
+                    'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
+                    'vendedorOtroPorcentaje': vendedorOtroPorcentaje,
                 }
                 print("params",params)
                 

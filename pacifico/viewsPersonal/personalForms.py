@@ -118,15 +118,33 @@ class PrestamoPersonalForm(forms.ModelForm):
                 
                 
             }),
-            'vendedorComision': forms.NumberInput(attrs={
-                'placeholder': 'Comisión del Vendedor',
-                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-            }),
-            
-            'observaciones': forms.Textarea(attrs={
-                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-                'placeholder': 'Ingrese sus observaciones aquí',
-                'rows': 4,  # Adjusts the default height of the textarea
+                                    'vendedorComision': forms.NumberInput(attrs={
+                                        'placeholder': 'Comisión del Vendedor',
+                                        'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center',
+                                        'readonly': 'readonly',
+                                    }),
+                                    'vendedorTipo': forms.Select(attrs={
+                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                    }),
+                                    'vendedorComisionPorcentaje': forms.NumberInput(attrs={
+                                        'placeholder': 'Porcentaje de Comisión del Vendedor',
+                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                        
+                                    }),
+                                    'vendedorOtroPorcentaje': forms.NumberInput(attrs={
+                                        'placeholder': 'Porcentaje Otro Vendedor',
+                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                    }),
+                                    'vendedorOtroComision': forms.NumberInput(attrs={
+                                        'placeholder': 'Comisión Otro Vendedor',
+                                        'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center',
+                                        'readonly': 'readonly',
+                                    }),
+                                    
+                                    'observaciones': forms.Textarea(attrs={
+                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                        'placeholder': 'Ingrese sus observaciones aquí',
+                                        'rows': 4,  # Adjusts the default height of the textarea
             }),
             #DEtalles del deudor
             'tiempoServicio': forms.TextInput(attrs={
@@ -1010,5 +1028,11 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['bonosMonto'].required = False
         self.fields['bonosDcto'].required = False
         self.fields['otrosMonto'].required = False
-        self.fields['otrosDcto'].required = False      
+        self.fields['otrosDcto'].required = False
+        self.fields['vendedorComision'].required = False
+        self.fields['vendedorComisionPorcentaje'].required = False
+        self.fields['vendedorTipo'].required = False
+        self.fields['vendedorOtroComision'].required = False
+        self.fields['vendedorOtroPorcentaje'].required = False
+              
 

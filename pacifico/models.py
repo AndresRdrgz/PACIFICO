@@ -55,6 +55,8 @@ OFICIAL_OPCIONES = [
         ('JAVIER CASTILLO', 'JAVIER CASTILLO'),
         ('ROSA FRANCO', 'ROSA FRANCO'),
         ('YARISBETH ARDINES', 'YARISBETH ARDINES'),
+        ('MELANIE CEDEÑO', 'MELANIE CEDEÑO'),
+        ('YENIFFER MENESES', 'YENIFFER MENESES'),
 
     ] 
 CARTERA_OPCIONES = [
@@ -297,7 +299,23 @@ class Cotizacion(models.Model):
     patrono = models.CharField(max_length=255, null=True)
     patronoCodigo = models.IntegerField(null=True)
     vendedor = models.CharField(max_length=255, null=True)
-    vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    vendedorComision = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0.00)
+    vendedorComisionPorcentaje = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
+    vendedorOtroPorcentaje = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
+    vendedorOtroComision = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0.00)
+    vendedorTipo = models.CharField(
+        max_length=20,
+        choices=[
+            ('SIN VENDEDOR', 'SIN VENDEDOR'),
+            ('EXTERNO', 'EXTERNO'),
+            ('CHISPA', 'CHISPA'),
+            ('INTERNO', 'INTERNO'),
+            ('SATELITE', 'SATELITE'),
+            ('AGENCIAS', 'AGENCIAS'),
+        ],
+        null=True,
+        blank=True
+    )
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)

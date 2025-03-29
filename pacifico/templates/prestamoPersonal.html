@@ -34,7 +34,7 @@
         {% include 'partials/cotDatosCliente.html' %}
 
         <!-- Parametros de la cotizacion -->
-        {% include 'partials/cotParametrosCotizacion.html' %}
+        {% include 'partials/cotParametrosCotizacionPP.html' %}
 
          <!-- Parametros del calculo -->
         {% include 'partials/cotParametrosCalculo.html' %}
@@ -144,27 +144,8 @@
    
 
     <!-- Modal Vendedor-->
-    <div id="vendedorModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <div class="flex space-x-4">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Buscar Vendedor</h3>
-                <div class="mt-4">
-                    <button type="button" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="closeModalVendedor()">Cerrar</button>
-                </div>
-            </div>
-                <div class="mt-2">
-                    <input type="text" id="searchVendedor" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" placeholder="Buscar...">
-                </div>
-                <div class="mt-4">
-                    <ul id="vendedorList" class="text-left">
-                        <!-- Patrono list will be populated here -->
-                    </ul>
-                </div>
-                
-            </div>
-        </div>
-    </div>
+    {% include 'partials/modals/vendedorModal.html' %}
+    
 
 
     <!-- Loading Animation -->
@@ -209,7 +190,7 @@
             const edadInput = document.getElementById('id_edad');
             const fechaInicioPagoInput = document.getElementById('id_fechaInicioPago');
             const vendedorInput = document.getElementById('id_vendedor');
-            const comisionVendedorInput = document.getElementById('id_vendedorComision');
+            
           
             const sexoField = document.getElementById('id_sexo');
             const colectivoCreditoField = document.getElementById('id_colectivoCredito');
@@ -231,8 +212,11 @@
             });
 
                         if (patronoField) {
+                            const deudorEmpresa = document.getElementById('id_deudorEmpresa'); // Define deudorEmpresa
                             patronoField.addEventListener('change', function() {
-                                deudorEmpresa.value = patronoField.value;
+                                if (deudorEmpresa) {
+                                    deudorEmpresa.value = patronoField.value;
+                                }
                             });
                         }
 
@@ -277,107 +261,12 @@
                     console.log("jubilado:", jubilado.value, "sexo:", sexo, "edad:", age);
                 });
             }
+        });
 
           
 
             
-            
-            /*
-            fetch("{% static 'cotizadorPatronos.json' %}")
-                .then(response => response.json())
-                .then(data => {
-                    const patronoList = document.getElementById('patronoList');
-                    data.forEach(patrono => {
-                        const li = document.createElement('li');
-                        li.textContent = patrono.codigo + " - " + patrono.descripcion;
-                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
-                        li.addEventListener('click', () => {
-                            document.getElementById('id_patrono').value = patrono.descripcion;
-                            document.getElementById('id_patronoCodigo').value = patrono.codigo;
-                            document.getElementById('id_porServDesc').value = patrono.porServDesc;
-                            document.getElementById('id_selectDescuento').value = patrono.selectDescuento;
-                            //document.getElementById('id_nombreEmpresa').value = patrono.descripcion;
-                            console.log("Patrono seleccionado:", patrono);
-                            closeModal();
-                        });
-                        patronoList.appendChild(li);
-                    });
-                })
-                .catch(error => console.error('Error loading patronos:', error));
-
-                 const searchPatrono = document.getElementById('searchPatrono');
-            if (searchPatrono) {
-                searchPatrono.addEventListener('input', function() {
-                    const searchValue = this.value.toLowerCase();
-                    const patronoList = document.getElementById('patronoList');
-                    const items = patronoList.getElementsByTagName('li');
-                    Array.from(items).forEach(item => {
-                        if (item.textContent.toLowerCase().includes(searchValue)) {
-                            item.style.display = '';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                });
-            }
-            
-      
-                */
     
-            fetch("{% static 'vendedores.json' %}")
-                .then(response => response.json())
-                .then(dataVendedores => {
-                    const vendedorList = document.getElementById('vendedorList');
-                    dataVendedores.forEach(vendedor => {
-                        const li = document.createElement('li');
-                        li.textContent = vendedor.codigo + " - " + vendedor.nombre;
-                        li.classList.add('cursor-pointer', 'hover:bg-gray-200', 'p-2');
-                        li.addEventListener('click', () => {
-                            document.getElementById('id_vendedor').value = vendedor.nombre;
-                            if (vendedor.codigo == 1) {
-                                document.getElementById('id_vendedorComision').value = 0;
-                                //document.getElementById('id_vendedorComision').readOnly = true;
-                                document.getElementById('id_vendedorComision').className = "w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2";
-                            } else {
-                                comisionVendedorInput.readOnly = false;
-                                comisionVendedorInput.className = "w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow";
-                            }
-                            closeModalVendedor();
-                        });
-                        vendedorList.appendChild(li);
-                    });
-                })
-                .catch(error => console.error('Error loading vendedores:', error));
-    
-           
-    
-            const searchVendedor = document.getElementById('searchVendedor');
-            if (searchVendedor) {
-                searchVendedor.addEventListener('input', function() {
-                    const searchValue = this.value.toLowerCase();
-                    const vendedorList = document.getElementById('vendedorList');
-                    const items = vendedorList.getElementsByTagName('li');
-                    Array.from(items).forEach(item => {
-                        if (item.textContent.toLowerCase().includes(searchValue)) {
-                            item.style.display = '';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                });
-            }
-        });
-    
-        function openModalVendedor() {
-            document.getElementById('vendedorModal').classList.remove('hidden');
-        }
-    
-        function closeModalVendedor() {
-            document.getElementById('vendedorModal').classList.add('hidden');
-        }
-
-     
-         
 
     
         document.getElementById('myForm').addEventListener('submit', function(event) {
