@@ -954,8 +954,6 @@ def fideicomiso_view(request):
         'resultado': resultado,
     }
 
-    if user_profile.pruebaFuncionalidades:
-        context['pruebaFuncionalidades'] = True
 
     return render(request, 'fideicomiso_form.html', context)
 

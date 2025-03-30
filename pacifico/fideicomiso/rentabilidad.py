@@ -321,7 +321,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     wrkMontoCancelAnt = 0
     wrkMontoPedido = 0
-    claseVend = params['vendedorTipo']
+    if tipo_prestamo == "PREST AUTO":
+        claseVend = "-"
+    else:
+        claseVend = params['vendedorTipo']
+
     comisionComision = [0] * 11  # Assuming a list with 11 elements
     comisionPorcentaje = [0] * 11  # Assuming a list with 11 elements
     comisionTotal = [0] * 11  # Assuming a list with 11 elements

@@ -1371,6 +1371,11 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['tasaInteres'].required = False
         self.fields['aplicaPromocion'].required = False
         self.fields['porServDesc'].required = False
+        self.fields['vendedorComisionPorcentaje'].required = False
+        self.fields['vendedorOtroPorcentaje'].required = False
+        self.fields['vendedorOtroComision'].required = False
+        
+        
 
 
 class CotizacionDocumentoForm(forms.ModelForm):
