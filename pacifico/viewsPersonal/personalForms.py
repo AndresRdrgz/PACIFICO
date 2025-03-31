@@ -1034,5 +1034,6 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['vendedorTipo'].required = False
         self.fields['vendedorOtroComision'].required = False
         self.fields['vendedorOtroPorcentaje'].required = False
+        self.fields['aseguradora'].required = False
               
 

@@ -1,7 +1,8 @@
 
 import logging
 import sys
-from ..models import CotizacionDocumento, UserProfile, Cotizacion
+from ..models import CotizacionDocumento, UserProfile, Cotizacion, Aseguradora
+
 from django.shortcuts import get_object_or_404
 
 
@@ -20,6 +21,45 @@ from ..analisisConsulta.nivelEndeudamiento import nivelEndeudamiento  # Correcte
 from ..views import log_error
 
 
+def identifica_seguro(patrono, sucursal):
+    aseguradora = 0
+    print("Identificando aseguradora, patrono: ", patrono, "sucursal: ", sucursal)
+
+    if 638 <= patrono <= 657:
+        #TT
+        if patrono in [638, 642, 643, 649, 650]:
+            #TTT
+            if sucursal in [2,4,13,24,26,8]:
+                #TTTT
+                aseguradora = 100
+        elif patrono == 640:
+            #TTFT
+            if sucursal == 2:
+                #TTFTT
+                aseguradora = 19
+        else:
+            #TTFT
+            if sucursal in [2,4,13,24,26,7,8]:
+                #TTFTT
+                aseguradora = 4
+    else:
+        #TF
+        if sucursal == 4:
+            #TFT
+            aseguradora = 20
+        elif sucursal in [2, 13, 24, 26, 8,11, 7]:
+            #TFT
+            aseguradora = 19
+
+    print("REsultado aseguradora: ", aseguradora)
+    try:
+        aseguradora_obj = Aseguradora.objects.get(codigo=aseguradora)
+        print("Encontrada aseguradora: ", aseguradora_obj)
+        print(f"aseguradora {aseguradora_obj.codigo} - {aseguradora_obj.descripcion} type: {type(aseguradora_obj)}")
+    except Aseguradora.DoesNotExist:
+        print(f"No aseguradora found with codigo: {aseguradora}")
+
+    return aseguradora
 
 
 
@@ -51,6 +91,8 @@ def cotizacionDetail_pp(request, pk):
         if form.is_valid():
             try:
                 aseguradora = form.cleaned_data['aseguradora']
+                print("aseguradora", aseguradora, "type:", type(aseguradora))
+                
                 form_data = form.cleaned_data
                 resultado, iteration_data= perform_pp_calculation(form)
 
@@ -125,6 +167,10 @@ def cotizacionDetail_pp(request, pk):
                 new_form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                 new_form.instance.manejo_5porc = resultado['manejo_5porc']
                 new_form.instance.valorAuto = resultado['valorAuto']
+                codigoSeguro = resultado['codigoSeguro']
+                aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                
                 new_form.instance.aseguradora = aseguradora
                 new_form.instance.siacapMonto = resultado['siacapMonto']
                 new_form.instance.siacapDcto = resultado['siacapDcto']
@@ -167,6 +213,9 @@ def cotizacionDetail_pp(request, pk):
                     new_instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                     new_instance.manejo_5porc = resultado['manejo_5porc']
                     new_instance.valorAuto = resultado['valorAuto']
+                    codigoSeguro = resultado['codigoSeguro']
+                    aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                    print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
                     new_instance.aseguradora = aseguradora
                     new_instance.siacapMonto = resultado['siacapMonto']
                     new_instance.siacapDcto = resultado['siacapDcto']
@@ -206,6 +255,11 @@ def cotizacionDetail_pp(request, pk):
                         new_instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
                     #-------                                                                                                                        
 
+                    codigoSeguro = resultado['codigoSeguro']
+                    aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                    print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                    new_instance.aseguradora = aseguradora
+                    
                     new_instance.tipoPrestamo = 'personal'
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                     #------- SAFE SAVE -----------
@@ -274,7 +328,7 @@ def cotizacionPrestamoPersonal(request):
 
                 if patrono is None: patrono = 9999
 
-                sucursal = 13
+                sucursal = form.cleaned_data['sucursal']
                 auxPeriocidad = int(periodoPago)
                 formaPago = form.cleaned_data['formaPago']
                 print("formaPago", formaPago, type(formaPago))
@@ -284,8 +338,8 @@ def cotizacionPrestamoPersonal(request):
                     forma_pago = 4
 
                 print("forma_pago",forma_pago)
-                aseguradora = form.cleaned_data['aseguradora']
-                codigoSeguro = aseguradora.codigo
+                
+                
                 r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
                 #datos comision vendedor
                 comisionVendedor = form.cleaned_data['vendedorComision'] if form.cleaned_data['vendedorComision'] is not None else 0
@@ -307,6 +361,8 @@ def cotizacionPrestamoPersonal(request):
                 sucursal = int(sucursal)
                 pagaDiciembre = form.cleaned_data['pagaDiciembre']
 
+                print("--------calculando aseguradora---------")
+                codigoSeguro = identifica_seguro(patrono, sucursal)
                 params = {
                     'tipoPrestamo': 'PERSONAL',
                     'edad': edad,
@@ -447,12 +503,16 @@ def perform_pp_calculation(form):
         patrono = form.cleaned_data['patronoCodigo'] if form.cleaned_data['patronoCodigo'] is not None else 9999
         fecha_inicioPago = form.cleaned_data['fechaInicioPago']
         sucursal = 13
-        auxPeriocidad = 1
+        porServDesc = form.cleaned_data['porServDesc'] if form.cleaned_data['porServDesc'] is not None else 0
+        selectDescuento = form.cleaned_data['selectDescuento']
+        periodoPago = form.cleaned_data['periodoPago']
+        
+        auxPeriocidad = int(periodoPago)
         forma_pago = 4
         # COLECTIVO DE CREDITO
-        aseguradora = form.cleaned_data['aseguradora']
-        # print('aseguradora', aseguradora)
-        codigoSeguro = aseguradora.codigo
+        
+        
+        
         r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
         comisionVendedor = form.cleaned_data['vendedorComision']
         
@@ -480,6 +540,11 @@ def perform_pp_calculation(form):
     
         #print('Sucursal', sucursal)
         # Call the generarFideicomiso2 function
+        print("--------calculando aseguradora---------")
+        codigoSeguro = identifica_seguro(patrono, sucursal)
+        
+        
+        
         print("--------iniciando---------")
         params = {
             'tipoPrestamo': 'PERSONAL',
@@ -508,7 +573,7 @@ def perform_pp_calculation(form):
             'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
             'vendedorOtroPorcentaje': vendedorOtroPorcentaje,
         }
-        #print('RESULTADO PARAMETROS', params)
+        print('RESULTADO PARAMETROS', params)
         
         resultado, iteration_data = generarPP(params)
         print("--------finalizado---------")
@@ -656,6 +721,7 @@ def perform_pp_calculation(form):
     from ..views import convert_decimal_to_float
     resultado = convert_decimal_to_float(resultado)
     from ..views import nivelEndeudamiento
+
     #CALCULO NIVEL DE ENDEUDAMIENTO - REAL
     print("-----Nivel Endeudamiento-----")
     resultadoNivel = nivelEndeudamiento(resultado)
