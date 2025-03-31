@@ -787,6 +787,7 @@ def generate_report_pp(request, numero_cotizacion):
         
         # Populate resultado with the values from the cotizacion record
         resultado = {
+            'id': 'WEB-' + str(numero_cotizacion),
             'oficial': cotizacion.oficial,
             'sucursal': cotizacion.sucursal,
             'fechaNacimiento': cotizacion.fechaNacimiento,
@@ -794,6 +795,7 @@ def generate_report_pp(request, numero_cotizacion):
             'cedulaCliente': cotizacion.cedulaCliente,
             'tipoDocumento': cotizacion.tipoDocumento,
             'edad': cotizacion.edad,
+            'patrono': cotizacion.patrono,
             'sexo': cotizacion.sexo,
             'apcScore': cotizacion.apcScore,
             'apcPI': cotizacion.apcPI / 100 if cotizacion.apcPI is not None else '',
@@ -986,8 +988,21 @@ def generate_report_pp(request, numero_cotizacion):
         print('llenando excel')
         # Example: Write the resultado data to the Excel sheet
         sheet['L7'] = resultado['oficial']
-        sheet['D22'] = resultado['sucursal']
+        SUCURSALES_OPCIONES = {
+            "2": "COLON",
+            "4": "CASINO",
+            "7": "DAVID",
+            "8": "CHORRERA",
+            "11": "SANTIAGO",
+            "13": "CALLE 50",
+            "16": "CHITRE",
+            "17": "PENONOME",
+        }
+        sheet['D22'] = SUCURSALES_OPCIONES.get(resultado['sucursal'], "DESCONOCIDO")
+        sheet['D24'] = resultado['id']
         sheet['D5'] = resultado['nombreCliente']
+        sheet['D9'] = resultado['patrono']
+        sheet['L5'] = resultado['cartera']
         sheet['D7'] = resultado['cedulaCliente']
         #sheet['H10'] = resultado['tipoDocumento']
         #sheet['J10'] = resultado['edad']
@@ -1050,7 +1065,7 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['E64'] = resultado['salarioBaseMensual']
         #sheet['E49']=resultado['tiempoServicio']
         #sheet['J49']=resultado['ingresos']
-        sheet['D9']=resultado['nombreEmpresa'] 
+        
         #sheet['J50']=resultado['referenciasAPC']
         sheet['l5']=resultado['cartera']
         #sheet['J51']=resultado['licencia']
@@ -1127,23 +1142,23 @@ def generate_report_pp(request, numero_cotizacion):
 
         if resultado['dirOtrosMonto3'] > 0:
             sheet['E78'] = resultado['dirOtrosMonto3']
-            sheet['C79'] = resultado['dirOtros3']
+            sheet['c78'] = resultado['dirOtros3']
             if resultado['dirOtrosDcto3'] == True:
-                sheet['C79'] = 'SÍ'
+                sheet['G78'] = 'SÍ'
             else:
-                sheet['C79'] = 'NO'
+                sheet['G78'] = 'NO'
 
         if resultado['dirOtrosMonto4'] is None:
             resultado['dirOtrosMonto4'] = 0
 
 
         if resultado['dirOtrosMonto4'] > 0:
-            sheet['E80'] = resultado['dirOtrosMonto4']
-            sheet['C80'] = resultado['dirOtros4']
+            sheet['e79'] = resultado['dirOtrosMonto4']
+            sheet['C79'] = resultado['dirOtros4']
             if resultado['dirOtrosDcto4'] == True:
-                sheet['C80'] = 'SÍ'
+                sheet['g79'] = 'SÍ'
             else:
-                sheet['C80'] = 'NO'
+                sheet['g79'] = 'NO'
 
         #pagos voluntarios
         sheet['I74'] = resultado['pagoVoluntario1']
@@ -1416,33 +1431,7 @@ def generate_report_pp(request, numero_cotizacion):
         print('prmer mes', resultado['primerMes'])
 
          # Select the sheet with name "DESGLOSE"
-        if "DESGLOSE" in workbook.sheetnames:
-            desglose = workbook["DESGLOSE"]
-        else:
-            return HttpResponse("Sheet not found.", status=404)
-
-        print ('Desglose sra Raquel')
-        desglose['I4'] = resultado['numeroCotizacion']
-        desglose['C6'] = resultado['r1'] / 100
-        desglose['C7'] = resultado['tasaInteres']
-        desglose['I8'] = str(resultado['cotPlazoPago']) + '/' + str(resultado['cotPlazoPago'])
         
-        desglose['D12'] = resultado['auxMonto2']
-        desglose['G16'] = resultado['manejo_5porc']
-
-        desglose['C14'] = resultado['calcMontoNotaria']
-        desglose['C15'] = resultado['cotMontoPrestamo']
-        
-        desglose['H12'] = resultado ['calcComiCierreFinal'] / 100
-        desglose['C13'] = resultado['montoManejoT']
-        desglose['G12'] = resultado['montoManejoT']
-        desglose['G15'] = resultado['montoManejoB']
-        desglose['G13'] = resultado['calcMontoTimbres']
-
-        desglose['D18'] = resultado['tablaTotalSeguro']
-        desglose['d19'] = resultado['tablaTotalInteres']
-        desglose['d20'] = resultado['tablaTotalFeci']
-        desglose['d21'] = resultado['tablaTotalPagos']
 
         # Select the sheet with name "mov bancarios"
         if "MOV. BANCARIOS" in workbook.sheetnames:

@@ -45,7 +45,7 @@ def nivelEndeudamiento(resultado):
         seguroSocial = (totalIngresosMensuales * 9.75) / 100
         seguroSocialCompleto = (totalIngresosMensualesCompleto * 9.75) / 100
 
-    ##print("Seguro Social: ", seguroSocial)
+    print("Seguro Social: ", seguroSocial)
 
     #SEGURO EDUCATIVO
     if resultado['cartera'] in ['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE']:
@@ -55,7 +55,7 @@ def nivelEndeudamiento(resultado):
         seguroEducativo = (totalIngresosMensuales * 1.25) / 100
         seguroEducativoCompleto = (totalIngresosMensualesCompleto * 1.25) / 100
 
-    ##print("Seguro Educativo: ", seguroEducativo)
+    print("Seguro Educativo: ", seguroEducativo)
 
     #IMPUESTO SOBRE LA RENTAa
     if resultado['cartera'] in ['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE']:
@@ -89,7 +89,7 @@ def nivelEndeudamiento(resultado):
         
 
 
-    ##print("Impuesto Sobre la Renta: ", impuestoSobreLaRenta)
+    print("Impuesto Sobre la Renta: ", impuestoSobreLaRenta)
 
 
     totalDescuentosLegales = seguroSocial + seguroEducativo + impuestoSobreLaRenta
