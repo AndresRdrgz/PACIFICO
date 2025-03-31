@@ -468,7 +468,13 @@ def perform_pp_calculation(form):
         calcTasaInteres = float(calcTasaInteres)
         calcComiCierre = float(calcComiCierre)
         r_deseada = float(r_deseada)
-        comisionVendedor = float(comisionVendedor)
+        
+        comisionVendedor = form.cleaned_data['vendedorComision'] if form.cleaned_data['vendedorComision'] is not None else 0
+        vendedorOtroComision = form.cleaned_data['vendedorOtroComision'] if form.cleaned_data['vendedorOtroComision'] is not None else 0
+        vendedorTipo = form.cleaned_data['vendedorTipo']
+        vendedorComisionPorcentaje = form.cleaned_data['vendedorComisionPorcentaje'] if form.cleaned_data['vendedorComisionPorcentaje'] is not None else 0
+        vendedorOtroPorcentaje = form.cleaned_data['vendedorOtroPorcentaje'] if form.cleaned_data['vendedorOtroPorcentaje'] is not None else 0
+                
        
         sucursal = int(sucursal)
     
@@ -476,28 +482,32 @@ def perform_pp_calculation(form):
         # Call the generarFideicomiso2 function
         print("--------iniciando---------")
         params = {
-                'tipoPrestamo': 'PERSONAL',
-                'edad': edad,
-                'sucursal': sucursal,
-                'sexo': sexo,
-                'jubilado': jubilado,
-                'cotMontoPrestamo': cotMontoPrestamo,
-                'fecha_inicioPago': fecha_inicioPago,
-                'calcTasaInteres': calcTasaInteres,
-                'calcComiCierre': calcComiCierre,
-                'auxPlazoPago': auxPlazoPago,
-                'patrono': patrono,
-                'sucursal': sucursal,
-                'auxPeriocidad': auxPeriocidad,
-                'forma_pago': forma_pago,
-                'codigoSeguro': codigoSeguro,
-                'fechaCalculo': datetime.datetime.now(),
-                'r_deseada': r_deseada,
-                'comisionVendedor': comisionVendedor,
-                'porServDesc': porServDesc,
-                'selectDescuento': selectDescuento,
-                'pagaDiciembre': pagaDiciembre,
-                }
+            'tipoPrestamo': 'PERSONAL',
+            'edad': edad,
+            'sucursal': sucursal,
+            'sexo': sexo,
+            'jubilado': jubilado,
+            'cotMontoPrestamo': cotMontoPrestamo,
+            'fecha_inicioPago': fecha_inicioPago,
+            'calcTasaInteres': calcTasaInteres,
+            'calcComiCierre': calcComiCierre,
+            'auxPlazoPago': auxPlazoPago,
+            'patrono': patrono,
+            'sucursal': sucursal,
+            'auxPeriocidad': auxPeriocidad,
+            'forma_pago': forma_pago,
+            'codigoSeguro': codigoSeguro,
+            'fechaCalculo': datetime.datetime.now(),
+            'r_deseada': r_deseada,
+            'comisionVendedor': comisionVendedor,
+            'porServDesc': porServDesc,
+            'selectDescuento': selectDescuento,
+            'pagaDiciembre': pagaDiciembre,
+            'vendedorTipo': vendedorTipo,
+            'vendedorOtroComision': vendedorOtroComision,
+            'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
+            'vendedorOtroPorcentaje': vendedorOtroPorcentaje,
+        }
         #print('RESULTADO PARAMETROS', params)
         
         resultado, iteration_data = generarPP(params)

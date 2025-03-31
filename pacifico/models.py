@@ -322,7 +322,7 @@ class Cotizacion(models.Model):
     pagaDiciembre = models.CharField(
         max_length=10,
         choices=[('NO', 'NO'), ('SI', 'SI')],
-        default='SI',
+        default='NO',
         null=True,
         blank=True
     )
