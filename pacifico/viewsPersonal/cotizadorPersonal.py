@@ -388,7 +388,7 @@ def cotizacionPrestamoPersonal(request):
                     'vendedorTipo': vendedorTipo,
                     'vendedorOtroComision': vendedorOtroComision,
                     'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
-                    'vendedorOtroPorcentaje': vendedorOtroPorcentaje,
+                    'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
                 }
                 print("params",params)
                 
@@ -571,7 +571,7 @@ def perform_pp_calculation(form):
             'vendedorTipo': vendedorTipo,
             'vendedorOtroComision': vendedorOtroComision,
             'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
-            'vendedorOtroPorcentaje': vendedorOtroPorcentaje,
+            'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
         }
         print('RESULTADO PARAMETROS', params)
         
