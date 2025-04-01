@@ -561,10 +561,10 @@ def cotizacionesList(request):
     if request.user.is_authenticated and not request.user.is_staff:
         filtered_cotizaciones = filtered_cotizaciones.filter(added_by=request.user)
 
-    # Filter by current month
-    current_month = timezone.now().month
-    current_year = timezone.now().year
-    filtered_cotizaciones = filtered_cotizaciones.filter(created_at__year=current_year, created_at__month=current_month)
+    # Filter by the last 30 days
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=30)
+    filtered_cotizaciones = filtered_cotizaciones.filter(created_at__range=[start_date, end_date])
 
     # Sort by newest first
     filtered_cotizaciones = filtered_cotizaciones.order_by('-created_at')
@@ -575,7 +575,6 @@ def cotizacionesList(request):
     }
 
     return render(request, 'cotizacionesListv2.html', context)
-
 
 
 @csrf_exempt
