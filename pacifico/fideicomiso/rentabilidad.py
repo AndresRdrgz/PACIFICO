@@ -371,7 +371,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         #FIN LOGICA CHISPA
         
     #Verificar si vendedor otro porcentaje
-    vendedorOtroPorcentaje = params['vendedorOtroPorcentaje']
+    vendedorOtroPorcentaje = params.get('vendedorOtroPorcentaje', 0)
     if vendedorOtroPorcentaje > 0:
         comisionPorcentaje[5] = vendedorOtroPorcentaje
         comisionComision[5] = "Y"
