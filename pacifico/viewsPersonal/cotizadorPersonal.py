@@ -421,6 +421,11 @@ def cotizacionPrestamoPersonal(request):
                 form.instance.manejo_5porc = resultado['manejo_5porc']
                 form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
                 form.instance.tipoPrestamo = 'personal'
+                codigoSeguro = resultado['codigoSeguro']
+                aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                
+                form.instance.aseguradora = aseguradora
 
                 try:
                     for field in form.instance._meta.fields:
@@ -443,9 +448,9 @@ def cotizacionPrestamoPersonal(request):
                         error_message = str(e)
                         log_error(error_message, request.user.username)
 
-                    print("mmmmmmm")
-                    #return redirect('cotizacionDetail_pp', numero_cotizacion)
-                    return render(request, 'prestamoPersonal.html', {'form': form, 'resultado': resultado, 'iteration_data': iteration_data})
+                    
+                    return redirect('cotizacionDetail_pp', pk=int(form.instance.NumeroCotizacion))
+                    
 
                 except Exception as e:
                     logger.error("Error saving form: %s", e)

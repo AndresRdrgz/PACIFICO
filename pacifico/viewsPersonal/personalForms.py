@@ -27,6 +27,7 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
 
             }),
+          
            
             'pagaDiciembre': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -812,12 +813,12 @@ class PrestamoPersonalForm(forms.ModelForm):
 
 
     aseguradora = forms.ModelChoiceField(
-        queryset=Aseguradora.objects.all(),
-        required=True,
-        widget=forms.Select(attrs={
-            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-        })
-    )
+    queryset=Aseguradora.objects.all(),
+    widget=forms.Select(attrs={
+        'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+        'disabled': 'disabled',
+    })
+)
     tasaBruta = forms.DecimalField(
         required=False,
         widget=forms.NumberInput(attrs={
