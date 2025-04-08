@@ -96,6 +96,7 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
     aux_x = ((((aux_l + aux_d + aux_o) / (1 - aux_f)) * ((aux_c / 1000) * aux_m)) + aux_z)
     aux_x = round(aux_x * 100) / 100
     print("Monto a amortizar = ",aux_x)
+    
    
 
     return aux_l, aux_z, aux_x, comis_cierre, tasa_bruta,tasa_real

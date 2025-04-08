@@ -4,9 +4,12 @@ from ..models import Cotizacion, Aseguradora
 from django.contrib.auth.models import User
 
 
+
 from django.conf import settings
 
 class PrestamoPersonalForm(forms.ModelForm):
+
+    
     class Meta:
         model = Cotizacion
         fields = '__all__'
@@ -791,6 +794,77 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'readonly': 'readonly',
                
             }),
+            #CANCELACIONES
+            'cancDescripcion1': forms.TextInput(attrs={
+                'placeholder': 'Descripción 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'cancMonto1': forms.NumberInput(attrs={
+                'placeholder': 'Monto 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancMensualidad1': forms.NumberInput(attrs={
+                'placeholder': 'Mensualidad 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancDescripcion2': forms.TextInput(attrs={
+                'placeholder': 'Descripción 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'cancMonto2': forms.NumberInput(attrs={
+                'placeholder': 'Monto 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancMensualidad2': forms.NumberInput(attrs={
+                'placeholder': 'Mensualidad 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancDescripcion3': forms.TextInput(attrs={
+                'placeholder': 'Descripción 3',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'cancMonto3': forms.NumberInput(attrs={
+                'placeholder': 'Monto 3',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancMensualidad3': forms.NumberInput(attrs={
+                'placeholder': 'Mensualidad 3',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancDescripcion4': forms.TextInput(attrs={
+                'placeholder': 'Descripción 4',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'cancMonto4': forms.NumberInput(attrs={
+                'placeholder': 'Monto 4',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancMensualidad4': forms.NumberInput(attrs={
+                'placeholder': 'Mensualidad 4',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancDescripcion5': forms.TextInput(attrs={
+                'placeholder': 'Descripción 5',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            }),
+            'cancMonto5': forms.NumberInput(attrs={
+                'placeholder': 'Monto 5',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancMensualidad5': forms.NumberInput(attrs={
+                'placeholder': 'Mensualidad 5',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
         
         }
 
@@ -1036,5 +1110,6 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['vendedorOtroComision'].required = False
         self.fields['vendedorOtroPorcentaje'].required = False
         self.fields['aseguradora'].required = False
+    
               
 

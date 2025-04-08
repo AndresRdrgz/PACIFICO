@@ -262,6 +262,11 @@ def cotizacionDetail_pp(request, pk):
                     
                     new_instance.tipoPrestamo = 'personal'
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+
+                    #cancelaciones
+                    
+
+
                     #------- SAFE SAVE -----------
                     print("intentando guardar")
                     new_instance.save()
@@ -348,6 +353,41 @@ def cotizacionPrestamoPersonal(request):
                 vendedorComisionPorcentaje = form.cleaned_data['vendedorComisionPorcentaje'] if form.cleaned_data['vendedorComisionPorcentaje'] is not None else 0
                 vendedorOtroPorcentaje = form.cleaned_data['vendedorOtroPorcentaje'] if form.cleaned_data['vendedorOtroPorcentaje'] is not None else 0
                 
+                #datos cancelaciones
+                cancDescripcion1 = form.cleaned_data['cancDescripcion1'] if form.cleaned_data['cancDescripcion1'] is not None else "-"
+                cancMonto1 = form.cleaned_data['cancMonto1'] if form.cleaned_data['cancMonto1'] is not None else 0
+                cancMensualidad1 = form.cleaned_data['cancMensualidad1'] if form.cleaned_data['cancMensualidad1'] is not None else 0
+                cancDescripcion2 = form.cleaned_data['cancDescripcion2'] if form.cleaned_data['cancDescripcion2'] is not None else "-"
+                cancMonto2 = form.cleaned_data['cancMonto2'] if form.cleaned_data['cancMonto2'] is not None else 0
+                cancMensualidad2 = form.cleaned_data['cancMensualidad2'] if form.cleaned_data['cancMensualidad2'] is not None else 0
+                cancDescripcion3 = form.cleaned_data['cancDescripcion3'] if form.cleaned_data['cancDescripcion3'] is not None else "-"
+                cancMonto3 = form.cleaned_data['cancMonto3'] if form.cleaned_data['cancMonto3'] is not None else 0
+                cancMensualidad3 = form.cleaned_data['cancMensualidad3'] if form.cleaned_data['cancMensualidad3'] is not None else 0
+                cancDescripcion4 = form.cleaned_data['cancDescripcion4'] if form.cleaned_data['cancDescripcion4'] is not None else "-"
+                cancMonto4 = form.cleaned_data['cancMonto4'] if form.cleaned_data['cancMonto4'] is not None else 0
+                cancMensualidad4 = form.cleaned_data['cancMensualidad4'] if form.cleaned_data['cancMensualidad4'] is not None else 0
+                cancDescripcion5 = form.cleaned_data['cancDescripcion5'] if form.cleaned_data['cancDescripcion5'] is not None else "-"
+                cancMonto5 = form.cleaned_data['cancMonto5'] if form.cleaned_data['cancMonto5'] is not None else 0
+                cancMensualidad5 = form.cleaned_data['cancMensualidad5'] if form.cleaned_data['cancMensualidad5'] is not None else 0
+                calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5
+
+
+
+                form.instance.cancDescripcion1 = cancDescripcion1
+                form.instance.cancMonto1 = cancMonto1
+                form.instance.cancMensualidad1 = cancMensualidad1
+                form.instance.cancDescripcion2 = cancDescripcion2
+                form.instance.cancMonto2 = cancMonto2
+                form.instance.cancMensualidad2 = cancMensualidad2
+                form.instance.cancDescripcion3 = cancDescripcion3
+                form.instance.cancMonto3 = cancMonto3
+                form.instance.cancMensualidad3 = cancMensualidad3
+                form.instance.cancDescripcion4 = cancDescripcion4
+                form.instance.cancMonto4 = cancMonto4
+                form.instance.cancMensualidad4 = cancMensualidad4
+                form.instance.cancDescripcion5 = cancDescripcion5
+                form.instance.cancMonto5 = cancMonto5
+                form.instance.cancMensualidad5 = cancMensualidad5
 
 
                 cantPagosSeguro = form.cleaned_data['cantPagosSeguro']
@@ -389,6 +429,7 @@ def cotizacionPrestamoPersonal(request):
                     'vendedorOtroComision': vendedorOtroComision,
                     'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
                     'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
+                    'calcNetoCancelacion': float(calcNetoCancelacion),
                 }
                 print("params",params)
                 
@@ -426,6 +467,7 @@ def cotizacionPrestamoPersonal(request):
                 print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
                 
                 form.instance.aseguradora = aseguradora
+                
 
                 try:
                     for field in form.instance._meta.fields:
@@ -449,7 +491,8 @@ def cotizacionPrestamoPersonal(request):
                         log_error(error_message, request.user.username)
 
                     
-                    return redirect('cotizacionDetail_pp', pk=int(form.instance.NumeroCotizacion))
+                    return render(request, 'prestamoPersonal.html', {'form': form, 'resultado': resultado, 'iteration_data': iteration_data, 'aseguradora': form.instance.aseguradora})
+                    #return redirect('cotizacionDetail_pp', pk=int(form.instance.NumeroCotizacion))
                     
 
                 except Exception as e:
@@ -539,8 +582,24 @@ def perform_pp_calculation(form):
         vendedorTipo = form.cleaned_data['vendedorTipo']
         vendedorComisionPorcentaje = form.cleaned_data['vendedorComisionPorcentaje'] if form.cleaned_data['vendedorComisionPorcentaje'] is not None else 0
         vendedorOtroPorcentaje = form.cleaned_data['vendedorOtroPorcentaje'] if form.cleaned_data['vendedorOtroPorcentaje'] is not None else 0
-                
-       
+         #datos cancelaciones
+        cancDescripcion1 = form.cleaned_data['cancDescripcion1'] if form.cleaned_data['cancDescripcion1'] is not None else "-"
+        cancMonto1 = form.cleaned_data['cancMonto1'] if form.cleaned_data['cancMonto1'] is not None else 0
+        cancMensualidad1 = form.cleaned_data['cancMensualidad1'] if form.cleaned_data['cancMensualidad1'] is not None else 0
+        cancDescripcion2 = form.cleaned_data['cancDescripcion2'] if form.cleaned_data['cancDescripcion2'] is not None else "-"
+        cancMonto2 = form.cleaned_data['cancMonto2'] if form.cleaned_data['cancMonto2'] is not None else 0
+        cancMensualidad2 = form.cleaned_data['cancMensualidad2'] if form.cleaned_data['cancMensualidad2'] is not None else 0
+        cancDescripcion3 = form.cleaned_data['cancDescripcion3'] if form.cleaned_data['cancDescripcion3'] is not None else "-"
+        cancMonto3 = form.cleaned_data['cancMonto3'] if form.cleaned_data['cancMonto3'] is not None else 0
+        cancMensualidad3 = form.cleaned_data['cancMensualidad3'] if form.cleaned_data['cancMensualidad3'] is not None else 0
+        cancDescripcion4 = form.cleaned_data['cancDescripcion4'] if form.cleaned_data['cancDescripcion4'] is not None else "-"
+        cancMonto4 = form.cleaned_data['cancMonto4'] if form.cleaned_data['cancMonto4'] is not None else 0
+        cancMensualidad4 = form.cleaned_data['cancMensualidad4'] if form.cleaned_data['cancMensualidad4'] is not None else 0
+        cancDescripcion5 = form.cleaned_data['cancDescripcion5'] if form.cleaned_data['cancDescripcion5'] is not None else "-"
+        cancMonto5 = form.cleaned_data['cancMonto5'] if form.cleaned_data['cancMonto5'] is not None else 0
+        cancMensualidad5 = form.cleaned_data['cancMensualidad5'] if form.cleaned_data['cancMensualidad5'] is not None else 0
+        calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5        
+
         sucursal = int(sucursal)
     
         #print('Sucursal', sucursal)
@@ -577,6 +636,7 @@ def perform_pp_calculation(form):
             'vendedorOtroComision': vendedorOtroComision,
             'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
             'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
+            'calcNetoCancelacion': float(calcNetoCancelacion),
         }
         print('RESULTADO PARAMETROS', params)
         

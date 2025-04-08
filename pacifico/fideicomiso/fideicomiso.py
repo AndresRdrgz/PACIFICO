@@ -573,8 +573,8 @@ def rutinaCalculo(params):
             calcNetoCancelacion = 0
             params['calcNetoCancelacion'] = calcNetoCancelacion
     else:
-        calcNetoCancelacion = 0
-        params['calcNetoCancelacion'] = calcNetoCancelacion
+        
+        calcNetoCancelacion = params['calcNetoCancelacion'] 
 
 
     #Calculo diciembres

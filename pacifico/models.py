@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.contrib.postgres.fields import JSONField
 
 SEXO_OPCIONES = [
         ('MASCULINO', 'Masculino'),
@@ -316,6 +317,25 @@ class Cotizacion(models.Model):
         null=True,
         blank=True
     )
+    #CANCELACION
+    cancDescripcion1 = models.CharField(max_length=255, null=True, blank=True)
+    cancMonto1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancMensualidad1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancDescripcion2 = models.CharField(max_length=255, null=True, blank=True)
+    cancMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancMensualidad2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancDescripcion3 = models.CharField(max_length=255, null=True, blank=True)
+    cancMonto3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancMensualidad3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancDescripcion4 = models.CharField(max_length=255, null=True, blank=True)
+    cancMonto4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancMensualidad4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancDescripcion5 = models.CharField(max_length=255, null=True, blank=True)
+    cancMonto5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancMensualidad5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    #------
+    
     formaPago = models.IntegerField(null=True)
     periodoPago = models.IntegerField(null=True, default=1)
     aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
