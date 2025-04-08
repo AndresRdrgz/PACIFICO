@@ -13,10 +13,10 @@ STATIC_URL = '/static/'
 DEBUG = True
 if DEBUG:
      DATABASES = {
-        'default': dj_database_url.config(
-            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -152,6 +152,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "pacifico",
+    "tombola",
 ]
 
 MIDDLEWARE = [
