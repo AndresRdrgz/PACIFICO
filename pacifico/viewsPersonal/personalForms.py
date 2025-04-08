@@ -72,6 +72,7 @@ class PrestamoPersonalForm(forms.ModelForm):
             'comiCierre': forms.NumberInput(attrs={
                 'placeholder': 'Comisión de Cierre',
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'value': '20',
             }),
             'plazoPago': forms.NumberInput(attrs={
                 'placeholder': 'Plazo de Pago',
@@ -865,6 +866,11 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'step': '0.01',
             }),
+            'cancRefiSaldo': forms.NumberInput(attrs={
+                'placeholder': 'Refi Saldo',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
         
         }
 
@@ -1110,6 +1116,7 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['vendedorOtroComision'].required = False
         self.fields['vendedorOtroPorcentaje'].required = False
         self.fields['aseguradora'].required = False
+        self.fields['comiCierre'].initial = 20
     
               
 

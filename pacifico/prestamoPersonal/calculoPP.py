@@ -102,9 +102,9 @@ def generarPP(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
-        #print("Desired r1: ", desired_r1)
+        print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
-        max_iterations = 1  # Define a maximum number of iterations to prevent infinite loops
+        max_iterations = 50  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
 
         # Set initial bounds for binary search
@@ -116,9 +116,10 @@ def generarPP(params):
             params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
             params['calcTasaInteres'] = 0.1 # Set initial value for calcTasaInteres PRUEBAS PERASTAMO PERSONAL
         
-            #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+            print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
             
             #print(params)
+            
             #count all fields in params
             i =0
             for key in params:

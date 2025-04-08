@@ -369,9 +369,9 @@ def cotizacionPrestamoPersonal(request):
                 cancDescripcion5 = form.cleaned_data['cancDescripcion5'] if form.cleaned_data['cancDescripcion5'] is not None else "-"
                 cancMonto5 = form.cleaned_data['cancMonto5'] if form.cleaned_data['cancMonto5'] is not None else 0
                 cancMensualidad5 = form.cleaned_data['cancMensualidad5'] if form.cleaned_data['cancMensualidad5'] is not None else 0
-                calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5
-
-
+                
+                cancRefiSaldo = form.cleaned_data['cancRefiSaldo'] if form.cleaned_data['cancRefiSaldo'] is not None else 0
+                calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5 + cancRefiSaldo
 
                 form.instance.cancDescripcion1 = cancDescripcion1
                 form.instance.cancMonto1 = cancMonto1
@@ -598,7 +598,8 @@ def perform_pp_calculation(form):
         cancDescripcion5 = form.cleaned_data['cancDescripcion5'] if form.cleaned_data['cancDescripcion5'] is not None else "-"
         cancMonto5 = form.cleaned_data['cancMonto5'] if form.cleaned_data['cancMonto5'] is not None else 0
         cancMensualidad5 = form.cleaned_data['cancMensualidad5'] if form.cleaned_data['cancMensualidad5'] is not None else 0
-        calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5        
+        cancRefiSaldo = form.cleaned_data['cancRefiSaldo'] if form.cleaned_data['cancRefiSaldo'] is not None else 0
+        calcNetoCancelacion = cancMonto1 + cancMonto2 + cancMonto3 + cancMonto4 + cancMonto5 + cancRefiSaldo
 
         sucursal = int(sucursal)
     

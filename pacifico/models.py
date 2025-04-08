@@ -333,7 +333,7 @@ class Cotizacion(models.Model):
     cancDescripcion5 = models.CharField(max_length=255, null=True, blank=True)
     cancMonto5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cancMensualidad5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
+    cancRefiSaldo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     #------
     
     formaPago = models.IntegerField(null=True)
