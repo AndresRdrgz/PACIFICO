@@ -181,6 +181,7 @@ def prepResultado(cotizacion):
         'nombreCliente': cotizacion.nombreCliente,
         'valorAuto': cotizacion.valorAuto,
         'abono': cotizacion.abono,
+        'auxPeriocidad': cotizacion.periodoPago,
         'salarioBaseMensual': cotizacion.salarioBaseMensual,
         'totalDescuentosLegales': cotizacion.totalDescuentosLegales,
         'totalDescuentoDirecto': cotizacion.totalDescuentoDirecto,
@@ -214,6 +215,11 @@ def prepResultado(cotizacion):
         'familiarSalarioBaseMensual': (cotizacion.salarioNetoActual or 0) + (cotizacion.cosalarioNetoActual or 0),
         'familiarSalarioNeto': ((cotizacion.salarioNetoActual or 0) + (cotizacion.cosalarioNetoActual or 0)) - ((cotizacion.wrkMontoLetra or 0) + (cotizacion.montoMensualSeguro or 0)),
     }
+    #letra mensual
+    if resultado['auxPeriocidad'] == 2:
+        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra'] * 2
+    else:
+        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra']
 
 
     try:

@@ -264,6 +264,12 @@ def cotizacionDetail_pp(request, pk):
                     new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
 
                     #cancelaciones
+
+                    #letra mensual
+                    if resultado['auxPeriocidad'] == 2:
+                        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra'] * 2
+                    else:
+                        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra']
                     
 
 
@@ -467,6 +473,12 @@ def cotizacionPrestamoPersonal(request):
                 print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
                 
                 form.instance.aseguradora = aseguradora
+
+                #letra mensual
+                if resultado['auxPeriocidad'] == 2:
+                    resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra'] * 2
+                else:
+                    resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra']
                 
 
                 try:

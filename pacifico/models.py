@@ -286,7 +286,7 @@ class Cotizacion(models.Model):
     )
     #Datos del cliente
     nombreCliente = models.CharField(max_length=100, null=True)
-    cedulaCliente = models.CharField(max_length=10, null=True,default='')
+    cedulaCliente = models.CharField(max_length=20, null=True,default='')
     tipoDocumento = models.CharField(max_length=10, choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')], default='CEDULA')
     fechaNacimiento = models.DateField(null=True)
     edad = models.IntegerField(null=True)

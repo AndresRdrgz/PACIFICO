@@ -961,6 +961,12 @@ def generate_report_pp(request, numero_cotizacion):
             'copagoVoluntario6': cotizacion.copagoVoluntario6,
             'copagoVoluntarioMonto6': cotizacion.copagoVoluntarioMonto6,
             'copagoVoluntarioDcto6': cotizacion.copagoVoluntarioDcto6,
+            'cancMensualidad1': cotizacion.cancMensualidad1,
+            'cancMensualidad2': cotizacion.cancMensualidad2,
+            'cancMensualidad3': cotizacion.cancMensualidad3,
+            'cancMensualidad4': cotizacion.cancMensualidad4,
+            'cancMensualidad5': cotizacion.cancMensualidad5,
+
 
 
 
@@ -1002,7 +1008,11 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['D24'] = resultado['id']
         sheet['D5'] = resultado['nombreCliente']
         sheet['D9'] = resultado['patrono']
+
         sheet['L5'] = resultado['cartera']
+        if resultado['cartera'] == "EMP. PRIVADA":
+            sheet['L5'] = "EMP. PRIV."
+
         sheet['D7'] = resultado['cedulaCliente']
         #sheet['H10'] = resultado['tipoDocumento']
         #sheet['J10'] = resultado['edad']
@@ -1038,7 +1048,21 @@ def generate_report_pp(request, numero_cotizacion):
         #sheet['E39'] = resultado['wrkLetraSinSeguros']
         #sheet['E43'] = resultado['wrkLetraSinSeguros']
         #sheet['e40'] = resultado['wrkLetraSeguro']
-        sheet['D33'] = resultado['wrkMontoLetra']
+
+        if resultado['cartera'] in [
+            "CONTRALORÍA",
+            "AUTÓNOMAS",
+            "EMP. PRIVADA",
+            "JUBI ACTIVO CONTRALORIA",
+            "JUBILADO CONTRALORIA",
+            "JUBI ACTIVO AUTÓNOMA",
+            "JUBILADO RIESGOS PROF. CSS"
+        ]:
+            sheet['D33'] = resultado['wrkMontoLetra'] * 2
+        else:
+            sheet['D33'] = resultado['wrkMontoLetra']
+            
+            
         #sheet['e42'] = resultado['montoMensualSeguro']
         #sheet['E44'] = resultado['wrkLetraConSeguros']
 
@@ -1047,6 +1071,13 @@ def generate_report_pp(request, numero_cotizacion):
         #DATOS DEL VENDEDOR
         #sheet['j18'] = resultado['vendedor']
         #sheet['j20'] = resultado['comisionVendedor']
+
+        #cancelaciones
+        sheet['l33'] = resultado['cancMensualidad1']
+        sheet['l34'] = resultado['cancMensualidad2']
+        sheet['l35'] = resultado['cancMensualidad3']
+        sheet['l36'] = resultado['cancMensualidad4']
+        sheet['l37'] = resultado['cancMensualidad5']
 
         #DATOS DEL VEHICULO
        
@@ -1063,11 +1094,12 @@ def generate_report_pp(request, numero_cotizacion):
 
         #DATOS DEL DEudor
         sheet['E64'] = resultado['salarioBaseMensual']
+        sheet['D29'] = resultado['salarioBaseMensual']
         #sheet['E49']=resultado['tiempoServicio']
         #sheet['J49']=resultado['ingresos']
         
         #sheet['J50']=resultado['referenciasAPC']
-        sheet['l5']=resultado['cartera']
+        
         #sheet['J51']=resultado['licencia']
         sheet['L9']=resultado['posicion']
         #sheet['E53']=resultado['perfilUniversitario']
