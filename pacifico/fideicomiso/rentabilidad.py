@@ -13,8 +13,8 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     pagadiciembre1 = "Y"
 
-    ##print("----RENTABILIDAD EFECTIVA ----")
-    ##print('calcMontoLetra:',calcMontoLetra)
+    ###print(("----RENTABILIDAD EFECTIVA ----")
+    ###print(('calcMontoLetra:',calcMontoLetra)
 
     wrkMontoFECI = round(wrkMontoFECI, 2)
     wrkNum7_2 = round(wrkNum7_2, 2)
@@ -40,7 +40,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
        
         wrkNetoTotal += 291.90
 
-    #print("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"montoServDes:",montoServDes,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCancelac:",calcNetoCancelac,"calcMontoRefi:",calcMontoRefi,"tipopagoPeriocidad:",tipopagoPeriocidad)
+    ##print(("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"montoServDes:",montoServDes,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCancelac:",calcNetoCancelac,"calcMontoRefi:",calcMontoRefi,"tipopagoPeriocidad:",tipopagoPeriocidad)
     
     wrkDes5Porciento = 0
     wrkFechaAnterior5 = datetime.datetime(2010, 6, 1)
@@ -65,7 +65,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
     auxL = 0.000102
 
     auxJ = 0
-    ##print("auxp:",auxP)
+    ###print(("auxp:",auxP)
     if patrono == 620 and tipo_prestamo != "LEASING":
         auxJ = calcMontoLetra
         auxJ = (auxJ * auxP) * 1.5 / 100
@@ -135,7 +135,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
             auxD = 1 + float(auxX)
             auxZ = auxD
             auxH = auxX
-            ###print("auxH =", auxH,'auxqi:',auxQI,'auxs:',auxS)
+            ####print(("auxH =", auxH,'auxqi:',auxQI,'auxs:',auxS)
            
     
             wrkAlpha4 = auxB
@@ -162,7 +162,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
             wrkMonto += auxE
             wrkMonto = round(wrkMonto, 2)
-            ###print('rentable valor',rentableValor,"wrkMonto =", wrkMonto)
+            ####print(('rentable valor',rentableValor,"wrkMonto =", wrkMonto)
             
             
 
@@ -177,7 +177,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
         wrkCredito = auxW
 
         if auxW == 99999:
-            ##print("auxW == 99999")
+            ###print(("auxW == 99999")
             return
 
         if calcMonto2 <= 100000:
@@ -213,7 +213,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     calcRentaAnual = round(calcRentaAnual, 2)
     calcRentaAnual /= 100
-    #print("calcRentaAnual = ", calcRentaAnual * 100)
+    ##print(("calcRentaAnual = ", calcRentaAnual * 100)
 
     TasaEfectiva = calcRentaAnual
 
@@ -223,11 +223,11 @@ def calcular_promocion(params):
     calcMontoNetoBruto = params['cotMontoPrestamo']
     calcNetoCancelacion = params['calcNetoCancelacion']
     tipoPrestamo = params['tipoPrestamo']
-    #print("Calcular promocion")
-    ##print("calcMontoNetoBruto:", calcMontoNetoBruto, params)
+    ##print(("Calcular promocion")
+    ###print(("calcMontoNetoBruto:", calcMontoNetoBruto, params)
     comisionTotal8 = 0
     wrkMontoPedido = calcMontoNetoBruto + calcNetoCancelacion
-    #print("wrkMontoPedido:", wrkMontoPedido)
+    ##print(("wrkMontoPedido:", wrkMontoPedido)
     if tipoPrestamo == "PREST AUTO":
         comisionTotal8 = 300
     else:
@@ -244,7 +244,7 @@ def calcular_promocion(params):
 def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     
-    #print("Calculo rentabilidad", params)
+    ##print(("Calculo rentabilidad", params)
     comisionVendedor = params['comisionVendedor']
     parmgralComisionPers = 50
     comisionTotal10 = parmgralComisionPers
@@ -280,8 +280,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     comisionTotal8 = 0 #comision de promocion
     
     
-    print(params)
-    print("------ CALCULANDO RENTABILIDAD ------")
+    #print((params)
+    #print(("------ CALCULANDO RENTABILIDAD ------")
    
 
     comisionTotal10 = parmgralComisionPers
@@ -306,7 +306,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         if promo_ini <= fecha_calculo <= promo_fin:
             # CALCULA PROMOCION
             comisionTotal8 = calcular_promocion(params)
-            #print("Calcular promocion", promo_ini, promo_fin, fecha_calculo, comisionTotal8)
+            ##print(("Calcular promocion", promo_ini, promo_fin, fecha_calculo, comisionTotal8)
             
             pass
         else:
@@ -364,7 +364,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                     total3 = total
                     comisionComision[3] = "Y"
                     comisionTotal[3] = total3
-                    print("Comision 3:", comisionComision[3], "Total 3:", total3)
+                    #print(("Comision 3:", comisionComision[3], "Total 3:", total3)
                     break
 
         
@@ -375,13 +375,13 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     if vendedorOtroPorcentaje > 0:
         comisionPorcentaje[5] = vendedorOtroPorcentaje
         comisionComision[5] = "Y"
-        print("Vendedor Otro Porcentaje:", vendedorOtroPorcentaje)      
+        #print(("Vendedor Otro Porcentaje:", vendedorOtroPorcentaje)      
     #Se le adiciona el 7% agencias promotoras
     comisionMonto = calcMontoNetoBruto
     comisionMonto = comisionMonto + calcNetoCanc
     comisionMonto = comisionMonto - wrkMontoCancelAnt
     comisionGastoComisio = 0
-    #print("comisionMonto:",comisionMonto)
+    ##print(("comisionMonto:",comisionMonto)
     
     for auxH in range(1, 11):
         if auxH <= 6:
@@ -406,7 +406,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                 comisionTotal[auxH] = 0
             comisionGastoComisio += comisionTotal[auxH]
     
-    print("comisionGastoComisio:", comisionGastoComisio)
+    #print(("comisionGastoComisio:", comisionGastoComisio)
     
     if sobresaldo == "Y":
         wrkMontoFECI=0
@@ -415,10 +415,10 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         auxQ = wrkMontoFECI
     else:
         pass
-    ##print("wrkMontoFECI:",wrkMontoFECI,"wrkNum7_2:",wrkNum7_2)
+    ###print(("wrkMontoFECI:",wrkMontoFECI,"wrkNum7_2:",wrkNum7_2)
     auxQ = auxQ / plazoPago
     auxQ = round(auxQ, 3)
-    ##print("auxQ =", auxQ)
+    ###print(("auxQ =", auxQ)
    
     wrkNetoTotal = calcMontoNetoBruto
     
@@ -435,12 +435,12 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
        
         wrkNetoTotal += 291.90
     
-    #print("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"calcMontoServDes:",calcMontoServDes,"calcMontoServDes2:",calcMontoServDes2,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCanc:",calcNetoCanc,"calcMontoREFI:",calcMontoREFI,"manejo_5porc:",manejo_5porc)
+    ##print(("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"calcMontoServDes:",calcMontoServDes,"calcMontoServDes2:",calcMontoServDes2,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCanc:",calcNetoCanc,"calcMontoREFI:",calcMontoREFI,"manejo_5porc:",manejo_5porc)
     
-    ##print('manejo_5porc:', manejo_5porc)
-    ##print('wrkNetoTotal:', wrkNetoTotal)
+    ###print(('manejo_5porc:', manejo_5porc)
+    ###print(('wrkNetoTotal:', wrkNetoTotal)
 
-    ###print("wrkNetoTotal =", wrkNetoTotal
+    ####print(("wrkNetoTotal =", wrkNetoTotal
     # Calcular 5% devolución de impuesto de seguro
     wrkDes5Porciento = 0
     # Evaluar 5% seguro REFI
@@ -456,8 +456,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     wrkNetoTotal -= wrkMonto21
     # 6 DE MARZO, 2025 - SUMA GASTO COMISION PROMOCION
-    #print("wrkNetoTotal:",wrkNetoTotal)
-    #print("parmgralComisionPers:",parmgralComisionPers,"comisionVendedor:",comisionVendedor,"comisionTotal8:",comisionTotal8)
+    ##print(("wrkNetoTotal:",wrkNetoTotal)
+    ##print(("parmgralComisionPers:",parmgralComisionPers,"comisionVendedor:",comisionVendedor,"comisionTotal8:",comisionTotal8)
     
     wrkNetoTotal += parmgralComisionPers
     if tipo_prestamo == "PREST AUTO":
@@ -466,9 +466,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         wrkNetoTotal += comisionGastoComisio
     
     wrkNetoTotal += comisionTotal8
-    #print("wrkNetoTotal =", wrkNetoTotal)
+    ##print(("wrkNetoTotal =", wrkNetoTotal)
     
-    ##print("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
+    ###print(("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
     wrkNetoTotal2 = wrkNetoTotal
     auxP = tipopagoPeriocidad
     auxW = 0
@@ -484,17 +484,17 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     auxX += 1
     auxX = pow(auxX, (1 / 12))
     wrkNumeric5_7 = auxX
-    ##print("auxX =", auxX)
+    ###print(("auxX =", auxX)
     auxX = wrkNumeric5_7
     auxX = round(auxX, 7)
-    ##print("auxX =", auxX)
+    ###print(("auxX =", auxX)
     auxX -= 1
     auxX = round(auxX, 7)
     
     auxV = wrkNum7_2
     auxV = auxV / plazoPago
     auxV = round(auxV, 13)
-    #print("auxV =", auxV,"auxX:",auxX,"plazopago:",plazoPago)
+    ##print(("auxV =", auxV,"auxX:",auxX,"plazopago:",plazoPago)
     auxX = round(auxX, 7)
 
     calcInicioPago = cotFechaInicioPago
@@ -511,7 +511,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         wrkMes = fechaInicioPago.month
         wrkNum3 = wrkMes
         auxG = wrkNum3
-        ###print("auxG =", auxG)
+        ####print(("auxG =", auxG)
         auxF = plazoPago
         auxO = 0
 
@@ -523,7 +523,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         wrkFecha2 = calcFechaPromeCK
         #wrkfecha2 = 2024 december 01
         #wrkFecha2 = datetime.datetime(2024, 12, 1)
-        ###print("wrkFecha2 =", wrkFecha2)
+        ####print(("wrkFecha2 =", wrkFecha2)
          # Ensure wrkFecha2 is a datetime object
         if isinstance(wrkFecha2, str):
             wrkFecha2 = datetime.datetime.strptime(wrkFecha2, "%Y-%m-%d")
@@ -534,7 +534,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         wrkFechaMesYear2 = calcInicioPago
 
         auxT = (wrkFechaMesYear1.year - wrkFechaMesYear2.year) * 12 + wrkFechaMesYear1.month - wrkFechaMesYear2.month
-        ##print("auxT =", auxT)
+        ###print(("auxT =", auxT)
        
         if sobresaldo == "N":
             pass
@@ -545,20 +545,20 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         if sobresaldo == "Y":
             auxB = auxB + auxT - 1
 
-        ##print("auxq:", auxQ)
+        ###print(("auxq:", auxQ)
         auxq_decimal = Decimal(str(auxQ))
         wrkNum9_2 = auxq_decimal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         wrkNum9_2 = float(wrkNum9_2)  # Convert back to float
 
-        ##print("wrkNum9_2:",wrkNum9_2)
+        ###print(("wrkNum9_2:",wrkNum9_2)
         auxQ = wrkNum9_2
         wrkNum9_2 = round(auxV,2)
-        ##print("wrkNum9_2:",wrkNum9_2)
+        ###print(("wrkNum9_2:",wrkNum9_2)
         auxV = wrkNum9_2
         auxV = round(auxV, 2)
         auxQ = round(auxQ, 3)
         
-        ###print("auxQ =", auxQ)
+        ####print(("auxQ =", auxQ)
         
         auxQI = 0
         auxE = round(calcMontoLetra,2)
@@ -567,8 +567,8 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         auxE -= auxV
         auxE -= auxJ
         auxS = auxE
-        ##print("auxS =", auxS)
-        #print("auxt:",auxT,"auxB:",auxB,"auxS:",auxS)
+        ###print(("auxS =", auxS)
+        ##print(("auxt:",auxT,"auxB:",auxB,"auxS:",auxS)
         
         for auxA in range(auxT, auxB+1):
             if plazoPago == 1:
@@ -594,7 +594,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                 auxE = auxE / auxD
             else:
                 auxE = 0
-            #print(pagadiciembre1,wrkNum3,auxE)
+            ##print((pagadiciembre1,wrkNum3,auxE)
             rentableSecuencia = auxA
             rentableMes = wrkNum3
             rentableValor = round(auxE, 2)
@@ -606,21 +606,21 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
 
             wrkMonto += auxE
             wrkMonto = round(wrkMonto, 2)
-            ##print('wrkMonto:',wrkMonto,"auxA:",auxA,"auxE:",auxE,"auxw:",auxW)
+            ###print(('wrkMonto:',wrkMonto,"auxA:",auxA,"auxE:",auxE,"auxw:",auxW)
             
                         
         wrkCredito5 = wrkDebito
-        ##print("credito5:",wrkCredito5)
+        ###print(("credito5:",wrkCredito5)
         wrkDebito = wrkMonto
         wrkDebito = wrkDebito - wrkNetoTotal
         wrkDebito = round(wrkDebito, 2)
-        #print("wrkDebito =", wrkDebito,"wrkNetoTotal:",wrkNetoTotal)
+        ##print(("wrkDebito =", wrkDebito,"wrkNetoTotal:",wrkNetoTotal)
         
        
         wrkCredito = auxW
 
         if auxW == 99999:
-            ##print("auxW == 99999",auxW)
+            ###print(("auxW == 99999",auxW)
             return
         
         if calcMonto2 <= 100000:
@@ -631,9 +631,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         if calcMonto2 > 100000:
             wrkIG = -1
         
-        ##print("wrkdebito:",wrkDebito,"0.01:",0.01)
+        ###print(("wrkdebito:",wrkDebito,"0.01:",0.01)
         if wrkDebito < 0.01:
-            ##print("wrkDebito < wrkIG",wrkDebito,"<",wrkIG,wrkDebito<wrkIG,"auxW:",auxW)
+            ###print(("wrkDebito < wrkIG",wrkDebito,"<",wrkIG,wrkDebito<wrkIG,"auxW:",auxW)
             if wrkDebito < wrkIG:
                 auxM = 0.000001
                 auxL = 0.00000001
@@ -641,9 +641,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                 auxX = round(auxX, 7)
                 auxRepetir = True
                 auxFlagNegativo = True
-                ##print("TT - auxX =", auxX)
+                ###print(("TT - auxX =", auxX)
             else:
-                ##print("TF - auxX =", auxX)
+                ###print(("TF - auxX =", auxX)
                 auxRepetir = False
         else:  
           
@@ -651,7 +651,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
             auxX += auxL
         
             auxX = round(auxX, 7)
-            ##print("F - auxX =", auxX,"auxW:",auxW)
+            ###print(("F - auxX =", auxX,"auxW:",auxW)
             auxRepetir = True
             auxFlagNegativo = False
             if auxW == 999:
@@ -665,7 +665,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         '''
 
     #FIN CICLO CALCULO RENTA
-    ##print('wrkd:',wrkDebito,'auxH:',auxH)
+    ###print(('wrkd:',wrkDebito,'auxH:',auxH)
     wrkCredito2 = wrkDebito
     wrk1110 = auxH
     wrkRentaMensual = auxH
@@ -673,28 +673,28 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     auxY = auxH
     auxY = auxY * 100
     
-    ##print("auxH =", auxH)
+    ###print(("auxH =", auxH)
     
-    ##print("auxY =", auxY)
+    ###print(("auxY =", auxY)
     calcRentabilidad = auxY
     #calcRentabilidad = round(calcRentabilidad * 100 / 10000, 4)
-    ##print("calcRentabilidad =", calcRentabilidad)
+    ###print(("calcRentabilidad =", calcRentabilidad)
     
 
-    ###print("calcRentabilidad =", calcRentabilidad)
+    ####print(("calcRentabilidad =", calcRentabilidad)
     auxU = auxY * 12
-    ##print("auxU =", auxU)
+    ###print(("auxU =", auxU)
 
     calcRentaAnual = auxU
     calcRentaAnual = round(calcRentaAnual * 100 / 10000, 4)
     r1 = calcRentaAnual
     #r1 = round(r1, 2)
 
-    print("R1 =", r1*100)
+    #print(("R1 =", r1*100)
     
     #calculo para la tasa efectiva, diferenciarla de la r1
     TasaEfectiva = rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,calcMontoNetoBruto,calcMontoTimbres,calcMontoNotaria,tipopagoPeriocidad,patrono,tipo_prestamo,calcTasaInteres,fechaInicioPago,plazoInteres,fechaCalculo,calcMontoLetra,calcInicioPago,tempPrimerDiaHabil,params)
     #TasaEfectiva=round(TasaEfectiva,2)
-    ##print("TasaEfectiva =", TasaEfectiva)
+    ###print(("TasaEfectiva =", TasaEfectiva)
     return  r1
 

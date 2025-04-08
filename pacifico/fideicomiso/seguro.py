@@ -31,16 +31,16 @@ def auxBusquedaSeguro(codigo, edad):
         {"CODIGO": 99, "DESCRIPCION": "ADELA DOBLES (INTERIOR)", "SECUENCIA": 1, "EDAD MIN": 18, "EDAD MAX": 79, "TASABRUTA": 10, "SOBRETASA":3, "TASAREAL":7},
     ]
 
-    #print("codigo:",codigo,"edad:",edad)
+    ##print(("codigo:",codigo,"edad:",edad)
     # Find the matching row in the table
     for row in table:
         if row["CODIGO"] == codigo and row["EDAD MIN"] <= edad <= row["EDAD MAX"]:
-            print("Seguro encontrado:", row["DESCRIPCION"], row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"])
+            #print(("Seguro encontrado:", row["DESCRIPCION"], row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"])
             
             return row["TASABRUTA"], row["SOBRETASA"], row["TASAREAL"]
 
     # Return None if no match is found
-    print("No se encontró el seguro",codigo,edad)
+    #print(("No se encontró el seguro",codigo,edad)
     
     return None, None, None
 
@@ -52,10 +52,10 @@ def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
 
         wrkFechaUltDia1 = calcFechaPromeCK.date()
         wrkFechaUltDia2 = cotFechaInicioPago.date()
-        print("wrkFechaUltDia1:",wrkFechaUltDia1,"wrkFechaUltDia2:",wrkFechaUltDia2)
+        #print(("wrkFechaUltDia1:",wrkFechaUltDia1,"wrkFechaUltDia2:",wrkFechaUltDia2)
        
         wrkFechaUltDia2 = getLastDayOfMonth(wrkFechaUltDia2)
-        print("wrkFechaUltDia2",wrkFechaUltDia2)
+        #print(("wrkFechaUltDia2",wrkFechaUltDia2)
         
         auxW = 1
         auxZ = 0
@@ -65,7 +65,7 @@ def seguroAdicional(calcFechaPromeCK,cotFechaInicioPago):
             wrkFechaUltDia1_aux = wrkFechaUltDia1
             wrkFechaUltDia1 = wrkFechaUltDia1.replace(day=28) + timedelta(days=4)
             wrkFechaUltDia1 = wrkFechaUltDia1.replace(day=1) + timedelta(days=auxW * 30)
-            print("wrkFechaUltDia1:",wrkFechaUltDia1,"<= wrkFechaUltDia2:",wrkFechaUltDia2)
+            #print(("wrkFechaUltDia1:",wrkFechaUltDia1,"<= wrkFechaUltDia2:",wrkFechaUltDia2)
             
             
             if wrkFechaUltDia1 <= wrkFechaUltDia2:
@@ -117,7 +117,7 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres,calcFe
     auxB = wrkPorcSeguroTotal
     auxC = auxPlazoInteres
     auxC = auxC + auxZ
-    print("auxa:",auxA,"auxB:",auxB,"auxC:",auxC)
+    #print(("auxa:",auxA,"auxB:",auxB,"auxC:",auxC)
     
     auxA = ((auxA * auxB * auxC) / 1000)
     auxX = ((auxA * auxB * auxG) / 1000)
@@ -134,7 +134,7 @@ def calculoSeguroTotal(auxMonto2,auxTasaBruta,auxTasaReal,auxPlazoInteres,calcFe
     if agregado == "Y":
         montoSeguro = montoSeguro * descomponer2
     
-    print("totalSeguro:",totalSeguro)
+    #print(("totalSeguro:",totalSeguro)
    
     
     return totalSeguro, montoSeguro, auxZ

@@ -127,8 +127,7 @@ def generarPP(params):
             #print("Total de campos: ",i)
             while iteration < max_iterations:
                 r1, resultados, iteration_data = rutinaCalculo(params)
-                logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
-                #print("Diferencia: ", abs(r1 - desired_r1))
+                print(f"Resultado Iteration {iteration}: r1 = {r1}, desired_r1 = {desired_r1}, calcTasaInteres = {params['calcTasaInteres'] * 100}")  #print("Diferencia: ", abs(r1 - desired_r1))
                 #print("Diferencia: ", r1 - desired_r1)
                 #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
                 if abs(r1 - desired_r1) <= tolerance:

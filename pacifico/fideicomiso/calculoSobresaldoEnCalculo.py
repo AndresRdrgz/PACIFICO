@@ -3,7 +3,7 @@ import datetime
 def calculoTimbres(comis_cierre,monto2):
     
     
-    ##print('comis_cierre:', comis_cierre, 'monto2:', monto2)
+    ###print(('comis_cierre:', comis_cierre, 'monto2:', monto2)
     sobresaldo = "Y"
     
     if comis_cierre == "":
@@ -21,7 +21,7 @@ def calculoTimbres(comis_cierre,monto2):
     first_decimal_digit = int((aux_a % 1) * 10)
 
     wrk_redondeo = round(aux_a)
-    ##print('wrk_redondeo:', wrk_redondeo,'aux_a:', aux_a)
+    ###print(('wrk_redondeo:', wrk_redondeo,'aux_a:', aux_a)
     wrk_alpha16 = aux_a
     temp79 = ""
 
@@ -34,23 +34,23 @@ def calculoTimbres(comis_cierre,monto2):
         aux_b += 0.10
     
     
-    #print("monto2",monto2)
-    #print('aux_b:', aux_b)
+    ##print(("monto2",monto2)
+    ##print(('aux_b:', aux_b)
     
     #MODIFICACION ENERO 2025 CALCULO TIMBRES
     timbresAndres = (monto2 // 100) * 0.10
-    #print('timbresAndres:', timbresAndres)
+    ##print(('timbresAndres:', timbresAndres)
     integer_part = int(monto2 // 100)
     decimal_part = monto2 % 100
-    #print('integer_part:', integer_part)
-    #print('decimal_part:', decimal_part)
-    ##print('aux_b:', aux_b)
+    ##print(('integer_part:', integer_part)
+    ##print(('decimal_part:', decimal_part)
+    ###print(('aux_b:', aux_b)
     timbres = integer_part * 0.10
     if decimal_part > 0:
         timbres += 0.10
     timbres = round(timbres, 2)
     aux_b = timbres
-    #print('timbres:', timbres)
+    ##print(('timbres:', timbres)
     return round(aux_b,2)
 
 def calculo_servicio_descuento(params):
@@ -68,7 +68,7 @@ def calculo_servicio_descuento(params):
     auxB = 0
     montoLetra = params['wrkMontoLetra']
     noLetras = params['auxPeriocidad'] * params['auxPlazoPago']
-    print(params, 'noLetras:', noLetras)
+    #print((params, 'noLetras:', noLetras)
 
 
     if edad >= edadJubFem and sexo == "FEMENINO":
@@ -116,7 +116,7 @@ def calculate_comision_manejo(sobresaldo, comis_cierre, monto2, monto1):
     monto_manejo_t = 0
     agregado = "N"
 
-    print('sobresaldo:', sobresaldo, 'comis_cierre:', comis_cierre, 'monto2:', monto2, 'monto1:', monto1)
+    #print(('sobresaldo:', sobresaldo, 'comis_cierre:', comis_cierre, 'monto2:', monto2, 'monto1:', monto1)
 
     if sobresaldo == "Y":
         aux_f = comis_cierre
@@ -194,7 +194,7 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
 
    # Example usage
     monto_manejo_t = calculate_comision_manejo("Y",calcComiCierre,calcMonto2,cotMontoPrestamo)
-    print('monto_manejo_t:', monto_manejo_t)
+    #print(('monto_manejo_t:', monto_manejo_t)
     
     params['montoManejoT'] = monto_manejo_t
     sobresaldo = "Y"  # Example value
@@ -203,7 +203,7 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
     pagadiciembre1 = "Y"
     forma_pago = 1  # Example value
 
-    print(params)
+    #print((params)
 
     #calculo neto cancelacion
       
@@ -211,29 +211,29 @@ def calculoSobresaldoEnCalculo(plazo_pago,cotMontoPrestamo,calcTasaInteres,calcM
     #MONTO TIMBRES
     monto_timbres = calculoTimbres(calcComiCierre,calcMonto2)
     params['calcMontoTimbres'] = monto_timbres
-    ##print(f"Monto Timbres: {monto_timbres}")
+    ###print((f"Monto Timbres: {monto_timbres}")
 
     #Servicio Descuneto PRESTAMO PERSONAL
     if tipo_prestamo == "PERSONAL":
         montoServDesc = calculo_servicio_descuento(params)
         montoServDesc =round(montoServDesc,2)
         params['montoServDesc'] = montoServDesc
-        print('montoServDesc:', montoServDesc)
+        #print(('montoServDesc:', montoServDesc)
         
-        ##print(f"Fecha Servicio Descuento: {fecha_servicio
+        ###print((f"Fecha Servicio Descuento: {fecha_servicio
 
-    print ("servicio descuento fin",montoServDesc)
+    #print( ("servicio descuento fin",montoServDesc)
     
     #GASTO MANEJO
     wrk_monto21, monto_manejo_b, manejo_5porc = calculate_gasto_manejo(monto_manejo_t, sobresaldo, montoServDesc, monto_timbres,tipo_prestamo)
-    ##print(f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
+    ###print((f"wrkMonto21: {wrk_monto21}, Monto Manejo B: {monto_manejo_b}, Manejo 5%: {manejo_5porc}")
     params['monto_manejo_b'] = monto_manejo_b
     sobresaldo = "Y"  # Example value
     aux_notaria_gasto = calcMontoNotaria  # Example value
     aux_monto2 = calcMonto2 # Example value
     #MONTO OBLIGACION
     monto1 = calculate_monto_obligacion(sobresaldo, tipo_prestamo, monto_manejo_t, aux_notaria_gasto, aux_monto2)
-    ##print(f"Monto1: {monto1}")
+    ###print((f"Monto1: {monto1}")
     params['manejo_5porc'] = manejo_5porc
 
     return params

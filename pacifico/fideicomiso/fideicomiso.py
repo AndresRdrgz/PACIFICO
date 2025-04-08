@@ -201,9 +201,9 @@ def calculate_fecha_promesa_ck(no_patrono, diasprom1, diasprom2, fecha_calculo, 
         aux_libres += 1
     
     #return fecha_calculo and add 1 day
-    #print('Fecha Promesa: ',fecha_calculo)
+    ##print('Fecha Promesa: ',fecha_calculo)
     fecha_calculo=fecha_calculo + datetime.timedelta(days=1)
-    #print('Fecha Promesa: ',fecha_calculo)
+    ##print('Fecha Promesa: ',fecha_calculo)
     return fecha_calculo.strftime("%Y-%m-%d")
     
 
@@ -262,7 +262,7 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     auxM = 0
     montoManejoB = params['montoManejoB']
 
-    #print("----TASA EFECTIVA MENSUAL----")
+    ##print("----TASA EFECTIVA MENSUAL----")
 
     if(pagaDiciembre2=="Y"):
         auxM = 11
@@ -278,15 +278,15 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     else:
         pass
     wrkInteresTotal = round(wrkInteresTotal * 100) / 100
-    #print("WRK WORK TASA EFECTIVA - Interes Total: ",wrkInteresTotal)
+    ##print("WRK WORK TASA EFECTIVA - Interes Total: ",wrkInteresTotal)
     montoManejoB = round(montoManejoB * 100) / 100
-    #print("WRK WORK TASA EFECTIVA - Monto Manejo: ",montoManejoB)
+    ##print("WRK WORK TASA EFECTIVA - Monto Manejo: ",montoManejoB)
     wrkTasaEfectiva = wrkTasaEfectiva + montoManejoB
     wrkTasaEfectiva = wrkTasaEfectiva * 2
     wrkTasaEfectiva = wrkTasaEfectiva * auxM
     #wrkTasaEfectiva = round(wrkTasaEfectiva * 100) / 100
     wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
-    #print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
+    ##print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
     auxV = 0
     calcNetoCancelac = params['calcNetoCancelacion']
     calcMontoRefi = 0
@@ -302,16 +302,16 @@ def calculoTasaEfectiva(calcMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoP
     auxN = auxPlazoPago + 1
 
     auxD = auxP * auxN
-    #print(wrkTasaEfectiva,"/",auxD)
+    ##print(wrkTasaEfectiva,"/",auxD)
     wrkTasaEfectiva = wrkTasaEfectiva / auxD
     wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
-    #print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
+    ##print("WRK WORK TASA EFECTIVA - Tasa Efectiva: ",wrkTasaEfectiva)
     if wrkTasaEfectiva <= 0.99:
         wrkTasaEfectiva = wrkTasaEfectiva * 100
 
     wrkTasaEfectiva = round(wrkTasaEfectiva, 5)
     calcTasaEfectiva = wrkTasaEfectiva
-    #print("Tasa Efectiva: ",calcTasaEfectiva)
+    ##print("Tasa Efectiva: ",calcTasaEfectiva)
 
     return calcTasaEfectiva
 
@@ -354,7 +354,7 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     params['wrkMontoLetra'] = wrkMontoLetra
     montoServDesc = round(calculo_servicio_descuento(params),2)
     params['montoServDesc'] = round(montoServDesc,2)
-    print('montoServDesc:', montoServDesc)
+    #print('montoServDesc:', montoServDesc)
     
         #GASTO DE MANEJO
     montoManejoB = params['montoManejoT']
@@ -362,14 +362,14 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
     if tipo_prestamo == "PREST AUTO":
         montoManejoB = montoManejoB - params['gastoFideicomiso']
     
-    print("Monto Manejo B: ",montoManejoB)
+    #print("Monto Manejo B: ",montoManejoB)
     
     #if sobresaldo
     wrkMonto21 = montoManejoB
     presvari5Manejo = montoManejoB
     presvari5Manejo = presvari5Manejo * 0.0654205
     presvari5Manejo = round(presvari5Manejo,2)
-    #print("presvari5Manejo: ",presvari5Manejo)
+    ##print("presvari5Manejo: ",presvari5Manejo)
     montoManejoB = montoManejoB - presvari5Manejo
     wrkMonto20 = presvari5Manejo
     wrkMonto20 = wrkMonto20 + montoManejoB
@@ -379,65 +379,65 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
         wrkMonto15 = wrkMonto21
         wrkMonto15 = wrkMonto15 - wrkMonto20
         montoManejoB = wrkMonto15
-    print("Monto Manejo B: ",montoManejoB,"presvari5Manejo: ",presvari5Manejo)
+    #print("Monto Manejo B: ",montoManejoB,"presvari5Manejo: ",presvari5Manejo)
     params['montoManejoB'] = montoManejoB
     params['manejo_5porc'] = presvari5Manejo
    
    
     calcTasaEfectiva = calculoTasaEfectiva(wrkMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoPrestamo,auxPlazoPago,params)
     params['calcTasaEfectiva'] = calcTasaEfectiva
-    #print("Tasa Efectiva: ",calcTasaEfectiva)
+    ##print("Tasa Efectiva: ",calcTasaEfectiva)
     wrkLogic10 = "Y"
     if(wrkLogic10=="Y"):
         
         r1 = calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params)
 
-    #print("Tasa Efectiva: ",round(TasaEfectiva*100,2)," r1: ",round(r1*100,2))
-    #print("total pagos: ",tablaTotalPagos," total seguro: ",tablaTotalSeguro," total feci: ",tablaTotalFeci," total interes: ",tablaTotalInteres," total monto capital: ",tablaTotalMontoCapital," monto letra: ",wrkMontoLetra)
+    ##print("Tasa Efectiva: ",round(TasaEfectiva*100,2)," r1: ",round(r1*100,2))
+    ##print("total pagos: ",tablaTotalPagos," total seguro: ",tablaTotalSeguro," total feci: ",tablaTotalFeci," total interes: ",tablaTotalInteres," total monto capital: ",tablaTotalMontoCapital," monto letra: ",wrkMontoLetra)
     return r1, iteration_data
 
 
 def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, paga_diciembre2, sobresaldo):
     
-    print("--------CALCULO DICIEMBRES--------")
+    #print("--------CALCULO DICIEMBRES--------")
     auxN = cot_plazo
     #print date type of aux_fecha_promesa_ck and cot_fecha_inicio_pago
-    #print("aux_fecha_promesa_ck: ",type(aux_fecha_promesa_ck)," cot_fecha_inicio_pago: ",type(cot_fecha_inicio_pago),"paga_diciembre2",paga_diciembre2)
+    ##print("aux_fecha_promesa_ck: ",type(aux_fecha_promesa_ck)," cot_fecha_inicio_pago: ",type(cot_fecha_inicio_pago),"paga_diciembre2",paga_diciembre2)
     wrk_fecha = aux_fecha_promesa_ck
     wrk_fecha2 = cot_fecha_inicio_pago
 
-    #print("wrkfecha: ",wrk_fecha," wrkfecha2: ",wrk_fecha2)
+    ##print("wrkfecha: ",wrk_fecha," wrkfecha2: ",wrk_fecha2)
     
     # Add one day to wrk_fecha
     wrk_fecha += timedelta(days=1)
-    #print("wrkfecha: ",wrk_fecha)
-    print("auxn: ",auxN," wrk_fecha: ",wrk_fecha," wrk_fecha2: ",wrk_fecha2)
+    ##print("wrkfecha: ",wrk_fecha)
+    #print("auxn: ",auxN," wrk_fecha: ",wrk_fecha," wrk_fecha2: ",wrk_fecha2)
     
     # Add one month if the first payment is after the 16th
     day_of_month = wrk_fecha2.day
     if day_of_month <= 15:
         wrk_fecha2 = wrk_fecha2.replace(day=1)
-        #print("primero del mes",wrk_fecha2)
+        ##print("primero del mes",wrk_fecha2)
     else:
         wrk_fecha2 = wrk_fecha2.replace(day=16)
         auxN += 1
         
-        print("se adiciona un mes",auxN,wrk_fecha2)
+        #print("se adiciona un mes",auxN,wrk_fecha2)
 
     AuxN2 = auxN
     
     # Calculate the difference in days
-    #print("CALCULO DIFERENCIA ---------")
-    #print("wrk_fecha2: ",wrk_fecha2," wrk_fecha: ",wrk_fecha)
+    ##print("CALCULO DIFERENCIA ---------")
+    ##print("wrk_fecha2: ",wrk_fecha2," wrk_fecha: ",wrk_fecha)
     time_difference = (wrk_fecha2 - wrk_fecha).days + 1
     dias_antes_primer_pg = time_difference
-    print("Dias antes del primer pago: ",dias_antes_primer_pg," dias: ",time_difference)
+    #print("Dias antes del primer pago: ",dias_antes_primer_pg," dias: ",time_difference)
     
     # Calculate auxC
     aux_a = dias_antes_primer_pg
     aux_b = 30.4
     aux_c = aux_a / aux_b
-    print("aux_c: ",aux_c)
+    #print("aux_c: ",aux_c)
     
 
     if aux_c < 0.5:
@@ -459,12 +459,12 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     wrk_fecha = cot_fecha_inicio_pago
     wrk_fecha_diciembre = cot_fecha_inicio_pago
     cont_diciembre = 0
-    #print("wrk_fecha_diciembre: ",wrk_fecha_diciembre,"auxc: ",aux_c)
-    #print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha_diciembre,wrk_fecha)
+    ##print("wrk_fecha_diciembre: ",wrk_fecha_diciembre,"auxc: ",aux_c)
+    ##print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha_diciembre,wrk_fecha)
     auxAndres =1
     auxU = 1
     while auxN > 0:
-        #print(auxAndres, "AuxU: ", auxU, " auxN: ", auxN, " - wrk_fecha_diciembre: ", wrk_fecha_diciembre)
+        ##print(auxAndres, "AuxU: ", auxU, " auxN: ", auxN, " - wrk_fecha_diciembre: ", wrk_fecha_diciembre)
         auxAndres += 1
         auxU += 1
         if wrk_fecha_diciembre.month == 12:
@@ -486,9 +486,9 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
             wrk_fecha_diciembre = wrk_fecha_diciembre.replace(year=new_year, month=new_month, day=1) - timedelta(days=1)
         auxN -= 1
 
-    print("auxn: ",auxN," cont_diciembre: ",cont_diciembre,"wrk_fecha_diciembre: ",wrk_fecha_diciembre)
+    #print("auxn: ",auxN," cont_diciembre: ",cont_diciembre,"wrk_fecha_diciembre: ",wrk_fecha_diciembre)
     auxN += cont_diciembre + AuxN2
-    #print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
+    ##print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre)
     
     
     #IF PAGA DICIEMBRE = NO
@@ -498,7 +498,7 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     if paga_diciembre2 == "Y":
         aux_u = 1
         #T
-        print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha)
+        #print("antes de empezar el ciclo auxN: ",auxN,wrk_fecha)
         for aux_u in range(1, auxN):
             if wrk_fecha.month == 12:
                 cont_diciembre = cont_diciembre + 1
@@ -508,7 +508,7 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
     #END IF"
     
     """
-    print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre,"wrk_fecha: ",wrk_fecha)
+    #print("Plazo: ",cot_plazo," Plazo Interes: ",auxN," Diciembre: ",cont_diciembre,"wrk_fecha: ",wrk_fecha)
 
     
     
@@ -517,7 +517,7 @@ def calculo_diciembres(cot_plazo, aux_fecha_promesa_ck, cot_fecha_inicio_pago, p
    
     
 
-    print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
+    #print("Plazo: ",cot_plazo," Plazo Interes: ",calc_plazo_interes," Diciembre: ",cont_diciembre)
     
     
 
@@ -580,7 +580,7 @@ def rutinaCalculo(params):
     #Calculo diciembres
     auxPlazoInteres = calculo_diciembres(auxPlazoPago, calcFechaPromeCK, cotFechaInicioPago, pagadiciembre2, "Y")
     params['auxPlazoInteres'] = auxPlazoInteres
-    print("Plazo Interes: ",auxPlazoInteres)
+    #print("Plazo Interes: ",auxPlazoInteres)
     
     if tipoPrestamo == "PREST AUTO":
         params['auxPlazoInteres'] = auxPlazoPago
@@ -588,7 +588,7 @@ def rutinaCalculo(params):
 
     #determinar monto amortizar
     aux_l, aux_z, aux_x, calcComiCierre,tasaBruta,tasaReal = determinar_monto_amortizar(cotMontoPrestamo, calcMontoNotaria, calcComiCierre, tipoPrestamo,codigoSeguro,edad,calcNetoCancelacion, params)
-    #print("aux_l: ",aux_l," aux_z: ",aux_z," aux_x: ",aux_x," calcComiCierre: ",calcComiCierre)
+    ##print("aux_l: ",aux_l," aux_z: ",aux_z," aux_x: ",aux_x," calcComiCierre: ",calcComiCierre)
     params['calcComiCierreFinal'] = calcComiCierre
     params['tasaBruta'] = tasaBruta
     calcMonto2 = aux_x
@@ -601,14 +601,14 @@ def rutinaCalculo(params):
     #CALCULO SOBRESALDO EN CALCULO
     params = calculoSobresaldoEnCalculo(auxPlazoPago,cotMontoPrestamo,calcTasaInteres,calcMonto2,calcComiCierre,calcMontoNotaria,params)
     
-    #print(params)
+    ##print(params)
     #PENDIENTE TOTAL SEGURO
-    #print("enviar a calculoSeguroTotal")
-    #print("calcFechaPromeCK: ",calcFechaPromeCK,"cotFechaInicioPago",cotFechaInicioPago)
+    ##print("enviar a calculoSeguroTotal")
+    ##print("calcFechaPromeCK: ",calcFechaPromeCK,"cotFechaInicioPago",cotFechaInicioPago)
 
     
     totalSeguro, montoSeguro, seguroAdicional = calculoSeguroTotal(calcMonto2,tasaBruta,tasaReal,auxPlazoInteres,calcFechaPromeCK,cotFechaInicioPago)
-    #print("Total Seguro: ",totalSeguro," Monto Seguro: ",montoSeguro)
+    ##print("Total Seguro: ",totalSeguro," Monto Seguro: ",montoSeguro)
     params['totalSeguro'] = totalSeguro
     params['seguroAdicional'] = seguroAdicional
 
@@ -646,7 +646,7 @@ def generarFideicomiso():
     forma_pago = params['forma_pago']
     
     fechaCalculo = datetime.datetime.now() + datetime.timedelta(days=31)
-    #print("Fecha Calculo: ",fechaCalculo)
+    ##print("Fecha Calculo: ",fechaCalculo)
     params['cotFechaInicioPago'] = fechaCalculo
 
     #PAGA DICIEMBRE
@@ -656,15 +656,15 @@ def generarFideicomiso():
 
     #IDENTIFGICAR NOTARIA
     notaria = identificar_notaria(sucursal, params['cotMontoPrestamo'], "PREST AUTO", 100, patrono, "")
-    #print("Notaria: ",notaria)
+    ##print("Notaria: ",notaria)
 
     calcMontoNotaria = search_gasto(notaria)
-    #print("Monto Notaria: ",calcMontoNotaria)
+    ##print("Monto Notaria: ",calcMontoNotaria)
 
     #FECHA PROMESA 
     #fecha_promesa = calculate_fecha_promesa_ck(patrono, 10, 5, fechaCalculo, "2024-11-01", "2026-12-11")
     fecha_promesa = calculoFechaPromesa()
-    #print("Fecha Promesa: ",fecha_promesa)
+    ##print("Fecha Promesa: ",fecha_promesa)
     
     #add calcMontoNotaria to params
     params['calcFechaPromeCK'] = fecha_promesa
@@ -711,7 +711,7 @@ def generarFideicomiso3(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
-        #print("Desired r1: ", desired_r1)
+        ##print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
         max_iterations = 50  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
@@ -723,19 +723,19 @@ def generarFideicomiso3(params):
         params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
         params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
         #params['calcTasaInteres'] = 0.0965
-        #print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
-        #print(params)
+        ##print("EMPEZAR CALCULO Tasa: ",params['calcTasaInteres'])
+        ##print(params)
           #count all fields in params
         i =0
         for key in params:
             i=i+1
-        #print("Total de campos: ",i)
+        ##print("Total de campos: ",i)
         while iteration < max_iterations:
             r1, resultados, iteration_data = rutinaCalculo(params)
             logger.info("Iteration %d: r1 = %s, desired_r1 = %s", iteration, r1, desired_r1)
-            #print("Diferencia: ", abs(r1 - desired_r1))
-            #print("Diferencia: ", r1 - desired_r1)
-            #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
+            ##print("Diferencia: ", abs(r1 - desired_r1))
+            ##print("Diferencia: ", r1 - desired_r1)
+            ##print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
             if abs(r1 - desired_r1) <= tolerance:
                 break
             elif r1 < desired_r1:
@@ -745,11 +745,11 @@ def generarFideicomiso3(params):
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
             params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)
             iteration += 1
-            #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
+            ##print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
         if iteration == max_iterations:
-            print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
-            print("Tasa de interes: ",params['calcTasaInteres'],"ITERACIONES: ",iteration)
+            #print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
+            #print("Tasa de interes: ",params['calcTasaInteres'],"ITERACIONES: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
@@ -762,7 +762,7 @@ def generarFideicomiso3(params):
                 resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
-            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100,"iteraciones: ",iteration)
+            #print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100,"iteraciones: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
@@ -784,9 +784,9 @@ def generarFideicomiso4(params):
 
         fechaCalculo = datetime.datetime.now() + datetime.timedelta(days=31)
         params['cotFechaInicioPago'] = fechaCalculo
-        print("fecha calculo",fechaCalculo)
+        #print("fecha calculo",fechaCalculo)
         #print date in text
-        print("Fecha Calculo set to:", fechaCalculo.strftime("%B"))
+        #print("Fecha Calculo set to:", fechaCalculo.strftime("%B"))
 
     
 
@@ -799,7 +799,7 @@ def generarFideicomiso4(params):
 
         # FECHA PROMESA
         fecha_promesa = calculoFechaPromesa()
-        print("Fecha Promesa:", fecha_promesa)
+        #print("Fecha Promesa:", fecha_promesa)
 
         # Add calcMontoNotaria to params
         params['calcFechaPromeCK'] = fecha_promesa
@@ -807,7 +807,7 @@ def generarFideicomiso4(params):
 
         # Goal seeking algorithm using binary search
         desired_r1 = params['r_deseada']
-        #print("Desired r1: ", desired_r1)
+        ##print("Desired r1: ", desired_r1)
         tolerance = 0.000001  # Define a tolerance level for the desired r1 value
         max_iterations = 1  # Define a maximum number of iterations to prevent infinite loops
         iteration = 0
@@ -815,10 +815,10 @@ def generarFideicomiso4(params):
         i =0
         for key in params:
             i=i+1
-        #print("Total de campos: ",i)
+        ##print("Total de campos: ",i)
         while iteration < max_iterations:
             r1, resultados, iteration_data = rutinaCalculo(params)
-            print("Iteration %d: r1 obtenida = %s, desired_r1 = %s" % (iteration, r1, desired_r1))
+            #print("Iteration %d: r1 obtenida = %s, desired_r1 = %s" % (iteration, r1, desired_r1))
             if abs(r1 - desired_r1) <= tolerance:
                 break
             elif r1 < desired_r1:
@@ -827,11 +827,11 @@ def generarFideicomiso4(params):
                 upper_bound = params['calcTasaInteres']
             
             iteration += 1
-            #print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
+            ##print("Iteracion: ",iteration, "tasa: ",params['calcTasaInteres']*100,"r1: ",r1*100)
 
         if iteration == max_iterations:
-            print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
-            print("Tasa de interes: ",round(params['calcTasaInteres']*100,2),"ITERACIONES: ",iteration)
+            #print("Goal seeking algorithm did not converge within the maximum number of iterations.","tolerance: ",tolerance*100)
+            #print("Tasa de interes: ",round(params['calcTasaInteres']*100,2),"ITERACIONES: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
@@ -844,7 +844,7 @@ def generarFideicomiso4(params):
                 resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
         else:
             logger.info("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, params['calcTasaInteres'])
-            print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100,"iteraciones: ",iteration)
+            #print("Desired r1 value achieved: %s with calcTasaInteres: %s", r1, "Tasa interes: ",params['calcTasaInteres']*100,"tolerance: ",tolerance*100,"iteraciones: ",iteration)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
             resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
