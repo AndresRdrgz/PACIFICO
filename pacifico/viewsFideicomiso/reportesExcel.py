@@ -1062,8 +1062,8 @@ def generate_report_pp(request, numero_cotizacion):
             sheet['E64'] = resultado['salarioBaseMensual']
             sheet['D29'] = resultado['salarioBaseMensual']
         else:
-            sheet['D33'] = resultado['wrkMontoLetra']
-            sheet['E64'] = resultado['salarioBaseMensual'] / 2
+            sheet['D33'] = resultado['wrkMontoLetra'] * 2
+            sheet['E64'] = resultado['salarioBaseMensual'] 
             sheet['D29'] = resultado['salarioBaseMensual'] / 2
             
             
