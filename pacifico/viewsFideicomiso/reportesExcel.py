@@ -1059,10 +1059,16 @@ def generate_report_pp(request, numero_cotizacion):
             "JUBILADO RIESGOS PROF. CSS"
         ]:
             sheet['D33'] = resultado['wrkMontoLetra'] * 2
+            sheet['E64'] = resultado['salarioBaseMensual']
+            sheet['D29'] = resultado['salarioBaseMensual']
         else:
-            sheet['D33'] = resultado['wrkMontoLetra']
+            sheet['D33'] = resultado['wrkMontoLetra'] * 2
+            sheet['E64'] = resultado['salarioBaseMensual'] 
+            sheet['D29'] = resultado['salarioBaseMensual'] / 2
             
             
+        
+        
         #sheet['e42'] = resultado['montoMensualSeguro']
         #sheet['E44'] = resultado['wrkLetraConSeguros']
 
@@ -1093,8 +1099,7 @@ def generate_report_pp(request, numero_cotizacion):
         #     sheet['J42'] = ''
 
         #DATOS DEL DEudor
-        sheet['E64'] = resultado['salarioBaseMensual']
-        sheet['D29'] = resultado['salarioBaseMensual']
+        
         #sheet['E49']=resultado['tiempoServicio']
         #sheet['J49']=resultado['ingresos']
         
