@@ -12,11 +12,7 @@ STATIC_URL = '/static/'
 
 DEBUG = True
 if DEBUG:
-<<<<<<< Updated upstream
     DATABASES = {
-=======
-     DATABASES = {
->>>>>>> Stashed changes
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
