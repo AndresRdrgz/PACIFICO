@@ -44,7 +44,7 @@ class Boleto(models.Model):
         db_table = 'boleto'
 
     def __str__(self):
-        return f"Boleto"
+        return f"Boleto {self.id} - Tombola {self.tombola.id} - CanalOrigen {self.canalOrigen}"
     
 class FormularioTombola(models.Model):
     nombre = models.CharField(max_length=100)
@@ -94,9 +94,12 @@ class FormularioTombola(models.Model):
     oficial = models.CharField(max_length=100, blank=True, null=True)
     autorizacion_apc = models.BooleanField(default=False)
     acepta_condiciones = models.BooleanField(default=False)
+    tombola = models.ForeignKey(Tombola, on_delete=models.CASCADE, related_name='formularios', blank=True, null=True)
 
     class Meta:
         db_table = 'formulario_tombola'
 
     def __str__(self):
         return f"Formulario {self.nombre} {self.apellido}"
+
+    
