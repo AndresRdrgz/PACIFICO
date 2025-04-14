@@ -164,108 +164,14 @@ class PeriodoPago(models.Model):
 
 class Cliente(models.Model):
     cedulaCliente = models.CharField(max_length=255, null=True)
-    tipoDocumento = models.CharField(max_length=10, choices=[('CEDULA', 'Cédula'), ('PASAPORTE', 'Pasaporte')], default='CEDULA')
+    
     nombreCliente = models.CharField(max_length=255, null=True)
-    fechaNacimiento = models.DateField(null=True)
-    edad = models.IntegerField(null=True)
+    fechaNacimiento = models.DateField(null=True,blank=True)
+    edad = models.IntegerField(null=True,blank=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
-    jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
-    aseguradora = models.ForeignKey(Aseguradora, on_delete=models.CASCADE, null=True)
-    patrono = models.CharField(max_length=255, null=True)
-    apcScore = models.IntegerField(null=True)
-    apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=0)
-    #Detalles del cliente
-    tiempoServicio = models.CharField(max_length=255, null=True)
-    ingresos = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    referenciasAPC = models.CharField(max_length=255, null=True, choices=REFERENCIAS_OPCIONES)
-    cartera = models.CharField(max_length=255, null=True, choices=CARTERA_OPCIONES)
-    licencia = models.CharField(max_length=10, choices=LICENCIA_OPCIONES, default='SI')
-    posicion = models.CharField(max_length=255, null=True)
-    perfilUniversitario = models.CharField(max_length=255, null=True)
-    #Nivel endeudamiento
-    horasExtrasMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
-    horasExtrasDcto = models.BooleanField(default=False)
-    primaMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    primaDcto = models.BooleanField(default=False)
-    bonosMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    bonosDcto = models.BooleanField(default=False)
-    otrosMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    otrosDcto = models.BooleanField(default=False)
-    siacapMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    siacapDcto = models.BooleanField(default=False)
-    praaMonto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    praaDcto = models.BooleanField(default=False)
-    dirOtros1 = models.CharField(max_length=255, null=True)
-    dirOtrosMonto1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    dirOtrosDcto1 = models.BooleanField(default=False)
-    dirOtros2 = models.CharField(max_length=255, null=True)
-    dirOtrosMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    dirOtrosDcto2 = models.BooleanField(default=False)
-    dirOtros3 = models.CharField(max_length=255, null=True)
-    dirOtrosMonto3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    dirOtrosDcto3 = models.BooleanField(default=False)
-    dirOtros4 = models.CharField(max_length=255, null=True)
-    dirOtrosMonto4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    dirOtrosDcto4 = models.BooleanField(default=False)
-    pagoVoluntario1 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto1 = models.BooleanField(default=False)
-    pagoVoluntario2 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto2 = models.BooleanField(default=False)
-    pagoVoluntario3 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto3 = models.BooleanField(default=False)
-    pagoVoluntario4 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto4 = models.BooleanField(default=False)
-    pagoVoluntario5 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto5 = models.BooleanField(default=False)
-    pagoVoluntario6 = models.CharField(max_length=255, null=True)
-    pagoVoluntarioMonto6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    pagoVoluntarioDcto6 = models.BooleanField(default=False)
-
-    salarioBaseMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    totalDescuentosLegales = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    totalDescuentoDirecto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    totalPagoVoluntario = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    salarioNetoActual = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    salarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNeto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-     #resultado nivel - completo
-    totalIngresosAdicionales = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
-    totalIngresosMensualesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    
-    totalDescuentosLegalesCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    salarioNetoActualCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    salarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    porSalarioNetoCompleto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-     #PRORRATEO
-    mes0 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes2 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes3 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes4 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes5 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes7 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes8 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes9 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes10 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    mes11 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    primerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True, blank = True)
-    tipoProrrateo = models.CharField(max_length=20, choices=TIPO_PRORRATEO_OPCIONES, default='horas_extras', blank=True)
-
-    #MOVIMIENTOS BANCARIOS
-    movPrimerMes = models.CharField(max_length=10, choices=MESES_OPCIONES, null=True)
+    jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO',blank=True,null=True)
     
     
-       
-
-
-    
-
     
     def __str__(self):
         return f"{self.nombreCliente} - {self.cedulaCliente}"
@@ -637,89 +543,7 @@ class Cotizacion(models.Model):
             'edad': self.edad,
             'sexo': self.sexo,
             'jubilado': self.jubilado,
-            'patrono': self.patrono,
-            'apcScore': self.apcScore,
-            'apcPI': self.apcPI,
-            'aseguradora': self.aseguradora,
-            'tiempoServicio': self.tiempoServicio,
-            'ingresos': self.ingresos,
-            'referenciasAPC': self.referenciasAPC,
-            'cartera': self.cartera,
-            'licencia': self.licencia,
-            'posicion': self.posicion,
-            'perfilUniversitario': self.perfilUniversitario,
-            'siacapMonto': self.siacapMonto,
-            'siacapDcto': self.siacapDcto,
-            'praaMonto': self.praaMonto,
-            'praaDcto': self.praaDcto,
-            'dirOtros1': self.dirOtros1,
-            'dirOtrosMonto1': self.dirOtrosMonto1,
-            'dirOtrosDcto1': self.dirOtrosDcto1,
-            'dirOtros2': self.dirOtros2,
-            'dirOtrosMonto2': self.dirOtrosMonto2,
-            'dirOtrosDcto2': self.dirOtrosDcto2,
-            'dirOtros3': self.dirOtros3,
-            'dirOtrosMonto3': self.dirOtrosMonto3,
-            'dirOtrosDcto3': self.dirOtrosDcto3,
-            'dirOtros4': self.dirOtros4,
-            'dirOtrosMonto4': self.dirOtrosMonto4,
-            'dirOtrosDcto4': self.dirOtrosDcto4,
-            'pagoVoluntario1': self.pagoVoluntario1,
-            'pagoVoluntarioMonto1': self.pagoVoluntarioMonto1,
-            'pagoVoluntarioDcto1': self.pagoVoluntarioDcto1,
-            'pagoVoluntario2': self.pagoVoluntario2,
-            'pagoVoluntarioMonto2': self.pagoVoluntarioMonto2,
-            'pagoVoluntarioDcto2': self.pagoVoluntarioDcto2,
-            'pagoVoluntario3': self.pagoVoluntario3,
-            'pagoVoluntarioMonto3': self.pagoVoluntarioMonto3,
-            'pagoVoluntarioDcto3': self.pagoVoluntarioDcto3,
-            'pagoVoluntario4': self.pagoVoluntario4,
-            'pagoVoluntarioMonto4': self.pagoVoluntarioMonto4,
-            'pagoVoluntarioDcto4': self.pagoVoluntarioDcto4,
-            'pagoVoluntario5': self.pagoVoluntario5,
-            'pagoVoluntarioMonto5': self.pagoVoluntarioMonto5,
-            'pagoVoluntarioDcto5': self.pagoVoluntarioDcto5,
-            'pagoVoluntario6': self.pagoVoluntario6,
-            'pagoVoluntarioMonto6': self.pagoVoluntarioMonto6,
-            'pagoVoluntarioDcto6': self.pagoVoluntarioDcto6,
-            'salarioBaseMensual': self.salarioBaseMensual,
-            'totalDescuentosLegales': self.totalDescuentosLegales,
-            'totalDescuentoDirecto': self.totalDescuentoDirecto,
-            'totalPagoVoluntario': self.totalPagoVoluntario,
-            'salarioNetoActual': self.salarioNetoActual,
-            'salarioNeto': self.salarioNeto,
-            'porSalarioNeto': self.porSalarioNeto,
-            'totalIngresosAdicionales': self.totalIngresosAdicionales,
-            'totalIngresosMensualesCompleto': self.totalIngresosMensualesCompleto,
-            'totalDescuentosLegalesCompleto': self.totalDescuentosLegales,
-            'salarioNetoActualCompleto': self.salarioNetoActual,
-            'salarioNetoCompleto': self.salarioNeto,
-            'porSalarioNetoCompleto': self.porSalarioNeto,
-            'horasExtrasMonto': self.horasExtrasMonto,
-            'horasExtrasDcto': self.horasExtrasDcto,
-            'primaMonto': self.primaMonto,
-            'primaDcto': self.primaDcto,
-            'bonosMonto': self.bonosMonto,
-            'bonosDcto': self.bonosDcto,
-            'otrosMonto': self.otrosMonto,
-            'otrosDcto': self.otrosDcto,
-            'mes0': self.mes0,
-            'mes1': self.mes1,
-            'mes2': self.mes2,
-            'mes3': self.mes3,
-            'mes4': self.mes4,
-            'mes5': self.mes5,
-            'mes6': self.mes6,
-            'mes7': self.mes7,
-            'mes8': self.mes8,
-            'mes9': self.mes9,
-            'mes10': self.mes10,
-            'mes11': self.mes11,
-            'primerMes': self.primerMes,
-            'tipoProrrateo': self.tipoProrrateo,
-            'tipoDocumento': self.tipoDocumento,
-
-
+            
             }
         )
         if not created:
@@ -729,82 +553,9 @@ class Cotizacion(models.Model):
             cliente.edad = self.edad
             cliente.sexo = self.sexo
             cliente.jubilado = self.jubilado
-            cliente.patrono = self.patrono
-            cliente.apcScore = self.apcScore
-            cliente.apcPI = self.apcPI
-            cliente.aseguradora = self.aseguradora
-            cliente.tiempoServicio = self.tiempoServicio
-            cliente.ingresos = self.ingresos
-            cliente.referenciasAPC = self.referenciasAPC
-            cliente.cartera = self.cartera
-            cliente.licencia = self.licencia
-            cliente.posicion = self.posicion
-            cliente.perfilUniversitario = self.perfilUniversitario
-            cliente.siacapMonto = self.siacapMonto
-            cliente.siacapDcto = self.siacapDcto
-            cliente.praaMonto = self.praaMonto
-            cliente.praaDcto = self.praaDcto
-            cliente.dirOtros1 = self.dirOtros1
-            cliente.dirOtrosMonto1 = self.dirOtrosMonto1
-            cliente.dirOtrosDcto1 = self.dirOtrosDcto1
-            cliente.dirOtros2 = self.dirOtros2
-            cliente.dirOtrosMonto2 = self.dirOtrosMonto2
-            cliente.dirOtrosDcto2 = self.dirOtrosDcto2
-            cliente.dirOtros3 = self.dirOtros3
-            cliente.dirOtrosMonto3 = self.dirOtrosMonto3    
-            cliente.dirOtrosDcto3 = self.dirOtrosDcto3
-            cliente.dirOtros4 = self.dirOtros4
-            cliente.dirOtrosMonto4 = self.dirOtrosMonto4
-            cliente.dirOtrosDcto4 = self.dirOtrosDcto4
-            cliente.pagoVoluntario1 = self.pagoVoluntario1
-            cliente.pagoVoluntarioMonto1 = self.pagoVoluntarioMonto1
-            cliente.pagoVoluntarioDcto1 = self.pagoVoluntarioDcto1
-            cliente.pagoVoluntario2 = self.pagoVoluntario2
-            cliente.pagoVoluntarioMonto2 = self.pagoVoluntarioMonto2
-            cliente.pagoVoluntarioDcto2 = self.pagoVoluntarioDcto2
-            cliente.pagoVoluntario3 = self.pagoVoluntario3
-            cliente.pagoVoluntarioMonto3 = self.pagoVoluntarioMonto3
-            cliente.pagoVoluntarioDcto3 = self.pagoVoluntarioDcto3
-            cliente.pagoVoluntario4 = self.pagoVoluntario4
-            cliente.pagoVoluntarioMonto4 = self.pagoVoluntarioMonto4
-            cliente.pagoVoluntarioDcto4 = self.pagoVoluntarioDcto4
-            cliente.salarioBaseMensual = self.salarioBaseMensual
-            cliente.totalDescuentosLegales = self.totalDescuentosLegales
-            cliente.totalDescuentoDirecto = self.totalDescuentoDirecto
-            cliente.totalPagoVoluntario = self.totalPagoVoluntario
-            cliente.salarioNetoActual = self.salarioNetoActual
-            cliente.salarioNeto = self.salarioNeto
-            cliente.porSalarioNeto = self.porSalarioNeto
-            cliente.totalIngresosAdicionales = self.totalIngresosAdicionales
-            cliente.totalIngresosMensualesCompleto = self.totalIngresosMensualesCompleto
-            cliente.totalDescuentosLegalesCompleto = self.totalDescuentosLegales
-            cliente.salarioNetoActualCompleto = self.salarioNetoActual
-            cliente.salarioNetoCompleto = self.salarioNeto
-            cliente.porSalarioNetoCompleto = self.porSalarioNeto
-            cliente.horasExtrasMonto = self.horasExtrasMonto
-            cliente.horasExtrasDcto = self.horasExtrasDcto
-            cliente.primaMonto = self.primaMonto
-            cliente.primaDcto = self.primaDcto
-            cliente.bonosMonto = self.bonosMonto
-            cliente.bonosDcto = self.bonosDcto
-            cliente.otrosMonto = self.otrosMonto
-            cliente.otrosDcto = self.otrosDcto
-            cliente.mes0 = self.mes0
-            cliente.mes1 = self.mes1
-            cliente.mes2 = self.mes2
-            cliente.mes3 = self.mes3
-            cliente.mes4 = self.mes4
-            cliente.mes5 = self.mes5
-            cliente.mes6 = self.mes6
-            cliente.mes7 = self.mes7
-            cliente.mes8 = self.mes8
-            cliente.mes9 = self.mes9
-            cliente.mes10 = self.mes10
-            cliente.mes11 = self.mes11
-            cliente.primerMes = self.primerMes
-            cliente.tipoProrrateo = self.tipoProrrateo
-            cliente.tipoDocumento = self.tipoDocumento
-          
+
+            
+            
 
             # Update other fields as necessary
         cliente.save()

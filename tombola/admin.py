@@ -1,13 +1,8 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
-from .models import Celulares, Tombola, Boleto, FormularioTombola
+from .models import Tombola, Boleto, FormularioTombola
 
 # Register your models here.
-
-@admin.register(Celulares)
-class CelularesAdmin(ModelAdmin):
-    pass
-
 @admin.register(Tombola)
 class TombolaAdmin(ModelAdmin):
     pass

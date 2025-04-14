@@ -1,22 +1,16 @@
 from django.db import models
+from pacifico.models import Cliente
+
+SEXO_OPCIONES = [
+        ('MASCULINO', 'Masculino'),
+        ('FEMENINO', 'Femenino'),
+    ]
+
 
 # Create your models here.
 
-class Celulares(models.Model):
-    id = models.AutoField(primary_key=True)
-    numero = models.CharField(max_length=20, unique=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_modificacion = models.DateTimeField(auto_now=True)
-    marca = models.CharField(max_length=50)
-    modelo = models.CharField(max_length=50)
-    color = models.CharField(max_length=20)
 
-    class Meta:
-        db_table = 'celulares'
 
-    def __str__(self):
-        return self.numero
-    
 class Tombola(models.Model):
     fecha_evento = models.DateTimeField(blank=True, null=True)
     nombre = models.CharField(max_length=100)
@@ -30,6 +24,7 @@ class Tombola(models.Model):
 class Boleto(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     tombola = models.ForeignKey(Tombola, on_delete=models.CASCADE, related_name='boletos')
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='boletos', blank=True, null=True)
     canalOrigen = models.CharField(
         max_length=50,
         choices=[
@@ -44,15 +39,17 @@ class Boleto(models.Model):
         db_table = 'boleto'
 
     def __str__(self):
-        return f"Boleto {self.id} - Tombola {self.tombola.id} - CanalOrigen {self.canalOrigen}"
+        return f"Boleto {self.id} - Tombola {self.tombola.id} - Cliente {self.cliente} - CanalOrigen {self.canalOrigen}"
     
 class FormularioTombola(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
+    cedulaCliente = models.CharField(max_length=255, null=True)
     celular = models.CharField(max_length=20)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     correo_electronico = models.EmailField(max_length=100, blank=True, null=True)
     edad = models.IntegerField(blank=True, null=True)
+    sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
     sector = models.CharField(
         max_length=100,
         choices=[
