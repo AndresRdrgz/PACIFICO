@@ -61,3 +61,6 @@ def formularioTombola(request):
 
 def confirmacion(request, boleto_id):
     return render(request, 'confirmacion.html', {'boleto_id': boleto_id})
+
+def validadorCedula(request):
+    return render(request, 'validadorCedula.html')
