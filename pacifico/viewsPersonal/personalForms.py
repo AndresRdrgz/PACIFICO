@@ -924,7 +924,7 @@ class PrestamoPersonalForm(forms.ModelForm):
         #self.fields['oficial'].required = False
         #self.fields['vendedor'].required = False
         self.fields['montoPrestamo'].required = False
-        self.fields['fechaInicioPago'].required = False
+         
         self.fields['salarioBaseMensual'].required = False
         self.fields['tasaEstimada'].required = False
         self.fields['tasaBruta'].required = False
