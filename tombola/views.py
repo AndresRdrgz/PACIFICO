@@ -1,3 +1,5 @@
+import openpyxl
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .forms import FormularioTombolaForm
 from .models import FormularioTombola, Boleto
@@ -70,3 +72,4 @@ def confirmacion(request, boleto_id):
 
 def validadorCedula(request):
     return render(request, 'validadorCedula.html')
+

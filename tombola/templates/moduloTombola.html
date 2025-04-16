@@ -16,106 +16,157 @@
         </div>
     </header>
     <main class="flex-1 overflow-auto p-6">
-        <!-- Tabla Formularios -->
-        <div class="bg-white rounded-lg shadow-sm border">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Formularios Creados</h3>
+        <!-- Tabs -->
+        <div class="sm:hidden">
+            <label for="tabs" class="sr-only">Select a table</label>
+            <select id="tabs" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                <option value="formularios">Formularios</option>
+                <option value="boletos">Boletos</option>
+            </select>
+        </div>
+        <ul class="hidden text-sm font-medium text-center text-gray-500 rounded-lg shadow-sm sm:flex">
+            <li class="w-full">
+            <button id="tabFormularios" class="inline-block w-full p-4 text-white bg-[#22a650] border-r border-gray-200 rounded-s-lg active focus:outline-none">
+                Formularios
+            </button>
+            </li>
+            <li class="w-full">
+            <button id="tabBoletos" class="inline-block w-full p-4 text-gray-500 bg-white border-r border-gray-200 hover:text-white hover:bg-[#22a650] focus:outline-none">
+                Boletos
+            </button>
+            </li>
+        </ul>
+        
+        <!-- Tables -->
+        <div id="formulariosTable" class="mt-4">
+            <div class="bg-white rounded-lg shadow-sm border">
+            <h3 class="text-xl font-semibold text-gray-800 mt-4 mb-2 mx-6">Formularios</h3>
+            <!-- Search and Buttons for Formularios -->
             <div class="p-4 flex bg-white flex-col md:flex-row md:items-center md:justify-between gap-4">
-                
                 <div class="relative flex-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4">
                         <circle cx="11" cy="11" r="8"></circle>
                         <path d="m21 21-4.3-4.3"></path>
                     </svg>
-                    <input type="text" id="searchInput" onkeyup="filterTable()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 max-w-xl" placeholder="Buscar por nombre de cliente"></div>
+                    <input type="text" id="searchInputFormularios" onkeyup="filterTable('formulariosTable', 0)" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 max-w-xl" placeholder="Buscar por nombre">
+                </div>
                 <div class="flex gap-2">
-                    <a href="{% url 'formularioTombola' %}">
-                        <button class="inline-flex items-center text-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[#22a650] text-primary-foreground hover:bg-[#1e9445] h-10 px-4 py-2 gap-2">
-                            Formulario de Cotiza y Gana
-                        </button>
-                    </a>
-                        
-                    <a href="{% url 'download_cotizaciones_excel' %}" class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" x2="12" y1="15" y2="3"></line>
-                        </svg>
-                        Exportar en Excel
-                    </a>
+                <a href="{% url 'formularioTombola' %}">
+                    <button class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                        Formulario de Cotiza y Gana
+                    </button>
+                </a>
+                <a href="{% url 'download_formularios_excel' %}" class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" x2="12" y1="15" y2="3"></line>
+                    </svg>
+                    Exportar en Excel
+                </a>
+                </div>
+            </div>    
+            <div class="overflow-x-auto">
+                <!-- Table content for Formularios -->
+                <div class="relative w-full overflow-auto" style="max-height: 80vh;">
+                <table class="w-full caption-bottom text-sm">
+                    <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
+                    <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">NOMBRE</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">APELLIDO</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CELULAR</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CORREO ELECTRÓNICO</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">OFICIAL</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">TÓMBOLA</th>
+                        <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA DE CREACIÓN</th>
+                    </tr>
+                    </thead>
+                    <tbody id="deudas-table-body" class="bg-white border-b">
+                    {% for formulario in tombola_list %}
+                    <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.nombre }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.apellido }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.celular }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.correo_electronico }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.oficial }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.tombola }}</td>
+                        <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.fecha_creacion }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr id="noMatchRow">
+                        <td colspan="11" class="px-2 py-4 text-center text-gray-500">
+                        No se encontraron formularios que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <div class="relative w-full overflow-auto" style="max-height: 80vh;">
-                    <table class="w-full caption-bottom text-sm">
-                        <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
-                            <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">NOMBRE</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">APELLIDO</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CELULAR</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CORREO ELECTRÓNICO</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">OFICIAL</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">TÓMBOLA</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA DE CREACIÓN</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deudas-table-body" class="bg-white border-b">
-                            {% for formulario in tombola_list %}
-                            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.nombre }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.apellido }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.celular }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.correo_electronico }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.oficial }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.tombola }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ formulario.fecha_creacion }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr id="noMatchRow">
-                                <td colspan="11" class="px-2 py-4 text-center text-gray-500">
-                                    No se encontraron formularios que coincidan con la búsqueda.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
-        <!-- Tabla Boletos -->
-        <div class="bg-white rounded-lg shadow-sm border">
-            <h3 class="text-xl font-semibold text-gray-800 mt-8 mb-4">Boletos</h3>
             
-            <div class="overflow-x-auto">
-                <div class="relative w-full overflow-auto" style="max-height: 80vh;">
-                    <table class="w-full caption-bottom text-sm">
-                        <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
-                            <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">ID</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CLIENTE</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">TOMBOLA</th>
-                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA DE CREACIÓN</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deudas-table-body" class="bg-white border-b">
-                            {% for boleto in boleto_list %}
-                            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.id }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.cliente  }}</td>                                
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.tombola  }}</td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.fecha_creacion }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr id="noMatchRow">
-                                <td colspan="11" class="px-2 py-4 text-center text-gray-500">
-                                    No hay boletos disponibles.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Tabla Boletos -->
+        <div id="boletosTable" class="mt-4 hidden">
+            <div class="bg-white rounded-lg shadow-sm border">
+                <h3 class="text-xl font-semibold text-gray-800 mt-4 mb-2 mx-6">Boletos</h3>
+                <!-- Search and Buttons for Boletos -->
+                <div class="p-4 flex bg-white flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div class="relative flex-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.3-4.3"></path>
+                        </svg>
+                        <input type="text" id="searchInputBoletos" onkeyup="filterTable('boletosTable', 1)" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 max-w-xl" placeholder="Buscar por cliente">
+                    </div>
+                    <button id="openModal" class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                        Carga masiva
+                    </button>
+                    <div class="flex gap-2">
+                        <a href="{% url 'download_boletos_excel' %}" class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" x2="12" y1="15" y2="3"></line>
+                            </svg>
+                            Exportar en Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <!-- Table content for Boletos -->
+                    <div class="relative w-full overflow-auto" style="max-height: 80vh;">
+                        <table class="w-full caption-bottom text-sm">
+                            <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
+                                <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                    <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">ID</th>
+                                    <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CLIENTE</th>
+                                    <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">TOMBOLA</th>
+                                    <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA DE CREACIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deudas-table-body" class="bg-white border-b">
+                                {% for boleto in boleto_list %}
+                                <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
+                                    <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.id }}</td>
+                                    <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.cliente  }}</td>                                
+                                    <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.tombola  }}</td>
+                                    <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">{{ boleto.fecha_creacion }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr id="noMatchRow">
+                                    <td colspan="11" class="px-2 py-4 text-center text-gray-500">
+                                        No hay boletos disponibles.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
+        
     </main>
 </div>
 
@@ -153,137 +204,103 @@
 </div>
 
 <!-- Modal Background -->
-<div id="nuevaCotizacionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
-    <!-- Modal Container -->
-    <div class="bg-white rounded-2xl shadow-lg w-full max-w-4xl p-6">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Tipo de préstamo</h2>
-            <button class="text-gray-500 hover:text-gray-700" onclick="closeNuevaCotizacionModal()">&times;</button>
-        </div>
-        <p class="text-sm text-gray-600 mt-1">Seleccione el tipo de préstamo.</p>
-        
-        <!-- Loan Options -->
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{% url 'fideicomiso' %}" class="block">
-            <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                <span class="text-4xl mb-4">🚗</span>
-                <div class="text-center">
-                    
-                        <p class="text-lg font-semibold">Préstamo de auto</p>
-                        <p class="text-sm text-gray-500">Financiamiento de autos nuevos y usados</p>
-                   
-                </div>
-            </button>
-        </a>
-            <a href="{% url 'prestPersonal' %}" class="block">
-                <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                    <span class="text-4xl mb-4">💰</span>
-                    <div class="text-center">
-                        <p class="text-lg font-semibold">Préstamo personal (En pruebas)</p>
-                        <p class="text-sm text-gray-500">Cotizador PP en construcción</p>
-                    </div>
+<div id="modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-1/3">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Carga Masiva de Clientes</h2>
+        <form method="POST" enctype="multipart/form-data" action="{% url 'carga_masiva' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="file" class="block text-gray-700 font-medium mb-2">Subir archivo:</label>
+                <input type="file" id="file" name="file" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-between items-center mb-4">
+                <button type="button" id="downloadTemplate" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Descargar plantilla
                 </button>
-            </a>
-        </div>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="submit" class="bg-[#22a650] hover:bg-[#1e9445] text-white font-bold py-2 px-4 rounded">
+                    Subir
+                </button>
+                <button type="button" id="closeModal" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                    Cancelar
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-    function openModal(cotizacion) {
-        document.getElementById('modalCotizacionId').innerText = cotizacion.NumeroCotizacion;
-        document.getElementById('modalTipoPrestamo').innerText = cotizacion.tipoPrestamo;
-        document.getElementById('modalCliente').innerText = cotizacion.nombreCliente;
-        document.getElementById('modalCedula').innerText = cotizacion.cedulaCliente;
-        document.getElementById('modalMarca').innerText = cotizacion.marca;
-        document.getElementById('modalModelo').innerText = cotizacion.modelo;
-        document.getElementById('modalPlazo').innerText = cotizacion.plazoPago;
-        document.getElementById('modalTasa').innerText = cotizacion.tasaEstimada;
-        document.getElementById('modalComiCierre').innerText = cotizacion.calcComiCierreFinal;
-        document.getElementById('modalTotalFinanciado').innerText = cotizacion.auxMonto2;
-        document.getElementById('modalOficial').innerText = cotizacion.oficial;
-        document.getElementById('modalFecha').innerText = cotizacion.created_at;
-
-        if (cotizacion.tipoPrestamo.toLowerCase() === 'personal') {
-            document.getElementById('cotizacionDetailButton').href = `/cotizacionPP/${cotizacion.NumeroCotizacion}/`;
-        } else {
-            document.getElementById('cotizacionDetailButton').href = `/cotizacion/${cotizacion.NumeroCotizacion}/`;
-        }
-        document.getElementById('clienteProfileButton').href = `/cliente/${cotizacion.cedulaCliente}/`;
-
-        const modal = document.getElementById('cotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-        backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
-
-    function openNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-        backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
     
-    function closeNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.add('hidden');
-        modal.classList.remove('visible');
-        backdrop.classList.add('hidden');
-        backdrop.classList.remove('visible');
-    }
+    // JavaScript to handle modal open and close
+    document.getElementById('openModal').addEventListener('click', function () {
+        document.getElementById('modal').classList.remove('hidden');
+    });
 
-    function closeModal() {
-        const modal = document.getElementById('cotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('visible');
-        modal.classList.add('hidden');
-        backdrop.classList.remove('visible');
-        backdrop.classList.add('hidden');
-    }
+    document.getElementById('closeModal').addEventListener('click', function () {
+        document.getElementById('modal').classList.add('hidden');
+    });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const rows = document.querySelectorAll('#deudas-table-body tr');
-        rows.forEach(row => {
-            row.addEventListener('click', function() {
-                const cotizacion = {
-                    NumeroCotizacion: this.querySelector('td:nth-child(1)').innerText,
-                    tipoPrestamo: this.querySelector('td:nth-child(2)').innerText,
-                    nombreCliente: this.querySelector('td:nth-child(3)').innerText,
-                    cedulaCliente: this.querySelector('td:nth-child(4)').innerText,
-                    marca: this.querySelector('td:nth-child(5)').innerText,
-                    modelo: this.querySelector('td:nth-child(6)').innerText,
-                    plazoPago: this.querySelector('td:nth-child(7)').innerText,
-                    tasaEstimada: this.querySelector('td:nth-child(8)').innerText,
-                    calcComiCierreFinal: this.querySelector('td:nth-child(9)').innerText,
-                    auxMonto2: this.querySelector('td:nth-child(10)').innerText,
-                    oficial: this.querySelector('td:nth-child(11)').innerText,
-                    created_at: this.querySelector('td:nth-child(12)').innerText
-                };
-                openModal(cotizacion);
-            });
+    // JavaScript to handle form submission via AJAX
+    document.querySelector('form[action="{% url "carga_masiva" %}"]').addEventListener('submit', function (event) {
+        event.preventDefault(); // Prevent the default form submission
+
+        const formData = new FormData(this); // Create FormData object from the form
+        const submitButton = this.querySelector('button[type="submit"]');
+        const modal = document.getElementById('modal');
+
+        // Disable the submit button to prevent multiple submissions
+        submitButton.disabled = true;
+        submitButton.textContent = 'Subiendo...';
+
+        fetch("{% url 'carga_masiva' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest', // Indicate this is an AJAX request
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value // CSRF token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Carga masiva completada exitosamente.');
+            } else {
+                alert(`Error: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ocurrió un error al procesar la carga masiva.');
+        })
+        .finally(() => {
+            // Re-enable the submit button and reset its text
+            submitButton.disabled = false;
+            submitButton.textContent = 'Subir';
+
+            // Close the modal
+            modal.classList.add('hidden');
         });
     });
+
+    // JavaScript to handle template download
+    document.getElementById('downloadTemplate').addEventListener('click', function () {
+        window.location.href = "{% url 'descargar_plantilla' %}";
+    });
     
-    function filterTable() {
+    function filterTable(tableId, columnIndex) {
         var input, filter, table, tr, td, i, txtValue, noMatch;
-        input = document.getElementById("searchInput");
+        input = document.getElementById(tableId === 'formulariosTable' ? "searchInputFormularios" : "searchInputBoletos");
         filter = input.value.toUpperCase();
-        table = document.querySelector("table");
+        table = document.getElementById(tableId);
         tr = table.getElementsByTagName("tr");
         noMatch = true;
 
-        for (i = 1; i < tr.length; i++) {
-            var tdCotizacion = tr[i].getElementsByTagName("td")[1]; // Index 0 for Cotización column
-            var tdCliente = tr[i].getElementsByTagName("td")[2]; // Index 1 for Cliente column
-            if (tdCotizacion || tdCliente) {
-                var txtValueCotizacion = tdCotizacion ? tdCotizacion.textContent || tdCotizacion.innerText : "";
-                var txtValueCliente = tdCliente ? tdCliente.textContent || tdCliente.innerText : "";
-                if (txtValueCotizacion.toUpperCase().indexOf(filter) > -1 || txtValueCliente.toUpperCase().indexOf(filter) > -1) {
+        for (i = 1; i < tr.length; i++) { // Start from 1 to skip the header row
+            td = tr[i].getElementsByTagName("td")[columnIndex]; // Use the specified column index
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
                     tr[i].style.display = "";
                     noMatch = false;
                 } else {
@@ -292,13 +309,13 @@
             }
         }
 
-        // Check if no matches are found
+        // Handle "No Match" row
         var noMatchRow = document.getElementById("noMatchRow");
         if (noMatch) {
             if (!noMatchRow) {
                 noMatchRow = document.createElement("tr");
                 noMatchRow.id = "noMatchRow";
-                noMatchRow.innerHTML = '<td colspan="11" class="px-6 py-4 text-center text-gray-500">No se encontraron cotizaciones que coincidan con la búsqueda.</td>';
+                noMatchRow.innerHTML = '<td colspan="11" class="px-6 py-4 text-center text-gray-500">No se encontraron resultados.</td>';
                 table.querySelector("tbody").appendChild(noMatchRow);
             }
         } else {
@@ -307,6 +324,42 @@
             }
         }
     }
+    // JavaScript to handle tab switching
+    document.getElementById('tabs').addEventListener('change', function () {
+        const selectedTab = this.value;
+        toggleTables(selectedTab);
+    });
+
+    document.getElementById('tabFormularios').addEventListener('click', function () {
+        toggleTables('formularios');
+    });
+
+    document.getElementById('tabBoletos').addEventListener('click', function () {
+        toggleTables('boletos');
+    });
+
+    function toggleTables(selectedTab) {
+    const formulariosTab = document.getElementById('tabFormularios');
+    const boletosTab = document.getElementById('tabBoletos');
+    const formulariosTable = document.getElementById('formulariosTable');
+    const boletosTable = document.getElementById('boletosTable');
+
+    if (selectedTab === 'formularios') {
+        formulariosTable.classList.remove('hidden');
+        boletosTable.classList.add('hidden');
+        formulariosTab.classList.add('text-white', 'bg-[#22a650]');
+        formulariosTab.classList.remove('text-gray-500', 'bg-white');
+        boletosTab.classList.add('text-gray-500', 'bg-white');
+        boletosTab.classList.remove('text-white', 'bg-[#22a650]');
+    } else if (selectedTab === 'boletos') {
+        boletosTable.classList.remove('hidden');
+        formulariosTable.classList.add('hidden');
+        boletosTab.classList.add('text-white', 'bg-[#22a650]');
+        boletosTab.classList.remove('text-gray-500', 'bg-white');
+        formulariosTab.classList.add('text-gray-500', 'bg-white');
+        formulariosTab.classList.remove('text-white', 'bg-[#22a650]');
+    }
+}
 </script>
 
 {% endblock %}
