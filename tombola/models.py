@@ -74,15 +74,14 @@ class FormularioTombola(models.Model):
         blank=True,
         null=True
     )
-    garantia = models.BooleanField(default=False)
-    es_cliente = models.BooleanField(default=False)
+
     producto_interesado = models.CharField(
         max_length=100,
         choices=[
             ('Préstamos personal', 'Préstamos personal'),
-            ('Préstamo personal con garantía hipotecaria', 'Préstamo personal con garantía hipotecaria'),
+            
             ('Préstamo de auto', 'Préstamo de auto'),
-            ('Préstamo para independiente o microempresario', 'Préstamo para independiente o microempresario'),
+            
         ],
         blank=True,
         null=True
@@ -91,7 +90,7 @@ class FormularioTombola(models.Model):
     oficial = models.CharField(max_length=100, blank=True, null=True)
     autorizacion_apc = models.BooleanField(default=False)
     acepta_condiciones = models.BooleanField(default=False)
-    tombola = models.ForeignKey(Tombola, on_delete=models.CASCADE, related_name='formularios', blank=True, null=True)
+    tombola = models.ForeignKey(Tombola, on_delete=models.CASCADE, related_name='formularios', blank=True, null=True,default=1)
 
     class Meta:
         db_table = 'formulario_tombola'
