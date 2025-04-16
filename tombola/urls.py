@@ -9,4 +9,6 @@ urlpatterns = [
     path('api/boletos/', api.fetch_boletos_by_cedula, name='fetch_boletos_by_cedula'),
     path('descargar-plantilla/', api.descargar_plantilla, name='descargar_plantilla'),
     path('carga-masiva/', api.carga_masiva, name='carga_masiva'),
+    path('download-formularios-excel/', api.download_formularios_excel, name='download_formularios_excel'),
+    path('download-boletos-excel/', api.download_boletos_excel, name='download_boletos_excel'),
 ]
