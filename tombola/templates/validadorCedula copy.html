@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Validación de cédula{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold text-gray-800">Validación de cédula</h2>
+    </div>
+
+    <!-- Input for Cedula -->
+    <div class="mb-4">
+        <label for="cedula" class="block text-gray-700 font-medium mb-2">Cédula:</label>
+        <input type="text" id="cedula" name="cedula" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su cédula">
+    </div>
+
+    <!-- Button to Search Cedula -->
+    <div>
+        <button id="buscarCedula" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Buscar cédula
+        </button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" class="mt-6">
+        <!-- Results will be displayed here -->
+    </div>
+</div>
+
+<script>
+    document.getElementById('buscarCedula').addEventListener('click', function () {
+        const cedula = document.getElementById('cedula').value;
+        const resultsDiv = document.getElementById('results');
+
+        if (!cedula) {
+            resultsDiv.innerHTML = '<p class="text-red-500">Por favor, ingrese una cédula.</p>';
+            return;
+        }
+
+        fetch(`/api/boletos/?cedula=${cedula}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const boletos = data.boletos;
+                    if (boletos.length > 0) {
+                        let html = '<h3 class="text-lg font-semibold text-gray-800 mb-4">Boletos Encontrados:</h3>';
+                        html += '<ul class="list-disc pl-5">';
+                        boletos.forEach(boleto => {
+                            html += `<li>ID: ${boleto.id}, Fecha: ${boleto.fecha_creacion}, Tómbola: ${boleto.tombola}, Origen: ${boleto.canalOrigen}</li>`;
+                        });
+                        html += '</ul>';
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = '<p class="text-gray-500">No se encontraron boletos para esta cédula.</p>';
+                    }
+                } else {
+                    resultsDiv.innerHTML = `<p class="text-red-500">${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching boletos:', error);
+                resultsDiv.innerHTML = '<p class="text-red-500">Ocurrió un error al buscar los boletos.</p>';
+            });
+    });
+</script>
+{% endblock %}

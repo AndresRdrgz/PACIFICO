@@ -1,33 +1,55 @@
-{% extends 'base.html' %}
+
+
+<!------------------- Pagina Actual validador Cedula ---------------------------->
+
+{% extends 'base_sinBarra.html' %}
 
 {% block title %}Validación de cédula{% endblock %}
 
 {% block content %}
-<div class="max-w-full mx-auto bg-white shadow-lg rounded-lg p-8">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-800">Validación de cédula</h2>
-    </div>
-
-    <!-- Input for Cedula -->
-    <div class="mb-4">
-        <label for="cedula" class="block text-gray-700 font-medium mb-2">Cédula:</label>
-        <input type="text" id="cedula" name="cedula" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su cédula">
-    </div>
-
-    <!-- Button to Search Cedula -->
-    <div>
-        <button id="buscarCedula" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Buscar cédula
-        </button>
-    </div>
-
-    <!-- Results Section -->
-    <div id="results" class="mt-6">
-        <!-- Results will be displayed here -->
+{% load static %}
+<div class="flex min-h-svh flex-col items-center justify-center gap-2" style="background-color: #22a650; padding: 6px;">
+    <div class="flex w-full flex-col items-center gap-6">
+        <img src="{% static 'logoBlanco.png' %}" alt="Logo" class="w-32 h-auto object-cover">
+        <div class="flex flex-col items-center gap-6">
+            <div class="rounded-lg border bg-white text-card-foreground shadow-sm w-full max-w-4xl" data-v0-t="card">
+                <div class="flex flex-col space-y-1 p-6 text-center">
+                    
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-semibold tracking-tight text-xl text-green-700 text-center w-full">Validación de cédula</h2>
+                    </div>
+                
+                    <!-- Input for Cedula -->
+                    <div class="mb-4">
+                        <label for="cedula" class="block text-gray-700 font-medium mb-2">Cédula:</label>
+                        <input type="text" id="cedula" name="cedula" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese la cédula">
+                    </div>
+                
+                    <!-- Button to Search Cedula -->
+                    <div>
+                        <button id="buscarCedula" class="w-full bg-green-500 text-white py-2 px-4 rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-offset-2 mt-4">
+                            Buscar cédula
+                        </button>
+                    </div>
+                
+                    <!-- Results Section -->
+                    <div id="results" class="mt-6">
+                        <!-- Results will be displayed here -->
+                    </div>
+                    <div>
+                        <a href="{% url 'formularioTombola' %}">
+                            <button class="w-full bg-gray-800 text-white py-2 px-4 rounded-md shadow hover:bg-gray-600 focus:outline-none focus:ring-offset-2 mt-4">
+                                Volver al formulario
+                            </button>
+                        </a>
+                    </div>    </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('buscarCedula').addEventListener('click', function () {
         const cedula = document.getElementById('cedula').value;
         const resultsDiv = document.getElementById('results');
@@ -43,12 +65,44 @@
                 if (data.success) {
                     const boletos = data.boletos;
                     if (boletos.length > 0) {
-                        let html = '<h3 class="text-lg font-semibold text-gray-800 mb-4">Boletos Encontrados:</h3>';
-                        html += '<ul class="list-disc pl-5">';
+                        let html = `
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Boletos Encontrados:</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-gray-500 border border-gray-300">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                        <tr>
+                                            <th scope="col" class="px-4 py-2">Nombre Cliente</th>
+                                            <th scope="col" class="px-4 py-2">ID</th>
+                                            <th scope="col" class="px-4 py-2">Fecha de Creación</th>
+                                            <th scope="col" class="px-4 py-2">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
                         boletos.forEach(boleto => {
-                            html += `<li>ID: ${boleto.id}, Fecha: ${boleto.fecha_creacion}, Tómbola: ${boleto.tombola}, Origen: ${boleto.canalOrigen}</li>`;
+                            html += `
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="px-4 py-2">${boleto.cliente}</td>
+                                    <td class="px-4 py-2">${boleto.id}</td>
+                                    <td class="px-4 py-2">${boleto.fecha_creacion}</td>
+                                    <td class="px-4 py-2">
+                                        <a href="/download_boleto/${boleto.id}/" class="inline-flex items-center bg-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                <polyline points="7 10 12 15 17 10"></polyline>
+                                                <line x1="12" x2="12" y1="15" y2="3"></line>
+                                            </svg>
+                                            Descargar
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
                         });
-                        html += '</ul>';
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
                         resultsDiv.innerHTML = html;
                     } else {
                         resultsDiv.innerHTML = '<p class="text-gray-500">No se encontraron boletos para esta cédula.</p>';
@@ -62,5 +116,6 @@
                 resultsDiv.innerHTML = '<p class="text-red-500">Ocurrió un error al buscar los boletos.</p>';
             });
     });
+});
 </script>
 {% endblock %}

@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from .models import Cliente, Boleto, Tombola, FormularioTombola
 from django.shortcuts import redirect, render
 from django.contrib import messages
+from django.utils.timezone import localtime
 
 def fetch_boletos_by_cedula(request):
     cedula = request.GET.get('cedula')  # Get the cedula from the request
@@ -11,10 +12,11 @@ def fetch_boletos_by_cedula(request):
         boletos = Boleto.objects.filter(cliente=cliente)  # Get boletos related to the cliente
         boletos_data = [
             {
-                'id': boleto.id,
-                'fecha_creacion': boleto.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S'),
-                'tombola': boleto.tombola.id,
-                'canalOrigen': boleto.canalOrigen,
+            'id': boleto.id,
+            'fecha_creacion': localtime(boleto.fecha_creacion).strftime('%Y-%m-%d %H:%M:%S'),
+            'tombola': boleto.tombola.id,
+            'canalOrigen': boleto.canalOrigen,
+            'cliente': cliente.nombreCliente
             }
             for boleto in boletos
         ]
