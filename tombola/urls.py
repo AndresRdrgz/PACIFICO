@@ -11,4 +11,7 @@ urlpatterns = [
     path('carga-masiva/', api.carga_masiva, name='carga_masiva'),
     path('download-formularios-excel/', api.download_formularios_excel, name='download_formularios_excel'),
     path('download-boletos-excel/', api.download_boletos_excel, name='download_boletos_excel'),
+    path('download_boleto/<int:boleto_id>/', views.download_boleto, name='download_boleto'),
+    path('send_boleto_email/<int:boleto_id>/', views.send_boleto_email, name='send_boleto_email'),
 ]
+
