@@ -86,7 +86,6 @@ def validadorCedula(request):
 
 
 #GENERAR BOLETO EN FORMATO PDF
-
 def generate_boleto_pdf(template_path, output_path, boleto_id):
     """
     Generate a boleto PDF by overlaying the boleto ID onto a PDF template.
@@ -105,12 +104,12 @@ def generate_boleto_pdf(template_path, output_path, boleto_id):
 
     # Create a canvas with the same size as the template
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
-
-    # Set font and position for the boleto ID
-    c.setFont("Helvetica-Bold", 20)
-    boleto_text = f"Boleto ID: {boleto_id}"
-    boleto_text_width = c.stringWidth(boleto_text, "Helvetica-Bold", 20)
-    c.drawString((page_width - boleto_text_width) / 2, page_height / 2, boleto_text)
+    # Set font, color, and position for the boleto ID
+    c.setFont("Helvetica-Bold", 30)
+    c.setFillColorRGB(1, 0, 0)  # Set the font color to red (RGB: 1, 0, 0)
+    boleto_text = f"Boleto No. {boleto_id:06d}"  # Format the ID as a 6-digit number with leading zeros
+    boleto_text_width = c.stringWidth(boleto_text, "Helvetica-Bold", 30)
+    c.drawString((page_width - boleto_text_width) / 2, (page_height - 10) / 2, boleto_text)
 
     # Finalize the overlay
     c.save()
@@ -132,7 +131,6 @@ def generate_boleto_pdf(template_path, output_path, boleto_id):
     # Write the final PDF to the output path
     with open(output_path, "wb") as output_file:
         writer.write(output_file)
-
 
 
 
