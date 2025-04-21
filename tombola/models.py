@@ -49,6 +49,7 @@ class FormularioTombola(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     correo_electronico = models.EmailField(max_length=100, blank=True, null=True)
     edad = models.IntegerField(blank=True, null=True)
+    fecha_nacimiento = models.DateField(blank=True, null=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
     sector = models.CharField(
         max_length=100,

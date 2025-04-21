@@ -10,6 +10,7 @@ from PyPDF2 import PdfWriter, PdfReader
 from django.conf import settings
 from django.core.mail import EmailMessage
 
+
 import os
 import smtplib
 

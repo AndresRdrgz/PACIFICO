@@ -13,5 +13,7 @@ urlpatterns = [
     path('download-boletos-excel/', api.download_boletos_excel, name='download_boletos_excel'),
     path('download_boleto/<int:boleto_id>/', views.download_boleto, name='download_boleto'),
     path('send_boleto_email/<int:boleto_id>/', views.send_boleto_email, name='send_boleto_email'),
+    path('api/boletos/listar/', api.listar_boletos, name='listar_boletos'),
+    path('api/formularios/listar/', api.listar_formularios, name='listar_formularios'),
 ]
 
