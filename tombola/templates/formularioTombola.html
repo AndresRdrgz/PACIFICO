@@ -42,8 +42,9 @@
                                {{ form.celular }}
                             </div>
                             <div class="space-y-2">
-                               <label for="id_correo_electronico" class="text-sm font-medium">Correo Electrónico <span class="text-red-500">*</span></label>
-                               {{ form.correo_electronico }}
+                                    <label for="id_correo_electronico" class="text-sm font-medium">Correo Electrónico <span class="text-red-500">*</span></label>
+                                    {{ form.correo_electronico }}
+                                    <span id="emailError" class="text-red-500 text-sm hidden">Error: formato de correo elcectrónico incorrecto. Ejemplo: nombre@gmail.com</span>
                             </div>
                             
                             <div class="space-y-2">
@@ -71,9 +72,9 @@
                                {{ form.dinero_a_solicitar }}
                             </div>
                             <div class="space-y-2">
-                               <label for="id_oficial" class="text-sm font-medium">Oficial <span class="text-red-500">*</span></label>
-                               {{ form.oficial }}
-                            </div>
+                                 <label for="id_oficial" class="text-sm font-medium">Oficial <span class="text-red-500">*</span></label>
+                                 {{ form.oficial }}
+                           </div>
                             <div class="space-y-2">
                                <label for="id_autorizacion_apc" class="text-sm font-medium">¿Nos autorizas a revisar tu APC? (Artículo 23 de la ley 24 del 22 de mayo del 2022) <span class="text-red-500">*</span></label>
                                {{ form.autorizacion_apc }}
@@ -102,21 +103,50 @@
 </div>
 
 <!-- Script para mostrar u ocultar "Dinero a Solicitar" -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const productoSelect = document.getElementById('id_producto_interesado');
+
+ <script>
+   document.addEventListener('DOMContentLoaded', function () {
+      const emailInput = document.getElementById('id_correo_electronico');
+      const emailError = document.getElementById('emailError');
+      const productoSelect = document.getElementById('id_producto_interesado');
         const dineroWrapper = document.getElementById('dinero_a_solicitar_wrapper');
+        const oficialSelect = document.getElementById('id_oficial'); // Get the dropdown element
 
-        function toggleDineroField() {
-            if (productoSelect.value === 'Préstamos personal') {
-                dineroWrapper.style.display = 'block';
-            } else {
-                dineroWrapper.style.display = 'none';
-            }
-        }
+      emailInput.addEventListener('blur', function () {
+         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex for email validation
 
-        productoSelect.addEventListener('change', toggleDineroField);
-        toggleDineroField(); // Ejecutar al cargar
-    });
+         if (emailInput.value === '') {
+               emailError.classList.add('hidden'); // Hide error message if input is blank
+         } else if (!emailRegex.test(emailInput.value)) {
+               emailError.classList.remove('hidden'); // Show error message if format is invalid
+         } else {
+               emailError.classList.add('hidden'); // Hide error message if format is valid
+         }
+      });
+
+       // Convert options to an array and sort them alphabetically
+       const options = Array.from(oficialSelect.options);
+       options.sort((a, b) => a.text.localeCompare(b.text));
+
+       // Clear the existing options and append the sorted ones
+       oficialSelect.innerHTML = '';
+       options.forEach(option => oficialSelect.appendChild(option));
+       function toggleDineroField() {
+         if (productoSelect.value === 'Préstamos personal') {
+             dineroWrapper.style.display = 'block';
+         } else {
+             dineroWrapper.style.display = 'none';
+         }
+     }
+    
+     productoSelect.addEventListener('change', toggleDineroField);
+     toggleDineroField(); // Ejecutar al cargar
+   });
+
+
+
 </script>
+
+       
+
 {% endblock %}

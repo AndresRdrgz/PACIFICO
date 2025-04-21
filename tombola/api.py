@@ -29,7 +29,7 @@ def descargar_plantilla(request):
     sheet.title = "Plantilla Clientes"
 
     # Add headers to the sheet
-    headers = ["Cedula", "Nombre completo", "Cantidad boletos"]
+    headers = ["Cedula", "Nombre", "Apellido", "Cantidad boletos"]
     for col_num, header in enumerate(headers, 1):
         sheet.cell(row=1, column=col_num, value=header)
 
@@ -55,11 +55,14 @@ def carga_masiva(request):
 
             # Iterate through each row in the sheet (skipping the header row)
             for row in sheet.iter_rows(min_row=2, values_only=True):
-                cedula, nombre_completo, cantidad_boletos = row
+                cedula, nombre, apellido, cantidad_boletos = row
 
                 # Validate the data
-                if not cedula or not nombre_completo or not cantidad_boletos:
+                if not cedula or not nombre or not apellido or not cantidad_boletos:
                     continue  # Skip rows with missing data
+
+                # Concatenate nombre and apellido to create nombre_completo
+                nombre_completo = f"{nombre} {apellido}"
 
                 # Check if the cliente exists
                 cliente, created = Cliente.objects.get_or_create(

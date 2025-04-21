@@ -1,5 +1,5 @@
 from django.db import models
-from pacifico.models import Cliente
+from pacifico.models import Cliente, OFICIAL_OPCIONES
 
 SEXO_OPCIONES = [
         ('MASCULINO', 'Masculino'),
@@ -88,7 +88,7 @@ class FormularioTombola(models.Model):
         null=True
     )
     dinero_a_solicitar = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    oficial = models.CharField(max_length=100, blank=True, null=True)
+    oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES, blank=True, null=True)  # Updated field
     autorizacion_apc = models.BooleanField(default=False)
     acepta_condiciones = models.BooleanField(default=False)
     tombola = models.ForeignKey(Tombola, on_delete=models.CASCADE, related_name='formularios', blank=True, null=True,default=1)
