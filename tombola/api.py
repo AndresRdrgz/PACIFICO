@@ -138,3 +138,37 @@ def download_boletos_excel(request):
     response['Content-Disposition'] = 'attachment; filename=boletos.xlsx'
     workbook.save(response)
     return response
+
+def listar_boletos(request):
+    """
+    API endpoint to retrieve a list of all boletos in JSON format.
+    """
+    boletos = Boleto.objects.all()
+    boletos_data = [
+        {
+            'id': boleto.id,
+            'cliente': str(boleto.cliente),
+            'tombola': str(boleto.tombola),
+            'fecha_creacion': boleto.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S'),
+            'canal_origen': boleto.canalOrigen,
+        }
+        for boleto in boletos
+    ]
+    return JsonResponse({'success': True, 'boletos': boletos_data})
+
+def listar_formularios(request):
+    formularios = FormularioTombola.objects.all()
+    formularios_data = [
+            {
+                'id': formulario.id,
+                'nombre': formulario.nombre,
+                'apellido': formulario.apellido,
+                'celular': formulario.celular,
+                'correo_electronico': formulario.correo_electronico,
+                'oficial': formulario.oficial,
+                'tombola': str(formulario.tombola),
+                'fecha_creacion': formulario.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S'),
+            }
+            for formulario in formularios
+    ]
+    return JsonResponse({'success': True, 'formularios': formularios_data})
