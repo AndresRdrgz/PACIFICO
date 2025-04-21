@@ -1,0 +1,106 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% block title %}{{ curso.titulo }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+
+    <!-- 🔰 Encabezado -->
+    <div class="row align-items-center">
+        <div class="col-md-9">
+            <h1 class="fw-bold text-success">{{ curso.titulo }}</h1>
+            <p><strong>Descripción:</strong> {{ curso.descripcion }}</p>
+            <p><strong>Inicio:</strong> {{ curso.fecha_inicio }} | <strong>Fin:</strong> {{ curso.fecha_fin }}</p>
+        </div>
+        <div class="col-md-3 text-center">
+            {% if curso.portada %}
+                <img src="{{ curso.portada.url }}" alt="Portada" class="img-fluid rounded shadow" style="max-height: 150px;">
+            {% else %}
+                <div class="avatar-iniciales" style="background-color: {{ color_portada }};">
+                    {{ curso.titulo|slice:":2"|upper }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+<!-- 📈 Progreso -->
+{% if progreso %}
+    <div class="mt-4">
+        <p><strong>Progreso:</strong> {{ completados }}/{{ total_modulos }} módulos completados</p>
+        <div class="progress" style="height: 24px;">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width: {{ progreso_percent }}%;" aria-valuenow="{{ completados }}"
+                 aria-valuemin="0" aria-valuemax="{{ total_modulos }}">
+                {{ progreso_percent }}%
+            </div>
+        </div>
+        {% if progreso.completado %}
+            <div class="alert alert-success mt-2">🎉 ¡Felicidades! Has completado este curso.</div>
+        {% endif %}
+    </div>
+{% endif %}
+
+
+    <!-- 📚 Contenido del curso -->
+    <h5 class="text-success mt-5">Contenido del curso</h5>
+    <div class="accordion" id="accordionModulos">
+        {% for modulo in curso.modulos.all|dictsort:"orden" %}
+            <div class="accordion-item mb-2">
+                <h2 class="accordion-header" id="heading-{{ modulo.id }}">
+                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse-{{ modulo.id }}"
+                            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                            aria-controls="collapse-{{ modulo.id }}">
+                        {{ modulo.orden }}. {{ modulo.titulo }}
+                    </button>
+                </h2>
+                <div id="collapse-{{ modulo.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                     aria-labelledby="heading-{{ modulo.id }}" data-bs-parent="#accordionModulos">
+                    <div class="accordion-body">
+                        {% if modulo.temas.all %}
+                            <ul class="list-group">
+                                {% for tema in modulo.temas.all|dictsort:"orden" %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {% if tema.id in temas_completados_ids %}
+                                                <span class="badge bg-success me-2">✅</span>
+                                            {% endif %}
+                                            <strong>{{ tema.orden }}. {{ tema.titulo }}</strong>
+                                        </div>
+                                        <a href="{% url 'ver_tema' curso.id tema.id %}" class="btn btn-sm btn-outline-success">
+                                            Ir al tema
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted">Este módulo no tiene temas aún.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-muted">Este curso aún no tiene módulos definidos.</p>
+        {% endfor %}
+    </div>
+
+    <a href="{% url 'lista_cursos' %}" class="btn btn-outline-secondary mt-4">← Volver a cursos</a>
+</div>
+
+{% if progreso.completado %}
+    <!-- 🎉 Script de confeti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#00c853', '#43a047', '#81c784'],
+            });
+        });
+    </script>
+{% endif %}
+
+
+{% endblock %}
