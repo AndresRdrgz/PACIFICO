@@ -4,81 +4,115 @@
 {% block title %}Cursos disponibles{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>
+<!-- 🌀 Contenedor con transición de entrada y fade-out al salir -->
+<div id="fadeContainer"
+     x-data="{ mostrar: true }"
+     x-init="setTimeout(() => mostrar = true, 50)"
+     x-bind:class="{ 'fade-out': !mostrar }">
 
-    <!-- Menú de Tabs -->
-    <ul class="nav nav-tabs mb-4 border-0" id="cursoTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active text-success fw-semibold" id="continuar-tab" type="button">
-                Continuar viendo
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link text-success fw-semibold" id="no-iniciados-tab" type="button">
-                Cursos no Iniciados
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link text-success fw-semibold" id="completados-tab" type="button">
-                Cursos Completados
-            </button>
-        </li>
-    </ul>
+    <div x-show="mostrar"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 translate-y-3"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-500"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
 
-    <!-- Lista de Cursos -->
-    {% for curso in cursos %}
-    <div class="card mb-4 border-0 shadow-sm rounded-3">
-        <div class="card-body">
-            <div class="row">
-                <!-- Imagen o avatar -->
-                <div class="col-md-4 text-center mb-3 mb-md-0">
-                    {% if curso.portada %}
-                        <img src="{{ curso.portada.url }}" alt="Portada del curso"
-                             class="img-fluid rounded shadow" style="max-height: 160px;">
-                    {% else %}
-                        <div class="avatar-iniciales my-2"
-                             style="background-color: {{ curso.color_portada|default:'#6c757d' }};">
-                            {{ curso.iniciales_portada|default:curso.titulo|slice:":2" }}
+        <div class="container my-5">
+            <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>
+
+            <!-- Menú de Tabs -->
+            <ul class="nav nav-tabs mb-4 border-0" id="cursoTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active text-success fw-semibold" id="continuar-tab" type="button">
+                        Continuar viendo
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-success fw-semibold" id="no-iniciados-tab" type="button">
+                        Cursos no Iniciados
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-success fw-semibold" id="completados-tab" type="button">
+                        Cursos Completados
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Lista de Cursos -->
+            {% for curso in cursos %}
+            <div class="card mb-4 border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Imagen o avatar -->
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            {% if curso.portada %}
+                                <img src="{{ curso.portada.url }}" alt="Portada del curso"
+                                     class="img-fluid rounded shadow" style="max-height: 160px;">
+                            {% else %}
+                                <div class="avatar-iniciales my-2"
+                                     style="background-color: '{{ curso.color_portada|default:"#6c757d" }}';">
+                                    {{ curso.iniciales_portada|default:curso.titulo|slice:":2" }}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                </div>
 
-                <!-- Información del curso + módulos -->
-                <div class="col-md-8">
-                    <h2 class="fw-bold text-success">
-                        <a href="{% url 'detalle_curso' curso.id %}" class="text-decoration-none text-success">
-                            {{ curso.titulo }}
-                        </a>
-                    </h2>
+                        <!-- Información del curso + módulos -->
+                        <div class="col-md-8">
+                            <h2 class="fw-bold text-success">
+                                <a href="{% url 'detalle_curso' curso.id %}" class="text-decoration-none text-success">
+                                    {{ curso.titulo }}
+                                </a>
+                            </h2>
 
-                    <p class="mb-1"><strong>Descripción:</strong> {{ curso.descripcion }}</p>
-                    <p class="mb-1">
-                        <strong>Inicio:</strong> {{ curso.fecha_inicio }} &nbsp;|&nbsp;
-                        <strong>Fin:</strong> {{ curso.fecha_fin }}
-                    </p>
+                            <p class="mb-1"><strong>Descripción:</strong> {{ curso.descripcion }}</p>
+                            <p class="mb-1">
+                                <strong>Inicio:</strong> {{ curso.fecha_inicio }} &nbsp;|&nbsp;
+                                <strong>Fin:</strong> {{ curso.fecha_fin }}
+                            </p>
 
-                    <h6 class="mt-3 mb-2">Módulos</h6>
-                    <ul class="list-group list-group-flush mb-2">
-                        {% for modulo in curso.modulos.all|dictsort:"orden"|slice:":4" %}
-                            <li class="list-group-item px-0 py-1 border-0">
-                                {{ modulo.orden }}. <strong>{{ modulo.titulo|truncatechars:50 }}</strong>
-                            </li>
-                        {% empty %}
-                            <li class="list-group-item text-muted px-0 py-1">Este curso no tiene módulos aún.</li>
-                        {% endfor %}
-                        {% if curso.modulos.count > 4 %}
-                            <li class="list-group-item text-muted px-0 py-1">...y más</li>
-                        {% endif %}
-                    </ul>
+                            <h6 class="mt-3 mb-2">Módulos</h6>
+                            <ul class="list-group list-group-flush mb-2">
+                                {% for modulo in curso.modulos.all|dictsort:"orden"|slice:":4" %}
+                                    <li class="list-group-item px-0 py-1 border-0">
+                                        {{ modulo.orden }}. <strong>{{ modulo.titulo|truncatechars:50 }}</strong>
+                                    </li>
+                                {% empty %}
+                                    <li class="list-group-item text-muted px-0 py-1">Este curso no tiene módulos aún.</li>
+                                {% endfor %}
+                                {% if curso.modulos.count > 4 %}
+                                    <li class="list-group-item text-muted px-0 py-1">...y más</li>
+                                {% endif %}
+                            </ul>
 
-                    <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-outline-success mt-2">Iniciar</a>
+                            <!-- 🔘 Botón con efecto fade-out -->
+                            <a href="{% url 'detalle_curso' curso.id %}" 
+                               class="btn btn-outline-success mt-2"
+                               x-data
+                               @click.prevent="
+                                   document.getElementById('fadeContainer').classList.add('fade-out');
+                                   setTimeout(() => window.location.href = $el.href, 700)
+                               ">
+                                Iniciar
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
+            {% empty %}
+                <p class="text-muted">No hay cursos disponibles por ahora.</p>
+            {% endfor %}
         </div>
     </div>
-    {% empty %}
-        <p class="text-muted">No hay cursos disponibles por ahora.</p>
-    {% endfor %}
 </div>
+
+<!-- 🎨 Estilo de transición -->
+<style>
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.7s ease-out;
+}
+</style>
+
 {% endblock %}

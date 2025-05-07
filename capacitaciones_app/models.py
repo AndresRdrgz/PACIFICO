@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 
 # 🧠 CURSO PRINCIPAL
@@ -12,7 +13,6 @@ class Curso(models.Model):
     def __str__(self):
         return self.titulo
 
-
 # 📚 MÓDULOS DEL CURSO
 class Modulo(models.Model):
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, related_name='modulos')
@@ -21,7 +21,6 @@ class Modulo(models.Model):
 
     def __str__(self):
         return f"{self.orden}. {self.titulo}"
-
 
 # 🧩 TEMAS dentro de un módulo
 class Tema(models.Model):
@@ -46,7 +45,6 @@ class Tema(models.Model):
                 self.video_youtube = f"https://www.youtube.com/embed/{match.group(1)}"
         super().save(*args, **kwargs)
 
-
 # 📂 ARCHIVOS ADICIONALES
 class ArchivoAdicional(models.Model):
     tema = models.ForeignKey(Tema, on_delete=models.CASCADE, related_name='archivos')
@@ -56,7 +54,23 @@ class ArchivoAdicional(models.Model):
     def __str__(self):
         return self.nombre
 
+# 🗣️ Feedback de usuarios (modelo independiente)
+class Feedback(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    tema = models.ForeignKey(Tema, on_delete=models.CASCADE, related_name='feedbacks')
+    puntuacion = models.PositiveSmallIntegerField(
+        'Calificación',
+        choices=[(i, f"{i} ⭐") for i in range(1, 6)]
+    )
+    comentario = models.TextField('Comentario', blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-creado_en']
+        unique_together = ('usuario', 'tema')
+
+    def __str__(self):
+        return f"{self.usuario.username} – {self.tema.titulo} ({self.puntuacion}⭐)"
 
 # 📊 PROGRESO DE CURSO
 class ProgresoCurso(models.Model):
@@ -69,7 +83,6 @@ class ProgresoCurso(models.Model):
     def __str__(self):
         return f"{self.usuario.username} - {self.curso.titulo}"
 
-
 # ✅ PROGRESO POR TEMA
 class ProgresoTema(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -79,3 +92,54 @@ class ProgresoTema(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.tema.titulo}"
+
+# 📝 Quiz asociado a Módulo
+class Quiz(models.Model):
+    modulo = models.OneToOneField(Modulo, on_delete=models.CASCADE)
+    titulo = models.CharField(max_length=255)
+    instrucciones = models.TextField(blank=True, null=True)
+    portada = models.ImageField(upload_to='quiz_portadas/', null=True, blank=True)  # 🖼️ Portada del quiz
+
+
+    def __str__(self):
+        return f"Quiz de {self.modulo.titulo}"
+
+# ❓ Preguntas del Quiz
+class Pregunta(models.Model):
+    quiz = models.ForeignKey(Quiz, related_name='preguntas', on_delete=models.CASCADE)
+    texto = models.TextField()
+    puntaje = models.PositiveIntegerField(default=0)
+    archivo = models.FileField(upload_to='archivos_preguntas/', null=True, blank=True)  # 📎 Archivo opcional
+
+    def __str__(self):
+        return self.texto
+
+
+# 🔘 Opciones por pregunta
+class Opcion(models.Model):
+    pregunta = models.ForeignKey(Pregunta, on_delete=models.CASCADE, related_name='opciones')
+    texto = models.CharField(max_length=255)
+    es_correcta = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.texto} ({'Correcta' if self.es_correcta else 'Incorrecta'})"
+
+# 🧑‍🎓 Respuestas del estudiante
+class RespuestaUsuario(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    pregunta = models.ForeignKey(Pregunta, on_delete=models.CASCADE)
+    opcion_seleccionada = models.ForeignKey(Opcion, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.pregunta.texto}"
+
+# 🎯 Resultado final del quiz
+class ResultadoQuiz(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    puntaje = models.IntegerField()
+    aprobado = models.BooleanField(default=False)
+    fecha_realizacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.quiz.modulo.titulo}: {self.puntaje} puntos"

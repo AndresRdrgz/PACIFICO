@@ -10,7 +10,6 @@
         <p>{{ tema.contenido }}</p>
     </div>
 
-    <!-- Video local -->
     {% if tema.video_local %}
         <div class="mb-4">
             <h5 class="text-success">🎥 Video</h5>
@@ -21,7 +20,6 @@
         </div>
     {% endif %}
 
-    <!-- Video YouTube -->
     {% if tema.video_youtube %}
         <div class="mb-4">
             <h5 class="text-success">🎥 Video de YouTube</h5>
@@ -31,7 +29,6 @@
         </div>
     {% endif %}
 
-    <!-- Imagen -->
     {% if tema.imagen %}
         <div class="mb-4 text-center">
             <h5 class="text-success">🖼 Imagen</h5>
@@ -39,7 +36,6 @@
         </div>
     {% endif %}
 
-    <!-- Documento -->
     {% if tema.documento %}
         <div class="mb-4">
             <h5 class="text-success">📄 Documento</h5>
@@ -47,7 +43,6 @@
         </div>
     {% endif %}
 
-    <!-- Archivos adicionales -->
     {% if tema.archivos.all %}
         <div class="mb-4">
             <h5 class="text-success">📂 Archivos adicionales</h5>
@@ -74,7 +69,58 @@
         {% endif %}
     </div>
 
+    <!-- 🔽 Encuesta de satisfacción -->
+    <div x-data="{ abierto: false }" class="mt-5">
+        <button @click="abierto = !abierto"
+                class="btn btn-outline-primary w-100 text-start d-flex justify-content-between align-items-center"
+                type="button">
+            <span>📋 ¿Qué te pareció este tema?</span>
+            <span x-show="!abierto">➕</span>
+            <span x-show="abierto">➖</span>
+        </button>
+
+        <div x-show="abierto" x-transition class="border rounded mt-3 p-4 bg-light shadow-sm">
+            <form method="post" class="needs-validation">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tu calificación:</label>
+                    <div class="d-flex gap-4 flex-wrap">
+                        {% for radio in form.puntuacion %}
+                            <label class="form-check">
+                                {{ radio.tag }}
+                                <span class="ms-1">{{ radio.choice_label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.comentario.id_for_label }}" class="form-label fw-bold">Tu comentario:</label>
+                    {{ form.comentario }}
+                </div>
+
+                <button type="submit" class="btn btn-primary">Enviar feedback</button>
+            </form>
+        </div>
+    </div>
+
+    {% if feedbacks %}
+        <h6 class="mt-5">🗣 Últimos comentarios</h6>
+        <ul class="list-group">
+            {% for fb in feedbacks %}
+                <li class="list-group-item">
+                    <strong>{{ fb.usuario.username }}</strong> 
+                    – {{ fb.puntuacion }} ⭐<br>
+                    <small class="text-muted">{{ fb.creado_en|date:"d/m/Y H:i" }}</small>
+                    <p class="mt-2">{{ fb.comentario }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <!-- Volver -->
-    <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-secondary mt-4">← Volver al curso</a>
+    <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-outline-secondary mt-4">← Volver al curso</a>
 </div>
 {% endblock %}

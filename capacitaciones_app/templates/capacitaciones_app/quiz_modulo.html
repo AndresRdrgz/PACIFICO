@@ -1,0 +1,151 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% block title %}Quiz: {{ modulo.titulo }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+
+    <h2 class="text-success fw-bold mb-4">Quiz: {{ modulo.titulo }}</h2>
+
+    <!-- 📷 Portada del quiz -->
+    {% if quiz.portada %}
+        <div class="text-center mb-4">
+            <img src="{{ quiz.portada.url }}" alt="Imagen del quiz" class="img-fluid rounded shadow" style="max-height: 250px;">
+        </div>
+    {% endif %}
+
+    <!-- ✅ Bloque de mensajes Django -->
+    {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- 🧠 Feedback visual del resultado -->
+    {% if resultado %}
+        <div class="text-center mb-4">
+            {% if resultado.puntaje >= 100 %}
+                <div class="display-4 text-success fw-bold">🥇 ¡Perfecto!</div>
+                <p class="text-success">¡Eres un crack absoluto! 💥</p>
+            {% elif resultado.puntaje >= 90 %}
+                <div class="display-4 text-primary fw-bold">🥈 ¡Casi perfecto!</div>
+                <p class="text-primary">¡Estás muy cerca de la perfección!</p>
+            {% elif resultado.puntaje >= 81 %}
+                <div class="display-4 text-warning fw-bold">🥉 ¡Bien hecho!</div>
+                <p class="text-warning">¡Buen trabajo! Aún puedes mejorar.</p>
+            {% else %}
+                <div class="display-4 text-danger fw-bold">❌ Reprobado</div>
+                <p class="text-danger">¡No te desanimes, vuelve a intentarlo! 💪</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- 📊 Barra de progreso -->
+    <div class="progress mb-4" style="height: 20px;">
+        <div class="progress-bar bg-info" role="progressbar" style="width: 0%;" id="quizProgress">
+            0%
+        </div>
+    </div>
+
+    <!-- 📋 Formulario de preguntas -->
+    {% if not resultado or permitir_reintento %}
+    <form method="post" novalidate id="quizForm">
+        {% csrf_token %}
+        {% if form.errors %}
+            <div class="alert alert-danger">Debes responder todas las preguntas antes de finalizar.</div>
+        {% endif %}
+
+        {% for pregunta in quiz.preguntas.all %}
+            <div class="mb-4">
+                <h5 class="fw-semibold">{{ forloop.counter }}. {{ pregunta.texto }}</h5>
+
+                {% if pregunta.explicacion %}
+                    <p class="text-muted small mb-2">{{ pregunta.explicacion }}</p>
+                {% endif %}
+
+                {% if pregunta.archivo %}
+                    <div class="mb-2">
+                        <a href="{{ pregunta.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-dark">
+                            📎 Ver archivo adjunto
+                        </a>
+                    </div>
+                {% endif %}
+
+                {% for opcion in pregunta.opciones.all %}
+                    <label class="opcion-custom d-block small">
+                        <input class="form-check-input d-none" type="radio" name="pregunta_{{ pregunta.id }}" value="{{ opcion.id }}" required>
+                        <div class="opcion-box p-2 rounded border">{{ opcion.texto }}</div>
+                    </label>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <div class="d-grid">
+            <button type="submit" class="btn btn-success fw-semibold">Finalizar Quiz</button>
+        </div>
+    </form>
+
+    {% elif resultado and not permitir_reintento %}
+        <div class="text-center">
+            <a href="{% url 'quiz_modulo' curso.id modulo.id %}?reintentar=1" class="btn btn-outline-primary mt-3">
+                🔁 Intentar nuevamente
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- 🔙 Volver al curso -->
+    <div class="text-center mt-4">
+        <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-outline-secondary">← Volver al curso</a>
+    </div>
+</div>
+
+<!-- 🎨 Estilos -->
+<style>
+.opcion-box {
+    background-color: #f9f9f9;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.opcion-box:hover {
+    background-color: #d0f0ff;
+    transform: scale(1.01);
+}
+.opcion-custom input:checked + .opcion-box {
+    background-color: #c8f7c5;
+    border-color: #28a745;
+    font-weight: bold;
+}
+</style>
+
+<!-- 📈 Script de progreso -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const totalPreguntas = {{ quiz.preguntas.count }};
+    const inputs = document.querySelectorAll('input[type="radio"]');
+    const progreso = document.getElementById('quizProgress');
+
+    function actualizarProgreso() {
+        const respondidas = new Set();
+        inputs.forEach(input => {
+            if (input.checked) {
+                respondidas.add(input.name);
+            }
+        });
+        const porcentaje = Math.round((respondidas.size / totalPreguntas) * 100);
+        progreso.style.width = `${porcentaje}%`;
+        progreso.innerText = `${porcentaje}%`;
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener('change', actualizarProgreso);
+    });
+
+    actualizarProgreso(); // Inicializa con valores ya marcados si existen
+});
+</script>
+{% endblock %}

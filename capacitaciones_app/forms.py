@@ -1,31 +1,42 @@
 from django import forms
 from .models import Pregunta, Opcion
+from .models import Feedback
 
-class RespuestaQuizForm(forms.Form):
+class QuizRespuestaForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        preguntas = kwargs.pop('preguntas', [])
+        preguntas = kwargs.pop('preguntas')
         super().__init__(*args, **kwargs)
 
         for pregunta in preguntas:
-            field_name = f"pregunta_{pregunta.id}"
+            opciones = pregunta.opciones.all()
+            
+            # Campo de selección de respuesta
+            self.fields[f"pregunta_{pregunta.id}"] = forms.ChoiceField(
+                label=pregunta.texto,
+                choices=[(opcion.id, opcion.texto) for opcion in opciones],
+                widget=forms.RadioSelect,
+                required=True
+            )
 
-            if pregunta.tipo in ['OM', 'VF']:
-                self.fields[field_name] = forms.ModelChoiceField(
-                    queryset=pregunta.opciones.all(),
-                    widget=forms.RadioSelect,
-                    required=True,
-                    label=pregunta.texto
-                )
-            elif pregunta.tipo == 'SM':
-                self.fields[field_name] = forms.ModelMultipleChoiceField(
-                    queryset=pregunta.opciones.all(),
-                    widget=forms.CheckboxSelectMultiple,
-                    required=True,
-                    label=pregunta.texto
-                )
-            elif pregunta.tipo == 'TL':
-                self.fields[field_name] = forms.CharField(
-                    widget=forms.Textarea(attrs={'rows': 2}),
-                    required=True,
-                    label=pregunta.texto
-                )
+            # Campo de comentario opcional
+            self.fields[f"comentario_{pregunta.id}"] = forms.CharField(
+                label="Comentario (opcional)",
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'Escribe tu comentario si deseas...'})
+            )
+
+from django import forms
+from .models import Feedback
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ['puntuacion', 'comentario']
+        widgets = {
+            'puntuacion': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'comentario': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': '¿Qué te pareció este tema?'
+            }),
+        }
