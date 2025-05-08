@@ -15,22 +15,11 @@ from capacitaciones_app.views import (
 )
 
 urlpatterns = [
-    # 🔁 Redirect home
-    path('', lambda request: redirect('lista_cursos'), name='home'),
-
+    
     # 🔐 Admin & Auth
-    path('admin/', admin.site.urls),
-    path('nested_admin/', include('nested_admin.urls')),
-    path(
-        'accounts/login/',
-        auth_views.LoginView.as_view(template_name='capacitaciones_app/login.html'),
-        name='login'
-    ),
-    path(
-        'accounts/logout/',
-        auth_views.LogoutView.as_view(next_page='login'),
-        name='logout'
-    ),
+    
+    #path('nested_admin/', include('nested_admin.urls')),
+    
 
     # 📚 Courses
     path('cursos/', lista_cursos, name='lista_cursos'),

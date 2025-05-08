@@ -6,8 +6,8 @@ from django.contrib.auth.models import User
 class Curso(models.Model):
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
-    fecha_inicio = models.DateField()
-    fecha_fin = models.DateField()
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
     portada = models.ImageField(upload_to='portadas/', null=True, blank=True)
 
     def __str__(self):

@@ -143,9 +143,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
-    "unfold",
-    "unfold.contrib.filters",
-    "unfold.contrib.forms",
+    
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -154,7 +152,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "pacifico",
     "tombola",
-    "capacitaciones_app"
+    "capacitaciones_app",
+    "nested_admin",
 ]
 
 MIDDLEWARE = [
