@@ -31,6 +31,12 @@ class Tema(models.Model):
 
     video_local = models.FileField(upload_to='videos/temas/', null=True, blank=True)
     video_youtube = models.URLField(null=True, blank=True)
+    video_externo = models.TextField(
+        "Embed o link de video externo",
+        null=True,
+        blank=True,
+        help_text="Pega aquí un iframe o un link de Vimeo, OneDrive, Google Drive, etc."
+    )
     imagen = models.ImageField(upload_to='imagenes_tema/', null=True, blank=True)
     documento = models.FileField(upload_to='documentos_tema/', null=True, blank=True)
 
@@ -38,12 +44,14 @@ class Tema(models.Model):
         return f"{self.orden}. {self.titulo}"
 
     def save(self, *args, **kwargs):
+        # Solo procesar si es un link de YouTube (opcional)
         if self.video_youtube:
             import re
             match = re.search(r"(?:v=|embed/|youtu.be/)([a-zA-Z0-9_-]{11})", self.video_youtube)
             if match:
                 self.video_youtube = f"https://www.youtube.com/embed/{match.group(1)}"
         super().save(*args, **kwargs)
+
 
 # 📂 ARCHIVOS ADICIONALES
 class ArchivoAdicional(models.Model):
