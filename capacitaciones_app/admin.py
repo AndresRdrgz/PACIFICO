@@ -41,7 +41,7 @@ class ArchivoAdicionalInline(nested_admin.NestedTabularInline):
     model = ArchivoAdicional
     extra = 1
 
-# 🔹 Temas dentro de un módulo (con archivos)
+# 🔹 Temas dentro de un módulo (con archivos y videos)
 class TemaInline(nested_admin.NestedStackedInline):
     model = Tema
     extra = 1
@@ -52,6 +52,7 @@ class TemaInline(nested_admin.NestedStackedInline):
         'contenido',
         'video_local',
         'video_youtube',
+        'video_externo',  # 👈 agregado
         'imagen',
         'documento',
     )
@@ -72,11 +73,22 @@ class CursoAdmin(nested_admin.NestedModelAdmin):
     search_fields = ('titulo',)
     list_filter = ('fecha_inicio',)
 
-# 🔹 Temas individuales
+# 🔹 Temas individuales (vista admin directa)
 class TemaAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'modulo', 'orden', 'preview_video_youtube')
     list_filter = ('modulo',)
     search_fields = ('titulo',)
+    fields = (
+        'modulo',
+        'orden',
+        'titulo',
+        'contenido',
+        'video_local',
+        'video_youtube',
+        'video_externo',  # 👈 agregado aquí también
+        'imagen',
+        'documento',
+    )
 
     def preview_video_youtube(self, obj):
         if obj.video_youtube:
