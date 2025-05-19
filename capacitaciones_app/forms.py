@@ -40,3 +40,28 @@ class FeedbackForm(forms.ModelForm):
                 'placeholder': '¿Qué te pareció este tema?'
             }),
         }
+
+from django import forms
+from django.contrib.auth.models import User
+from .models import Curso, GrupoAsignacion
+
+class AsignacionCursoForm(forms.Form):
+    usuarios = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Selecciona usuarios"
+    )
+    grupos = forms.ModelMultipleChoiceField(
+        queryset=GrupoAsignacion.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Selecciona grupos"
+    )
+    cursos = forms.ModelMultipleChoiceField(
+        queryset=Curso.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Cursos a asignar"
+    )
+

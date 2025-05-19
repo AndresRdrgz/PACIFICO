@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
 
-# 🧠 CURSO PRINCIPAL
+# 📘 CURSO
 class Curso(models.Model):
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
@@ -10,8 +10,33 @@ class Curso(models.Model):
     fecha_fin = models.DateField(null=True, blank=True)
     portada = models.ImageField(upload_to='portadas/', null=True, blank=True)
 
+    usuarios_asignados = models.ManyToManyField(User, blank=True, related_name='cursos_asignados')
+    grupos_asignados = models.ManyToManyField('GrupoAsignacion', blank=True, related_name='cursos_asignados')
+
     def __str__(self):
         return self.titulo
+
+
+# 🧑‍🤝‍🧑 GRUPOS
+class GrupoAsignacion(models.Model):
+    nombre = models.CharField(max_length=100)
+    usuarios_asignados = models.ManyToManyField(User, related_name='grupos_asignados')
+
+    def __str__(self):
+        return self.nombre
+
+
+# ✅ HISTORIAL DE ASIGNACIONES
+class Asignacion(models.Model):
+    curso = models.ForeignKey(Curso, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    grupo = models.ForeignKey(GrupoAsignacion, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+    metodo = models.CharField(max_length=50, default='manual')
+
+    def __str__(self):
+        return f"{self.curso} → {self.usuario or self.grupo}"
+
 
 # 📚 MÓDULOS DEL CURSO
 class Modulo(models.Model):
@@ -21,6 +46,7 @@ class Modulo(models.Model):
 
     def __str__(self):
         return f"{self.orden}. {self.titulo}"
+
 
 # 🧩 TEMAS dentro de un módulo
 class Tema(models.Model):
@@ -44,7 +70,6 @@ class Tema(models.Model):
         return f"{self.orden}. {self.titulo}"
 
     def save(self, *args, **kwargs):
-        # Solo procesar si es un link de YouTube (opcional)
         if self.video_youtube:
             import re
             match = re.search(r"(?:v=|embed/|youtu.be/)([a-zA-Z0-9_-]{11})", self.video_youtube)
@@ -62,7 +87,8 @@ class ArchivoAdicional(models.Model):
     def __str__(self):
         return self.nombre
 
-# 🗣️ Feedback de usuarios (modelo independiente)
+
+# 🗣️ Feedback
 class Feedback(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     tema = models.ForeignKey(Tema, on_delete=models.CASCADE, related_name='feedbacks')
@@ -80,7 +106,8 @@ class Feedback(models.Model):
     def __str__(self):
         return f"{self.usuario.username} – {self.tema.titulo} ({self.puntuacion}⭐)"
 
-# 📊 PROGRESO DE CURSO
+
+# 📊 PROGRESO CURSO
 class ProgresoCurso(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE)
@@ -90,6 +117,7 @@ class ProgresoCurso(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.curso.titulo}"
+
 
 # ✅ PROGRESO POR TEMA
 class ProgresoTema(models.Model):
@@ -101,29 +129,30 @@ class ProgresoTema(models.Model):
     def __str__(self):
         return f"{self.usuario.username} - {self.tema.titulo}"
 
-# 📝 Quiz asociado a Módulo
+
+# 📝 Quiz
 class Quiz(models.Model):
     modulo = models.OneToOneField(Modulo, on_delete=models.CASCADE)
     titulo = models.CharField(max_length=255)
     instrucciones = models.TextField(blank=True, null=True)
-    portada = models.ImageField(upload_to='quiz_portadas/', null=True, blank=True)  # 🖼️ Portada del quiz
-
+    portada = models.ImageField(upload_to='quiz_portadas/', null=True, blank=True)
 
     def __str__(self):
         return f"Quiz de {self.modulo.titulo}"
+
 
 # ❓ Preguntas del Quiz
 class Pregunta(models.Model):
     quiz = models.ForeignKey(Quiz, related_name='preguntas', on_delete=models.CASCADE)
     texto = models.TextField()
     puntaje = models.PositiveIntegerField(default=0)
-    archivo = models.FileField(upload_to='archivos_preguntas/', null=True, blank=True)  # 📎 Archivo opcional
+    archivo = models.FileField(upload_to='archivos_preguntas/', null=True, blank=True)
 
     def __str__(self):
         return self.texto
 
 
-# 🔘 Opciones por pregunta
+# 🔘 Opciones
 class Opcion(models.Model):
     pregunta = models.ForeignKey(Pregunta, on_delete=models.CASCADE, related_name='opciones')
     texto = models.CharField(max_length=255)
@@ -132,7 +161,8 @@ class Opcion(models.Model):
     def __str__(self):
         return f"{self.texto} ({'Correcta' if self.es_correcta else 'Incorrecta'})"
 
-# 🧑‍🎓 Respuestas del estudiante
+
+# 🧑‍🎓 Respuestas de usuario
 class RespuestaUsuario(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     pregunta = models.ForeignKey(Pregunta, on_delete=models.CASCADE)
@@ -140,6 +170,7 @@ class RespuestaUsuario(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.pregunta.texto}"
+
 
 # 🎯 Resultado final del quiz
 class ResultadoQuiz(models.Model):

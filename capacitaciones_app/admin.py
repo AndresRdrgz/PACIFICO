@@ -12,7 +12,8 @@ from .models import (
     Quiz,
     Pregunta,
     Opcion,
-    ResultadoQuiz
+    ResultadoQuiz,
+    GrupoAsignacion
 )
 
 # 🔹 Opciones dentro de una pregunta
@@ -20,7 +21,7 @@ class OpcionInline(nested_admin.NestedTabularInline):
     model = Opcion
     extra = 2
 
-# 🔹 Preguntas dentro de un quiz (con campo archivo)
+# 🔹 Preguntas dentro de un quiz
 class PreguntaInline(nested_admin.NestedStackedInline):
     model = Pregunta
     extra = 1
@@ -41,7 +42,7 @@ class ArchivoAdicionalInline(nested_admin.NestedTabularInline):
     model = ArchivoAdicional
     extra = 1
 
-# 🔹 Temas dentro de un módulo (con archivos y videos)
+# 🔹 Temas dentro de un módulo
 class TemaInline(nested_admin.NestedStackedInline):
     model = Tema
     extra = 1
@@ -52,12 +53,12 @@ class TemaInline(nested_admin.NestedStackedInline):
         'contenido',
         'video_local',
         'video_youtube',
-        'video_externo',  # 👈 agregado
+        'video_externo',
         'imagen',
         'documento',
     )
 
-# 🔹 Módulos dentro del curso (con temas y quiz)
+# 🔹 Módulos dentro del curso
 class ModuloInline(nested_admin.NestedStackedInline):
     model = Modulo
     extra = 1
@@ -72,8 +73,17 @@ class CursoAdmin(nested_admin.NestedModelAdmin):
     inlines = [ModuloInline]
     search_fields = ('titulo',)
     list_filter = ('fecha_inicio',)
+    filter_horizontal = ('usuarios_asignados', 'grupos_asignados')  # ✅ Si quieres ver grupos también
+    fields = ('titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'portada', 'usuarios_asignados', 'grupos_asignados')
 
-# 🔹 Temas individuales (vista admin directa)
+# 🔹 Grupos de asignación (corregido)
+@admin.register(GrupoAsignacion)
+class GrupoAsignacionAdmin(admin.ModelAdmin):
+    list_display = ('nombre',)
+    search_fields = ('nombre',)
+    filter_horizontal = ('usuarios_asignados',)  # ✅ CORREGIDO: sin cursos
+
+# 🔹 Temas individuales
 class TemaAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'modulo', 'orden', 'preview_video_youtube')
     list_filter = ('modulo',)
@@ -85,7 +95,7 @@ class TemaAdmin(admin.ModelAdmin):
         'contenido',
         'video_local',
         'video_youtube',
-        'video_externo',  # 👈 agregado aquí también
+        'video_externo',
         'imagen',
         'documento',
     )

@@ -4,7 +4,6 @@
 {% block title %}Cursos disponibles{% endblock %}
 
 {% block content %}
-<!-- 🌀 Contenedor con transición de entrada y fade-out al salir -->
 <div id="fadeContainer"
      x-data="{ mostrar: true }"
      x-init="setTimeout(() => mostrar = true, 50)"
@@ -21,98 +20,75 @@
         <div class="container my-5">
             <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>
 
-            <!-- Menú de Tabs -->
-            <ul class="nav nav-tabs mb-4 border-0" id="cursoTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-success fw-semibold" id="continuar-tab" type="button">
-                        Continuar viendo
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-success fw-semibold" id="no-iniciados-tab" type="button">
-                        Cursos no Iniciados
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-success fw-semibold" id="completados-tab" type="button">
-                        Cursos Completados
-                    </button>
-                </li>
-            </ul>
+            <!-- Tabs funcionales -->
+            <div class="mb-4 d-flex gap-2 flex-wrap">
+                <a href="?estado=en-progreso" class="btn {% if estado == 'en-progreso' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Continuar viendo
+                </a>
+                <a href="?estado=no-iniciados" class="btn {% if estado == 'no-iniciados' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Cursos no Iniciados
+                </a>
+                <a href="?estado=completados" class="btn {% if estado == 'completados' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Cursos Completados
+                </a>
+            </div>
 
-            <!-- Lista de Cursos -->
-            {% for curso in cursos %}
-            <div class="card mb-4 border-0 shadow-sm rounded-3">
-                <div class="card-body">
-                    <div class="row">
-                        <!-- Imagen o avatar -->
-                        <div class="col-md-4 text-center mb-3 mb-md-0">
-                            {% if curso.portada %}
-                                <img src="{{ curso.portada.url }}" alt="Portada del curso"
-                                     class="img-fluid rounded shadow" style="max-height: 160px;">
-                            {% else %}
-                                <div class="avatar-iniciales my-2"
-                                     style="background-color: '{{ curso.color_portada|default:"#6c757d" }}';">
-                                    {{ curso.iniciales_portada|default:curso.titulo|slice:":2" }}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Información del curso + módulos -->
-                        <div class="col-md-8">
-                            <h2 class="fw-bold text-success">
-                                <a href="{% url 'detalle_curso' curso.id %}" class="text-decoration-none text-success">
-                                    {{ curso.titulo }}
-                                </a>
-                            </h2>
-
-                            <p class="mb-1"><strong>Descripción:</strong> {{ curso.descripcion }}</p>
-                            <p class="mb-1">
-                                <strong>Inicio:</strong> {{ curso.fecha_inicio }} &nbsp;|&nbsp;
+            <!-- Rejilla de tarjetas -->
+            {% if cursos %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for curso in cursos %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0">
+                        {% if curso.portada %}
+                        <img src="{{ curso.portada.url }}" class="card-img-top rounded-top" style="height: 160px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="fw-bold text-success">{{ curso.titulo }}</h5>
+                            <p class="text-muted small mb-2">
+                                {{ curso.descripcion|truncatechars:100 }}
+                            </p>
+                            <p class="mb-1 small">
+                                <strong>Inicio:</strong> {{ curso.fecha_inicio }}<br>
                                 <strong>Fin:</strong> {{ curso.fecha_fin }}
                             </p>
 
-                            <h6 class="mt-3 mb-2">Módulos</h6>
-                            <ul class="list-group list-group-flush mb-2">
-                                {% for modulo in curso.modulos.all|dictsort:"orden"|slice:":4" %}
-                                    <li class="list-group-item px-0 py-1 border-0">
-                                        {{ modulo.orden }}. <strong>{{ modulo.titulo|truncatechars:50 }}</strong>
-                                    </li>
-                                {% empty %}
-                                    <li class="list-group-item text-muted px-0 py-1">Este curso no tiene módulos aún.</li>
-                                {% endfor %}
-                                {% if curso.modulos.count > 4 %}
-                                    <li class="list-group-item text-muted px-0 py-1">...y más</li>
-                                {% endif %}
-                            </ul>
-
-                            <!-- 🔘 Botón con efecto fade-out -->
-                            <a href="{% url 'detalle_curso' curso.id %}" 
-                               class="btn btn-outline-success mt-2"
-                               x-data
-                               @click.prevent="
-                                   document.getElementById('fadeContainer').classList.add('fade-out');
-                                   setTimeout(() => window.location.href = $el.href, 700)
-                               ">
-                                Iniciar
-                            </a>
+                            <div class="mt-auto">
+                                <a href="{% url 'detalle_curso' curso.id %}" 
+                                   class="btn btn-outline-success w-100 mt-2"
+                                   x-data
+                                   @click.prevent="
+                                       document.getElementById('fadeContainer').classList.add('fade-out');
+                                       setTimeout(() => window.location.href = $el.href, 700)
+                                   ">
+                                    Iniciar
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% empty %}
-                <p class="text-muted">No hay cursos disponibles por ahora.</p>
-            {% endfor %}
+            {% else %}
+                <p class="text-muted">No tienes cursos asignados en esta categoría.</p>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- 🎨 Estilo de transición -->
 <style>
 .fade-out {
     opacity: 0;
     transition: opacity 0.7s ease-out;
 }
+.card {
+    transition: transform 0.2s ease-in-out;
+    border-radius: 12px;
+}
+.card:hover {
+    transform: scale(1.02);
+}
+.card-img-top {
+    border-bottom: 1px solid #dee2e6;
+}
 </style>
-
 {% endblock %}
