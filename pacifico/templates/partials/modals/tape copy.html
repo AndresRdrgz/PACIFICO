@@ -1,0 +1,154 @@
+<div id="tapeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 51;">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="mt-3 max-h-[80vh] overflow-y-auto">
+            <div class="flex space-x-4 justify-between">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Análisis del TAPE del Cliente</h3>
+                <button type="button" class="text-gray-500 hover:text-gray-700" onclick="closetapeModal()">×</button>
+            </div>
+
+                        <div role="tablist" aria-orientation="horizontal" class="inline-flex h-10 my-5 items-center justify-center rounded-lg bg-gray-200 p-1 text-gray-600 shadow-md">
+                            <button type="button" role="tab" aria-selected="true" aria-controls="sectionTapeInformacion" data-state="active" id="tab-informacion" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-800 shadow-sm" onclick="showTapeTab('informacion')">
+                                Información
+                            </button>
+                            <button type="button" role="tab" aria-selected="false" aria-controls="sectionTapeResultados" data-state="inactive" id="tab-resultado" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium bg-gray-200 text-gray-600" onclick="showTapeTab('resultado')">
+                                Resultado
+                            </button>
+                        </div>
+                        <!--  Inicio contenido-->
+                        <div id="sectionTapeInformacion" class="flex-1 p-4 rounded-lg">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Información</h3>
+                            <!-- Form Elements -->
+                            <!-- ... rest of your content ... -->
+                        </div>
+                        <div id="sectionTapeResultados" class="flex-1 p-4 rounded-lg hidden">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Resultado</h3>
+                        </div>
+                        <script>
+                            function showTapeTab(tab) {
+                                // Sections
+                                const infoSection = document.getElementById('sectionTapeInformacion');
+                                const resultSection = document.getElementById('sectionTapeResultados');
+                                // Tab buttons
+                                const infoTab = document.getElementById('tab-informacion');
+                                const resultTab = document.getElementById('tab-resultado');
+
+                                if (tab === 'informacion') {
+                                    infoSection.classList.remove('hidden');
+                                    resultSection.classList.add('hidden');
+                                    infoTab.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
+                                    infoTab.classList.remove('bg-gray-200', 'text-gray-600');
+                                    infoTab.setAttribute('aria-selected', 'true');
+                                    infoTab.setAttribute('data-state', 'active');
+                                    resultTab.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+                                    resultTab.classList.add('bg-gray-200', 'text-gray-600');
+                                    resultTab.setAttribute('aria-selected', 'false');
+                                    resultTab.setAttribute('data-state', 'inactive');
+                                } else {
+                                    infoSection.classList.add('hidden');
+                                    resultSection.classList.remove('hidden');
+                                    resultTab.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
+                                    resultTab.classList.remove('bg-gray-200', 'text-gray-600');
+                                    resultTab.setAttribute('aria-selected', 'true');
+                                    resultTab.setAttribute('data-state', 'active');
+                                    infoTab.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+                                    infoTab.classList.add('bg-gray-200', 'text-gray-600');
+                                    infoTab.setAttribute('aria-selected', 'false');
+                                    infoTab.setAttribute('data-state', 'inactive');
+                                }
+                            }
+                        </script>
+
+        <!--Boton guardado-->
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <button type="button" class="inline-flex text-white items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-black text-primary-foreground hover:bg-black/90 h-10 px-4 py-2" onclick="closetapeModal()">Guardar</button>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    function opentapeModal() {
+        document.getElementById('tapeModal').classList.remove('hidden');
+    }
+    function closetapeModal() {
+        document.getElementById('tapeModal').classList.add('hidden');
+    }
+     function calculateTotalDedducciones() {
+        const table = document.getElementById('tableDeducciones');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const cells = row.getElementsByTagName('td');
+            const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+            total += monto;
+        }
+        rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+        console.log("Total:", total);
+        return total;
+    }
+
+     document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableDeducciones input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalDedducciones);
+        });
+    });
+
+    function calculateTotalCancelaciones() {
+        const table = document.getElementById('tableCancelaciones');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const cells = row.getElementsByTagName('td');
+            const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+            total += monto;
+        }
+        rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+        console.log("Total Cancelaciones:", total);
+        return total;
+    }
+    function calculateTotalLetraHipotecas() {
+        const table = document.getElementById('tableLetraHipotecas');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        // Loop through all rows except header and footer
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const inputs = row.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+        }
+        // Set total in the footer (second cell, which spans 3 columns)
+        const tfootCells = rows[rows.length - 1].getElementsByTagName('td');
+        if (tfootCells.length > 1) {
+            tfootCells[1].textContent = total;
+        } else if (tfootCells.length === 1) {
+            tfootCells[0].textContent = total;
+        }
+        console.log("Total Letra Hipotecas:", total);
+        return total;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableCancelaciones input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalCancelaciones);
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableLetraHipotecas input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalLetraHipotecas);
+        });
+    });
+
+
+
+</script>

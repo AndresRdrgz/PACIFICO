@@ -1,0 +1,392 @@
+<div id="tapeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 51;">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="mt-3 max-h-[80vh] overflow-y-auto">
+            <div class="flex space-x-4 justify-between">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Análisis del TAPE del Cliente</h3>
+                <button type="button" class="text-gray-500 hover:text-gray-700" onclick="closetapeModal()">×</button>
+            </div>
+
+            <div role="tablist" aria-orientation="horizontal" class="inline-flex h-10 my-5 items-center justify-center rounded-lg bg-gray-200 p-1 text-gray-600 shadow-md">
+            <button type="button" role="tab" aria-selected="true" aria-controls="radix-«r0»-content-inventory" data-state="active" id="radix-«r0»-trigger-inventory" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-800 shadow-sm">
+                Información
+            </button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="radix-«r0»-content-restock" data-state="inactive" id="radix-«r0»-trigger-restock" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium bg-gray-200 text-gray-600">
+                Resultado
+            </button>
+        </div>
+        <!--  Inicio contenido-->
+        <div id="sectionTapeInformacion" class="flex-1 p-4 rounded-lg">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Información</h3>
+            <!-- Form Elements -->
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="tapeCartera" class="block text-sm font-medium text-gray-700 mb-1">Cartera</label>
+                    <select name="cartera" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow" placeholder="Cartera" id="tapeCartera">
+                      <option value="" selected="">---------</option>
+                      <option value="CONTRALORÍA">CONTRALORÍA</option>
+                      <option value="EMP. CSS">EMP. CSS</option>
+                      <option value="AUTÓNOMAS">AUTÓNOMAS</option>
+                      <option value="ACP">ACP</option>
+                      <option value="JUBILADO CSS">JUBILADO CSS</option>
+                      <option value="EMP. PRIVADA">EMP. PRIVADA</option>
+                      <option value="JUBILADO DE LA ZONA">JUBILADO DE LA ZONA</option>
+                      <option value="JUBI ACTIVO CONTRALORIA">JUBI ACTIVO CONTRALORIA</option>
+                      <option value="JUBI ACTIVO CSS">JUBI ACTIVO CSS</option>
+                      <option value="JUBILADO CONTRALORIA">JUBILADO CONTRALORIA</option>
+                      <option value="JUBI ACTIVO AUTÓNOMA">JUBI ACTIVO AUTÓNOMA</option>
+                      <option value="JUBILADO RIESGOS PROF. CSS">JUBILADO RIESGOS PROF. CSS</option>
+                      <option value="INDEPENDIENTE">INDEPENDIENTE</option>
+                    </select>
+                </div>
+               
+                 <div class="flex-1 mb-4">
+                    <label for="tapeSalarioBrutoMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Bruto Mensual</label>
+                    <input type="number" name="tapeSalarioBrutoMensual" placeholder="Salario Bruto Mensual" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow" step="0.01" id="tapeSalarioBrutoMensual">
+                </div>
+                 <div class="flex-1 mb-4">
+                    
+                    <label for="tapeSalarioNetoMensual" class="block text-sm font-medium text-gray-700 mb-1">Salario Neto Mensual</label>
+                    <input type="number" name="tapeSalarioNetoMensual" placeholder="Salario Neto Mensual" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="tapeSalarioNetoMensual" readonly="readonly">
+                </div>
+            </div>
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="tapeLetraPrestamo" class="block text-sm font-medium text-gray-700 mb-1">Letra del Préstamo</label>
+                    <input type="number" name="tapeLetraPrestamo" placeholder="Letra del Préstamo" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow" step="0.01" id="tapeLetraPrestamo">
+                </div>
+                <div class="flex-1 mb-4">
+                    <label for="tapPeriodoLetra" class="block text-sm font-medium text-gray-700 mb-1">Período de Letra del Préstamo</label>
+                    <input type="text" id="tapPeriodoLetra" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" readonly>
+                </div>
+               
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const carteraPeriodoMap = {
+                        "CONTRALORÍA": "MENSUAL",
+                        "EMP. CSS": "QUINCENAL",
+                        "AUTÓNOMAS": "MENSUAL",
+                        "ACP": "QUINCENAL",
+                        "JUBILADO CSS": "QUINCENAL",
+                        "EMP. PRIVADA": "MENSUAL",
+                        "JUBILADO DE LA ZONA": "N/A",
+                        "JUBI ACTIVO CONTRALORIA": "MENSUAL",
+                        "JUBI ACTIVO CSS": "QUINCENAL",
+                        "JUBILADO CONTRALORIA": "MENSUAL",
+                        "JUBI ACTIVO AUTÓNOMA": "MENSUAL",
+                        "JUBILADO RIESGOS PROF. CSS": "MENSUAL",
+                        "INDEPENDIENTE": "N/A"
+                    };
+                    const carteraSelect = document.getElementById('tapeCartera');
+                    const periodoInput = document.getElementById('tapPeriodoLetra');
+                    const labelBruto = document.querySelector('label[for="tapeSalarioBrutoMensual"]');
+                    const labelNeto = document.querySelector('label[for="tapeSalarioNetoMensual"]');
+                    carteraSelect.addEventListener('change', function() {
+                        const value = carteraSelect.value;
+                        const periodo = carteraPeriodoMap[value] || '';
+                        periodoInput.value = periodo;
+                        if (periodo === "QUINCENAL") {
+                            if (labelBruto) labelBruto.textContent = "Salario Bruto Quincenal";
+                            if (labelNeto) labelNeto.textContent = "Salario Neto Quincenal";
+                        } else {
+                            if (labelBruto) labelBruto.textContent = "Salario Bruto Mensual";
+                            if (labelNeto) labelNeto.textContent = "Salario Neto Mensual";
+                        }
+                    });
+                });
+            </script>
+            </script>
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="tapeHipotecaDescuentoDir" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Hipoteca - Descuento Directo</label>
+                    <select name="hipotecaDescuentoDir" id="tapeHipotecaDescuentoDir" class="bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="" selected>---------</option>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                    </select>
+                </div>
+                <div class="flex-1 mb-4">
+                    <label for="tapeTieneEmbargo" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">¿Tiene embargo?</label>
+                    <select name="tieneEmbargo" id="tapeTieneEmbargo" class="bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="" selected>---------</option>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex space-x-4">
+                <div class="flex-1 mb-4">
+                    <label for="tapeLetraDepende" class="block text-sm font-medium text-gray-700 mb-1">¿Letra depende del embargo?</label>
+                    <select name="letraDepende" id="tapeLetraDepende" class="bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <option value="" selected>---------</option>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                    </select>
+                </div>
+                 <div class="flex-1 mb-4">
+                    <label for="tapeLetraFaje" class="block text-sm font-medium text-gray-700 mb-1">Letra de Faje / FejuPen </label>
+                    <input type="number" name="tapeLetraFaje" placeholder="Letra de Faje" class="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow" step="0.01" id="tapeLetraFaje">
+                </div>
+            </div> 
+            </div>
+           
+
+
+
+            <!--Nivel de Endeudamiento-->
+            
+            <div id="sectionDeducciones" class="flex-1 p-1 rounded-lg">
+                <!--DEUDOR-->
+                <div class="flex flex-col sm:flex-row sm:space-y-0 sm:space-x-4 mt-2">
+                    <div class="flex-1">
+                        <!--DESCUENTOS DIRECTO-->
+                        
+                        <table class="min-w-full divide-y divide-gray-200 border" id="tableDeducciones">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th colspan="2" scope="col" class="px-6 py-3 text-xs uppercase bg-black text-white text-center">DEDUCCIONES DE PRÉSTAMO</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">1</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones1" placeholder="Monto 1" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones1">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">2</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones2" placeholder="Monto 2" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">3</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones3" placeholder="Monto 3" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones3">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">4</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones4" placeholder="Monto 4" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones4">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">5</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones5" placeholder="Monto 5" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones5">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">6</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="deducciones6" placeholder="Monto 6" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="deducciones6">
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">Total</td>
+                                    <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">
+                                        
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="flex-1">
+                        <!--PAGOS VOLUNTARIOS-->
+                        
+                        <table class="min-w-full divide-y divide-gray-200 border" id="tableCancelaciones">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th colspan="2" scope="col" class="px-6 py-3 text-xs uppercase bg-black text-white text-center">CANCELACIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">1</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones1" placeholder="Monto 1" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones1">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">2</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones2" placeholder="Monto 2" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones2">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">3</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones3" placeholder="Monto 3" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones3">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">4</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones4" placeholder="Monto 4" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones4">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">5</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones5" placeholder="Monto 5" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones5">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">6</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="number" name="cancelaciones6" placeholder="Monto 6" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="cancelaciones6">
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">Total</td>
+                                    <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">
+                                        
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <table class="min-w-full divide-y mt-4 divide-gray-200 border" id="tableLetraHipotecas">
+                            
+                     <thead class="bg-gray-50">
+                                <tr>
+                                    <th colspan="4" scope="col" class="px-6 py-3 text-xs uppercase bg-black text-white text-center">LETRA DE HIPOTECAS PAGO VOLUNTARIO O DSCTO PARCIAL</th>
+                                </tr>
+                            </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">1</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="number" name="letraHipoteca1" placeholder="Monto 1" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="letraHipoteca1">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">2</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="number" name="letraHipoteca2" placeholder="Monto 2" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2" step="0.01" id="letraHipoteca2">
+                            </td>
+                        </tr>
+                        
+                    </tbody>
+                   <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">Total</td>
+                                    <td colspan="3" class="px-6 py-3 text-left text-xs font-medium text-black-500 uppercase tracking-wider">
+                                    </td>
+                                </tr>
+                            </tfoot>
+                </table>
+
+                
+            </div>
+
+            <!--Fin Nivel-->
+
+
+           
+        </div>
+        <div id="sectionTapeResultados" class="flex-1 p-4 rounded-lg">
+
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Resultado</h3>
+        </div>
+
+        <!--Boton guardado-->
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <button type="button" class="inline-flex text-white items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-black text-primary-foreground hover:bg-black/90 h-10 px-4 py-2" onclick="closetapeModal()">Guardar</button>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    function opentapeModal() {
+        document.getElementById('tapeModal').classList.remove('hidden');
+    }
+    function closetapeModal() {
+        document.getElementById('tapeModal').classList.add('hidden');
+    }
+     function calculateTotalDedducciones() {
+        const table = document.getElementById('tableDeducciones');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const cells = row.getElementsByTagName('td');
+            const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+            total += monto;
+        }
+        rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+        console.log("Total:", total);
+        return total;
+    }
+
+     document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableDeducciones input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalDedducciones);
+        });
+    });
+
+    function calculateTotalCancelaciones() {
+        const table = document.getElementById('tableCancelaciones');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const cells = row.getElementsByTagName('td');
+            const monto = parseFloat(cells[1].getElementsByTagName('input')[0].value) || 0;
+            total += monto;
+        }
+        rows[rows.length - 1].getElementsByTagName('td')[1].textContent = total;
+        console.log("Total Cancelaciones:", total);
+        return total;
+    }
+    function calculateTotalLetraHipotecas() {
+        const table = document.getElementById('tableLetraHipotecas');
+        const rows = table.getElementsByTagName('tr');
+        let total = 0;
+        // Loop through all rows except header and footer
+        for (let i = 1; i < rows.length - 1; i++) {
+            const row = rows[i];
+            const inputs = row.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+        }
+        // Set total in the footer (second cell, which spans 3 columns)
+        const tfootCells = rows[rows.length - 1].getElementsByTagName('td');
+        if (tfootCells.length > 1) {
+            tfootCells[1].textContent = total;
+        } else if (tfootCells.length === 1) {
+            tfootCells[0].textContent = total;
+        }
+        console.log("Total Letra Hipotecas:", total);
+        return total;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableCancelaciones input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalCancelaciones);
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('#tableLetraHipotecas input');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', calculateTotalLetraHipotecas);
+        });
+    });
+
+
+
+</script>
