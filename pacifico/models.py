@@ -519,6 +519,48 @@ class Cotizacion(models.Model):
     egresosMes6 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     averageIngresos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    #DATOS DEL TAPEz
+    hipotecaDescuentoDir = models.CharField(
+        max_length=2,
+        choices=[('NO', 'No'), ('SI', 'Si')],
+        null=True,
+        blank=True
+    )
+    tieneEmbargo = models.CharField(
+        max_length=2,
+        choices=[('NO', 'No'), ('SI', 'Si')],
+        null=True,
+        blank=True
+    )
+    letraDepende = models.CharField(
+        max_length=2,
+        choices=[('NO', 'No'), ('SI', 'Si')],
+        null=True,
+        blank=True
+    )
+    letraFaje = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    deducciones1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deducciones2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deducciones3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deducciones4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deducciones5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deducciones6 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    cancelaciones1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancelaciones2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancelaciones3 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancelaciones4 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancelaciones5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cancelaciones6 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    letraHipoteca1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    letraHipoteca2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
  
 
            

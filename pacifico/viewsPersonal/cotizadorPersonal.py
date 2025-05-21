@@ -318,6 +318,7 @@ def cotizacionPrestamoPersonal(request):
         form = PrestamoPersonalForm(request.POST, request.FILES)
         if form.is_valid():
             try:
+                print("form is valid, extracting data...")
                 # Extract form data
                 edad = form.cleaned_data['edad']
                 sexo = form.cleaned_data['sexo']
@@ -330,6 +331,7 @@ def cotizacionPrestamoPersonal(request):
                 print("tasa interes",calcTasaInteres)
                
                 calcComiCierre = Decimal(form.cleaned_data['comiCierre']) / Decimal(100)
+               
                 auxPlazoPago = form.cleaned_data['plazoPago']
                 patrono = form.cleaned_data['patronoCodigo']
                 fecha_inicioPago = form.cleaned_data['fechaInicioPago']
@@ -649,8 +651,11 @@ def cotizacionPrestamoPersonal(request):
         'resultado': resultado,
     }
 
-    if user_profile.pruebaFuncionalidades:
-        context['pruebaFuncionalidades'] = True
+    try:
+        if user_profile.pruebaFuncionalidades:
+            context['pruebaFuncionalidades'] = True
+    except Exception:
+        context['pruebaFuncionalidades'] = False
 
     return render(request, 'prestamoPersonal.html', context)
 

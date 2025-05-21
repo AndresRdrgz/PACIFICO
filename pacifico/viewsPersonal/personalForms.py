@@ -871,6 +871,13 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'step': '0.01',
             }),
+            #CAMPOS TAPE
+            'letraHipoteca1': forms.NumberInput(attrs={
+                'placeholder': 'Monto 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+                
+            }),
         
         }
 
@@ -923,7 +930,7 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['perfilUniversitario'].required = False
         #self.fields['oficial'].required = False
         #self.fields['vendedor'].required = False
-        self.fields['montoPrestamo'].required = False
+        self.fields['montoPrestamo'].required = True
          
         self.fields['salarioBaseMensual'].required = False
         self.fields['tasaEstimada'].required = False
