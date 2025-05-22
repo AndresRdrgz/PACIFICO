@@ -1,11 +1,7 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from django.shortcuts import redirect
-from django.contrib.auth import views as auth_views
-from capacitaciones_app.views import exportar_asignaciones_excel 
-from capacitaciones_app.views import asignar_curso_ajax
 
 from capacitaciones_app.views import (
     lista_cursos,
@@ -17,8 +13,12 @@ from capacitaciones_app.views import (
     asignacion_admin,
     asignar_curso_ajax,
     cursos_asignados_ajax,
-    desasignar_curso_ajax,  
+    desasignar_curso_ajax,
+    exportar_asignaciones_excel,
 )
+
+from .views_asignacion import historial_asignaciones_ajax
+from capacitaciones_app.views_asignacion import historial_usuario
 
 urlpatterns = [
     # 🔐 Admin & Auth
@@ -43,10 +43,10 @@ urlpatterns = [
 
     path('asignar-curso/', asignar_curso_ajax, name='asignar_curso_ajax'),
     path('cursos-asignados/<int:usuario_id>/', cursos_asignados_ajax, name='cursos_asignados_ajax'),
-
     path('desasignar-curso/', desasignar_curso_ajax, name='desasignar_curso_ajax'),
-
     path('exportar-asignaciones-excel/', exportar_asignaciones_excel, name='exportar_asignaciones_excel'),
+    path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
+    path('mi-progreso/', historial_usuario, name='mi_progreso'),
 
 ]
 

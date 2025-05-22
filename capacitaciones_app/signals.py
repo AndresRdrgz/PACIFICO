@@ -12,7 +12,10 @@ def sync_grupo_asignacion(sender, instance, action, pk_set, reverse, **kwargs):
                 try:
                     grupo = GrupoAsignacion.objects.get(pk=grupo_id)
                     miembros = grupo.usuarios_asignados.all()
-                    instance.usuarios_asignados.add(*miembros)
+
+                    # ✅ Evita duplicados: solo añade los que aún no están
+                    nuevos = miembros.exclude(id__in=instance.usuarios_asignados.values_list('id', flat=True))
+                    instance.usuarios_asignados.add(*nuevos)
                 except GrupoAsignacion.DoesNotExist:
                     continue
 
@@ -26,6 +29,7 @@ def sync_grupo_asignacion(sender, instance, action, pk_set, reverse, **kwargs):
                             miembro in g.usuarios_asignados.all()
                             for g in instance.grupos_asignados.all()
                         )
+                        # 🔒 Solo quitar si no pertenece a ningún otro grupo
                         if not sigue_siendomiembro:
                             instance.usuarios_asignados.remove(miembro)
                 except GrupoAsignacion.DoesNotExist:
@@ -46,16 +50,24 @@ def sync_grupo_asignacion(sender, instance, action, pk_set, reverse, **kwargs):
 # ✅ Cuando se guarda un grupo
 @receiver(post_save, sender=GrupoAsignacion)
 def sync_cursos_a_usuarios(sender, instance, **kwargs):
-    for curso in instance.cursos_asignados.all():  # 🔄 campo correcto en Curso
-        curso.usuarios_asignados.add(*instance.usuarios_asignados.all())
+    for curso in instance.cursos_asignados.all():
+        miembros = instance.usuarios_asignados.all()
+
+        # ✅ Solo agregar si aún no están
+        nuevos = miembros.exclude(id__in=curso.usuarios_asignados.values_list('id', flat=True))
+        curso.usuarios_asignados.add(*nuevos)
 
 
 # 🔁 Cuando se modifican usuarios dentro de un grupo
 @receiver(m2m_changed, sender=GrupoAsignacion.usuarios_asignados.through)
 def sync_usuarios_grupo(sender, instance, action, pk_set, **kwargs):
     if action in ['post_add', 'post_remove', 'post_clear']:
-        for curso in instance.cursos_asignados.all():  # 🔄 campo correcto en Curso
+        for curso in instance.cursos_asignados.all():
             nuevos_usuarios = set()
             for grupo in curso.grupos_asignados.all():
                 nuevos_usuarios.update(grupo.usuarios_asignados.all())
-            curso.usuarios_asignados.set(nuevos_usuarios)
+
+            # ✅ Evita sobrescribir asignaciones directas externas al grupo
+            actuales = set(curso.usuarios_asignados.all())
+            unificados = actuales.union(nuevos_usuarios)
+            curso.usuarios_asignados.set(unificados)

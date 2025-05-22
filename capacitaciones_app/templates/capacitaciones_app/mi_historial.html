@@ -1,0 +1,86 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% load static %}
+{% load dict_filters %}
+
+{% block title %}Mi Progreso{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="fw-bold text-success text-center mb-4">📈 Mi Progreso</h2>
+
+    <div class="table-responsive">
+        <table id="tabla-progreso" class="table table-bordered table-hover align-middle table-sm">
+            <thead class="table-success">
+                <tr>
+                    <th>#</th>
+                    <th>📅 Fecha</th>
+                    <th>📚 Curso</th>
+                    <th>📈 Progreso</th>
+                    <th>✅ Módulos</th>
+                    <th>📅 Finalizado</th>
+                    <th>🕒 Último ingreso</th>
+                    <th>📝 Método</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asignacion in asignaciones %}
+                    {% with curso=asignacion.curso %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ asignacion.fecha|date:"d/m/Y H:i" }}</td>
+                        <td>{{ curso.titulo }}</td>
+                        <td>
+                            {% with p=progreso|get_item:curso.id %}
+                                {% if p %}
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: {{ p.porcentaje }}%">
+                                            {{ p.porcentaje }}%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with p=progreso|get_item:curso.id %}
+                                {% if p %}
+                                    {{ p.modulos_completados.count }}/{{ curso.modulos.count }}
+                                {% else %}
+                                    0/{{ curso.modulos.count }}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with p=progreso|get_item:curso.id %}
+                                {% if p and p.completado %}
+                                    {{ p.fecha_completado|date:"d/m/Y" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>—</td>
+                        <td>{{ asignacion.metodo }}</td>
+                    </tr>
+                    {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#tabla-progreso').DataTable({
+        language: {
+            search: "🔍 Buscar:",
+            paginate: { previous: "Anterior", next: "Siguiente" },
+            info: "Mostrando _START_ a _END_ de _TOTAL_ cursos",
+            lengthMenu: "Mostrar _MENU_ cursos"
+        },
+        pageLength: 10
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,223 @@
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function toggleTodosCheckbox(source) {
+        const items = document.querySelectorAll('.curso-item');
+        items.forEach(item => {
+            const checkbox = item.querySelector('.curso-checkbox');
+            checkbox.checked = source.checked;
+            item.classList.toggle('seleccionado', source.checked);
+        });
+        console.log("🟢 Script de asignación cargado correctamente");
+    }
+    window.toggleTodosCheckbox = toggleTodosCheckbox;
+
+    document.querySelectorAll('.curso-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const li = cb.closest('.curso-item');
+            li.classList.toggle('seleccionado', cb.checked);
+        });
+    });
+
+    document.querySelectorAll('.curso-item').forEach(item => {
+        item.addEventListener('dragstart', e => {
+            const seleccionados = Array.from(document.querySelectorAll('.curso-item'))
+                .filter(c => c.querySelector('.curso-checkbox').checked);
+            const texto = item.innerText.trim();
+            const ghost = document.createElement("div");
+            ghost.classList.add("ghost-drag");
+            ghost.style.position = "absolute";
+            ghost.style.top = "-9999px";
+            ghost.style.padding = "6px 12px";
+            ghost.style.background = "#198754";
+            ghost.style.color = "white";
+            ghost.style.fontWeight = "bold";
+            ghost.style.fontSize = "14px";
+            ghost.style.borderRadius = "4px";
+            ghost.style.boxShadow = "0 4px 10px rgba(0,0,0,0.2)";
+            ghost.innerText = seleccionados.length > 1 ? `${seleccionados.length} cursos` : texto;
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 0, 0);
+            if (seleccionados.length > 1) {
+                const ids = seleccionados.map(c => c.dataset.cursoId);
+                e.dataTransfer.setData('multipleCursoIds', JSON.stringify(ids));
+            } else {
+                e.dataTransfer.setData('cursoId', item.dataset.cursoId);
+            }
+            item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            document.querySelectorAll('.ghost-drag').forEach(g => g.remove());
+        });
+    });
+
+    document.querySelectorAll('.drop-target').forEach(target => {
+        target.addEventListener('dragover', e => {
+            e.preventDefault();
+            target.classList.add('bg-light');
+        });
+        target.addEventListener('dragleave', () => {
+            target.classList.remove('bg-light');
+        });
+        target.addEventListener('drop', e => {
+            e.preventDefault();
+            const el = e.currentTarget;
+            el.classList.remove('bg-light');
+            el.classList.add('success-highlight');
+            setTimeout(() => el.classList.remove('success-highlight'), 1000);
+
+            const multiple = e.dataTransfer.getData('multipleCursoIds');
+            let cursosAAsignar = multiple ? JSON.parse(multiple) : [e.dataTransfer.getData('cursoId')];
+            const usuarioId = el.dataset.usuarioId || null;
+            const grupoId = el.dataset.grupoId || null;
+
+            Promise.all(
+                cursosAAsignar.map(cursoId => {
+                    return fetch("{% url 'asignar_curso_ajax' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ curso_id: cursoId, usuario_id: usuarioId, grupo_id: grupoId })
+                    });
+                })
+            ).then(() => {
+                // ✅ FIX: Limpiar selección visual después de asignar
+                document.querySelectorAll('.curso-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    cb.closest('.curso-item').classList.remove('seleccionado');
+                });
+
+                alert("Curso(s) asignado(s) correctamente.");
+                location.reload();
+            }).catch(err => {
+                alert("Error de red.");
+                console.error(err);
+            });
+        });
+    });
+
+    document.querySelectorAll('.ver-cursos-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const usuarioId = button.dataset.usuarioId;
+            const lista = document.getElementById('lista-cursos-asignados');
+            lista.innerHTML = '<li class="list-group-item">Cargando...</li>';
+            fetch(`/cursos-asignados/${usuarioId}/`)
+                .then(res => res.json())
+                .then(data => {
+                    lista.innerHTML = '';
+                    if (data.cursos.length === 0) {
+                        lista.innerHTML = '<li class="list-group-item">Sin cursos asignados</li>';
+                    } else {
+                        data.cursos.forEach(curso => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            li.innerHTML = `
+                                <span>${curso.titulo}</span>
+                                <button class="btn btn-sm btn-danger" onclick="desasignarCurso(${curso.id}, ${usuarioId}, this)">❌</button>
+                            `;
+                            lista.appendChild(li);
+                        });
+                    }
+                    new bootstrap.Modal(document.getElementById('modalCursosAsignados')).show();
+                });
+        });
+    });
+
+    // DataTable inicialización
+    window.tablaHistorial = $('#tabla-historial-completa').DataTable({
+        responsive: true,
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+        }
+    });
+
+    cargarHistorial(); // 🚀 Carga inicial
+    setInterval(cargarHistorial, 60000); // ⏱️ Actualización automática cada 60s
+});
+
+function desasignarCurso(cursoId, usuarioId, btn) {
+    if (!confirm("¿Estás seguro de desasignar este curso?")) return;
+    fetch("{% url 'desasignar_curso_ajax' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ curso_id: cursoId, usuario_id: usuarioId })
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+            const li = btn.closest('li');
+            li.classList.add('fade-out');
+            setTimeout(() => li.remove(), 400);
+            cargarHistorial();
+        } else {
+            alert("Error al desasignar: " + data.mensaje);
+        }
+    }).catch(error => {
+        console.error("Error:", error);
+        alert("Ocurrió un error de red.");
+    });
+}
+
+function cargarHistorial() {
+    console.log("🔄 Ejecutando cargarHistorial()...");
+
+    fetch("{% url 'historial_asignaciones_ajax' %}")
+        .then(response => response.json())
+        .then(data => {
+            console.log("📥 Datos recibidos:", data);
+
+            if (!window.tablaHistorial) {
+                console.warn("⚠️ tablaHistorial no está inicializada.");
+                return;
+            }
+
+            window.tablaHistorial.clear();
+
+            if (!data.historial.length) {
+                window.tablaHistorial.draw();
+                return;
+            }
+
+            data.historial.forEach((item, index) => {
+                window.tablaHistorial.row.add([
+                    index + 1,
+                    `<span title="${item.fecha}">${item.fecha}</span>`,
+                    item.curso,
+                    item.usuario,
+                    item.grupo,
+                    `<div class='progress' style='height:18px;'>
+                        <div class='progress-bar ${getProgressClass(item.progreso)}' style='width:${item.progreso};'>${item.progreso}</div>
+                    </div>`,
+                    item.modulos,
+                    item.finalizado,
+                    item.ultimo_ingreso,
+                    item.metodo
+                ]);
+            });
+
+            window.tablaHistorial.draw();
+        })
+        .catch(error => {
+            console.error("❌ Error al cargar historial:", error);
+        });
+}
+
+function getProgressClass(p) {
+    const percent = parseInt(p);
+    if (percent >= 100) return 'bg-success';
+    if (percent >= 50) return 'bg-warning';
+    return 'bg-danger';
+}
+</script>
+
+<style>
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+</style>
