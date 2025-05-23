@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal, ROUND_HALF_UP
+from mantenimiento.models import Promocion, Patrono
 
 
 def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,calcMontoNetoBruto,calcMontoTimbres,calcMontoNotaria,tipopagoPeriocidad,patrono,tipo_prestamo,calcTasaInteres,fechaInicioPago,plazoInteres,fechaCalculo,calcMontoLetra,calcInicioPago,tempPrimerDiaHabil,params):
@@ -219,27 +220,106 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     return TasaEfectiva
 
-def calcular_promocion(params):
-    calcMontoNetoBruto = params['cotMontoPrestamo']
-    calcNetoCancelacion = params['calcNetoCancelacion']
-    tipoPrestamo = params['tipoPrestamo']
-    ##print(("Calcular promocion")
-    ###print(("calcMontoNetoBruto:", calcMontoNetoBruto, params)
+def calcular_promocion(params, fecha_calculo):
+    from datetime import datetime
+
     comisionTotal8 = 0
-    wrkMontoPedido = calcMontoNetoBruto + calcNetoCancelacion
-    ##print(("wrkMontoPedido:", wrkMontoPedido)
-    if tipoPrestamo == "PREST AUTO":
-        comisionTotal8 = 300
-    else:
-        comisionTotal8 = 0
+    # Get the agrupador for the given patrono
+    patrono = Patrono.objects.filter(codigo=params['patrono']).first()
+    agrupador = patrono.agrupador if patrono else None
+    vendedorTipo = params['vendedorTipo']
 
-    return comisionTotal8
+    # Debugging output (optional)
+    #print("Agrupador for patrono:", agrupador)
+    # Get all active promotions within the date range
+    promociones_activas = Promocion.objects.filter(
+        activa=True,
+        fecha_inicio__lte=fecha_calculo,
+        fecha_fin__gte=fecha_calculo,
+        producto=params['tipoPrestamo'],
+    ).exclude(incentivo="FECHA PAGO")
 
-    
+    print("Cantidad de promociones activas:", promociones_activas.count())
+    promocion_aplicada = None  # Track which type applied
 
-    
+    for promocion in promociones_activas:
+        print("Vendedor Tipo:", vendedorTipo, "Promocion Vendedor Tipo:", promocion.vendedorTipo)
+        #PROMOCION DIRIGO A CLIENTE
+        if promocion.dirigido_a == "CLIENTE":
+            # First, check if there is a target with todos=True
+            target_promocion = promocion.target_promociones.filter(
+                todos=True,
+            ).first()
+            if not target_promocion:
+                # If not found, check for specific patcat
+                target_promocion = promocion.target_promociones.filter(
+                    patcat=params['patrono'],
+                ).first()
+            if not target_promocion:
+                # If still not found, check for specific agrupador only
+                target_promocion = promocion.target_promociones.filter(
+                    agrupador=agrupador,
+                ).first()
+            if target_promocion:
+                #T
+                print("Target found for CLIENTE:", target_promocion)
+                if promocion.incentivo == "EFECTIVO":
+                    #TT
+                    if promocion.monto is not None and promocion.monto > 0:
+                        #TTT
+                        comisionTotal8 = promocion.monto
+                    if promocion.porcentaje is not None and promocion.porcentaje > 0:
+                        #TTT
+                        comisionTotal8 = promocion.porcentaje * params['cotMontoPrestamo'] / 100
+                if promocion.incentivo == "LETRAS":
+                    #TT
+                    if promocion.no_letras is not None and params.get('calcMontoLetra') is not None:
+                        comisionTotal8 = promocion.no_letras * params['calcMontoLetra']
+                
+                print("Comision Total 8:", comisionTotal8)
+                promocion_aplicada = "CLIENTE"
+                break  # Stop after applying a promotion
+            else:
+                print("No target found for CLIENTE, skipping promotion.")
+                promociones_activas = promociones_activas.exclude(id=promocion.id)
 
-    
+        #PROMOCION DIRIGIDO A VENDEDOR
+       
+        elif promocion.dirigido_a == "VENDEDOR" and promocion.vendedorTipo == vendedorTipo:
+            if promocion.monto is not None and promocion.monto > 0:
+                #TTT
+                comisionTotal8 = promocion.monto
+                print("Comision Total 8:", comisionTotal8)
+                promocion_aplicada = "VENDEDOR"
+                break
+        #PROMOCION DIRIGIDO A AGENCIA
+        elif promocion.dirigido_a == "AGENCIA":
+            if promocion.monto is not None and promocion.monto > 0:
+                #TTT
+                comisionTotal8 = promocion.monto
+                print("Comision Total 8:", comisionTotal8)
+                promocion_aplicada = "AGENCIA"
+                break
+        else:
+            print("No valid dirigido_a found, skipping promotion.")
+            promociones_activas = promociones_activas.exclude(id=promocion.id)
+
+    if promocion_aplicada:
+        print(f"Promocion aplicada para: {promocion_aplicada}")
+
+    # If no valid target found, return 0
+    if comisionTotal8 == 0:
+        print("No valid target found, returning 0.")
+        return 0
+
+    return float(comisionTotal8)
+
+    # If no valid target found, return 0
+    if comisionTotal8 == 0:
+        print("No valid target found, returning 0.")
+        return 0
+
+    return float(comisionTotal8)
 
 def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
@@ -299,18 +379,11 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     
     if promoActiva == True:
-        promo_ini = datetime.datetime(2025, 2, 28)
-        promo_fin = datetime.datetime(2025, 3, 31)
+        
         fecha_calculo = datetime.datetime.strptime(auxFechaCalculo, "%Y-%m-%d")
+        comisionTotal8 = calcular_promocion(params,fecha_calculo)
 
-        if promo_ini <= fecha_calculo <= promo_fin:
-            # CALCULA PROMOCION
-            comisionTotal8 = calcular_promocion(params)
-            ##print(("Calcular promocion", promo_ini, promo_fin, fecha_calculo, comisionTotal8)
-            
-            pass
-        else:
-            pass
+        
     
     #SI ES CARTERA ACP
     if 630 <= patrono <= 660:

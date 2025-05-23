@@ -154,6 +154,7 @@ INSTALLED_APPS = [
     "tombola",
     "capacitaciones_app",
     "nested_admin",
+    "mantenimiento",
 ]
 
 MIDDLEWARE = [

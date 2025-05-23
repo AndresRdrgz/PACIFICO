@@ -7,13 +7,16 @@ from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
 from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
-from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal, cotizacionDetail_pp
+from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
 
 
 urlpatterns = [
     path('', main_menu, name='main_menu'),
     path('cotizador/prestAuto/', fideicomiso_view, name='fideicomiso'),
-    path('cotizador/prestPersonal/', cotizacionPrestamoPersonal, name='prestPersonal'),
+    path('cotizador/prestPersonal/', cotizacionPrestamoPersonal, name='prestPersonal'),  # No pk
+    path('cotizador/prestPersonal/<int:pk>/', cotizacionPrestamoPersonal, name='prestPersonal_with_pk'),  # With pk
+    path('cotizacionPP/', cotizacionPrestamoPersonal, name='cotizacionDetail_pp'),  # No pk
+    path('cotizacionPP/<int:pk>/', cotizacionPrestamoPersonal, name='cotizacionDetail_pp_with_pk'),  # With pk
     path('get_lineas/', views.get_lineas, name='get_lineas'),
     path('generate_report/<int:numero_cotizacion>/', generate_report, name='generate_report'),
     path('generate_report_pp/<int:numero_cotizacion>/', generate_report_pp, name='generate_report_pp'),
@@ -25,7 +28,7 @@ urlpatterns = [
     path('clientes/', clientesList, name="clientesList"),
     path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),
     path('cotizacion/<int:pk>/', views.cotizacionDetail, name='cotizacion_detail'),
-    path('cotizacionPP/<int:pk>/', cotizacionDetail_pp, name='cotizacionDetail_pp'),
+    #path('cotizacionPP/<int:pk>/', cotizacionDetail_pp, name='cotizacionDetail_pp'),
     path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),
     path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),
     path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),

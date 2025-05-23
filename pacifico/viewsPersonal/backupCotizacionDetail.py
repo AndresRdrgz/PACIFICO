@@ -64,6 +64,251 @@ def identifica_seguro(patrono, sucursal):
 
 
 logger = logging.getLogger(__name__)
+def cotizacionDetail_pp(request, pk):
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=pk)
+    original_numero = cotizacion.NumeroCotizacion  # Store original number
+   
+    form = PrestamoPersonalForm(instance=cotizacion)
+    consulta = {
+        'consulta': True,
+    }
+
+    resultado = prepResultado(cotizacion)
+    context = {
+        'form': form,
+        'cotizacion': cotizacion,
+        'resultado': resultado,
+        'consulta': consulta,
+    }
+
+    documentos = CotizacionDocumento.objects.filter(cotizacion=cotizacion)
+    context['documentos'] = documentos
+
+
+    if request.method == 'POST':
+        form = PrestamoPersonalForm(request.POST, request.FILES, instance=cotizacion)
+        if form.is_valid():
+            try:
+                aseguradora = form.cleaned_data['aseguradora']
+                print("aseguradora", aseguradora, "type:", type(aseguradora))
+                
+                form_data = form.cleaned_data
+                resultado, iteration_data= perform_pp_calculation(form)
+
+                # Create a new form instance to save a new record
+                new_form = PrestamoPersonalForm(request.POST)
+                #guardar resultado en nueva intancia
+                #save resultado['tasaEstimada'] in form instance
+                #print("Guardando resultado en nueva instancia")
+                pp = pprint.PrettyPrinter(indent=4)
+                #pp.pprint(resultado)
+                #resultado['wrkLetraSinSeguros'] = resultado['wrkMontoLetra']  - resultado['wrkLetraSeguro']
+                #resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
+                if form.cleaned_data['aplicaCodeudor'] == "si":
+                    print('aplica codeudor - CALCULAR NIVEL DE ENDEUDAMIENTO')
+                    codeudorResultado = {
+                        'primaMonto': form.cleaned_data['coprimaMonto'],
+                        'bonosMonto': form.cleaned_data['cobonosMonto'],
+                        'otrosMonto': form.cleaned_data['cootrosMonto'],
+                        'horasExtrasMonto': form.cleaned_data['cohorasExtrasMonto'],
+                        'siacapMonto': form.cleaned_data['cosiacapMonto'],
+                        'praaMonto': form.cleaned_data['copraaMonto'],
+                        'dirOtrosMonto1': form.cleaned_data['codirOtrosMonto1'],
+                        'dirOtrosMonto2': form.cleaned_data['codirOtrosMonto2'],
+                        'dirOtrosMonto3': form.cleaned_data['codirOtrosMonto3'],
+                        'dirOtrosMonto4': form.cleaned_data['codirOtrosMonto4'],
+                        'pagoVoluntarioMonto1' : form.cleaned_data['copagoVoluntarioMonto1'],
+                        'pagoVoluntarioMonto2' : form.cleaned_data['copagoVoluntarioMonto2'],
+                        'pagoVoluntarioMonto3' : form.cleaned_data['copagoVoluntarioMonto3'],
+                        'pagoVoluntarioMonto4' : form.cleaned_data['copagoVoluntarioMonto4'],
+                        'pagoVoluntarioMonto5' : form.cleaned_data['copagoVoluntarioMonto5'],
+                        'pagoVoluntarioMonto6' : form.cleaned_data['copagoVoluntarioMonto6'],
+                        'salarioBaseMensual' : form.cleaned_data['codeudorIngresos'],
+                        'cartera' : form.cleaned_data['codeudorCartera'],
+                        'wrkLetraConSeguros' : resultado['wrkLetraConSeguros'],
+
+                    }
+                    
+                    codeudorResultado = convert_decimal_to_float(codeudorResultado)
+                    print('iniciar nivel codeudor')
+                    resultadoNivelCodeudor = nivelEndeudamiento(codeudorResultado)
+                    print('resultadoNivelCodeudor', resultadoNivelCodeudor)
+                    new_form.instance.cosalarioBaseMensual = codeudorResultado['salarioBaseMensual']
+                    new_form.instance.cototalDescuentosLegales = resultadoNivelCodeudor['totalDescuentosLegales']
+                    new_form.instance.cototalDescuentoDirecto = resultadoNivelCodeudor['totalDescuentoDirecto']
+                    new_form.instance.cototalPagoVoluntario = resultadoNivelCodeudor['totalPagoVoluntario']
+                    new_form.instance.cosalarioNetoActual = resultadoNivelCodeudor['salarioNetoActual']
+                    new_form.instance.cosalarioNeto = resultadoNivelCodeudor['salarioNeto']
+                    new_form.instance.coporSalarioNeto = resultadoNivelCodeudor['porSalarioNeto']
+                    new_form.instance.cototalIngresosAdicionales = resultadoNivelCodeudor['totalIngresosAdicionales']
+                    new_form.instance.cototalIngresosMensualesCompleto = resultadoNivelCodeudor['totalIngresosMensualesCompleto']
+                    new_form.instance.cototalDescuentosLegalesCompleto = resultadoNivelCodeudor['totalDescuentosLegalesCompleto']
+                    new_form.instance.cosalarioNetoActualCompleto = resultadoNivelCodeudor['salarioNetoActualCompleto']
+                    new_form.instance.cosalarioNetoCompleto = resultadoNivelCodeudor['salarioNetoCompleto']
+                    new_form.instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
+
+                #---------
+                new_form.instance.tasaEstimada = resultado['tasaEstimada']
+                new_form.instance.tasaBruta = resultado['tasaBruta']
+                new_form.instance.r1 = resultado['r1']
+                
+                new_form.instance.auxMonto2 = resultado['auxMonto2']
+                new_form.instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                new_form.instance.wrkLetraSeguro = resultado['wrkLetraSeguro'] 
+                new_form.instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
+                new_form.instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                new_form.instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                new_form.instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                new_form.instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                new_form.instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                new_form.instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                new_form.instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                new_form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                new_form.instance.manejo_5porc = resultado['manejo_5porc']
+                new_form.instance.valorAuto = resultado['valorAuto']
+                codigoSeguro = resultado['codigoSeguro']
+                aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                
+                new_form.instance.aseguradora = aseguradora
+                new_form.instance.siacapMonto = resultado['siacapMonto']
+                new_form.instance.siacapDcto = resultado['siacapDcto']
+                new_form.instance.praaMonto = resultado['praaMonto']
+                new_form.instance.praaDcto = resultado['praaDcto']
+                #resultado nivel de endeuamiento - real
+                new_form.instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                new_form.instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                new_form.instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                new_form.instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                new_form.instance.salarioNetoActual = resultado['salarioNetoActual']
+                new_form.instance.salarioNeto = resultado['salarioNeto']
+                new_form.instance.porSalarioNeto = resultado['porSalarioNeto']
+                new_form.instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                new_form.instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                new_form.instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                new_form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                new_form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                new_form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+                # ------------------- Save the new record -------------------
+                if new_form.is_valid():
+                    new_instance = new_form.save(commit=False)
+                    new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+                     # Set the calculated values on the new instance
+                    new_instance.wrkMontoLetra = resultado['wrkMontoLetra']
+                    
+                    
+                    new_instance.montoManejoT = resultado['montoManejoT']
+                    new_instance.monto_manejo_b = resultado['montoManejoB']
+                    new_instance.tasaEstimada = resultado['tasaEstimada']
+                    new_instance.r1 = resultado['r1']
+                    new_instance.auxMonto2 = resultado['auxMonto2']
+                    new_instance.calcComiCierreFinal = resultado['calcComiCierreFinal']
+                    new_instance.calcMontoNotaria = resultado['calcMontoNotaria']
+                    new_instance.calcMontoTimbres = resultado['calcMontoTimbres']
+                    new_instance.tablaTotalPagos = resultado['tablaTotalPagos']
+                    new_instance.tablaTotalSeguro = resultado['tablaTotalSeguro']
+                    new_instance.tablaTotalFeci = resultado['tablaTotalFeci']
+                    new_instance.tablaTotalInteres = resultado['tablaTotalInteres']
+                    new_instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
+                    new_instance.manejo_5porc = resultado['manejo_5porc']
+                    new_instance.valorAuto = resultado['valorAuto']
+                    codigoSeguro = resultado['codigoSeguro']
+                    aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                    print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                    new_instance.aseguradora = aseguradora
+                    new_instance.siacapMonto = resultado['siacapMonto']
+                    new_instance.siacapDcto = resultado['siacapDcto']
+                    new_instance.praaMonto = resultado['praaMonto']
+                    new_instance.praaDcto = resultado['praaDcto']
+                    new_instance.wrkLetraSinSeguros = resultado['wrkLetraSinSeguros']
+                    new_instance.wrkLetraSeguro = resultado['wrkLetraSeguro'] 
+                    new_instance.tasaBruta = resultado['tasaBruta']
+                    #resultado nivel de endeuamiento - real
+                    new_instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                    new_instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                    new_instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                    new_instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                    new_instance.salarioNetoActual = resultado['salarioNetoActual']
+                    new_instance.salarioNeto = resultado['salarioNeto']
+                    new_instance.porSalarioNeto = resultado['porSalarioNeto']
+                    new_instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                    new_instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                    new_instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                    new_instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                    new_instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                    new_instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+                    #resultado codeudor nivel de endeudamiento
+                    if form.cleaned_data['aplicaCodeudor'] == "si":
+                        new_instance.cosalarioBaseMensual = codeudorResultado['salarioBaseMensual']
+                        new_instance.cototalDescuentosLegales = resultadoNivelCodeudor['totalDescuentosLegales']
+                        new_instance.cototalDescuentoDirecto = resultadoNivelCodeudor['totalDescuentoDirecto']
+                        new_instance.cototalPagoVoluntario = resultadoNivelCodeudor['totalPagoVoluntario']
+                        new_instance.cosalarioNetoActual = resultadoNivelCodeudor['salarioNetoActual']
+                        new_instance.cosalarioNeto = resultadoNivelCodeudor['salarioNeto']
+                        new_instance.coporSalarioNeto = resultadoNivelCodeudor['porSalarioNeto']
+                        new_instance.cototalIngresosAdicionales = resultadoNivelCodeudor['totalIngresosAdicionales']
+                        new_instance.cototalIngresosMensualesCompleto = resultadoNivelCodeudor['totalIngresosMensualesCompleto']
+                        new_instance.cototalDescuentosLegalesCompleto = resultadoNivelCodeudor['totalDescuentosLegalesCompleto']
+                        new_instance.cosalarioNetoActualCompleto = resultadoNivelCodeudor['salarioNetoActualCompleto']
+                        new_instance.cosalarioNetoCompleto = resultadoNivelCodeudor['salarioNetoCompleto']
+                        new_instance.coporSalarioNetoCompleto = resultadoNivelCodeudor['porSalarioNetoCompleto']
+                    #-------                                                                                                                        
+
+                    codigoSeguro = resultado['codigoSeguro']
+                    aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
+                    print("nueva instancia aseguradora:", aseguradora,"codigoSeguro:", resultado['codigoSeguro'])
+                    new_instance.aseguradora = aseguradora
+                    
+                    new_instance.tipoPrestamo = 'personal'
+                    new_instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+
+                    #cancelaciones
+
+                    #letra mensual
+                    if resultado['auxPeriocidad'] == 2:
+                        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra'] * 2
+                    else:
+                        resultado['wrkMontoLetraMensual'] = resultado['wrkMontoLetra']
+                    
+
+
+                    #------- SAFE SAVE -----------
+                    print("intentando guardar")
+                    new_instance.save()
+                    print("se guardo -",new_form.instance.NumeroCotizacion)
+                     # Get the NumeroCotizacion after saving the form
+                    numero_cotizacion = int(new_form.instance.NumeroCotizacion)
+                    resultado['numero_cotizacion'] = numero_cotizacion
+                    print('numero_cotizacion -',numero_cotizacion)
+                    # Convert date objects to strings
+                    for key, value in resultado.items():
+                        if isinstance(value, datetime.date):
+                            resultado[key] = value.strftime('%Y-%m-%d')
+                    request.session['resultado'] = resultado
+                    print("resultados guardados")
+                    return redirect('cotizacionDetail_pp', pk=int(new_form.instance.NumeroCotizacion))
+                    
+                else:
+                   
+                    print(new_form.errors)
+                    error_message = str(e)
+                    log_error(error_message, request.user.username)
+               
+            except Exception as e:
+                print('Error:', e)
+                error_message = str(e)
+                log_error(error_message, request.user.username)
+                pass
+                
+        else:
+            logger.warning("Form is not valid: %s", form.errors)
+            print(form.errors)
+            
+            
+    return render(request, 'prestamoPersonal.html', context)
+
+
+
 @login_required
 def cotizacionPrestamoPersonal(request, pk=None):
     resultado = None
@@ -71,8 +316,6 @@ def cotizacionPrestamoPersonal(request, pk=None):
     print("cotizacionPrestamoPersonal, pk:", pk)
     if pk:
         cotizacion = get_object_or_404(Cotizacion, pk=pk)
-        resultado = prepResultado(cotizacion)
-        print("cotizacion:", cotizacion)
 
     if request.method == 'POST':
         form = PrestamoPersonalForm(request.POST, request.FILES, instance=cotizacion)
@@ -84,7 +327,6 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 edad = form.cleaned_data['edad']
                 sexo = form.cleaned_data['sexo']
                 jubilado = form.cleaned_data['jubilado']
-                aplicaPromocion = form.cleaned_data['aplicaPromocion']
                 nombreCliente = form.cleaned_data['nombreCliente']
                 cotMontoPrestamo = Decimal(form.cleaned_data['montoPrestamo'])
                 calcTasaInteres = 10 / 100
@@ -199,7 +441,6 @@ def cotizacionPrestamoPersonal(request, pk=None):
                     'vendedorComisionPorcentaje': float(vendedorComisionPorcentaje),
                     'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
                     'calcNetoCancelacion': float(calcNetoCancelacion),
-                    'aplicaPromocion': aplicaPromocion,
                 }
                 print("params",params)
                 
@@ -359,16 +600,16 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 
 
                 form.save()
-                print("se guardo -",form.instance.pk)
-                numero_cotizacion = int(form.instance.pk)
+                print("se guardo -",form.instance.NumeroCotizacion)
+                numero_cotizacion = int(form.instance.NumeroCotizacion)
                 resultado['numero_cotizacion'] = numero_cotizacion
                 for key, value in resultado.items():
                             if isinstance(value, Decimal):
                                 resultado[key] = float(value)
                 request.session['resultado'] = resultado
-                print("redirecting,", numero_cotizacion)
+                print("redirecting,",numero_cotizacion)
                 messages.success(request, 'Cotización guardada exitosamente.')
-                return redirect('prestPersonal_with_pk', pk=form.instance.pk)
+                return redirect('cotizacionPrestamoPersonal', pk=form.instance.pk)
 
             except Exception as e:
                 logger.error("Error in prest personal: %s", e)

@@ -280,8 +280,9 @@ class PrestamoPersonalForm(forms.ModelForm):
             }),
             #CODEUDOR
             #CODEUDOR
-            'aplicaCodeudor:': forms.Select(attrs={
-                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+           
+             'aplicaPromocion': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600',
             }),
             'codeudorNombre': forms.TextInput(attrs={
                 'placeholder': 'Nombre del Codeudor',
@@ -871,6 +872,98 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'step': '0.01',
             }),
+             #CAMPOS TAPE
+            'letraHipoteca1': forms.NumberInput(attrs={
+                'placeholder': 'Monto 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+                
+            }),
+             #CAMPOS TAPE
+            'letraHipoteca2': forms.NumberInput(attrs={
+                'placeholder': 'Monto 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+                
+            }),
+            'deducciones1': forms.NumberInput(attrs={
+                'placeholder': 'Monto 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'deducciones2': forms.NumberInput(attrs={
+                'placeholder': 'Monto 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'deducciones3': forms.NumberInput(attrs={
+                'placeholder': 'Monto 3',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'deducciones4': forms.NumberInput(attrs={
+                'placeholder': 'Monto 4',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'deducciones5': forms.NumberInput(attrs={
+                'placeholder': 'Monto 5',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'deducciones6': forms.NumberInput(attrs={
+                'placeholder': 'Monto 6',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones1': forms.NumberInput(attrs={
+                'placeholder': 'Monto 1',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones2': forms.NumberInput(attrs={
+                'placeholder': 'Monto 2',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones3': forms.NumberInput(attrs={
+                'placeholder': 'Monto 3',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones4': forms.NumberInput(attrs={
+                'placeholder': 'Monto 4',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones5': forms.NumberInput(attrs={
+                'placeholder': 'Monto 5',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'cancelaciones6': forms.NumberInput(attrs={
+                'placeholder': 'Monto 6',
+                'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+                'step': '0.01',
+            }),
+            'hipotecaDescuentoDir': forms.Select(attrs={
+                'id': 'tapeHipotecaDescuentoDir',
+                'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
+            }),
+            'tieneEmbargo': forms.Select(attrs={
+                'id': 'tapeTieneEmbargo',
+                'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
+            }),
+            'letraDepende': forms.Select(attrs={
+                'id': 'tapeLetraDepende',
+                'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
+            }),
+            'letraFaje': forms.NumberInput(attrs={
+                'id': 'tapeLetraFaje',
+                'placeholder': 'Letra de Faje',
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'step': '0.01',
+            }),
         
         }
 
@@ -943,8 +1036,7 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['tablaTotalInteres'].required = False
         self.fields['tablaTotalMontoCapital'].required = False
         self.fields['manejo_5porc'].required = False
-        self.fields['apcScore'].required = False
-        self.fields['apcPI'].required = False
+       
         self.fields['cartera'].required = False
         self.fields['patronoCodigo'].required = False
         self.fields['montoManejoT'].required = False

@@ -203,8 +203,8 @@ class Cotizacion(models.Model):
     edad = models.IntegerField(null=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
     jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
-    apcScore = models.IntegerField(null=True)
-    apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    apcScaore = models.IntegerField(null=True,blank=True)
+    apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
    
     #Parametros de la Cotizacion
     aplicaPromocion = models.BooleanField(default=False, blank=True, null=True)
@@ -270,7 +270,7 @@ class Cotizacion(models.Model):
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     comiCierre = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=13)
     plazoPago = models.IntegerField(null=True)
-    tasaInteres = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    tasaInteres = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
     r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    # Datos seguro de auto
     financiaSeguro = models.BooleanField(default=True)
@@ -565,18 +565,16 @@ class Cotizacion(models.Model):
 
            
     
-    #SAVE FUNCTION
+    # SAVE FUNCTION
     NumeroCotizacion = models.IntegerField(null=True, blank=True, unique=True)
     added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if self.NumeroCotizacion is None:
-            last_cotizacion = Cotizacion.objects.all().order_by('NumeroCotizacion').last()
-            if last_cotizacion and last_cotizacion.NumeroCotizacion is not None:
-                self.NumeroCotizacion = last_cotizacion.NumeroCotizacion + 1
-            else:
-                self.NumeroCotizacion = 1
+        super(Cotizacion, self).save(*args, **kwargs)
+        if self.NumeroCotizacion is None or self.NumeroCotizacion != self.id:
+            self.NumeroCotizacion = self.id
+            super(Cotizacion, self).save(update_fields=['NumeroCotizacion'])
         
         #Verifica si existe el cliente
         
@@ -609,7 +607,7 @@ class Cotizacion(models.Model):
         super(Cotizacion, self).save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente} - {self.tipoPrestamo}"
+        return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente} - {self.tipoPrestamo} - {self.id}"
     
 
 class CotizacionDocumento(models.Model):
