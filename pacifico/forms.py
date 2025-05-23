@@ -1201,7 +1201,7 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['tablaTotalInteres'].required = False
         self.fields['tablaTotalMontoCapital'].required = False
         self.fields['manejo_5porc'].required = False
-        self.fields['apcScore'].required = False
+        
         self.fields['apcPI'].required = False
         self.fields['cartera'].required = False
         self.fields['siacapMonto'].required = False

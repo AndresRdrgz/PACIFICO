@@ -203,7 +203,7 @@ class Cotizacion(models.Model):
     edad = models.IntegerField(null=True)
     sexo= models.CharField(max_length=10, choices=SEXO_OPCIONES, default='MASCULINO')
     jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
-    apcScaore = models.IntegerField(null=True,blank=True)
+    apcScore = models.IntegerField(null=True,blank=True)
     apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
    
     #Parametros de la Cotizacion
