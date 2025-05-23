@@ -40,21 +40,37 @@
                         {{ progreso_percent }}%
                     </div>
                 </div>
-                {% if progreso.completado %}
-                    <div class="alert alert-success mt-2">🎉 ¡Felicidades! Has completado este curso.</div>
+                {% if curso_completado %}
+                    <div class="alert alert-success mt-3 d-flex align-items-center" role="alert">
+                        <span style="font-size: 1.2em; margin-right: 8px;">🎉</span>
+                        ¡Felicidades! Has completado este curso.
+                    </div>
                 {% endif %}
+
+
             </div>
         {% endif %}
 
-        {% comment %} Botón para descargar certificado {% endcomment %}
+        {% comment %} Botón para descargar certificado (solo si el curso está completado) {% endcomment %}
 <div class="mt-4 text-center">
-  <a 
-    href="{% url 'certificado' curso.id %}" 
-    class="btn btn-success"
-  >
-    Descargar Certificado
-  </a>
+  {% if curso_completado %}
+    <a 
+      href="{% url 'certificado' curso.id %}" 
+      class="btn btn-success"
+    >
+      Descargar Certificado
+    </a>
+  {% else %}
+    <button 
+      class="btn btn-outline-secondary" 
+      disabled 
+      title="Completa todos los temas y quizzes para habilitar el certificado"
+    >
+      Descargar Certificado
+    </button>
+  {% endif %}
 </div>
+
 
 
         <!-- 📚 Contenido del curso -->
@@ -121,21 +137,14 @@
 </div>
 
 <!-- 🎉 Confeti si completado -->
-{% if progreso.completado %}
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                confetti({
-                    particleCount: 450,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#00c853', '#43a047', '#81c784'],
-                });
-            }, 600);
-        });
-    </script>
+{% if cert_warning %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ cert_warning }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
 {% endif %}
+
+
 
 <!-- 🎨 Estilos -->
 <style>
