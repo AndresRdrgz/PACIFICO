@@ -991,7 +991,7 @@ def generate_report_pp(request, numero_cotizacion):
         else:
             return HttpResponse("Sheet not found.", status=404)
         
-        print('llenando excel')
+        print('llenando excel PP')
         # Example: Write the resultado data to the Excel sheet
         sheet['L7'] = resultado['oficial']
         SUCURSALES_OPCIONES = {
@@ -1018,37 +1018,8 @@ def generate_report_pp(request, numero_cotizacion):
         #sheet['J10'] = resultado['edad']
         #sheet['I10'] = resultado['sexo']
         sheet['D20'] = resultado['fechaNacimiento']
-        #sheet['k10'] = resultado['apcScore']
-        #sheet['l10'] = resultado['apcPI']
-        #parametros de la cotizacion
-        #sheet['F14'] = resultado['cotPlazoPago']
-        #sheet['G14'] = resultado['r1'] / 100
-        #sheet['E14'] = resultado['abonoPorcentaje'] / 100
-        #sheet['e15'] = resultado['abono']
-        #print('cashback', resultado['cashback'])
-        #sheet['H14'] = resultado['tasaInteres']
-        #sheet['E20'] = resultado['cashback']
-        #sheet['C14'] = resultado['valorAuto']
-        #sheet['L14'] = resultado['calcMontoTimbres']
-        #sheet['i15'] = 'SI APLICA'
-        #sheet['J15'] = resultado['tasaBruta']
-        #if resultado['tasaBruta'] == 0:
-        #    sheet['K15'] = 'NO'
-
-        #sheet['H14'] = resultado['cashback']
-
-        #DETALLES DE LA COTIZACION
-        #sheet['E21'] = resultado['cotMontoPrestamo']
-        #sheet['E23'] = resultado['calcMontoNotaria']
-        #sheet['E24'] = resultado['promoPublicidad']
-        #sheet['e26'] = resultado['montoLetraSeguroAdelantado']
-        #sheet['e29'] = resultado['calcComiCierreFinal'] / 100
-        #sheet['e30'] = resultado['manejo_5porc']
-        #sheet['e31'] = resultado['auxMonto2']
-        #sheet['E39'] = resultado['wrkLetraSinSeguros']
-        #sheet['E43'] = resultado['wrkLetraSinSeguros']
-        #sheet['e40'] = resultado['wrkLetraSeguro']
-
+       
+        print('Cartera:', resultado['cartera'])
         if resultado['cartera'] in [
             "CONTRALORÍA",
             "AUTÓNOMAS",
@@ -1280,17 +1251,7 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['E99'] = resultado['codeudorIngresos']
         #sheet['J57'] = resultado['codeudorLicencia']
         sheet['L91'] = resultado['codeudorEmpresa']
-        #sheet['J56'] = resultado['codeudorReferenciasAPC']
-
-        #sheet['E61'] = resultado['codeudorNombreEmpres1']
-        #sheet['I61'] = resultado['codeudorPeriodo1']
-        #sheet['K61'] = resultado['codeudorSalario1']
-        #sheet['E62'] = resultado['codeudorNombreEmpres2']
-        #sheet['I62'] = resultado['codeudorPeriodo2']
-        #sheet['K62'] = resultado['codeudorSalario2']
-        #sheet['E63'] = resultado['codeudorNombreEmpres3']
-        #sheet['I63'] = resultado['codeudorPeriodo3']
-        #sheet['K63'] = resultado['codeudorSalario3']
+       
 
         #CODEUDOR - INGRESOS ADICIONALES
         if resultado['cohorasExtrasMonto'] is None:

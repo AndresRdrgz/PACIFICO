@@ -228,7 +228,7 @@ def calcular_promocion(params, fecha_calculo):
     patrono = Patrono.objects.filter(codigo=params['patrono']).first()
     agrupador = patrono.agrupador if patrono else None
     vendedorTipo = params['vendedorTipo']
-
+    print("Parametros:", params)
     # Debugging output (optional)
     #print("Agrupador for patrono:", agrupador)
     # Get all active promotions within the date range
@@ -239,11 +239,12 @@ def calcular_promocion(params, fecha_calculo):
         producto=params['tipoPrestamo'],
     ).exclude(incentivo="FECHA PAGO")
 
-    print("Cantidad de promociones activas:", promociones_activas.count())
+    #print("Cantidad de promociones activas:", promociones_activas.count())
     promocion_aplicada = None  # Track which type applied
 
     for promocion in promociones_activas:
-        print("Vendedor Tipo:", vendedorTipo, "Promocion Vendedor Tipo:", promocion.vendedorTipo)
+        #print("Vendedor Tipo:", vendedorTipo, "Promocion Vendedor Tipo:", promocion.vendedorTipo)
+        print("Promocion incentivo:", promocion.incentivo)
         #PROMOCION DIRIGO A CLIENTE
         if promocion.dirigido_a == "CLIENTE":
             # First, check if there is a target with todos=True
@@ -262,7 +263,7 @@ def calcular_promocion(params, fecha_calculo):
                 ).first()
             if target_promocion:
                 #T
-                print("Target found for CLIENTE:", target_promocion)
+                print("Target found for CLIENTE:", target_promocion, "incentivo:", promocion.incentivo)
                 if promocion.incentivo == "EFECTIVO":
                     #TT
                     if promocion.monto is not None and promocion.monto > 0:
@@ -270,11 +271,12 @@ def calcular_promocion(params, fecha_calculo):
                         comisionTotal8 = promocion.monto
                     if promocion.porcentaje is not None and promocion.porcentaje > 0:
                         #TTT
-                        comisionTotal8 = promocion.porcentaje * params['cotMontoPrestamo'] / 100
+                        comisionTotal8 = promocion.porcentaje * Decimal(str(params['cotMontoPrestamo'])) / Decimal('100')
                 if promocion.incentivo == "LETRAS":
                     #TT
-                    if promocion.no_letras is not None and params.get('calcMontoLetra') is not None:
-                        comisionTotal8 = promocion.no_letras * params['calcMontoLetra']
+                    print("Incentivo letras calculando, promocion letras:", promocion.no_letras)
+                    if promocion.no_letras is not None and params.get('wrkMontoLetra') is not None:
+                        comisionTotal8 = promocion.no_letras * params['wrkMontoLetra']
                 
                 print("Comision Total 8:", comisionTotal8)
                 promocion_aplicada = "CLIENTE"
@@ -304,8 +306,7 @@ def calcular_promocion(params, fecha_calculo):
             print("No valid dirigido_a found, skipping promotion.")
             promociones_activas = promociones_activas.exclude(id=promocion.id)
 
-    if promocion_aplicada:
-        print(f"Promocion aplicada para: {promocion_aplicada}")
+    
 
     # If no valid target found, return 0
     if comisionTotal8 == 0:

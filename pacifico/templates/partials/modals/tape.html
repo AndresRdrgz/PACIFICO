@@ -107,9 +107,33 @@
                     const labelBruto = document.querySelector('label[for="tapeSalarioBrutoMensual"]');
                     const labelNeto = document.querySelector('label[for="tapeSalarioNetoMensual"]');
                     const montoInembargableInput = document.getElementById('tapeMontoInembargable');
+                    const cotizacionCartera = document.getElementById('id_cartera');
+                    const nivelCartera = document.getElementById('cartera');
+                    const tapeSalarioBrutoMensual = document.getElementById('tapeSalarioBrutoMensual');
+                    const nivelIngresos = document.getElementById('id_ingresos');
+                    const id_salarioBaseMensual = document.getElementById('id_salarioBaseMensual');
+
+                    tapeSalarioBrutoMensual.addEventListener('input', function() {
+                        const value = parseFloat(tapeSalarioBrutoMensual.value) || 0;
+                        let periodo = carteraPeriodoMap[carteraSelect.value] || '';
+                        let finalValue = value;
+                        if (periodo === "QUINCENAL") {
+                            finalValue = value * 2;
+                        }
+                        if (value > 0) {
+                            nivelIngresos.value = finalValue;
+                            id_salarioBaseMensual.value = finalValue;
+                        } else {
+                            nivelIngresos.value = '';
+                            id_salarioBaseMensual.value = '';
+                        }
+                    });
+
                     carteraSelect.addEventListener('change', function() {
                         const value = carteraSelect.value;
                         const periodo = carteraPeriodoMap[value] || '';
+                        cotizacionCartera.value = value; // Update hidden field
+                        nivelCartera.value = value; // Update hidden field
                         periodoInput.value = periodo;
                         if (periodoTarget) periodoTarget.value = periodo;
                         if (periodo === "QUINCENAL") {

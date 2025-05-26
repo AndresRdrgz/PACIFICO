@@ -1,7 +1,7 @@
 def nivelEndeudamiento(resultado):
-    #print("------nivel de endeudamiento ------")
+    print("------nivel de endeudamiento ------")
     
-
+    print("Resultado recibido:", resultado)
     # print resultado with its field types
     for key, value in resultado.items():
         if value is None:
@@ -105,7 +105,13 @@ def nivelEndeudamiento(resultado):
     salarioNetoActual = round(salarioNetoActual,2)
     salarioNetoActualCompleto = totalIngresosMensualesCompleto - granTotalDescontadoCompleto
     salarioNetoActualCompleto = round(salarioNetoActualCompleto,2)
-    letraMensual = resultado['wrkLetraConSeguros']
+    if resultado['tipoPrestamo'] == 'PERSONAL':
+        if resultado['auxPeriocidad'] == 2:
+            letraMensual = resultado['wrkLetraConSeguros'] * 2
+        else:
+            letraMensual = resultado['wrkLetraConSeguros']
+    
+    print("Salario Neto = ", salarioNetoActual, " - Letra Mensual = ", letraMensual)
     salarioNeto = salarioNetoActual - letraMensual
     salarioNeto = round(salarioNeto, 2)
     salarioNetoCompleto = salarioNetoActualCompleto - letraMensual
@@ -161,5 +167,5 @@ def nivelEndeudamiento(resultado):
         'totalDescuentosLegalesCompleto': round(totalDescuentosLegalesCompleto, 2),
         'totalIngresosMensualesCompleto': round(totalIngresosMensualesCompleto, 2),
     }
-
+    print("Resultado Nivel:", resultadoNivel)
     return resultadoNivel

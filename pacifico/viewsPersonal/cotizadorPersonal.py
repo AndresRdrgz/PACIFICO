@@ -344,6 +344,26 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 form.instance.tablaTotalMontoCapital = resultado['tablaTotalMontoCapital']
                 form.instance.manejo_5porc = resultado['manejo_5porc']
                 form.instance.added_by = request.user if request.user.is_authenticated else "INVITADO"
+
+                #GUARDAR DATOS NIVEL
+                form.instance.otrosMonto = resultado['otrosMonto']
+                form.instance.bonosMonto = resultado['bonosMonto']
+                form.instance.primaMonto = resultado['primaMonto']
+                form.instance.salarioBaseMensual = resultado['salarioBaseMensual']
+                form.instance.totalDescuentosLegales = resultado['totalDescuentosLegales']
+                form.instance.totalDescuentoDirecto = resultado['totalDescuentoDirecto']
+                form.instance.totalPagoVoluntario = resultado['totalPagoVoluntario']
+                form.instance.salarioNetoActual = resultado['salarioNetoActual']
+                form.instance.salarioNeto = resultado['salarioNeto']
+                form.instance.porSalarioNeto = resultado['porSalarioNeto']
+                form.instance.totalIngresosAdicionales = resultado['totalIngresosAdicionales']
+                form.instance.totalIngresosMensualesCompleto = resultado['totalIngresosMensualesCompleto']
+                form.instance.totalDescuentosLegalesCompleto = resultado['totalDescuentosLegalesCompleto']
+                form.instance.salarioNetoActualCompleto = resultado['salarioNetoActualCompleto']
+                form.instance.salarioNetoCompleto = resultado['salarioNetoCompleto']
+                form.instance.porSalarioNetoCompleto = resultado['porSalarioNetoCompleto']
+
+
                 form.instance.tipoPrestamo = 'personal'
                 codigoSeguro = resultado['codigoSeguro']
                 aseguradora = Aseguradora.objects.get(codigo=codigoSeguro)
@@ -392,6 +412,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
         'form': form,
         'resultado': resultado,
         'cotizacion': cotizacion,
+        
     }
 
     if hasattr(request.user, 'userprofile') and request.user.userprofile.pruebaFuncionalidades:
