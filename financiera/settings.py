@@ -13,12 +13,13 @@ STATIC_URL = '/static/'
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 if DEBUG:
-    DATABASES = {
+     DATABASES = {
         'default': dj_database_url.config(
             default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
             conn_max_age=600
         )
     }
+else:
     DATABASES = {
         'default': dj_database_url.config(
             default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
