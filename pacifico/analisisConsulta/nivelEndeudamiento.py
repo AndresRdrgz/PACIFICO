@@ -110,6 +110,9 @@ def nivelEndeudamiento(resultado):
             letraMensual = resultado['wrkLetraConSeguros'] * 2
         else:
             letraMensual = resultado['wrkLetraConSeguros']
+    else:
+        letraMensual = resultado['wrkLetraConSeguros']
+       
     
     print("Salario Neto = ", salarioNetoActual, " - Letra Mensual = ", letraMensual)
     salarioNeto = salarioNetoActual - letraMensual
