@@ -208,6 +208,7 @@ def cotizacionDetail(request, pk):
                         'salarioBaseMensual' : form.cleaned_data['codeudorIngresos'],
                         'cartera' : form.cleaned_data['codeudorCartera'],
                         'wrkLetraConSeguros' : resultado['wrkLetraConSeguros'],
+                        'tipoPrestamo' : form.cleaned_data['tipoPrestamo'],
 
                     }
                     
