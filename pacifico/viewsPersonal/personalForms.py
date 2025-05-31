@@ -1,4 +1,3 @@
-
 from django import forms
 from ..models import Cotizacion, Aseguradora
 from django.contrib.auth.models import User
@@ -954,6 +953,10 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'id': 'tapeTieneEmbargo',
                 'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
             }),
+            'cancelarEmbargo': forms.Select(attrs={
+                'id': 'tapeCancelarEmbargo',
+                'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
+            }),
             'letraDepende': forms.Select(attrs={
                 'id': 'tapeLetraDepende',
                 'class': 'bg-transparent border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500',
@@ -1001,7 +1004,35 @@ class PrestamoPersonalForm(forms.ModelForm):
         })
     )
 
-    
+    tapeLetraPrestamo = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Letra del Préstamo',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeLetraPrestamo',
+        })
+    )
+
+    tapeSalarioNetoMensual = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Salario Neto Mensual',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeSalarioNetoMensual',
+        })
+    )
+
+    tapeSalarioBrutoMensual = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Salario Bruto Mensual',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeSalarioBrutoMensual',
+        })
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1209,6 +1240,6 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['vendedorOtroPorcentaje'].required = False
         self.fields['aseguradora'].required = False
         self.fields['comiCierre'].initial = 20
-    
-              
+
+
 

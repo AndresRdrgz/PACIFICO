@@ -379,6 +379,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 
 
                 form.save()
+                print("Cartera value from form:", form.cleaned_data.get('cartera'))
                 print("se guardo -",form.instance.pk)
                 numero_cotizacion = int(form.instance.pk)
                 resultado['numero_cotizacion'] = numero_cotizacion

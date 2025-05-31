@@ -521,6 +521,9 @@ class Cotizacion(models.Model):
 
     
     #DATOS DEL TAPEz
+    tapeLetraPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    tapeSalarioNetoMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    tapeSalarioBrutoMensual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     hipotecaDescuentoDir = models.CharField(
         max_length=2,
         choices=[('NO', 'No'), ('SI', 'Si')],
@@ -528,6 +531,12 @@ class Cotizacion(models.Model):
         blank=True
     )
     tieneEmbargo = models.CharField(
+        max_length=2,
+        choices=[('NO', 'No'), ('SI', 'Si')],
+        null=True,
+        blank=True
+    )
+    cancelarEmbargo = models.CharField(
         max_length=2,
         choices=[('NO', 'No'), ('SI', 'Si')],
         null=True,
