@@ -73,6 +73,8 @@ def cotizacionPrestamoPersonal(request, pk=None):
         cotizacion = get_object_or_404(Cotizacion, pk=pk)
         resultado = prepResultado(cotizacion)
         print("cotizacion:", cotizacion)
+        # print cartera
+        print("cartera value from cotizacion:", cotizacion.cartera)
 
     if request.method == 'POST':
         form = PrestamoPersonalForm(request.POST, request.FILES, instance=cotizacion)
@@ -205,6 +207,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 
                 resultado, iteration_data = generarPP(params)
                 print("--------finalizado---------")
+                print("resultado:", resultado)
                 resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra'] / 2, 2) * 2
                 #Preparacion campos nivel
                 #Datos del deudor
@@ -294,6 +297,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 
                 resultado['cashback'] = form.cleaned_data['cashback'] if form.cleaned_data['cashback'] is not None else 0
                 resultado['cashback'] = round(resultado['cashback'], 2)
+                
                 resultado['r1']=round(resultado['r1'],2)
                 resultado['abono'] = form.cleaned_data['abono'] if form.cleaned_data['abono'] is not None else 0
                 resultado['abono'] = round(resultado['abono'], 2)
@@ -328,7 +332,10 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 form.instance.tasaEstimada = resultado['tasaEstimada']
                 form.instance.tasaBruta = resultado['tasaBruta']
                 form.instance.r1 = resultado['r1']
+                form.instance.plazoInteres = resultado['auxPlazoInteres']
+                form.instance.fechaVencimiento = resultado['fechaVencimiento']
                 form.instance.montoPrestamo = resultado['cotMontoPrestamo']
+                form.instance.montoServDesc = resultado['montoServDesc']
                 form.instance.auxMonto2 = round(Decimal(resultado['auxMonto2']), 2)
                 form.instance.montoManejoT = resultado['montoManejoT']
                 form.instance.monto_manejo_b = resultado['montoManejoB']

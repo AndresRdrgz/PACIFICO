@@ -1068,7 +1068,7 @@ class PrestamoPersonalForm(forms.ModelForm):
         self.fields['tablaTotalMontoCapital'].required = False
         self.fields['manejo_5porc'].required = False
        
-        self.fields['cartera'].required = False
+        self.fields['cartera'].required = True
         self.fields['patronoCodigo'].required = False
         self.fields['montoManejoT'].required = False
         self.fields['monto_manejo_b'].required = False

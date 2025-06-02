@@ -267,9 +267,12 @@ class Cotizacion(models.Model):
     porServDesc = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     # Datos de la cotización
     fechaInicioPago = models.DateField(null=True)
+    fechaVencimiento = models.DateField(null=True,blank=True)
     montoPrestamo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     comiCierre = models.DecimalField(max_digits=10, decimal_places=2, null=True,default=13)
     plazoPago = models.IntegerField(null=True)
+    plazoInteres = models.IntegerField(null=True, blank=True)
+    montoServDesc = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0, blank=True)
     tasaInteres = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
     r_deseada = models.DecimalField(max_digits=10, decimal_places=2, null=True)
    # Datos seguro de auto

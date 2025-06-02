@@ -386,13 +386,13 @@ def recrearSobresaldo(cotMontoPrestamo,calcTasaInteres,auxPlazoPago,patrono,calc
    
     calcTasaEfectiva = calculoTasaEfectiva(wrkMontoLetra,auxPeriocidad,tablaTotalInteres,cotMontoPrestamo,auxPlazoPago,params)
     params['calcTasaEfectiva'] = calcTasaEfectiva
-    ##print("Tasa Efectiva: ",calcTasaEfectiva)
+    #print("Tasa Efectiva: ",calcTasaEfectiva)
     wrkLogic10 = "Y"
     if(wrkLogic10=="Y"):
         
         r1 = calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params)
 
-    ##print("Tasa Efectiva: ",round(TasaEfectiva*100,2)," r1: ",round(r1*100,2))
+    #print("Tasa Efectiva: ",round(TasaEfectiva*100,2)," r1: ",round(r1*100,2))
     ##print("total pagos: ",tablaTotalPagos," total seguro: ",tablaTotalSeguro," total feci: ",tablaTotalFeci," total interes: ",tablaTotalInteres," total monto capital: ",tablaTotalMontoCapital," monto letra: ",wrkMontoLetra)
     return r1, iteration_data
 

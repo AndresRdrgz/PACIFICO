@@ -1461,6 +1461,53 @@ def generate_report_pp(request, numero_cotizacion):
         except:
                 movimientos['U13'] = "COLOCAR MANUAL"
 
+        
+        #LLENADO RESUMEN
+        sheet = workbook['RESUMEN']
+        sheet['I5'] = resultado['id']
+        sheet['K5'] = resultado['oficial']
+        sheet['K5'] = resultado['oficial']
+
+        sheet['E11'] = cotizacion.fechaInicioPago
+        sheet['E12'] = cotizacion.fechaVencimiento
+        if cotizacion.formaPago == 1:
+            sheet['E9'] = "PAGO VOLUNTARIO"
+        elif cotizacion.formaPago == 2:
+            sheet['E9'] = "DESCUENTO DIRECTO"
+
+        sheet['c7'] = cotizacion.r1
+        sheet['c9'] = cotizacion.tasaEstimada
+        if cotizacion.periodoPago == 1:
+            sheet['C10'] = "MENSUAL"
+        elif cotizacion.periodoPago == 2:
+            sheet['C10'] = "QUINCENAL" 
+            
+        sheet['c11'] = "SOBRESALDO"
+        sheet['C12'] = cotizacion.tasaBruta
+
+        sheet['c14'] = cotizacion.auxMonto2
+
+        sheet['c16'] = cotizacion.calcMontoTimbres
+        sheet['c17'] = cotizacion.monto_manejo_b
+        sheet['c18'] = cotizacion.montoServDesc
+        sheet['c19'] = cotizacion.manejo_5porc
+        sheet['c20'] = cotizacion.montoManejoT
+        sheet['H10'] = str(cotizacion.plazoPago) + " / " + str(cotizacion.plazoInteres)
+        sheet['H11'] = cotizacion.pagaDiciembre
+        sheet['h15'] = cotizacion.montoPrestamo 
+        sheet['H16'] = cotizacion.tablaTotalPagos  
+        sheet['H14'] = cotizacion.calcMontoNotaria
+
+        sheet['H23'] = cotizacion.vendedor
+        sheet['H24'] = cotizacion.vendedorComisionPorcentaje
+
+        if cotizacion.periodoPago == 1:
+             sheet['H19'] = cotizacion.plazoPago
+             sheet['H20'] = cotizacion.wrkMontoLetra
+        elif cotizacion.periodoPago == 2:
+            sheet['H19'] = cotizacion.plazoPago * 2
+            sheet['H20'] = cotizacion.wrkMontoLetra * 2
+
         print('llenando excel')
         # Save the workbook to a temporary file
         temp_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.xlsx')
