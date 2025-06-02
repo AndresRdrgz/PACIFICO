@@ -1030,12 +1030,14 @@ def generate_report_pp(request, numero_cotizacion):
             "JUBI ACTIVO AUTÓNOMA",
             "JUBILADO RIESGOS PROF. CSS"
         ]:
-            sheet['K60'] = resultado['tapeLetraPrestamo'] * 2
-            sheet['d33'] = resultado['tapeLetraPrestamo'] * 2
+            tape_letra = resultado['tapeLetraPrestamo'] if resultado['tapeLetraPrestamo'] is not None else resultado['wrkMontoLetra']
+            sheet['K60'] = tape_letra * 2
+            sheet['d33'] = tape_letra * 2
             sheet['E64'] = resultado['salarioBaseMensual']
             sheet['D29'] = resultado['salarioBaseMensual']
         else:
-            sheet['K60'] = resultado['tapeLetraPrestamo'] * 2
+            tape_letra = resultado['tapeLetraPrestamo'] if resultado['tapeLetraPrestamo'] is not None else resultado['wrkMontoLetra']
+            sheet['K60'] = tape_letra
             sheet['d33'] = resultado['wrkMontoLetra']
             sheet['E64'] = resultado['salarioBaseMensual'] 
             sheet['D29'] = resultado['salarioBaseMensual'] / 2
