@@ -966,6 +966,7 @@ def generate_report_pp(request, numero_cotizacion):
             'cancMensualidad3': cotizacion.cancMensualidad3,
             'cancMensualidad4': cotizacion.cancMensualidad4,
             'cancMensualidad5': cotizacion.cancMensualidad5,
+            'tapeLetraPrestamo' : cotizacion.tapeLetraPrestamo,
 
 
 
@@ -1029,12 +1030,12 @@ def generate_report_pp(request, numero_cotizacion):
             "JUBI ACTIVO AUTÓNOMA",
             "JUBILADO RIESGOS PROF. CSS"
         ]:
-            sheet['K60'] = resultado['wrkMontoLetra'] * 2
-            sheet['d33'] = resultado['wrkMontoLetra'] * 2
+            sheet['K60'] = resultado['tapeLetraPrestamo'] * 2
+            sheet['d33'] = resultado['tapeLetraPrestamo'] * 2
             sheet['E64'] = resultado['salarioBaseMensual']
             sheet['D29'] = resultado['salarioBaseMensual']
         else:
-            sheet['K60'] = resultado['wrkMontoLetra'] * 2
+            sheet['K60'] = resultado['tapeLetraPrestamo'] * 2
             sheet['d33'] = resultado['wrkMontoLetra']
             sheet['E64'] = resultado['salarioBaseMensual'] 
             sheet['D29'] = resultado['salarioBaseMensual'] / 2
