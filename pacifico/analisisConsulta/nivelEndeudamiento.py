@@ -1,7 +1,7 @@
 def nivelEndeudamiento(resultado):
-    print("------nivel de endeudamiento ------")
+    #print("------nivel de endeudamiento ------")
     
-    print("Resultado recibido:", resultado)
+    #print("Resultado recibido:", resultado)
     # print resultado with its field types
     for key, value in resultado.items():
         if value is None:

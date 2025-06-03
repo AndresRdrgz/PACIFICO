@@ -52,7 +52,7 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
     #BUSCAR SEGURO
     tasa_bruta, sobretasa, tasa_real = auxBusquedaSeguro(codigoSeguro,edad)
     
-    ###print((f"Tasa Bruta: {tasa_bruta}, Sobretasa: {sobretasa}, Tasa Real: {tasa_real}")
+    #print(f"Tasa Bruta: {tasa_bruta}, Sobretasa: {sobretasa}, Tasa Real: {tasa_real}")
     #tipo_prestamo = "PREST AUTO"
     aux_a = cot_monto_prestamo
     aux_b = calcNetoCancelacion
@@ -81,6 +81,7 @@ def determinar_monto_amortizar(cot_monto_prestamo, aux_notaria_gasto, comis_cier
 
     aux_l = ((aux_a + aux_b + aux_h) - (aux_j + aux_k + aux_i))
 
+    #print("Verificar valores: ", aux_l, aux_d, aux_f)
     aux_z = ((aux_l + aux_d) / (1 - aux_f))
 
     if tipo_prestamo == "PREST AUTO":

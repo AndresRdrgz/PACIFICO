@@ -110,7 +110,7 @@ def generarPP(params):
         # Set initial bounds for binary search
         lower_bound = 0.0
         #upper_bound = 0.65
-        upper_bound = 1.0
+        upper_bound = 2
         if max_iterations > 1:
             params['calcTasaInteres'] = (lower_bound + upper_bound) / 2
             params['calcTasaInteres'] = round(params['calcTasaInteres'], 4)

@@ -174,6 +174,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
 
                 print("--------calculando aseguradora---------")
                 codigoSeguro = identifica_seguro(patrono, sucursal)
+                print("--------INICIANDO---------")
                 params = {
                     'tipoPrestamo': 'PERSONAL',
                     'edad': edad,
@@ -203,11 +204,11 @@ def cotizacionPrestamoPersonal(request, pk=None):
                     'calcNetoCancelacion': float(calcNetoCancelacion),
                     'aplicaPromocion': aplicaPromocion,
                 }
-                print("params",params)
+                #print("params",params)
                 
                 resultado, iteration_data = generarPP(params)
                 print("--------finalizado---------")
-                print("resultado:", resultado)
+                #print("resultado:", resultado)
                 resultado['wrkMontoLetra'] = round(resultado['wrkMontoLetra'] / 2, 2) * 2
                 #Preparacion campos nivel
                 #Datos del deudor
