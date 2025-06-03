@@ -108,7 +108,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 auxPeriocidad = int(periodoPago)
                 formaPago = form.cleaned_data['formaPago']
                 print("formaPago", formaPago, type(formaPago))
-                if formaPago == '2':
+                if formaPago == '2' or formaPago == '6':
                     forma_pago = 3
                 else:
                     forma_pago = 4

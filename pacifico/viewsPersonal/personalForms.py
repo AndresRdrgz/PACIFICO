@@ -975,15 +975,14 @@ class PrestamoPersonalForm(forms.ModelForm):
         initial=1,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+           'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
     formaPago = forms.ChoiceField(
-        choices=[(1, '1 - PAGO VOLUNTARIO'), (2, '2 - DESCUENTO DIRECTO')],
-        initial=1,
+        choices=[(1, '1 - PAGO VOLUNTARIO'), (2, '2 - DESCUENTO DIRECTO'),(6, '6 - DESCUENTO ACH')],
         required=False,
         widget=forms.Select(attrs={
-            'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
         })
     )
 
