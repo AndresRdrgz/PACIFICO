@@ -39,7 +39,7 @@
     
     <div class="flex-1 mb-4">
         <label for="tapeSalarioMinimoPorLey" class="block text-sm font-medium text-gray-700 mb-1">Salario Minimo por Ley</label>
-        <input type="number" name="tapeSalarioMinimoPorLey" placeholder="Salario Minimo por Ley" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 text-right" step="0.01" id="tapeSalarioMinimoPorLey" readonly>
+        <input type="number" name="tapeSalarioMinimoPorLey" placeholder="Salario Minimo por Ley" class="w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 text-center" step="0.01" id="tapeSalarioMinimoPorLey" readonly>
     </div>
 </div>
 <h3 class="text-lg leading-6 mb-2 font-medium text-gray-900">CAPACIDAD QUINCENAL DE DESCUENTO POR EMBARGO</h3>
@@ -101,7 +101,12 @@
         let porcentaje = porcentajes[cartera] !== undefined ? porcentajes[cartera] : 0;
         console.log('Porcentaje:', porcentaje);
         const salario = document.getElementById('tapeSalarioBrutoMensual') ? document.getElementById('tapeSalarioBrutoMensual').value : 0;
-        var salarioPorcentaje = (salario * porcentaje) / 100;
+        var salarioPorcentaje = 0;
+        if (cartera !== 'ACP') {
+            salarioPorcentaje = ((salario * porcentaje) / 100).toFixed(2);
+        }
+
+
         document.getElementById('tapeSalarioPorcentaje').value = salarioPorcentaje;
         document.getElementById('tapePorcentaje1').value = porcentaje;
         
@@ -111,59 +116,22 @@
 
 
         // Calcular el total disponible quincenal
-        var totalQuincenal = 0;
-        if (periodo === 'QUINCENAL') {
+        console.log('--------DISPONIBLE QUINCENAL--------');
+        var totalQuincenal = '-';
+        if (cartera === 'ACP') {
+            var tapeCapacidad50 = document.getElementById('tapeCapacidad50') ? document.getElementById('tapeCapacidad50').value : 0;
+            totalQuincenal = tapeCapacidad50;
+        } else if (periodo === 'QUINCENAL') {
             totalQuincenal = parseFloat(salarioPorcentaje) - parseFloat(totalDeducciones);
+            totalQuincenal = totalQuincenal.toFixed(2);
         } else if (periodo === 'MENSUAL') {
-            totalQuincenal = (parseFloat(salarioPorcentaje) - parseFloat(totalDeducciones))/2;
+            totalQuincenal = (parseFloat(salarioPorcentaje) - parseFloat(totalDeducciones)) / 2;
+            totalQuincenal = totalQuincenal.toFixed(2);
         }
         console.log('Total Quincenal:', totalQuincenal);
-       document.getElementById('tapeDisponibleQuincenal').value = totalQuincenal.toFixed(2);
+       document.getElementById('tapeDisponibleQuincenal').value = totalQuincenal;
         //----------------------------------------------------------------------------
-
-        // Calculo Analisis de Salario Minimo por Ley
-        // Si Jubilado CSS, Jubilado de la Zona, Jubilado Contraloria, Jubilado riesgo profesional CSS, usa N/A (0%), de resto 25%
-        if (cartera === 'JUBILADO CSS' || cartera === 'JUBILADO DE LA ZONA' || cartera === 'JUBILADO CONTRALORIA' || cartera === 'JUBILADO RIESGOS PROF. CSS') {
-            porcentaje = 0;
-        } else {
-            porcentaje = 25;
-        }
-        var salarioPorcentajeLey = (salario * porcentaje) / 100;
-        console.log('Porcentaje Ley: ',porcentaje,'Salario Porcentaje Ley:', salarioPorcentajeLey);
-        document.getElementById('tapePorcentajeMinimoLey').value = porcentaje;
-        document.getElementById('tapeSalarioMinimoLey').value = salarioPorcentajeLey;
-        // Resultado final salario minimo por ley
-        //-------------------------------------------------------------
-        var tapeSalarioMinimoPorLey = 0;
-        var tapeLetraPrestamo = document.getElementById('tapeLetraPrestamo') && document.getElementById('tapeLetraPrestamo').value.trim() !== '' 
-            ? document.getElementById('tapeLetraPrestamo').value 
-            : 0;
-        if(periodo === 'QUINCENAL'){
-            tapeLetraPrestamo = parseFloat(tapeLetraPrestamo) * 2;
-        }
-        var tapeSalarioNetoMensual = document.getElementById('tapeSalarioNetoMensual') && document.getElementById('tapeSalarioNetoMensual').value.trim() !== '' 
-            ? document.getElementById('tapeSalarioNetoMensual').value 
-            : 0;
-        var totalCancelaciones  = calculateTotalCancelaciones();
-        if (porcentaje === 0) {
-            tapeSalarioMinimoPorLey = 0;
-        } else {
-            if (cartera === 'ACP') {
-            tapeSalarioMinimoPorLey = 0;
-            } else {
-            if (periodo === 'QUINCENAL') {
-                // No calculation provided for QUINCENAL, keep as is or add logic if needed
-            } else {
-                // MENSUAL
-                tapeSalarioMinimoPorLey = parseFloat(tapeSalarioNetoMensual) + parseFloat(totalCancelaciones) - parseFloat(salarioPorcentajeLey) - parseFloat(tapeLetraPrestamo);
-                tapeSalarioMinimoPorLey = tapeSalarioMinimoPorLey / 2;
-            }
-            }
-        }
-        console.log('tapeSalarioMinimoPorLey:', tapeSalarioMinimoPorLey);
-        document.getElementById('tapeSalarioMinimoPorLey').value = tapeSalarioMinimoPorLey.toFixed(2);
-    //----------------------------------------------------------------------------
-    // Calculo Analisis de Capacidad de Descuento por Embargo
+        // Calculo Analisis de Capacidad de Descuento por Embargo
     if (cartera === 'JUBILADO CSS' || cartera === 'JUBILADO DE LA ZONA' || cartera === 'JUBILADO CONTRALORIA' || cartera === 'JUBILADO RIESGOS PROF. CSS') {
         porcentaje = 0;
     } else {
@@ -176,17 +144,82 @@
         var tapeSalarioEmbargable = 0;
         var tapeCapacidadMaximaEmbargo = 0;
     }else{
-        var tapeSalarioEmbargable = parseFloat(tapeSalarioBrutoMensual) - parseFloat(montoInembargable);
-        var tapeCapacidadMaximaEmbargo = (parseFloat(tapeSalarioEmbargable) * parseFloat(porcentaje)) / 100;
+        var tapeSalarioEmbargable = (parseFloat(tapeSalarioBrutoMensual) - parseFloat(montoInembargable)).toFixed(2);
+        var tapeCapacidadMaximaEmbargo = ((parseFloat(tapeSalarioEmbargable) * parseFloat(porcentaje)) / 100);
         if (periodo === 'MENSUAL') {
-            tapeCapacidadMaximaEmbargo = parseFloat(tapeCapacidadMaximaEmbargo) / 2;
+            tapeCapacidadMaximaEmbargo = tapeCapacidadMaximaEmbargo / 2;
         }
+        tapeCapacidadMaximaEmbargo = tapeCapacidadMaximaEmbargo.toFixed(2);
     }
     console.log('tapeSalarioEmbargable:', tapeSalarioEmbargable,' tapeCapacidadMaximaEmbargo:', tapeCapacidadMaximaEmbargo);
     document.getElementById('tapeSalarioEmbargable').value = tapeSalarioEmbargable;
     document.getElementById('tapeCapacidadMaximaEmbargo').value = tapeCapacidadMaximaEmbargo;
 
     //----------------------------------------------------------------------------
+
+        // Calculo Analisis de Salario Minimo por Ley
+        var tapeLimiteConHipoteca = document.getElementById('tapeLimiteConHipoteca') ? document.getElementById('tapeLimiteConHipoteca').value : 0;
+        var tapeLimiteSinHipoteca = document.getElementById('tapeLimiteSinHipoteca') ? document.getElementById('tapeLimiteSinHipoteca').value : 0;
+        // Si Jubilado CSS, Jubilado de la Zona, Jubilado Contraloria, Jubilado riesgo profesional CSS, usa N/A (0%), de resto 25%
+        if (cartera === 'JUBILADO CSS' || cartera === 'JUBILADO DE LA ZONA' || cartera === 'JUBILADO CONTRALORIA' || cartera === 'JUBILADO RIESGOS PROF. CSS') {
+            porcentaje = 0;
+        } else {
+            porcentaje = 25;
+        }
+        var salarioPorcentajeLey;
+        if (cartera === 'ACP') {
+             console.log('tapeLimiteConHipoteca:', tapeLimiteConHipoteca, ' tapeLimiteSinHipoteca:', tapeLimiteSinHipoteca);
+            salarioPorcentajeLey = (parseFloat(tapeLimiteConHipoteca) - parseFloat(tapeLimiteSinHipoteca)).toFixed(2);
+        } else {
+            salarioPorcentajeLey = ((salario * porcentaje) / 100).toFixed(2);
+        }
+        console.log('Porcentaje Ley: ', porcentaje, 'Salario Porcentaje Ley:', salarioPorcentajeLey);
+        document.getElementById('tapePorcentajeMinimoLey').value = porcentaje;
+        document.getElementById('tapeSalarioMinimoLey').value = salarioPorcentajeLey;
+        // Resultado final salario minimo por ley
+        //-------------------------------------------------------------
+        console.log('--------SALARIO MINIMO POR LEY--------');
+        var tapeSalarioMinimoPorLey = 0;
+        var tapeLetraPrestamo = document.getElementById('tapeLetraPrestamo') && document.getElementById('tapeLetraPrestamo').value.trim() !== '' 
+            ? document.getElementById('tapeLetraPrestamo').value 
+            : 0;
+       
+        var tapeSalarioNetoMensual = document.getElementById('tapeSalarioNetoMensual') && document.getElementById('tapeSalarioNetoMensual').value.trim() !== '' 
+            ? document.getElementById('tapeSalarioNetoMensual').value 
+            : 0;
+        var totalCancelaciones  = calculateTotalCancelaciones();
+        
+        console.log('Salario Neto Mensual:', tapeSalarioNetoMensual);
+        console.log('tapeLetraPrestamo:', tapeLetraPrestamo);
+        console.log('Salario x Porcentaje:', salarioPorcentajeLey);
+
+
+        if (porcentaje === 0) {
+            tapeSalarioMinimoPorLey = 0;
+        } else {
+            if (cartera === 'ACP') {
+            tapeUtilizado = document.getElementById('tapeUtilizado') ? document.getElementById('tapeUtilizado').value : 0;
+            tapeSalarioMinimoPorLey = (parseFloat(tapeLimiteSinHipoteca)*2) - tapeUtilizado + totalCancelaciones - salarioPorcentajeLey - tapeCapacidadMaximaEmbargo  - tapeLetraPrestamo;
+            } else {
+            if (periodo === 'QUINCENAL') {
+                // No calculation provided for QUINCENAL, keep as is or add logic if needed
+                tapeSalarioMinimoPorLey = parseFloat(tapeSalarioNetoMensual) + parseFloat(totalCancelaciones) - parseFloat(salarioPorcentajeLey) - parseFloat(tapeLetraPrestamo);
+            } else {
+                // MENSUAL
+                tapeSalarioMinimoPorLey = parseFloat(tapeSalarioNetoMensual) + parseFloat(totalCancelaciones) - parseFloat(salarioPorcentajeLey) - parseFloat(tapeLetraPrestamo);
+                tapeSalarioMinimoPorLey = tapeSalarioMinimoPorLey / 2;
+            }
+            }
+        }
+       
+        
+        
+
+        document.getElementById('tapeSalarioMinimoPorLey').value = tapeSalarioMinimoPorLey.toFixed(2);
+        console.log('tapeSalarioMinimoPorLey:', tapeSalarioMinimoPorLey);
+        console.log('---------------------------------------');
+    //----------------------------------------------------------------------------
+    
         // Calculo Analisis de Hipotecas
     const letraHipoteca1 = document.getElementById('letraHipoteca1') ? document.getElementById('letraHipoteca1').value : 0;
     const letraHipoteca2 = document.getElementById('letraHipoteca2') ? document.getElementById('letraHipoteca2').value : 0;

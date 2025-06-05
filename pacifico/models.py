@@ -574,6 +574,11 @@ class Cotizacion(models.Model):
     letraHipoteca1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     letraHipoteca2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    #TAPE ACP
+    tapeCapacidad50 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    tapeLimiteConHipoteca = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    tapeLimiteSinHipoteca = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    tapeUtilizado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
            
     

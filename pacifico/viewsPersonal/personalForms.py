@@ -1032,6 +1032,43 @@ class PrestamoPersonalForm(forms.ModelForm):
             'id': 'tapeSalarioBrutoMensual',
         })
     )
+    #Campos tape ACP
+    tapeCapacidad50 = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Capacidad 50%',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeCapacidad50',
+        })
+    )
+    tapeLimiteConHipoteca = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Límite con Hipoteca',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeLimiteConHipoteca',
+        })
+    )
+    tapeLimiteSinHipoteca = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Límite sin Hipoteca',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeLimiteSinHipoteca',
+        })
+    )
+    tapeUtilizado = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'placeholder': 'Utilizado',
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'step': '0.01',
+            'id': 'tapeUtilizado',
+        })
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

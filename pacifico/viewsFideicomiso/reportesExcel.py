@@ -1021,46 +1021,47 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['D20'] = resultado['fechaNacimiento']
        
         print('Cartera:', resultado['cartera'])
-        if resultado['cartera'] in [
-            "CONTRALORÍA",
-            "AUTÓNOMAS",
-            "EMP. PRIVADA",
-            "JUBI ACTIVO CONTRALORIA",
-            "JUBILADO CONTRALORIA",
-            "JUBI ACTIVO AUTÓNOMA",
-            "JUBILADO RIESGOS PROF. CSS"
-        ]:
-            tape_letra = resultado['tapeLetraPrestamo'] if resultado['tapeLetraPrestamo'] is not None else resultado['wrkMontoLetra']
-            sheet['K60'] = tape_letra * 2
-            sheet['d33'] = tape_letra * 2
-            sheet['E64'] = resultado['salarioBaseMensual']
-            sheet['D29'] = resultado['salarioBaseMensual']
-        else:
-            tape_letra = resultado['tapeLetraPrestamo'] if resultado['tapeLetraPrestamo'] is not None else resultado['wrkMontoLetra']
-            sheet['K60'] = tape_letra
-            sheet['d33'] = resultado['wrkMontoLetra']
-            sheet['E64'] = resultado['salarioBaseMensual'] 
-            sheet['D29'] = resultado['salarioBaseMensual'] / 2
-            
-            
         
-        
-        #sheet['e42'] = resultado['montoMensualSeguro']
-        #sheet['E44'] = resultado['wrkLetraConSeguros']
+        #DATOS TAPE
+        tapeLetraPrestamo = cotizacion.tapeLetraPrestamo if cotizacion.tapeLetraPrestamo is not None else 0
+        tapeSalarioBrutoMensual = cotizacion.tapeSalarioBrutoMensual if cotizacion.tapeSalarioBrutoMensual is not None else 0
+        tapeSalarioNetoMensual = cotizacion.tapeSalarioNetoMensual if cotizacion.tapeSalarioNetoMensual is not None else 0
+        hipotecaDescuentoDir = cotizacion.hipotecaDescuentoDir if cotizacion.hipotecaDescuentoDir is not None else ''
+        tieneEmbargo = cotizacion.tieneEmbargo if cotizacion.tieneEmbargo is not None else ''
+        letraDepende = cotizacion.letraDepende if cotizacion.letraDepende is not None else ''
+        letraFaje = cotizacion.letraFaje if cotizacion.letraFaje is not None else ''
 
-        #sheet['E46'] = resultado['tablaTotalPagos']
+        sheet['d29'] = tapeSalarioBrutoMensual
+        sheet['d31'] = tapeSalarioNetoMensual
+        sheet['d33'] = tapeLetraPrestamo
+        sheet['d37'] = hipotecaDescuentoDir
+        sheet['d39'] = tieneEmbargo
+        sheet['d41'] = letraDepende
+        sheet['d44'] = letraFaje
         
-        #DATOS DEL VENDEDOR
-        #sheet['j18'] = resultado['vendedor']
-        #sheet['j20'] = resultado['comisionVendedor']
+
+        #CAPACIDAD TAPE ACP
+        if resultado['cartera'] == 'ACP':
+            sheet['d46'] = cotizacion.tapeCapacidad50
+            sheet['d48'] = cotizacion.tapeLimiteConHipoteca
+            sheet['d50'] = cotizacion.tapeLimiteSinHipoteca
+            sheet['d52'] = cotizacion.tapeUtilizado
 
         #cancelaciones
-        sheet['l33'] = resultado['cancMensualidad1']
-        sheet['l34'] = resultado['cancMensualidad2']
-        sheet['l35'] = resultado['cancMensualidad3']
-        sheet['l36'] = resultado['cancMensualidad4']
-        sheet['l37'] = resultado['cancMensualidad5']
+        sheet['l33'] = cotizacion.cancelaciones1
+        sheet['l34'] = cotizacion.cancelaciones2
+        sheet['l35'] = cotizacion.cancelaciones3
+        sheet['l36'] = cotizacion.cancelaciones4
+        sheet['l37'] = cotizacion.cancelaciones5
+        sheet['i38'] = cotizacion.cancelaciones6
 
+        #deducciones
+        sheet['g33'] = cotizacion.deducciones1
+        sheet['g34'] = cotizacion.deducciones2
+        sheet['g35'] = cotizacion.deducciones3
+        sheet['g36'] = cotizacion.deducciones4
+        sheet['g37'] = cotizacion.deducciones5
+        sheet['g38'] = cotizacion.deducciones6
         #DATOS DEL VEHICULO
        
 
