@@ -12,7 +12,7 @@ STATIC_URL = '/static/'
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
         DATABASES = {
         'default': {
@@ -156,6 +156,7 @@ INSTALLED_APPS = [
     "capacitaciones_app",
     "nested_admin",
     "mantenimiento",
+    "workflow",
 ]
 
 MIDDLEWARE = [
