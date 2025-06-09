@@ -12,6 +12,7 @@ STATIC_URL = '/static/'
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
+DEBUG = True
 if DEBUG:
         DATABASES = {
         'default': {

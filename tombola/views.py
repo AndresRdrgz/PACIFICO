@@ -9,6 +9,7 @@ from reportlab.pdfgen import canvas
 from PyPDF2 import PdfWriter, PdfReader
 from django.conf import settings
 from django.core.mail import EmailMessage
+from .models import FormularioTombola, Boleto, CargaMasiva
 
 
 import os
@@ -17,27 +18,74 @@ import smtplib
 import os
 
 
-# Create your views here.
+from django.shortcuts import render, redirect
+from .models import CargaMasiva, Boleto, FormularioTombola
+from pacifico.models import Cliente
+from .forms import FormularioTombolaForm
+
 def moduloTombola(request):
-    tombola_list = FormularioTombola.objects.all()
-    boleto_list = Boleto.objects.all()  # Assuming you have a model named Boleto
-    return render(request, 'moduloTombola.html', {'tombola_list': tombola_list, 'boleto_list': boleto_list})
+    # Traer boletos para la tabla de Participantes
+    boletos = Boleto.objects.select_related('formulario_origen', 'tombola', 'cliente')
+    boleto_data = []
+
+    for b in boletos:
+        f = getattr(b, 'formulario_origen', None)
+
+        if f:  # Si proviene de formulario
+            nombre = f.nombre
+            apellido = f.apellido
+            celular = f.celular
+            correo = f.correo_electronico
+            oficial = f.oficial
+            fecha = f.fecha_creacion
+        else:  # Si proviene de carga masiva
+            if b.cliente and b.cliente.nombreCliente:
+                partes = b.cliente.nombreCliente.split()
+                nombre = partes[0]
+                apellido = partes[-1] if len(partes) > 1 else ""
+            else:
+                nombre = "Desconocido"
+                apellido = ""
+            celular = ""
+            correo = ""
+            oficial = ""
+            fecha = b.fecha_creacion
+
+        boleto_data.append({
+            "nombre": nombre,
+            "apellido": apellido,
+            "celular": celular,
+            "correo": correo,
+            "oficial": oficial,
+            "canal": b.canalOrigen,
+            "tombola": b.tombola.nombre if b.tombola else "-",
+            "boleto_id": b.id,
+            "fecha": fecha,
+        })
+
+    # Historial de cargas masivas
+    cargas = CargaMasiva.objects.order_by('-fecha_subida')
+
+    return render(request, 'moduloTombola.html', {
+        'boleto_data': boleto_data,
+        'cargas_masivas': cargas,
+    })
+
 
 def formularioTombola(request):
     try:
         if request.method == 'POST':
             form = FormularioTombolaForm(request.POST)
             if form.is_valid():
-                print("Formulario válido")
-                formulario = form.save()  # Save the FormularioTombola instance
-                
-                # Check if Cliente with given cedula exists, otherwise create it
-                cedulaCliente = form.cleaned_data.get('cedulaCliente')  # Assuming the form has a 'cedula' field
-                nombre = form.cleaned_data.get('nombre')  # Assuming the form has a 'nombre' field
-                apellido = form.cleaned_data.get('apellido')  # Assuming the form has an 'apellido' field
-                edad = form.cleaned_data.get('edad')  # Assuming the form has an 'edad' field
-                sexo = form.cleaned_data.get('sexo')  # Assuming the form has a 'sexo' field
-                
+                formulario = form.save(commit=False)
+
+                # Datos del cliente
+                cedulaCliente = form.cleaned_data.get('cedulaCliente')
+                nombre = form.cleaned_data.get('nombre')
+                apellido = form.cleaned_data.get('apellido')
+                edad = form.cleaned_data.get('edad')
+                sexo = form.cleaned_data.get('sexo')
+
                 cliente, created = Cliente.objects.get_or_create(
                     cedulaCliente=cedulaCliente,
                     defaults={
@@ -47,37 +95,48 @@ def formularioTombola(request):
                     }
                 )
 
-                # Check if a Boleto already exists for this tombola, cedula, and origin
-                existing_boleto = Boleto.objects.filter(
+                # Guardar formulario para poder asignar boleto después
+                formulario.save()
+
+                # Validar si ya existe un boleto desde formulario
+                existente = Boleto.objects.filter(
                     tombola=formulario.tombola,
                     cliente=cliente,
                     canalOrigen='Formulario'
                 ).first()
-                print(f"Existing Boleto: {existing_boleto}")
-                if existing_boleto:
-                    print("Cliente ya está participando")
+
+                if existente:
                     return render(request, 'confirmacion.html', {
-                        'error_message': "Cliente ya está participando",
+                        'error_message': "Cliente ya está participando"
                     })
 
-                # Create the Boleto instance
+                # Crear boleto
                 boleto = Boleto.objects.create(
-                    tombola=formulario.tombola,  # Assuming FormularioTombola has a tombola ForeignKey
-                    cliente=cliente,  # Associate the Boleto with the Cliente
-                    canalOrigen='Formulario'  # Set the canalOrigen field
+                    tombola=formulario.tombola,
+                    cliente=cliente,
+                    canalOrigen='Formulario'
                 )
 
-                return redirect('confirmacion', boleto_id=boleto.id)  # Redirect to confirmation page with boleto_id
+                # 🔥 ESTA ES LA PARTE CLAVE
+                formulario.boleto_asociado = boleto
+                formulario.save()
+
+                # Enviar por correo
+                enviar_boleto_por_correo(boleto, formulario)
+
+                return redirect('confirmacion', boleto_id=boleto.id)
         else:
             form = FormularioTombolaForm()
         
         return render(request, 'formularioTombola.html', {'form': form})
+    
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Error: {e}")
         return render(request, 'formularioTombola.html', {
             'form': FormularioTombolaForm(),
-            'error_message': "Ocurrió un error al procesar el formulario. Por favor, inténtelo de nuevo."
+            'error_message': "Ocurrió un error al procesar el formulario."
         })
+
 
 def confirmacion(request, boleto_id):
     return render(request, 'confirmacion.html', {'boleto_id': boleto_id})
@@ -106,11 +165,11 @@ def generate_boleto_pdf(template_path, output_path, boleto_id):
     # Create a canvas with the same size as the template
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
     # Set font, color, and position for the boleto ID
-    c.setFont("Helvetica-Bold", 30)
+    c.setFont("Helvetica-Bold", 20)
     c.setFillColorRGB(1, 0, 0)  # Set the font color to red (RGB: 1, 0, 0)
     boleto_text = f"Boleto No. {boleto_id:06d}"  # Format the ID as a 6-digit number with leading zeros
     boleto_text_width = c.stringWidth(boleto_text, "Helvetica-Bold", 30)
-    c.drawString((page_width - boleto_text_width) / 2, (page_height - 10) / 2, boleto_text)
+    c.drawString((page_width - boleto_text_width) / 2+43, page_height * 0.605, boleto_text)
 
     # Finalize the overlay
     c.save()
@@ -154,6 +213,15 @@ def download_boleto(request, boleto_id):
     # Serve the file as a response
     response = FileResponse(open(output_path, "rb"), as_attachment=True, filename=f"boleto_{boleto_id}.pdf")
 
+    # ✅ En local, no intentes borrar de inmediato para evitar PermissionError
+    if not settings.DEBUG:
+        try:
+            os.remove(output_path)
+        except Exception as e:
+            print(f"No se pudo eliminar el archivo temporal: {e}")
+
+    return response
+
     # Optionally delete the file after serving
     os.remove(output_path)
 
@@ -193,7 +261,7 @@ def send_boleto_email(request, boleto_id):
 
         # Recipient email from the formulario
         recipient_email = formulario.correo_electronico
-        cc_emails = ["arodriguez@fpacifico.com", "snunez@fpacifico.com"]  # CC recipients
+        cc_emails = ["arodriguez@fpacifico.com", "jacastillo@fpacifico.com"]  # CC recipients
 
         # Email subject and body
         subject = "Tu boleto de participación"
@@ -231,3 +299,77 @@ def send_boleto_email(request, boleto_id):
             'error_message': f"Error al enviar el correo: {str(e)}",
             'boleto_id': boleto_id
         })
+    
+    from django.core.mail import EmailMessage
+
+def enviar_boleto_por_correo(boleto, formulario=None, correo=None, nombre=None, apellido=None):
+    try:
+        # Priorizar datos desde formulario si se proporciona
+        if formulario:
+            correo = formulario.correo_electronico
+            nombre = formulario.nombre
+            apellido = formulario.apellido
+
+        if not correo:
+            print("No se proporcionó un correo electrónico.")
+            return
+
+        # Generar PDF
+        template_path = os.path.join(settings.BASE_DIR, "tombola/templates/boleto_template.pdf")
+        output_path = os.path.join(settings.BASE_DIR, f"tombola/temp/boleto_{boleto.id}.pdf")
+
+        generate_boleto_pdf(template_path, output_path, boleto.id)
+
+        # Preparar correo
+        cc_emails = ["arodriguez@fpacifico.com", "jacastillo@fpacifico.com"]
+        subject = "Tu boleto de participación"
+        body = f"Hola {nombre} {apellido},\n\nAdjunto encontrarás tu boleto de participación con el ID: {boleto.id:06d}.\n\nSaludos,\nEquipo de FPACIFICO"
+
+        email = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email="tombola@fpacifico.com",
+            to=[correo],
+            cc=cc_emails,
+        )
+
+        with open(output_path, "rb") as pdf:
+            email.attach(f"boleto_{boleto.id}.pdf", pdf.read(), "application/pdf")
+
+        email.send()
+
+        if not settings.DEBUG:
+            os.remove(output_path)
+
+        print(f"Correo enviado a {correo}")
+
+    except Exception as e:
+        print(f"Error al enviar el boleto por correo: {e}")
+
+from .models import CargaMasiva
+import openpyxl
+from django.utils.timezone import localtime
+
+def descargar_excel_cargas(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Cargas Masivas"
+
+    headers = ["ID", "Archivo", "Cantidad de Registros", "Usuario", "Fecha de Subida"]
+    ws.append(headers)
+
+    cargas = CargaMasiva.objects.all().order_by('-fecha_subida')
+
+    for carga in cargas:
+        ws.append([
+            carga.id,
+            carga.archivo,
+            carga.cantidad_registros,
+            carga.usuario,
+            localtime(carga.fecha_subida).strftime("%Y-%m-%d %H:%M:%S")
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=cargas_masivas.xlsx'
+    wb.save(response)
+    return response
