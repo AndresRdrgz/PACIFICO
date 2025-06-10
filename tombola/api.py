@@ -1,5 +1,6 @@
 import openpyxl
 import os
+from io import BytesIO
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.shortcuts import redirect, render
@@ -133,46 +134,58 @@ def download_participantes_excel(request):
         formulario = getattr(boleto, 'formulario_origen', None)
         cliente = boleto.cliente
 
-        if formulario:
+        # Nombre y Apellido
+        if formulario and formulario.nombre and formulario.apellido:
             nombre = formulario.nombre
             apellido = formulario.apellido
         else:
             nombre_parts = cliente.nombreCliente.split() if cliente.nombreCliente else []
             nombre = nombre_parts[0] if len(nombre_parts) > 0 else ""
-            apellido = nombre_parts[1] if len(nombre_parts) > 1 else ""
+            apellido = " ".join(nombre_parts[1:]) if len(nombre_parts) > 1 else ""
 
-        cedula = cliente.cedulaCliente
-        celular = formulario.celular if formulario else ""
-        correo = formulario.correo_electronico if formulario else ""
-        edad = formulario.edad if formulario else ""
-        nacimiento = formulario.fecha_nacimiento.strftime('%Y-%m-%d') if formulario and formulario.fecha_nacimiento else ""
-        sexo = formulario.sexo if formulario else ""
-        sector = formulario.sector if formulario else ""
-        salario = formulario.salario if formulario else ""
-        producto = formulario.producto_interesado if formulario else ""
-        monto = float(formulario.dinero_a_solicitar) if formulario and formulario.dinero_a_solicitar else ""
-        oficial = formulario.oficial if formulario else ""
-        canal = boleto.canalOrigen
+        # Datos comunes
+        cedula = cliente.cedulaCliente or ""
+        celular = getattr(formulario, 'celular', "") or ""
+        correo = getattr(formulario, 'correo_electronico', "") or ""
+        edad = getattr(formulario, 'edad', "") or ""
+
+        # Fecha de nacimiento
+        nacimiento = ""
+        if formulario and formulario.fecha_nacimiento:
+            try:
+                nacimiento = formulario.fecha_nacimiento.strftime('%Y-%m-%d')
+            except:
+                nacimiento = ""
+
+        sexo = getattr(formulario, 'sexo', "") or ""
+        sector = getattr(formulario, 'sector', "") or ""
+        salario = getattr(formulario, 'salario', "") or ""
+        producto = getattr(formulario, 'producto_interesado', "") or ""
+
+        # Monto solicitado
+        monto = ""
+        if formulario and formulario.dinero_a_solicitar:
+            try:
+                monto = float(formulario.dinero_a_solicitar)
+            except (ValueError, TypeError):
+                monto = ""
+
+        oficial = getattr(formulario, 'oficial', "") or ""
+        canal = boleto.canalOrigen or ""
         tombola = boleto.tombola.nombre if boleto.tombola else ""
-        fecha = boleto.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
 
-        sheet.cell(row=row_num, column=1, value=f"{boleto.id:06d}")
-        sheet.cell(row=row_num, column=2, value=nombre)
-        sheet.cell(row=row_num, column=3, value=apellido)
-        sheet.cell(row=row_num, column=4, value=cedula)
-        sheet.cell(row=row_num, column=5, value=celular)
-        sheet.cell(row=row_num, column=6, value=correo)
-        sheet.cell(row=row_num, column=7, value=edad)
-        sheet.cell(row=row_num, column=8, value=nacimiento)
-        sheet.cell(row=row_num, column=9, value=sexo)
-        sheet.cell(row=row_num, column=10, value=sector)
-        sheet.cell(row=row_num, column=11, value=salario)
-        sheet.cell(row=row_num, column=12, value=producto)
-        sheet.cell(row=row_num, column=13, value=monto)
-        sheet.cell(row=row_num, column=14, value=oficial)
-        sheet.cell(row=row_num, column=15, value=canal)
-        sheet.cell(row=row_num, column=16, value=tombola)
-        sheet.cell(row=row_num, column=17, value=fecha)
+        try:
+            fecha = boleto.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            fecha = ""
+
+        # Escribir en hoja Excel
+        fila = [
+            f"{boleto.id:06d}", nombre, apellido, cedula, celular, correo, edad, nacimiento, sexo,
+            sector, salario, producto, monto, oficial, canal, tombola, fecha
+        ]
+        for col_num, value in enumerate(fila, 1):
+            sheet.cell(row=row_num, column=col_num, value=value)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -180,6 +193,7 @@ def download_participantes_excel(request):
     response['Content-Disposition'] = 'attachment; filename=Formulario_Participantes.xlsx'
     workbook.save(response)
     return response
+
 
 
 def download_boletos_excel(request):
