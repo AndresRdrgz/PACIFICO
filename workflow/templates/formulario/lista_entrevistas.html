@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrevistas Registradas</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .btn-pacifico {
+      background-color: #22a650;
+      color: white;
+    }
+    .btn-pacifico:hover {
+      background-color: #1c8a42;
+      color: white;
+    }
+    .table thead {
+      background-color: #22a650;
+      color: white;
+    }
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5 mb-5">
+    <div class="top-header">
+      <h2>📋 Lista de Entrevistas Registradas</h2>
+      <div>
+        <a href="{% url 'entrevista_cliente' %}" class="btn btn-pacifico">
+          + Nueva Entrevista
+        </a>
+        <a href="{% url 'descargar_entrevistas_excel' %}" class="btn btn-success ms-2">
+          Descargar Excel
+        </a>
+      </div>
+    </div>
+
+    {% if entrevistas %}
+      <div class="table-responsive shadow rounded">
+        <table class="table table-bordered table-hover align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Cédula</th>
+              <th>Correo</th>
+              <th>Celular</th>
+              <th>Producto</th>
+              <th>Oficial</th>
+              <th>Fecha Entrevista</th>
+              <th>Descargar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entrevista in entrevistas %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ entrevista.primer_nombre }} {{ entrevista.primer_apellido }}</td>
+              <td>{{ entrevista.provincia_cedula }}-{{ entrevista.tipo_letra }}-{{ entrevista.tomo_cedula }}-{{ entrevista.partida_cedula }}</td>
+              <td>{{ entrevista.email }}</td>
+              <td>{{ entrevista.telefono }}</td>
+              <td>{{ entrevista.tipo_producto }}</td>
+              <td>{{ entrevista.oficial }}</td>
+              <td>{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}</td>
+              <td>
+                <a href="{% url 'descargar_entrevista_excel' entrevista.id %}" class="btn btn-outline-success btn-sm">
+                  <i class="fas fa-file-excel"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info text-center">No hay entrevistas registradas aún.</div>
+    {% endif %}
+  </div>
+</body>
+</html>
+
