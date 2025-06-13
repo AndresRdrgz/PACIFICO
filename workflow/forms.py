@@ -89,6 +89,31 @@ class ClienteEntrevistaForm(forms.ModelForm):
                 'style': 'width:2.5em;height:1.5em;',
                 'role': 'switch'
             }),
+            'conyuge_nombre': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Nombre completo',
+            }),
+            'conyuge_cedula': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Cédula',
+            }),
+            'conyuge_telefono': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Teléfono',
+            }),
+            'conyuge_lugar_trabajo': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Lugar de trabajo',
+            }),
+            'conyuge_cargo': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Cargo',
+            }),
+            'conyuge_ingreso': forms.NumberInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Ingreso mensual',
+                'step': '0.01',
+            }),
         }
 
     def clean_jubilado(self):
