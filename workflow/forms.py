@@ -3,6 +3,17 @@ from django.forms import inlineformset_factory
 from .models import ClienteEntrevista, OtroIngreso, ReferenciaPersonal, ReferenciaComercial
 
 class ClienteEntrevistaForm(forms.ModelForm):
+    JUBILADO_CHOICES = (
+        ('True', 'Sí'),
+        ('False', 'No'),
+    )
+    jubilado = forms.ChoiceField(
+        choices=JUBILADO_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True,
+        label='Jubilado'
+    )
+
     class Meta:
         model = ClienteEntrevista
         exclude = [
@@ -67,9 +78,30 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'autoriza_apc': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acepta_datos': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'es_beneficiario_final': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'es_pep': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'es_familiar_pep': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            # PEP toggles con estilo Bootstrap 5 Switch y tamaño personalizado
+            'es_pep': forms.CheckboxInput(attrs={
+                'class': 'form-check-input form-switch',
+                'style': 'width:2.5em;height:1.5em;',
+                'role': 'switch'
+            }),
+            'es_familiar_pep': forms.CheckboxInput(attrs={
+                'class': 'form-check-input form-switch',
+                'style': 'width:2.5em;height:1.5em;',
+                'role': 'switch'
+            }),
         }
+
+    def clean_jubilado(self):
+        value = self.cleaned_data['jubilado']
+        return value == 'True'
+
+    def clean_es_pep(self):
+        # Asegura que el valor sea booleano
+        return bool(self.cleaned_data.get('es_pep', False))
+
+    def clean_es_familiar_pep(self):
+        # Asegura que el valor sea booleano
+        return bool(self.cleaned_data.get('es_familiar_pep', False))
 
 
 class OtroIngresoForm(forms.ModelForm):

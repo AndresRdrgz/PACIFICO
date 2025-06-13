@@ -1,89 +1,301 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Entrevistas Registradas</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+{% block title %}Entrevistas Registradas{% endblock %}
+
+{% block content %}
+<div class="container py-5">
   <style>
     body {
-      background-color: #f8f9fa;
+      background: linear-gradient(120deg, #e8f5e9 0%, #b2dfdb 100%);
+      min-height: 100vh;
+      color: #1b4332;
     }
     .btn-pacifico {
-      background-color: #22a650;
-      color: white;
+      background: linear-gradient(90deg, #22a650 0%, #198754 100%);
+      color: #fff;
+      border-radius: 1.5em;
+      font-weight: 600;
+      border: none;
+      box-shadow: 0 2px 8px rgba(34,166,80,0.10);
+      transition: background 0.2s;
     }
     .btn-pacifico:hover {
-      background-color: #1c8a42;
-      color: white;
+      background: linear-gradient(90deg, #198754 0%, #14532d 100%);
+      color: #fff;
     }
-    .table thead {
-      background-color: #22a650;
-      color: white;
+    .card-entrevista {
+      border-radius: 1.5em;
+      box-shadow: 0 2px 24px rgba(34,166,80,0.13);
+      border: none;
+      background: linear-gradient(120deg, #e8f5e9 80%, #b2dfdb 100%);
+      color: #14532d;
+      transition: transform 0.1s, box-shadow 0.2s;
     }
-    .top-header {
+    .card-entrevista:hover {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 8px 32px #22a65044;
+    }
+    .card-header-custom {
+      background: linear-gradient(90deg, #22a650 0%, #198754 100%);
+      color: #fff;
+      border-radius: 1.5em 1.5em 0 0;
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 1em 1.5em;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
+      gap: 0.7em;
+      border-bottom: 1px solid #19875433;
+    }
+    .card-header-custom i {
+      font-size: 1.5em;
+    }
+    .card-body-custom {
+      background: transparent;
+      border-radius: 0 0 1.5em 1.5em;
+      padding: 1.5em;
+    }
+    .summary-card {
+      background: linear-gradient(90deg, #22a650 0%, #198754 100%);
+      color: #fff;
+      border-radius: 1.5em;
+      box-shadow: 0 2px 16px rgba(34,166,80,0.10);
+      margin-bottom: 2em;
+      padding: 1.5em 2em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .summary-card .fa-users {
+      font-size: 2.5em;
+      opacity: 0.7;
+    }
+    .summary-card .summary-count {
+      font-size: 2.2em;
+      font-weight: bold;
+      margin-left: 0.5em;
+    }
+    .futuristic-module {
+      background: rgba(34, 166, 80, 0.07);
+      border-radius: 2em;
+      box-shadow: 0 4px 32px #19875422;
+      padding: 2em 2em 1em 2em;
+      margin-bottom: 2em;
+      border: 1px solid #19875433;
+    }
+    .search-bar {
+      background: #e8f5e9;
+      border-radius: 2em;
+      border: 1px solid #22a65077;
+      color: #14532d;
+      padding: 0.7em 1.5em;
+      width: 100%;
+      font-size: 1.1em;
+      margin-bottom: 1.5em;
+      outline: none;
+      box-shadow: 0 2px 8px #22a65022;
+      transition: border 0.2s;
+    }
+    .search-bar:focus {
+      border: 1.5px solid #198754;
+      background: #d1fae5;
+    }
+    .chart-container {
+      display: flex;
+      gap: 2em;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2em;
+    }
+    .chart-box {
+      background: #e8f5e9;
+      border-radius: 1.5em;
+      box-shadow: 0 2px 16px #19875422;
+      padding: 1.5em;
+      min-width: 320px;
+      max-width: 420px;
+      flex: 1 1 320px;
+      margin-bottom: 1em;
+    }
+    @media (max-width: 767px) {
+      .summary-card {
+        flex-direction: column;
+        gap: 1em;
+        text-align: center;
+      }
+      .chart-container {
+        flex-direction: column;
+        gap: 1em;
+      }
     }
   </style>
-</head>
-<body>
-  <div class="container mt-5 mb-5">
-    <div class="top-header">
-      <h2>📋 Lista de Entrevistas Registradas</h2>
-      <div>
-        <a href="{% url 'entrevista_cliente' %}" class="btn btn-pacifico">
-          + Nueva Entrevista
-        </a>
-        <a href="{% url 'descargar_entrevistas_excel' %}" class="btn btn-success ms-2">
-          Descargar Excel
-        </a>
+  <div class="summary-card mb-4">
+    <div>
+      <i class="fa-solid fa-users"></i>
+      <span class="summary-count">{{ entrevistas|length }}</span>
+      <span style="font-size:1.1em;">Entrevistas registradas</span>
+    </div>
+    <div>
+      <a href="{% url 'entrevista_cliente' %}" class="btn btn-pacifico me-2">
+        <i class="fa-solid fa-plus"></i> Nueva Entrevista
+      </a>
+      <a href="{% url 'descargar_entrevistas_excel' %}" class="btn btn-light text-success border-success">
+        <i class="fa-solid fa-file-excel"></i> Descargar Excel
+      </a>
+    </div>
+  </div>
+
+  <div class="futuristic-module">
+    <input type="text" id="searchInput" class="search-bar" placeholder="🔎 Buscar por nombre, cédula o correo...">
+    <div class="chart-container">
+      <div class="chart-box">
+        <h6 class="text-center mb-3" style="color:#198754;">Distribución por Producto</h6>
+        <canvas id="productosChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <h6 class="text-center mb-3" style="color:#22a650;">Distribución por Oficial</h6>
+        <canvas id="oficialesChart"></canvas>
       </div>
     </div>
-
-    {% if entrevistas %}
-      <div class="table-responsive shadow rounded">
-        <table class="table table-bordered table-hover align-middle">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Cédula</th>
-              <th>Correo</th>
-              <th>Celular</th>
-              <th>Producto</th>
-              <th>Oficial</th>
-              <th>Fecha Entrevista</th>
-              <th>Descargar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entrevista in entrevistas %}
-            <tr>
-              <td>{{ forloop.counter }}</td>
-              <td>{{ entrevista.primer_nombre }} {{ entrevista.primer_apellido }}</td>
-              <td>{{ entrevista.provincia_cedula }}-{{ entrevista.tipo_letra }}-{{ entrevista.tomo_cedula }}-{{ entrevista.partida_cedula }}</td>
-              <td>{{ entrevista.email }}</td>
-              <td>{{ entrevista.telefono }}</td>
-              <td>{{ entrevista.tipo_producto }}</td>
-              <td>{{ entrevista.oficial }}</td>
-              <td>{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}</td>
-              <td>
-                <a href="{% url 'descargar_entrevista_excel' entrevista.id %}" class="btn btn-outline-success btn-sm">
-                  <i class="fas fa-file-excel"></i>
-                </a>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <div class="alert alert-info text-center">No hay entrevistas registradas aún.</div>
-    {% endif %}
   </div>
+
+  {% if entrevistas %}
+    <div class="row g-4" id="entrevistasCards">
+      {% for entrevista in entrevistas %}
+      <div class="col-12 col-md-6 col-lg-4 entrevista-card" 
+           data-nombre="{{ entrevista.primer_nombre }} {{ entrevista.primer_apellido }}"
+           data-cedula="{{ entrevista.provincia_cedula }}-{{ entrevista.tipo_letra }}-{{ entrevista.tomo_cedula }}-{{ entrevista.partida_cedula }}"
+           data-email="{{ entrevista.email }}">
+        <div class="card card-entrevista h-100">
+          <div class="card-header-custom">
+            <i class="fa-solid fa-user-circle"></i>
+            {{ entrevista.primer_nombre }} {{ entrevista.primer_apellido }}
+          </div>
+          <div class="card-body card-body-custom">
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-id-card"></i> Cédula:</span>
+              <span>{{ entrevista.provincia_cedula }}-{{ entrevista.tipo_letra }}-{{ entrevista.tomo_cedula }}-{{ entrevista.partida_cedula }}</span>
+            </div>
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-envelope"></i> Correo:</span>
+              <span>{{ entrevista.email }}</span>
+            </div>
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-mobile-screen"></i> Celular:</span>
+              <span>{{ entrevista.telefono }}</span>
+            </div>
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-briefcase"></i> Producto:</span>
+              <span class="producto-label">{{ entrevista.tipo_producto }}</span>
+            </div>
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-user-tie"></i> Oficial:</span>
+              <span class="oficial-label">{{ entrevista.oficial }}</span>
+            </div>
+            <div class="mb-2">
+              <span class="fw-semibold"><i class="fa-solid fa-calendar-days"></i> Fecha Entrevista:</span>
+              <span>{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="mt-3 text-end">
+              <a href="{% url 'descargar_entrevista_excel' entrevista.id %}" class="btn btn-outline-success btn-sm">
+                <i class="fa-solid fa-file-arrow-down"></i> Descargar
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center mt-5">No hay entrevistas registradas aún.</div>
+  {% endif %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // --- Buscador Futurista ---
+  document.getElementById('searchInput').addEventListener('input', function() {
+    const value = this.value.toLowerCase();
+    document.querySelectorAll('.entrevista-card').forEach(function(card) {
+      const nombre = card.getAttribute('data-nombre').toLowerCase();
+      const cedula = card.getAttribute('data-cedula').toLowerCase();
+      const email = card.getAttribute('data-email').toLowerCase();
+      if (nombre.includes(value) || cedula.includes(value) || email.includes(value)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+
+  // --- Gráficos Futuristas ---
+  // Obtén los datos de productos y oficiales desde el DOM
+  const productos = {};
+  const oficiales = {};
+  document.querySelectorAll('.producto-label').forEach(el => {
+    const prod = el.textContent.trim();
+    productos[prod] = (productos[prod] || 0) + 1;
+  });
+  document.querySelectorAll('.oficial-label').forEach(el => {
+    const ofi = el.textContent.trim();
+    oficiales[ofi] = (oficiales[ofi] || 0) + 1;
+  });
+
+  // Gráfico de barras de productos
+  const productosChart = new Chart(document.getElementById('productosChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(productos),
+      datasets: [{
+        label: 'Cantidad',
+        data: Object.values(productos),
+        backgroundColor: [
+          '#22a650', '#198754', '#b2dfdb', '#fbbf24', '#ef4444', '#14532d'
+        ],
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { color: '#14532d' }, grid: { color: '#19875433' } },
+        y: { beginAtZero: true, ticks: { color: '#14532d' }, grid: { color: '#19875422' } }
+      }
+    }
+  });
+
+  // Gráfico de pastel de oficiales
+  const oficialesChart = new Chart(document.getElementById('oficialesChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(oficiales),
+      datasets: [{
+        data: Object.values(oficiales),
+        backgroundColor: [
+          '#198754', '#22a650', '#b2dfdb', '#fbbf24', '#ef4444', '#14532d'
+        ],
+        borderWidth: 2,
+        borderColor: '#e8f5e9'
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          labels: { color: '#14532d', font: { weight: 'bold' } }
+        }
+      },
+      cutout: '70%'
+    }
+  });
+</script>
+{% endblock %}
+        },
+        cutout: '70%'
+      }
+    });
+  </script>
 </body>
-</html>
+
 
