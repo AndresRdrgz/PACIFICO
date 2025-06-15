@@ -137,10 +137,15 @@ class ClienteEntrevista(models.Model):
     # OTROS INGRESOS
     tipo_ingreso_1 = models.CharField(max_length=100, blank=True, null=True)
     descripcion_ingreso_1 = models.CharField(max_length=255, blank=True, null=True)
-    monto_ingreso_1 = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    monto_ingreso_1 = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+
     tipo_ingreso_2 = models.CharField(max_length=100, blank=True, null=True)
     descripcion_ingreso_2 = models.CharField(max_length=255, blank=True, null=True)
-    monto_ingreso_2 = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    monto_ingreso_2 = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+
+    tipo_ingreso_3 = models.CharField(max_length=100, blank=True, null=True)
+    descripcion_ingreso_3 = models.CharField(max_length=255, blank=True, null=True)
+    monto_ingreso_3 = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
 
     # PEP
     es_pep = models.BooleanField(default=False)
@@ -174,7 +179,7 @@ class ClienteEntrevista(models.Model):
     fecha_entrevista = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.primer_nombre} {self.primer_apellido} - {self.email}"
+        return f"{self.primer_nombre} {self.primer_apellido}"
 
     # Puedes agregar un método para mostrar los niveles académicos como lista
     def get_nivel_academico_list(self):
@@ -217,5 +222,5 @@ class OtroIngreso(models.Model):
     monto = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
-        return f"{self.fuente} - {self.monto}"
+        return self.fuente
 

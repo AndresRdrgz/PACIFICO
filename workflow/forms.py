@@ -14,11 +14,35 @@ class ClienteEntrevistaForm(forms.ModelForm):
         label='Jubilado'
     )
 
+    provincia_cedula = forms.ChoiceField(
+        choices=ClienteEntrevista._meta.get_field('provincia_cedula').choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        label='Provincia de la cédula'
+    )
+    tipo_letra = forms.ChoiceField(
+        choices=ClienteEntrevista._meta.get_field('tipo_letra').choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        label='Letra de la cédula'
+    )
+
+    tipo_ingreso_1 = forms.CharField(required=False, label='Tipo de Ingreso 1')
+    descripcion_ingreso_1 = forms.CharField(required=False, label='Descripción Ingreso 1')
+    monto_ingreso_1 = forms.DecimalField(required=False, label='Monto Ingreso 1', min_value=0, decimal_places=2, max_digits=12)
+
+    tipo_ingreso_2 = forms.CharField(required=False, label='Tipo de Ingreso 2')
+    descripcion_ingreso_2 = forms.CharField(required=False, label='Descripción Ingreso 2')
+    monto_ingreso_2 = forms.DecimalField(required=False, label='Monto Ingreso 2', min_value=0, decimal_places=2, max_digits=12)
+
+    tipo_ingreso_3 = forms.CharField(required=False, label='Tipo de Ingreso 3')
+    descripcion_ingreso_3 = forms.CharField(required=False, label='Descripción Ingreso 3')
+    monto_ingreso_3 = forms.DecimalField(required=False, label='Monto Ingreso 3', min_value=0, decimal_places=2, max_digits=12)
+
     class Meta:
         model = ClienteEntrevista
         exclude = [
-            'tipo_ingreso_1', 'descripcion_ingreso_1', 'monto_ingreso_1',
-            'tipo_ingreso_2', 'descripcion_ingreso_2', 'monto_ingreso_2',
+            # ...existing code...
         ]
         widgets = {
             # Campos de texto y fechas
@@ -145,7 +169,7 @@ OtroIngresoFormSet = inlineformset_factory(
     form=OtroIngresoForm,
     extra=3,
     max_num=3,
-    can_delete=False
+    can_delete=True  # Cambiado a True para flexibilidad
 )
 
 
@@ -165,16 +189,16 @@ ReferenciaPersonalFormSet = inlineformset_factory(
     ClienteEntrevista,
     ReferenciaPersonal,
     form=ReferenciaPersonalForm,
-    extra=3,
+    extra=3,  # Siempre 3 formularios
     max_num=3,
-    can_delete=False
+    can_delete=True
 )
 
 
 class ReferenciaComercialForm(forms.ModelForm):
     class Meta:
         model = ReferenciaComercial
-        exclude = ['entrevista']
+        exclude = ['entrevista']  # Asegura que 'entrevista' es el campo correcto a excluir
         widgets = {
             'tipo': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),

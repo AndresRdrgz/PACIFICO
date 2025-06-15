@@ -1,18 +1,35 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.forms import modelform_factory
+from django.forms import inlineformset_factory
+from .models import ClienteEntrevista, OtroIngreso, ReferenciaPersonal, ReferenciaComercial
 from .forms import (
     ClienteEntrevistaForm,
+    OtroIngresoFormSet,
     ReferenciaPersonalFormSet,
     ReferenciaComercialFormSet,
-    OtroIngresoFormSet
 )
-from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
 from django.http import HttpResponse
+from django.contrib import messages
 import openpyxl
 from openpyxl.utils import get_column_letter
 import datetime
+import csv
 
 
 def entrevista_cliente_view(request):
+    steps_info = [
+        ("Datos Generales", "fa-user"),
+        ("Dirección", "fa-location-dot"),
+        ("Cónyuge", "fa-people-roof"),
+        ("Laboral", "fa-briefcase"),
+        ("PEP", "fa-shield-halved"),
+        ("Ref. Pers.", "fa-user-group"),
+        ("Ref. Com.", "fa-building"),
+        ("Bancarios", "fa-university"),
+        ("Autorizaciones", "fa-circle-check"),
+    ]
+
+
     if request.method == 'POST':
         form = ClienteEntrevistaForm(request.POST, request.FILES)
         referencias_formset = ReferenciaPersonalFormSet(request.POST, prefix='personales')
@@ -27,29 +44,32 @@ def entrevista_cliente_view(request):
         ):
             entrevista = form.save()
 
-            for ref in referencias_formset.save(commit=False):
-                ref.entrevista = entrevista
-                ref.save()
+            # Relaciona correctamente las referencias personales con la entrevista
+            referencias_formset.instance = entrevista
+            referencias_formset.save()
 
-            for ref in referencias_comerciales_formset.save(commit=False):
-                ref.entrevista = entrevista
-                ref.save()
+            referencias_comerciales_formset.instance = entrevista
+            referencias_comerciales_formset.save()
 
-            for ingreso in otros_ingresos_formset.save(commit=False):
-                ingreso.cliente = entrevista
-                ingreso.save()
+            otros_ingresos_formset.instance = entrevista
+            otros_ingresos_formset.save()
 
-            # Eliminar ingresos vacíos existentes
+            # Elimina otros ingresos vacíos
             for form_ing in otros_ingresos_formset:
                 if not form_ing.cleaned_data.get('fuente') and not form_ing.cleaned_data.get('monto'):
                     if form_ing.instance.pk:
                         form_ing.instance.delete()
 
             return redirect('formulario_gracias')
+
     else:
         form = ClienteEntrevistaForm()
         entrevista_nueva = ClienteEntrevista()
-        referencias_formset = ReferenciaPersonalFormSet(queryset=ReferenciaPersonal.objects.none(), prefix='personales')
+        referencias_formset = ReferenciaPersonalFormSet(
+            instance=entrevista_nueva,
+            queryset=ReferenciaPersonal.objects.none(),
+            prefix='personales'
+        )
         referencias_comerciales_formset = ReferenciaComercialFormSet(instance=entrevista_nueva, queryset=ReferenciaComercial.objects.none(), prefix='comerciales')
         otros_ingresos_formset = OtroIngresoFormSet(queryset=OtroIngreso.objects.none(), prefix='otrosingresos')
 
@@ -58,6 +78,8 @@ def entrevista_cliente_view(request):
         'referencias_formset': referencias_formset,
         'referencias_comerciales_formset': referencias_comerciales_formset,
         'otros_ingresos_formset': otros_ingresos_formset,
+        'steps_info': steps_info,
+        'messages': messages.get_messages(request)
     })
 
 
@@ -84,7 +106,6 @@ def descargar_entrevistas_excel(request):
         fila = []
         for field in campos_entrevista:
             valor = getattr(entrevista, field)
-            # Quitar tzinfo si es datetime con zona horaria
             if isinstance(valor, datetime.datetime) and valor.tzinfo is not None:
                 valor = valor.replace(tzinfo=None)
             fila.append(valor if valor is not None else "")
@@ -138,7 +159,6 @@ def descargar_entrevistas_excel(request):
 
 
 def descargar_entrevista_excel(request, entrevista_id):
-    import csv
     entrevista = ClienteEntrevista.objects.get(pk=entrevista_id)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="entrevista_{entrevista_id}.csv"'
@@ -164,6 +184,45 @@ def descargar_entrevista_excel(request, entrevista_id):
         writer.writerow([ingreso.fuente, '', ingreso.monto])
 
     return response
+
+
+def cliente_entrevista_create(request):
+    if request.method == 'POST':
+        form = ClienteEntrevistaForm(request.POST)
+        otro_ingreso_formset = OtroIngresoFormSet(request.POST, prefix='otroingreso')
+        referencia_personal_formset = ReferenciaPersonalFormSet(request.POST, prefix='refpersonal')
+        referencia_comercial_formset = ReferenciaComercialFormSet(request.POST, prefix='refcomercial')
+        if (form.is_valid() and otro_ingreso_formset.is_valid() and
+                referencia_personal_formset.is_valid() and referencia_comercial_formset.is_valid()):
+            cliente = form.save()
+            otro_ingreso_formset.instance = cliente
+            otro_ingreso_formset.save()
+            referencia_personal_formset.instance = cliente
+            referencia_personal_formset.save()
+            referencia_comercial_formset.instance = cliente
+            referencia_comercial_formset.save()
+            return redirect('cliente_entrevista_detail', pk=cliente.pk)
+    else:
+        form = ClienteEntrevistaForm()
+        otro_ingreso_formset = OtroIngresoFormSet(prefix='otroingreso')
+        referencia_personal_formset = ReferenciaPersonalFormSet(prefix='refpersonal')
+        referencia_comercial_formset = ReferenciaComercialFormSet(prefix='refcomercial')
+    return render(request, 'workflow/cliente_entrevista_form.html', {
+        'form': form,
+        'otro_ingreso_formset': otro_ingreso_formset,
+        'referencia_personal_formset': referencia_personal_formset,
+        'referencia_comercial_formset': referencia_comercial_formset,
+    })
+
+
+def cliente_entrevista_detail(request, pk):
+    cliente = get_object_or_404(ClienteEntrevista, pk=pk)
+    return render(request, 'workflow/cliente_entrevista_detail.html', {'cliente': cliente})
+
+
+def cliente_entrevista_list(request):
+    clientes = ClienteEntrevista.objects.all()
+    return render(request, 'workflow/cliente_entrevista_list.html', {'clientes': clientes})
 
 
 # Validaciones actuales en entrevista_cliente_view:
@@ -249,4 +308,5 @@ def descargar_entrevista_excel(request, entrevista_id):
 #
 # 8. Los formsets permiten agregar/eliminar múltiples referencias y otros ingresos, y validan la estructura de cada uno.
 #
+# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
 # 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.

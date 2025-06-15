@@ -1,132 +1,255 @@
 {% extends 'base_sinBarra.html' %}
-
 {% block title %}Entrevista de Cliente{% endblock %}
-
 {% block content %}
 {% load static %}
 
-<div class="min-h-screen bg-gradient-to-br from-green-600 to-green-900 flex justify-center items-start py-8 px-2">
-  <div class="relative bg-white max-w-3xl w-full rounded-2xl border border-gray-200 shadow-xl px-6 md:px-12 py-8 md:py-12 mb-8 transition-all duration-300 group">
-    <div class="absolute top-0 left-0 right-0 h-2 rounded-t-2xl bg-gradient-to-r from-green-700 to-green-400"></div>
+<div class="min-h-screen bg-gradient-to-br from-green-600 to-green-900 flex justify-center items-start py-10 px-4">
+  <div class="relative bg-white max-w-5xl w-full rounded-xl shadow-lg border border-gray-200 px-4 md:px-12 py-8 md:py-14 mb-10 transition-all duration-300 flex flex-col">
+    
+    <!-- Logo y título -->
     <div class="flex flex-col items-center text-center mb-8">
-      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="w-40 h-auto object-cover mb-2" />
-      <h2 class="font-bold text-3xl md:text-4xl text-green-700 mb-1 tracking-tight">Entrevista de Cliente</h2>
-      <p class="text-green-700 text-base font-medium mb-0">Complete todos los datos a continuación</p>
+      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="w-50 h-auto object-cover mb-2" />
+      <h2 class="font-extrabold text-3xl md:text-4xl text-green-700 tracking-tight mb-1">Formulario de Datos Generales</h2>
+      <p class="text-green-700 text-base md:text-lg font-medium">Complete todos los pasos con atención</p>
     </div>
-    <div>
-      <form method="post" enctype="multipart/form-data" novalidate id="entrevista-form">
-        {% csrf_token %}
-        {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
-          <div class="rounded-xl font-semibold text-sm bg-red-100 text-red-700 px-6 py-4 mb-6 border border-red-300">
-            <strong>Por favor, corrija los campos obligatorios resaltados en rojo.</strong>
-            <ul class="mb-0 mt-2 space-y-1 list-disc list-inside">
-              {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
-              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-              {% for subform in referencias_formset.forms %}
-                {% for field in subform %}
-                  {% for error in field.errors %}
-                    <li>Referencia Personal {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                  {% endfor %}
-                {% endfor %}
-                {% for error in subform.non_field_errors %}
-                  <li>{{ error }}</li>
-                {% endfor %}
-              {% endfor %}
-              {% for error in referencias_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
-              {% for subform in referencias_comerciales_formset.forms %}
-                {% for field in subform %}
-                  {% for error in field.errors %}
-                    <li>Referencia Comercial {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                  {% endfor %}
-                {% endfor %}
-                {% for error in subform.non_field_errors %}
-                  <li>{{ error }}</li>
-                {% endfor %}
-              {% endfor %}
-              {% for error in referencias_comerciales_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
-              {% for subform in otros_ingresos_formset.forms %}
-                {% for field in subform %}
-                  {% for error in field.errors %}
-                    <li>Otro Ingreso {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
-                  {% endfor %}
-                {% endfor %}
-                {% for error in subform.non_field_errors %}
-                  <li>{{ error }}</li>
-                {% endfor %}
-              {% endfor %}
-              {% for error in otros_ingresos_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
+
+    <!-- Stepper mejorado con iconos y responsive -->
+    <div class="flex flex-col items-center mb-10 w-full">
+      <div class="flex w-full max-w-4xl md:max-w-5xl justify-between items-center overflow-x-auto px-1 md:px-8 py-4 md:py-6 bg-white/80 rounded-2xl shadow-lg border border-green-200">
+        {% for step, icon in steps_info %}
+          <div class="flex flex-col items-center flex-1 min-w-[60px]">
+            <div class="relative flex flex-col items-center">
+              <div id="circle-{{ forloop.counter0 }}"
+                class="flex items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-green-400 bg-white text-green-700 font-bold text-lg md:text-2xl transition-all duration-300 stepper-circle z-10 shadow-md">
+                <i class="fa {{ icon }}"></i>
+              </div>
+              {% if not forloop.last %}
+                <div class="hidden md:block absolute top-1/2 left-full w-20 h-1 bg-green-200 z-0"></div>
+                <div class="block md:hidden absolute top-1/2 left-full w-8 h-1 bg-green-200 z-0"></div>
+              {% endif %}
+            </div>
+            <span id="label-{{ forloop.counter0 }}" class="mt-2 text-xs md:text-base font-semibold text-gray-700 text-center leading-tight truncate max-w-[70px] md:max-w-[140px]">
+              {{ step }}
+            </span>
           </div>
-        {% endif %}
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-user-check"></i></span> 1. Datos Generales</h2>
-          <!-- Use a single-column layout for all fields below -->
-          <div class="grid grid-cols-1 gap-4">
+        {% endfor %}
+      </div>
+      <div class="mt-4 text-green-700 font-semibold text-base">
+        <span id="stepper-label"></span>
+      </div>
+    </div>
+
+    <!-- Mensaje de error general -->
+    {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
+      <div class="bg-red-100 border border-red-300 text-red-700 px-6 py-4 mb-6 rounded-xl text-sm font-medium shadow-sm">
+        <strong>Corrija los campos obligatorios:</strong>
+        <ul class="mt-2 space-y-1 list-disc list-inside text-xs">
+          {# Errores del formulario principal #}
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ error|capfirst }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error|capfirst }}</li>
+          {% endfor %}
+
+          {# Errores de referencias_formset #}
+          {% for subform in referencias_formset.forms %}
+            {% for field in subform %}
+              {% for error in field.errors %}
+                <li><strong>Referencia personal - {{ field.label }}:</strong> {{ error|capfirst }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in subform.non_field_errors %}
+              <li>Referencia personal: {{ error|capfirst }}</li>
+            {% endfor %}
+          {% endfor %}
+
+          {# Errores de referencias_comerciales_formset #}
+          {% for subform in referencias_comerciales_formset.forms %}
+            {% for field in subform %}
+              {% for error in field.errors %}
+                <li><strong>Referencia comercial - {{ field.label }}:</strong> {{ error|capfirst }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in subform.non_field_errors %}
+              <li>Referencia comercial: {{ error|capfirst }}</li>
+            {% endfor %}
+          {% endfor %}
+
+          {# Errores de otros_ingresos_formset #}
+          {% for subform in otros_ingresos_formset.forms %}
+            {% for field in subform %}
+              {% for error in field.errors %}
+                <li><strong>Otro ingreso - {{ field.label }}:</strong> {{ error|capfirst }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in subform.non_field_errors %}
+              <li>Otro ingreso: {{ error|capfirst }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Formulario principal: solo un form, incluye todos los pasos -->
+    <form method="post" enctype="multipart/form-data" novalidate id="entrevista-form" class="flex flex-col flex-1">
+      {% csrf_token %}
+
+      <div id="steps-container" class="space-y-8 flex-1">
+        <div class="step-content" data-step="0">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-user text-lg"></i> Datos Generales
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/datos_generales.html' with form=form %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-map-marker-alt"></i></span> 2. Dirección Residencial</h2>
-          <!-- Use a single-column layout for all fields below -->
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="1">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-location-dot text-lg"></i> Dirección Residencial
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/direccion_residencial.html' with form=form %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-users"></i></span> 3. Datos del Cónyuge o Deudor Solidario</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="2">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-people-roof text-lg"></i> Datos del Cónyuge
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/conyuge.html' with form=form %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-briefcase"></i></span> 4. Información Laboral y Otros Ingresos</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="3">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-briefcase text-lg"></i> Información Laboral
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/informacion_laboral.html' with form=form otros_ingresos_formset=otros_ingresos_formset %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-user-shield"></i></span> 5. PEP - Persona Expuesta Políticamente</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="4">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-shield-halved text-lg"></i> PEP
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/pep.html' with form=form %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-user-friends"></i></span> 6. Referencias Personales</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="5">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-user-group text-lg"></i> Referencias Personales
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/referencias_personales.html' with referencias_formset=referencias_formset %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-briefcase"></i></span> 7. Referencias Comerciales</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="6">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-building text-lg"></i> Referencias Comerciales
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/referencias_comerciales.html' with referencias_comerciales_formset=referencias_comerciales_formset %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-university"></i></span> 8. Datos Bancarios</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="7">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-university text-lg"></i> Datos Bancarios
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/datos_bancarios.html' with form=form %}
           </div>
         </div>
-        <div class="border-t-4 border-green-600 pt-6 mt-8">
-          <h2 class="flex items-center gap-2 text-xl md:text-2xl font-bold text-green-700 mb-4 uppercase tracking-wide"><span><i class="fas fa-check-circle"></i></span> 9. Autorizaciones</h2>
-          <div class="grid grid-cols-1 gap-4">
+        <div class="step-content hidden" data-step="8">
+          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-circle-check text-lg"></i> Autorizaciones
+          </h3>
+          <div class="space-y-6">
             {% include 'formulario/componentes/autorizaciones.html' with form=form %}
           </div>
         </div>
-        <div class="text-end mt-8">
-          <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-xl shadow-lg font-semibold text-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">Enviar</button>
+      </div>
+
+      <!-- Navegación (botones arriba del formulario) -->
+      <div class="mb-8 pb-6 border-b border-gray-200 flex justify-between items-center">
+        <button type="button" id="prevBtn"
+          class="hidden text-gray-700 bg-gray-200 hover:bg-gray-300 px-6 py-3 rounded-full text-sm font-semibold transition">
+          ← Atrás
+        </button>
+        <div class="flex gap-3">
+          <button type="button" id="nextBtn"
+            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full text-sm font-semibold transition">
+            Siguiente →
+          </button>
+          <button type="submit" id="submitBtn"
+            class="hidden bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white px-6 py-3 rounded-full text-sm font-bold transition">
+            <i class="fas fa-paper-plane mr-2"></i> Enviar Formulario
+          </button>
         </div>
-      </form>
-      {% if messages %}
-        {% for message in messages %}
-          <div class="rounded-xl font-bold text-lg bg-green-100 text-green-800 px-6 py-4 mt-6 text-center border border-green-300">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    </div>
+      </div>
+    </form>
   </div>
 </div>
+
+<!-- Script -->
+<script>
+  let currentStep = 0;
+  const steps = document.querySelectorAll('.step-content');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const stepperLabel = document.getElementById('stepper-label');
+  const stepNames = [
+    "Datos Generales", "Dirección Residencial", "Datos del Cónyuge",
+    "Información Laboral", "PEP", "Referencias Personales",
+    "Referencias Comerciales", "Datos Bancarios", "Autorizaciones"
+  ];
+
+  function showStep(index) {
+    steps.forEach((step, i) => {
+      step.classList.toggle('hidden', i !== index);
+      // Stepper visual feedback
+      const circle = document.getElementById(`circle-${i}`);
+      if (circle) {
+        circle.classList.remove('bg-green-600', 'text-white', 'border-green-600', 'scale-110', 'shadow-lg', 'bg-green-400', 'text-green-700', 'border-green-400', 'bg-white');
+        if (i < index) {
+          circle.classList.add('bg-green-400', 'text-white', 'border-green-400');
+        } else if (i === index) {
+          circle.classList.add('bg-green-600', 'text-white', 'border-green-600', 'scale-110', 'shadow-lg');
+        } else {
+          circle.classList.add('bg-white', 'text-green-700', 'border-green-400');
+        }
+      }
+    });
+
+    prevBtn.classList.toggle('hidden', index === 0);
+    nextBtn.classList.toggle('hidden', index === steps.length - 1);
+    submitBtn.classList.toggle('hidden', index !== steps.length - 1);
+
+    if (stepperLabel) {
+      stepperLabel.textContent = `Paso ${index + 1} de ${steps.length}: ${stepNames[index]}`;
+    }
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (currentStep < steps.length - 1) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 0) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    showStep(currentStep);
+  });
+</script>
 
 {% endblock %}
