@@ -74,14 +74,16 @@
     </div>
 </div>
 
+
 <script>
     document.getElementById('calcularTapeBtn').addEventListener('click', function() {
         // Obtener el valor de cartera (puedes ajustar el id según tu input real)
         const cartera = document.getElementById('tapeCartera').value.trim().toUpperCase();
         const periodo = document.getElementById('tapPeriodoLetra').value.trim().toUpperCase();
-        console.log('Cartera:', cartera,'Periodo: ',periodo);
+        const hipotecaDescuentoDir = document.getElementById('tapeHipotecaDescuentoDir') ? document.getElementById('tapeHipotecaDescuentoDir').value.trim().toUpperCase() : '';
+        console.log('Cartera:', cartera,'Periodo: ',periodo, 'Hipoteca Descuento Dir:', hipotecaDescuentoDir);
         // Diccionario de porcentajes por cartera
-        const porcentajes = {
+        let porcentajes = {
             'CONTRALORÍA': 35,
             'EMP. CSS': 35,
             'AUTÓNOMAS': 35,
@@ -96,6 +98,24 @@
             'JUBILADO RIESGOS PROF. CSS': 50,
             'INDEPENDIENTE': 0
         };
+        // Si hipotecaDescuentoDir es 'SI', usar los nuevos porcentajes
+        if (hipotecaDescuentoDir === 'SI') {
+            porcentajes = {
+                'CONTRALORÍA': 35,
+                'EMP. CSS': 35,
+                'AUTÓNOMAS': 35,
+                'ACP': 75,
+                'JUBILADO CSS': 70,
+                'EMP. PRIVADA': 20,
+                'JUBILADO DE LA ZONA': 0,
+                'JUBI ACTIVO CONTRALORIA': 35,
+                'JUBI ACTIVO CSS': 35,
+                'JUBILADO CONTRALORIA': 70,
+                'JUBI ACTIVO AUTÓNOMA': 35,
+                'JUBILADO RIESGOS PROF. CSS': 70,
+                'INDEPENDIENTE': 0
+            };
+        }
 
         // Buscar el porcentaje correspondiente
         let porcentaje = porcentajes[cartera] !== undefined ? porcentajes[cartera] : 0;
@@ -103,9 +123,17 @@
         const salario = document.getElementById('tapeSalarioBrutoMensual') ? document.getElementById('tapeSalarioBrutoMensual').value : 0;
         var salarioPorcentaje = 0;
         if (cartera !== 'ACP') {
+            if (
+            cartera === 'JUBILADO CSS' ||
+            cartera === 'JUBILADO CONTRALORIA' ||
+            cartera === 'JUBILADO RIESGOS PROF. CSS'
+            ) {
+            salarioPorcentaje = (((salario - (salario * 0.0675)) * porcentaje) / 100).toFixed(2);
+            } else {
             salarioPorcentaje = ((salario * porcentaje) / 100).toFixed(2);
+            }
         }
-
+        console.log('Salario:', salario, 'Salario Porcentaje:', salarioPorcentaje);
 
         document.getElementById('tapeSalarioPorcentaje').value = salarioPorcentaje;
         document.getElementById('tapePorcentaje1').value = porcentaje;
@@ -221,8 +249,8 @@
     //----------------------------------------------------------------------------
     
         // Calculo Analisis de Hipotecas
-    const letraHipoteca1 = document.getElementById('letraHipoteca1') ? document.getElementById('letraHipoteca1').value : 0;
-    const letraHipoteca2 = document.getElementById('letraHipoteca2') ? document.getElementById('letraHipoteca2').value : 0;
+    const letraHipoteca1 = document.getElementById('id_letraHipoteca1') ? document.getElementById('id_letraHipoteca1').value : 0;
+    const letraHipoteca2 = document.getElementById('id_letraHipoteca2') ? document.getElementById('id_letraHipoteca2').value : 0;
     var totalHipoteca = parseFloat(letraHipoteca1) + parseFloat(letraHipoteca2);
     console.log('Letra Hipoteca 1:', letraHipoteca1);
     console.log('Letra Hipoteca 2:', letraHipoteca2);
@@ -234,7 +262,7 @@
         tapeAnalisis = 0;
     }else{
         if (cartera === 'JUBILADO CSS' || cartera === 'JUBILADO CONTRALORIA' || cartera === 'JUBILADO RIESGOS PROF. CSS') {
-
+            tapeAnalisis = totalQuincenal - totalHipoteca;
         }else{
             console.log('tapeSalarioMinimoPorLey:', tapeSalarioMinimoPorLey,' totalHipoteca:', totalHipoteca);
             tapeAnalisis = tapeSalarioMinimoPorLey - totalHipoteca;

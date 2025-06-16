@@ -237,12 +237,53 @@
     </div>
 
 
-    <!-- Loading Animation -->
-    <div 
-        id="loading" 
-        class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-[#22a650] border-solid"></div>
+    <!-- Modern Loading Modal -->
+    <div id="loading-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 transition-opacity duration-300 hidden">
+      <div class="bg-white rounded-xl shadow-2xl px-8 py-8 flex flex-col items-center w-full max-w-md animate-fade-in">
+        <div class="w-16 h-16 mb-4 relative flex items-center justify-center">
+          <svg class="animate-spin-slow w-16 h-16 text-[#22a650]" viewBox="0 0 50 50">
+            <circle class="opacity-20" cx="25" cy="25" r="20" stroke="#22a650" stroke-width="6" fill="none" />
+            <circle class="animate-dash" cx="25" cy="25" r="20" stroke="#22a650" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="90 150" />
+          </svg>
+        </div>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
+          <div id="loading-bar" class="h-2 bg-[#22a650] rounded-full animate-loading-bar" style="width: 0%"></div>
+        </div>
+        <div id="loading-message" class="text-gray-700 text-center font-medium text-base">Procesando solicitud, favor espere...</div>
+        <div id="loading-warning" class="text-red-600 text-center font-semibold text-sm mt-3 hidden">Estamos teniendo alto volumen de peticiones.</div>
+      </div>
     </div>
+
+    <style>
+    @keyframes fade-in {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-in { animation: fade-in 0.3s ease; }
+    @keyframes loading-bar {
+      0% { width: 0%; }
+      80% { width: 90%; }
+      100% { width: 100%; }
+    }
+    .animate-loading-bar {
+      animation: loading-bar 20s linear forwards;
+    }
+    @keyframes spin-slow {
+      100% { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 1.2s linear infinite;
+    }
+    @keyframes dash {
+      0% { stroke-dashoffset: 240; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .animate-dash {
+      stroke-dasharray: 90 150;
+      stroke-dashoffset: 240;
+      animation: dash 1.2s linear infinite;
+    }
+    </style>
 
 {% include 'partials/sura.html' %}
     <script>
@@ -324,7 +365,7 @@
     
     
             window.addEventListener('load', function() {
-                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('loading-modal').classList.add('hidden');
             });
 
                         if (patronoField) {
@@ -700,10 +741,8 @@
 
     
         document.getElementById('myForm').addEventListener('submit', function(event) {
-            document.getElementById('loading').classList.remove('hidden');
-            const documentosData = collectDocumentData();
-            const documentosDataInput = document.getElementById('documentos_data');
-            documentosDataInput.value = JSON.stringify(documentosData);
+            document.getElementById('loading-modal').classList.remove('hidden');
+           
         });
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -737,12 +776,23 @@
             }
         });
         
-
-      
-
-            
-
-
-
+        let loadingTimeout;
+function showLoadingModal() {
+  document.getElementById('loading-modal').classList.remove('hidden');
+  document.getElementById('loading-bar').style.width = '0%';
+  document.getElementById('loading-bar').classList.remove('!w-full');
+  document.getElementById('loading-warning').classList.add('hidden');
+  // Start loading bar animation
+  document.getElementById('loading-bar').classList.add('animate-loading-bar');
+  // Show warning after 20s
+  loadingTimeout = setTimeout(() => {
+    document.getElementById('loading-warning').classList.remove('hidden');
+  }, 20000); // 20 seconds
+}
+function hideLoadingModal() {
+  document.getElementById('loading-modal').classList.add('hidden');
+  document.getElementById('loading-bar').classList.remove('animate-loading-bar');
+  clearTimeout(loadingTimeout);
+}
     </script>
 {% endblock %}
