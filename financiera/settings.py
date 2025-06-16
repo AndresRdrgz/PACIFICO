@@ -157,6 +157,7 @@ INSTALLED_APPS = [
     "nested_admin",
     "mantenimiento",
     "workflow",
+    "widget_tweaks",
 ]
 
 MIDDLEWARE = [

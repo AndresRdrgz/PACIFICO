@@ -1,0 +1,368 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrevista de Cliente</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet">
+  <link href="{% static 'formulario/css/formulario.css' %}" rel="stylesheet">
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    rel="stylesheet">
+  <style>
+    .seccion { margin-bottom: 3rem; }
+    .seccion h2 {
+      display: flex;
+      align-items: center;
+      border-bottom: 2px solid var(--verde-pacifico);
+      padding-bottom: .5rem;
+      margin-bottom: 1.5rem;
+      color: var(--gris-texto);
+    }
+    .seccion h2 .section-icon {
+      margin-right: .5rem;
+      color: var(--verde-pacifico);
+    }
+
+    /* Estilos para los formularios de otros ingresos */
+    .otros-ingreso-form {
+      width: 100%;
+      background: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0 0 8px rgba(0,0,0,0.05);
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+
+<body class="form-bg">
+  <div class="form-container">
+    <div class="card form-card shadow-lg rounded-4">
+
+      <!-- HEADER -->
+      <div class="card-header text-center border-0 p-0" style="background: transparent;">
+        <div style="background:linear-gradient(90deg,#00c86b,#009c3c);
+                    border-top-left-radius:1rem;border-top-right-radius:1rem;
+                    padding:2.5rem 1rem 1.5rem;">
+          <img src="{% static 'formulario/img/logoCol.png' %}"
+               class="img-fluid mb-2" style="max-height:60px;"
+               alt="Logo Pacífico">
+          <h2 class="fw-bold mb-0" style="color:#fff;">Entrevista de Cliente</h2>
+          <p class="mb-0" style="color:#e0ffe0;">Complete todos los datos a continuación</p>
+        </div>
+      </div>
+
+      <!-- BODY -->
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <!-- Mensaje de error global si hay errores -->
+          {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
+            <div class="alert alert-danger">
+              <strong>Por favor, corrija los campos obligatorios resaltados en rojo.</strong>
+              <ul class="mb-0">
+                {% for field in form %}
+                  {% for error in field.errors %}
+                    <li>{{ field.label }}: {{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for subform in referencias_formset.forms %}
+                  {% for field in subform %}
+                    {% for error in field.errors %}
+                      <li>Referencia Personal {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% for error in subform.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in referencias_formset.non_form_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for subform in referencias_comerciales_formset.forms %}
+                  {% for field in subform %}
+                    {% for error in field.errors %}
+                      <li>Referencia Comercial {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% for error in subform.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in referencias_comerciales_formset.non_form_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for subform in otros_ingresos_formset.forms %}
+                  {% for field in subform %}
+                    {% for error in field.errors %}
+                      <li>Otro Ingreso {{ forloop.parentloop.counter }} - {{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% for error in subform.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in otros_ingresos_formset.non_form_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-user-check"></i></span>
+              1. Datos Generales
+            </h2>
+            {% include 'formulario/componentes/datos_generales.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-map-marker-alt"></i></span>
+              2. Dirección Residencial
+            </h2>
+            {% include 'formulario/componentes/direccion_residencial.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-users"></i></span>
+              3. Datos del Cónyuge o Deudor Solidario
+            </h2>
+            {% include 'formulario/componentes/conyuge.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-briefcase"></i></span>
+              4. Información Laboral
+            </h2>
+            {% include 'formulario/componentes/informacion_laboral.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-user-shield"></i></span>
+              5. PEP - Persona Expuesta Políticamente
+            </h2>
+            {% include 'formulario/componentes/pep.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-user-friends"></i></span>
+              6. Referencias Personales
+            </h2>
+            {% include 'formulario/componentes/referencias_personales.html' with referencias_formset=referencias_formset %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-briefcase"></i></span>
+              7. Referencias Comerciales
+            </h2>
+            <div id="referencias-comerciales-seccion" class="form-section">
+              <!-- CORRECTO: SIEMPRE INCLUYE EL MANAGEMENT_FORM ANTES DE LOS FORMULARIOS -->
+              {{ referencias_comerciales_formset.management_form }}
+              <div id="referencias-comerciales-forms">
+                {% for ref_form in referencias_comerciales_formset %}
+                  <div class="border rounded p-3 mb-4 referencia-comercial-form">
+                    <h5 class="referencia-comercial-header">Referencia Comercial {{ forloop.counter }}</h5>
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.nombre.id_for_label }}">{{ ref_form.nombre.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-user text-muted"></i></span>
+                          {{ ref_form.nombre }}
+                        </div>
+                        {% if ref_form.nombre.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.nombre.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.tipo.id_for_label }}">{{ ref_form.tipo.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-list text-muted"></i></span>
+                          {{ ref_form.tipo }}
+                        </div>
+                        {% if ref_form.tipo.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.tipo.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.actividad.id_for_label }}">{{ ref_form.actividad.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-briefcase text-muted"></i></span>
+                          {{ ref_form.actividad }}
+                        </div>
+                        {% if ref_form.actividad.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.actividad.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.telefono.id_for_label }}">{{ ref_form.telefono.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-phone text-muted"></i></span>
+                          {{ ref_form.telefono }}
+                        </div>
+                        {% if ref_form.telefono.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.telefono.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.celular.id_for_label }}">{{ ref_form.celular.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-mobile-alt text-muted"></i></span>
+                          {{ ref_form.celular }}
+                        </div>
+                        {% if ref_form.celular.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.celular.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-md-6">
+                        <label for="{{ ref_form.saldo.id_for_label }}">{{ ref_form.saldo.label }}</label>
+                        <div class="input-group">
+                          <span class="input-group-text"><i class="fas fa-dollar-sign text-muted"></i></span>
+                          {{ ref_form.saldo }}
+                        </div>
+                        {% if ref_form.saldo.errors %}
+                          <div class="text-danger small mt-1">
+                            {{ ref_form.saldo.errors|striptags }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="text-end mt-2">
+                      <button type="button" class="btn btn-danger btn-sm remove-referencia-comercial" title="Eliminar referencia" style="display:none;">
+                        <i class="fas fa-minus"></i> Eliminar
+                      </button>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="text-end mt-2">
+                <button type="button" class="btn btn-outline-success btn-sm" id="add-referencia-comercial">
+                  <i class="fas fa-plus"></i> Añadir otra referencia comercial
+                </button>
+              </div>
+            </div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const refsDiv = document.getElementById('referencias-comerciales-forms');
+                const addBtn = document.getElementById('add-referencia-comercial');
+                const managementForm = document.querySelector('[name="comerciales-TOTAL_FORMS"]');
+                let totalRefs = refsDiv.querySelectorAll('.referencia-comercial-form').length;
+
+                function updateReferenciaTitles() {
+                  const forms = refsDiv.querySelectorAll('.referencia-comercial-form');
+                  forms.forEach((form, idx) => {
+                    const h5 = form.querySelector('.referencia-comercial-header');
+                    if (h5) h5.textContent = 'Referencia Comercial ' + (idx + 1);
+                  });
+                }
+
+                function updateRemoveButtons() {
+                  const forms = refsDiv.querySelectorAll('.referencia-comercial-form');
+                  forms.forEach((form, idx) => {
+                    const btn = form.querySelector('.remove-referencia-comercial');
+                    if (forms.length === 1) {
+                      btn.style.display = 'none';
+                    } else {
+                      btn.style.display = '';
+                    }
+                  });
+                }
+                updateReferenciaTitles();
+                updateRemoveButtons();
+
+                addBtn.addEventListener('click', function() {
+                  const forms = refsDiv.querySelectorAll('.referencia-comercial-form');
+                  // Encuentra el formulario vacío de Django para clonar (usando el template __prefix__)
+                  const emptyFormTemplate = document.getElementById('empty-comercial-form-template');
+                  let emptyForm;
+                  if (emptyFormTemplate) {
+                    emptyForm = emptyFormTemplate.cloneNode(true);
+                    emptyForm.style.display = '';
+                    emptyForm.removeAttribute('id');
+                  } else {
+                    emptyForm = forms[0].cloneNode(true);
+                  }
+                  // Limpiar valores de los inputs
+                  emptyForm.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (el.type === 'checkbox' || el.type === 'radio') {
+                      el.checked = false;
+                    } else {
+                      el.value = '';
+                    }
+                  });
+                  refsDiv.appendChild(emptyForm);
+                  totalRefs++;
+                  managementForm.value = totalRefs;
+                  updateReferenciaTitles();
+                  updateRemoveButtons();
+                });
+
+                refsDiv.addEventListener('click', function(e) {
+                  if (e.target.closest('.remove-referencia-comercial')) {
+                    const form = e.target.closest('.referencia-comercial-form');
+                    if (refsDiv.children.length > 1) {
+                      form.remove();
+                      totalRefs--;
+                      managementForm.value = totalRefs;
+                      updateReferenciaTitles();
+                      updateRemoveButtons();
+                    }
+                  }
+                });
+              });
+            </script>
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-university"></i></span>
+              8. Datos Bancarios
+            </h2>
+            {% include 'formulario/componentes/datos_bancarios.html' with form=form %}
+          </div>
+
+          <div class="seccion">
+            <h2>
+              <span class="section-icon"><i class="fas fa-file-signature"></i></span>
+              9. Autorizaciones
+            </h2>
+            {% include 'formulario/componentes/autorizaciones.html' with form=form %}
+          </div>
+
+          <div class="text-end mb-4">
+            <button type="submit" class="btn btn-primary btn-submit">Enviar</button>
+          </div>
+        </form>
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-success mt-4 text-center">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
