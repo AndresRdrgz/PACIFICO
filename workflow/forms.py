@@ -67,11 +67,7 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'ocupacion': forms.TextInput(attrs={'class': 'form-control'}),
             'trabajo_cargo': forms.TextInput(attrs={'class': 'form-control'}),
             'origen_fondos': forms.Select(attrs={'class': 'form-select'}),
-            'cod_empleado': forms.TextInput(attrs={'class': 'form-control'}),
-            'cod_contraloria_1': forms.TextInput(attrs={'class': 'form-control'}),
-            'cod_contraloria_2': forms.TextInput(attrs={'class': 'form-control'}),
-            'cod_contraloria_3': forms.TextInput(attrs={'class': 'form-control'}),
-            'pep_cargo_actual': forms.TextInput(attrs={'class': 'form-control'}),
+            
             'pep_cargo_anterior': forms.TextInput(attrs={'class': 'form-control'}),
             'parentesco_pep': forms.TextInput(attrs={'class': 'form-control'}),
             'nombre_pep': forms.TextInput(attrs={'class': 'form-control'}),
@@ -100,9 +96,9 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'estatura': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
 
             # Checkboxes (toggles)
-            'autoriza_apc': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'acepta_datos': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'es_beneficiario_final': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'autoriza_apc': forms.CheckboxInput(attrs={'class': 'form-check-input', 'value': 'VERDADERO'}),
+            'acepta_datos': forms.CheckboxInput(attrs={'class': 'form-check-input', 'value': 'VERDADERO'}),
+            'es_beneficiario_final': forms.CheckboxInput(attrs={'class': 'form-check-input', 'value': 'VERDADERO'}),
             # PEP toggles con estilo Bootstrap 5 Switch y tamaño personalizado
             'es_pep': forms.CheckboxInput(attrs={
                 'class': 'form-check-input form-switch',
@@ -147,9 +143,15 @@ class ClienteEntrevistaForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Asegura que los toggles (checkboxes) se guarden como booleanos
-        for field in ['autoriza_apc', 'acepta_datos', 'es_beneficiario_final', 'es_pep', 'es_familiar_pep']:
-            cleaned_data[field] = bool(self.data.get(field, False))
+        # Asegura que los toggles de autorizaciones sean booleanos según el valor recibido
+        for field in ['autoriza_apc', 'acepta_datos', 'es_beneficiario_final']:
+            val = self.data.get(field)
+            # El valor será 'VERDADERO' si el toggle está encendido, 'FALSO' o None si está apagado
+            cleaned_data[field] = (val == 'VERDADERO')
+        # PEP toggles
+        for field in ['es_pep', 'es_familiar_pep']:
+            val = self.data.get(field)
+            cleaned_data[field] = bool(val)
         return cleaned_data
 
     def clean_jubilado(self):

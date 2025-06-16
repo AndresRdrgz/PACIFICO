@@ -170,22 +170,41 @@ def descargar_entrevistas_excel(request):
     wb.remove(wb.active)
 
     ws_entrevistas = wb.create_sheet(title="Entrevistas")
-    campos_entrevista = [field for field in ClienteEntrevista._meta.fields if field.name != 'lugar_nacimiento']
+    campos_excluir = [
+        'tipo_ingreso_1', 'descripcion_ingreso_1', 'monto_ingreso_1',
+        'tipo_ingreso_2', 'descripcion_ingreso_2', 'monto_ingreso_2',
+        'tipo_ingreso_3', 'descripcion_ingreso_3', 'monto_ingreso_3'
+    ]
+    campos_entrevista = [
+        field for field in ClienteEntrevista._meta.fields
+        if field.name != 'lugar_nacimiento' and field.name not in campos_excluir
+    ]
 
-    # Encabezados: usa verbose_name para mostrar "Peso (lb)" y "Estatura (m)"
+    # --- AGREGADO: asegúrate de que peso y estatura estén en los encabezados ---
     encabezados = [
         field.verbose_name if field.name in ['peso', 'estatura'] else field.verbose_name.title() if field.name in ['conyuge_cargo', 'conyuge_ingreso'] else field.name
         for field in campos_entrevista
     ]
     if 'nacionalidad' not in [field.name for field in campos_entrevista]:
         encabezados.append('nacionalidad')
+    # Si no están explícitamente, agrégalos al final
+    if "Peso (lb)" not in encabezados:
+        encabezados.append("Peso (lb)")
+    if "Estatura (m)" not in encabezados:
+        encabezados.append("Estatura (m)")
     ws_entrevistas.append(encabezados)
 
     for entrevista in entrevistas:
         fila = []
         for field in campos_entrevista:
             valor = getattr(entrevista, field.name, "")
-            if field.name in ['peso', 'estatura', 'conyuge_ingreso'] and valor is not None:
+            # Exporta peso y estatura como texto (sin conversión a decimal)
+            if field.name in ['peso', 'estatura']:
+                valor = str(valor) if valor is not None else ""
+            # Para los toggles de autorizaciones y PEP, mostrar "Sí" o "No" en el Excel
+            elif field.name in ['autoriza_apc', 'acepta_datos', 'es_beneficiario_final', 'es_pep', 'es_familiar_pep']:
+                valor = "Sí" if valor else "No"
+            elif field.name in ['conyuge_ingreso'] and valor is not None:
                 try:
                     valor = float(valor)
                 except Exception:
@@ -195,8 +214,13 @@ def descargar_entrevistas_excel(request):
             if isinstance(valor, datetime.datetime) and valor.tzinfo is not None:
                 valor = valor.replace(tzinfo=None)
             fila.append(valor if valor is not None else "")
+        # Si no están explícitamente, agrégalos al final
         if 'nacionalidad' not in [field.name for field in campos_entrevista]:
             fila.append(getattr(entrevista, 'nacionalidad', ''))
+        if 'peso' not in [field.name for field in campos_entrevista]:
+            fila.append(str(getattr(entrevista, 'peso', '')) if getattr(entrevista, 'peso', None) is not None else "")
+        if 'estatura' not in [field.name for field in campos_entrevista]:
+            fila.append(str(getattr(entrevista, 'estatura', '')) if getattr(entrevista, 'estatura', None) is not None else "")
         ws_entrevistas.append(fila)
 
     ws_ref_personales = wb.create_sheet(title="Referencias Personales")
@@ -346,4 +370,10 @@ def api_entrevistas(request):
     for entrevista in entrevistas:
         registro = {field: getattr(entrevista, field, None) for field in campos}
         data.append(registro)
+    return JsonResponse({'entrevistas': data})
+    return JsonResponse({'entrevistas': data})
+    for entrevista in entrevistas:
+        registro = {field: getattr(entrevista, field, None) for field in campos}
+        data.append(registro)
+    return JsonResponse({'entrevistas': data})
     return JsonResponse({'entrevistas': data})
