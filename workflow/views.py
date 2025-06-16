@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import modelform_factory
 from django.forms import inlineformset_factory
-from .models import ClienteEntrevista, OtroIngreso, ReferenciaPersonal, ReferenciaComercial
+from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
 from .forms import (
     ClienteEntrevistaForm,
-    OtroIngresoFormSet,
     ReferenciaPersonalFormSet,
     ReferenciaComercialFormSet,
+    OtroIngresoFormSet,
 )
 from django.http import HttpResponse
 from django.contrib import messages
@@ -31,47 +31,118 @@ def entrevista_cliente_view(request):
 
 
     if request.method == 'POST':
-        form = ClienteEntrevistaForm(request.POST, request.FILES)
-        referencias_formset = ReferenciaPersonalFormSet(request.POST, prefix='personales')
-        referencias_comerciales_formset = ReferenciaComercialFormSet(request.POST, prefix='comerciales')
-        otros_ingresos_formset = OtroIngresoFormSet(request.POST, prefix='otrosingresos')
+        form = ClienteEntrevistaForm(request.POST)
+        referencias_formset = ReferenciaPersonalFormSet(
+            request.POST,
+            queryset=ReferenciaPersonal.objects.none(),
+            prefix='referencias'
+        )
+        referencias_comerciales_formset = ReferenciaComercialFormSet(
+            request.POST,
+            queryset=ReferenciaComercial.objects.none(),
+            prefix='referencias_comerciales'
+        )
+        otros_ingresos_formset = OtroIngresoFormSet(
+            request.POST,
+            queryset=OtroIngreso.objects.none(),
+            prefix='otros_ingresos'
+        )
 
-        if (
-            form.is_valid() and
-            referencias_formset.is_valid() and
-            referencias_comerciales_formset.is_valid() and
-            otros_ingresos_formset.is_valid()
-        ):
-            entrevista = form.save()
+        tiene_otros_ingresos = request.POST.get('tiene_otros_ingresos') == 'true'
 
-            # Relaciona correctamente las referencias personales con la entrevista
-            referencias_formset.instance = entrevista
-            referencias_formset.save()
+        if (form.is_valid() and referencias_formset.is_valid() and
+            referencias_comerciales_formset.is_valid() and otros_ingresos_formset.is_valid()):
+            cliente = form.save(commit=False)
+            # Asigna explícitamente todos los datos generales si no están en fields automáticos
+            cliente.primer_nombre = form.cleaned_data.get('primer_nombre')
+            cliente.segundo_nombre = form.cleaned_data.get('segundo_nombre')
+            cliente.primer_apellido = form.cleaned_data.get('primer_apellido')
+            cliente.segundo_apellido = form.cleaned_data.get('segundo_apellido')
+            cliente.provincia_cedula = form.cleaned_data.get('provincia_cedula')
+            cliente.tipo_letra = form.cleaned_data.get('tipo_letra')
+            cliente.tomo_cedula = form.cleaned_data.get('tomo_cedula')
+            cliente.partida_cedula = form.cleaned_data.get('partida_cedula')
+            cliente.telefono = form.cleaned_data.get('telefono')
+            cliente.email = form.cleaned_data.get('email')
+            cliente.fecha_nacimiento = form.cleaned_data.get('fecha_nacimiento')
+            cliente.sexo = form.cleaned_data.get('sexo')
+            cliente.jubilado = form.cleaned_data.get('jubilado')
+            cliente.nivel_academico = form.cleaned_data.get('nivel_academico')
+            cliente.estado_civil = form.cleaned_data.get('estado_civil')
+            cliente.no_dependientes = form.cleaned_data.get('no_dependientes')
+            cliente.titulo = form.cleaned_data.get('titulo')
+            cliente.salario = form.cleaned_data.get('salario')
+            cliente.tipo_producto = form.cleaned_data.get('tipo_producto')
+            cliente.oficial = form.cleaned_data.get('oficial')
+            cliente.apellido_casada = form.cleaned_data.get('apellido_casada')
+            cliente.peso = form.cleaned_data.get('peso')
+            cliente.estatura = form.cleaned_data.get('estatura')
+            cliente.nacionalidad = form.cleaned_data.get('nacionalidad')
+            # ...otros campos generales si los tienes en el formulario...
 
-            referencias_comerciales_formset.instance = entrevista
-            referencias_comerciales_formset.save()
+            # Otros ingresos del modelo principal
+            cliente.tipo_ingreso_1 = form.cleaned_data.get('tipo_ingreso_1')
+            cliente.descripcion_ingreso_1 = form.cleaned_data.get('descripcion_ingreso_1')
+            cliente.monto_ingreso_1 = form.cleaned_data.get('monto_ingreso_1')
+            cliente.tipo_ingreso_2 = form.cleaned_data.get('tipo_ingreso_2')
+            cliente.descripcion_ingreso_2 = form.cleaned_data.get('descripcion_ingreso_2')
+            cliente.monto_ingreso_2 = form.cleaned_data.get('monto_ingreso_2')
+            cliente.tipo_ingreso_3 = form.cleaned_data.get('tipo_ingreso_3')
+            cliente.descripcion_ingreso_3 = form.cleaned_data.get('descripcion_ingreso_3')
+            cliente.monto_ingreso_3 = form.cleaned_data.get('monto_ingreso_3')
 
-            otros_ingresos_formset.instance = entrevista
-            otros_ingresos_formset.save()
+            # Información laboral
+            cliente.trabajo_direccion = form.cleaned_data.get('trabajo_direccion')
+            cliente.trabajo_lugar = form.cleaned_data.get('trabajo_lugar')
+            cliente.trabajo_cargo = form.cleaned_data.get('trabajo_cargo')
+            cliente.salario = form.cleaned_data.get('salario')
+            cliente.tipo_trabajo = form.cleaned_data.get('tipo_trabajo')
+            cliente.frecuencia_pago = form.cleaned_data.get('frecuencia_pago')
+            cliente.tel_trabajo = form.cleaned_data.get('tel_trabajo')
+            cliente.tel_ext = form.cleaned_data.get('tel_ext')
+            cliente.origen_fondos = form.cleaned_data.get('origen_fondos')
+            cliente.fecha_inicio_trabajo = form.cleaned_data.get('fecha_inicio_trabajo')
 
-            # Elimina otros ingresos vacíos
-            for form_ing in otros_ingresos_formset:
-                if not form_ing.cleaned_data.get('fuente') and not form_ing.cleaned_data.get('monto'):
-                    if form_ing.instance.pk:
-                        form_ing.instance.delete()
+            cliente.save()
 
+            # Guardar referencias personales correctamente
+            referencias = referencias_formset.save(commit=False)
+            for ref in referencias:
+                ref.entrevista = cliente
+                ref.save()
+            for ref in referencias_formset.deleted_objects:
+                ref.delete()
+
+            comerciales = referencias_comerciales_formset.save(commit=False)
+            for com in comerciales:
+                com.entrevista = cliente
+                com.save()
+            for com in referencias_comerciales_formset.deleted_objects:
+                com.delete()
+
+            if tiene_otros_ingresos:
+                otros = otros_ingresos_formset.save(commit=False)
+                for otro in otros:
+                    otro.cliente = cliente
+                    otro.save()
+                for otro in otros_ingresos_formset.deleted_objects:
+                    otro.delete()
             return redirect('formulario_gracias')
 
     else:
         form = ClienteEntrevistaForm()
-        entrevista_nueva = ClienteEntrevista()
         referencias_formset = ReferenciaPersonalFormSet(
-            instance=entrevista_nueva,
             queryset=ReferenciaPersonal.objects.none(),
-            prefix='personales'
+            prefix='referencias'
         )
-        referencias_comerciales_formset = ReferenciaComercialFormSet(instance=entrevista_nueva, queryset=ReferenciaComercial.objects.none(), prefix='comerciales')
-        otros_ingresos_formset = OtroIngresoFormSet(queryset=OtroIngreso.objects.none(), prefix='otrosingresos')
+        referencias_comerciales_formset = ReferenciaComercialFormSet(
+            queryset=ReferenciaComercial.objects.none(),
+            prefix='referencias_comerciales'
+        )
+        otros_ingresos_formset = OtroIngresoFormSet(
+            queryset=OtroIngreso.objects.none(),
+            prefix='otros_ingresos'
+        )
 
     return render(request, 'formulario/entrevista_cliente.html', {
         'form': form,
@@ -99,16 +170,33 @@ def descargar_entrevistas_excel(request):
     wb.remove(wb.active)
 
     ws_entrevistas = wb.create_sheet(title="Entrevistas")
-    campos_entrevista = [field.name for field in ClienteEntrevista._meta.fields]
-    ws_entrevistas.append(campos_entrevista)
+    campos_entrevista = [field for field in ClienteEntrevista._meta.fields if field.name != 'lugar_nacimiento']
+
+    # Encabezados: usa verbose_name para mostrar "Peso (lb)" y "Estatura (m)"
+    encabezados = [
+        field.verbose_name if field.name in ['peso', 'estatura'] else field.verbose_name.title() if field.name in ['conyuge_cargo', 'conyuge_ingreso'] else field.name
+        for field in campos_entrevista
+    ]
+    if 'nacionalidad' not in [field.name for field in campos_entrevista]:
+        encabezados.append('nacionalidad')
+    ws_entrevistas.append(encabezados)
 
     for entrevista in entrevistas:
         fila = []
         for field in campos_entrevista:
-            valor = getattr(entrevista, field)
+            valor = getattr(entrevista, field.name, "")
+            if field.name in ['peso', 'estatura', 'conyuge_ingreso'] and valor is not None:
+                try:
+                    valor = float(valor)
+                except Exception:
+                    pass
+            elif valor is not None and hasattr(valor, 'normalize'):
+                valor = str(valor)
             if isinstance(valor, datetime.datetime) and valor.tzinfo is not None:
                 valor = valor.replace(tzinfo=None)
             fila.append(valor if valor is not None else "")
+        if 'nacionalidad' not in [field.name for field in campos_entrevista]:
+            fila.append(getattr(entrevista, 'nacionalidad', ''))
         ws_entrevistas.append(fila)
 
     ws_ref_personales = wb.create_sheet(title="Referencias Personales")
@@ -130,12 +218,17 @@ def descargar_entrevistas_excel(request):
             ws_ref_comerciales.append(fila)
 
     ws_otros_ingresos = wb.create_sheet(title="Otros Ingresos")
-    campos_otros_ingresos = ['cliente_id', 'fuente', 'monto']
+    campos_otros_ingresos = ['cliente_id', 'tipo_ingreso', 'fuente', 'monto']
     ws_otros_ingresos.append(campos_otros_ingresos)
 
     for entrevista in entrevistas:
         for ingreso in entrevista.otros_ingresos.all():
-            fila = [entrevista.id, ingreso.fuente, ingreso.monto]
+            fila = [
+                entrevista.id,
+                ingreso.tipo_ingreso,
+                ingreso.fuente,
+                ingreso.monto
+            ]
             ws_otros_ingresos.append(fila)
 
     for ws in [ws_entrevistas, ws_ref_personales, ws_ref_comerciales, ws_otros_ingresos]:
@@ -225,88 +318,32 @@ def cliente_entrevista_list(request):
     return render(request, 'workflow/cliente_entrevista_list.html', {'clientes': clientes})
 
 
-# Validaciones actuales en entrevista_cliente_view:
 
-# 1. ClienteEntrevistaForm:
-#    - Se valida con form.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 2. ReferenciaPersonalFormSet:
-#    - Se valida con referencias_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 3. ReferenciaComercialFormSet:
-#    - Se valida con referencias_comerciales_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 4. OtroIngresoFormSet:
-#    - Se valida con otros_ingresos_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 5. Solo si TODOS los formularios y formsets son válidos:
-#    - Se guarda la instancia principal (ClienteEntrevista).
-#    - Se guardan todas las referencias personales asociadas.
-#    - Se guardan todas las referencias comerciales asociadas.
-#    - Se guardan todos los otros ingresos asociados.
-#
-# 6. Si algún formulario o formset no es válido:
-#    - El usuario ve los errores en pantalla y no se guarda nada en la base de datos.
-#
-# 7. Los campos requeridos y validaciones de tipo/dominio se definen en los modelos y en los formularios Django.
-#
-# 8. Los formsets permiten agregar/eliminar múltiples referencias y otros ingresos, y validan la estructura de cada uno.
-#
-# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
-#    - Se valida con otros_ingresos_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 5. Solo si TODOS los formularios y formsets son válidos:
-#    - Se guarda la instancia principal (ClienteEntrevista).
-#    - Se guardan todas las referencias personales asociadas.
-#    - Se guardan todas las referencias comerciales asociadas.
-#    - Se guardan todos los otros ingresos asociados.
-#
-# 6. Si algún formulario o formset no es válido:
-#    - El usuario ve los errores en pantalla y no se guarda nada en la base de datos.
-#
-# 7. Los campos requeridos y validaciones de tipo/dominio se definen en los modelos y en los formularios Django.
-#
-# 8. Los formsets permiten agregar/eliminar múltiples referencias y otros ingresos, y validan la estructura de cada uno.
-#
-# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
-# 4. OtroIngresoFormSet:
-#    - Se valida con otros_ingresos_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 5. Solo si TODOS los formularios y formsets son válidos:
-#    - Se guarda la instancia principal (ClienteEntrevista).
-#    - Se guardan todas las referencias personales asociadas.
-#    - Se guardan todas las referencias comerciales asociadas.
-#    - Se guardan todos los otros ingresos asociados.
-#
-# 6. Si algún formulario o formset no es válido:
-#    - El usuario ve los errores en pantalla y no se guarda nada en la base de datos.
-#
-# 7. Los campos requeridos y validaciones de tipo/dominio se definen en los modelos y en los formularios Django.
-#
-# 8. Los formsets permiten agregar/eliminar múltiples referencias y otros ingresos, y validan la estructura de cada uno.
-#
-# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
-#    - Se valida con otros_ingresos_formset.is_valid().
-#    - Si no es válido, se muestran los errores en el template.
-#
-# 5. Solo si TODOS los formularios y formsets son válidos:
-#    - Se guarda la instancia principal (ClienteEntrevista).
-#    - Se guardan todas las referencias personales asociadas.
-#    - Se guardan todas las referencias comerciales asociadas.
-#    - Se guardan todos los otros ingresos asociados.
-#
-# 6. Si algún formulario o formset no es válido:
-#    - El usuario ve los errores en pantalla y no se guarda nada en la base de datos.
-#
-# 7. Los campos requeridos y validaciones de tipo/dominio se definen en los modelos y en los formularios Django.
-#
-# 8. Los formsets permiten agregar/eliminar múltiples referencias y otros ingresos, y validan la estructura de cada uno.
-#
-# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
-# 9. El botón "Enviar" solo redirige a la página de gracias si todo es válido y guardado.
+from django.http import JsonResponse
+
+def api_entrevistas(request):
+    entrevistas = ClienteEntrevista.objects.all()
+    campos = [field.name for field in ClienteEntrevista._meta.fields]
+    data = []
+    for entrevista in entrevistas:
+        registro = {field: getattr(entrevista, field, None) for field in campos}
+        data.append(registro)
+    return JsonResponse({'entrevistas': data})
+
+
+from django.http import JsonResponse
+
+def api_entrevistas(request):
+    entrevistas = ClienteEntrevista.objects.all()
+    campos = [field.name for field in ClienteEntrevista._meta.fields]
+    data = []
+    for entrevista in entrevistas:
+        registro = {field: getattr(entrevista, field, None) for field in campos}
+        data.append(registro)
+    return JsonResponse({'entrevistas': data})
+    campos = [field.name for field in ClienteEntrevista._meta.fields]
+    data = []
+    for entrevista in entrevistas:
+        registro = {field: getattr(entrevista, field, None) for field in campos}
+        data.append(registro)
+    return JsonResponse({'entrevistas': data})

@@ -19,6 +19,7 @@ from capacitaciones_app.views import (
 
 from .views_asignacion import historial_asignaciones_ajax
 from capacitaciones_app.views_asignacion import historial_usuario
+from . import views
 
 urlpatterns = [
     # 🔐 Admin & Auth
@@ -48,6 +49,9 @@ urlpatterns = [
     path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
     path('mi-progreso/', historial_usuario, name='mi_progreso'),
 
+    # AJAX Group Views
+    path('ajax/usuarios-grupo/<int:grupo_id>/', views.usuarios_grupo_ajax, name='usuarios_grupo_ajax'),
+    path('ajax/quitar-usuario-grupo/', views.quitar_usuario_grupo_ajax, name='quitar_usuario_grupo_ajax'),
 ]
 
 if settings.DEBUG:

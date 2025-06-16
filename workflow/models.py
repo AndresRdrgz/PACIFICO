@@ -7,6 +7,7 @@ SEXO_CHOICES = [
 ]
 
 PROVINCIA_CHOICES = [
+    ('', '—'),  # Opción vacía con raya
     ('1', '1'),
     ('2', '2'),
     ('3', '3'),
@@ -20,6 +21,7 @@ PROVINCIA_CHOICES = [
 ]
 
 LETRA_CEDULA_CHOICES = [
+    ('', '—'),  # Opción vacía con raya
     ('E', 'E'),
     ('N', 'N'),
     ('PE', 'PE'),
@@ -54,38 +56,32 @@ class ClienteEntrevista(models.Model):
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100)
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
-    provincia_cedula = models.CharField(max_length=2, choices=PROVINCIA_CHOICES)
-    tipo_letra = models.CharField(max_length=5, choices=LETRA_CEDULA_CHOICES)
+    provincia_cedula = models.CharField(max_length=2, choices=PROVINCIA_CHOICES, blank=True, null=True)
+    tipo_letra = models.CharField(max_length=5, choices=LETRA_CEDULA_CHOICES, blank=True, null=True)
     tomo_cedula = models.CharField(max_length=10)
     partida_cedula = models.CharField(max_length=10)
     telefono = models.CharField(max_length=20)
-    telefono2 = models.CharField(max_length=20, blank=True, null=True)
-    tel_residencia = models.CharField(max_length=10, blank=True, null=True)
     email = models.EmailField()
     fecha_nacimiento = models.DateField()
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
     jubilado = models.BooleanField(default=False)
-    imc = models.CharField(max_length=50, blank=True, null=True)
     nivel_academico = models.CharField(
         max_length=200,
         blank=True,
         null=True,
         help_text="Valores separados por coma para selección múltiple. Ej: PRIMARIA,SECUNDARIA",
     )
-    venc_cedula = models.DateField(blank=True, null=True)
+    
     lugar_nacimiento = models.CharField(max_length=100, blank=True, null=True)
     estado_civil = models.CharField(max_length=50, blank=True, null=True)
     no_dependientes = models.PositiveIntegerField(default=0)
     titulo = models.CharField(max_length=100, blank=True, null=True)
-    redes_sociales = models.CharField(max_length=255, blank=True, null=True)
-    sector = models.CharField(max_length=100)
     salario = models.DecimalField(max_digits=10, decimal_places=2)
-    como_se_entero = models.CharField(max_length=100, blank=True, null=True)
     tipo_producto = models.CharField(max_length=50, choices=PRODUCTO_CHOICES)
     oficial = models.CharField(max_length=100)
     apellido_casada = models.CharField(max_length=100, blank=True, null=True)
-    peso = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-    estatura = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
+    peso = models.DecimalField("Peso (lb)", max_digits=5, decimal_places=2, blank=True, null=True)
+    estatura = models.DecimalField("Estatura (m)", max_digits=4, decimal_places=2, blank=True, null=True)
     nacionalidad = models.CharField(max_length=100, default="Panamá")
     ESTADO_CIVIL_CHOICES = [
         ('CASADO (A)', 'CASADO (A)'),
@@ -105,7 +101,9 @@ class ClienteEntrevista(models.Model):
     # CÓNYUGE
     conyuge_nombre = models.CharField(max_length=100, blank=True, null=True)
     conyuge_cedula = models.CharField(max_length=15, blank=True, null=True)
-    conyuge_empresa = models.CharField(max_length=100, blank=True, null=True)
+    conyuge_lugar_trabajo = models.CharField(max_length=100, blank=True, null=True)
+    conyuge_cargo = models.CharField(max_length=100, blank=True, null=True)
+    conyuge_ingreso = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     conyuge_telefono = models.CharField(max_length=20, blank=True, null=True)
 
     # INFORMACIÓN LABORAL
@@ -129,10 +127,6 @@ class ClienteEntrevista(models.Model):
     tel_ext = models.CharField(max_length=5, blank=True, null=True)
     origen_fondos = models.CharField(max_length=20, choices=ORIGEN_FONDOS_CHOICES, blank=True, null=True)
     fecha_inicio_trabajo = models.DateField(blank=True, null=True)
-    cod_empleado = models.CharField(max_length=15, blank=True, null=True)
-    cod_contraloria_1 = models.CharField(max_length=3, blank=True, null=True)
-    cod_contraloria_2 = models.CharField(max_length=3, blank=True, null=True)
-    cod_contraloria_3 = models.CharField(max_length=5, blank=True, null=True)
 
     # OTROS INGRESOS
     tipo_ingreso_1 = models.CharField(max_length=100, blank=True, null=True)
@@ -189,7 +183,11 @@ class ClienteEntrevista(models.Model):
 
 
 class ReferenciaPersonal(models.Model):
-    entrevista = models.ForeignKey(ClienteEntrevista, on_delete=models.CASCADE, related_name='referencias_personales')
+    entrevista = models.ForeignKey(
+        ClienteEntrevista,
+        on_delete=models.CASCADE,
+        related_name='referencias_personales'
+    )
     nombre = models.CharField(max_length=100)
     telefono = models.CharField(max_length=20)
     relacion = models.CharField(max_length=100)
@@ -200,12 +198,21 @@ class ReferenciaPersonal(models.Model):
 
 
 class ReferenciaComercial(models.Model):
-    entrevista = models.ForeignKey(ClienteEntrevista, on_delete=models.CASCADE, related_name='referencias_comerciales')
-    tipo = models.CharField(max_length=100, blank=True, null=True)
-    nombre = models.CharField(max_length=100)
+    entrevista = models.ForeignKey(
+        ClienteEntrevista,
+        on_delete=models.CASCADE,
+        related_name='referencias_comerciales'
+    )
+    TIPO_CHOICES = [
+        ('', '---------'),
+        ('COMERCIAL', 'COMERCIAL'),
+        ('CLIENTES', 'CLIENTES'),
+    ]
+    tipo = models.CharField(max_length=100, choices=TIPO_CHOICES, blank=True, null=True)
+    nombre = models.CharField(max_length=100, blank=True, null=True)  # <--- Cambiado aquí
     actividad = models.CharField(max_length=100, blank=True, null=True)
-    telefono = models.CharField(max_length=20, blank=True, null=True)  # <-- Cambia max_length=10 a max_length=20
-    celular = models.CharField(max_length=20, blank=True, null=True)   # <-- Cambia max_length=10 a max_length=20
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    celular = models.CharField(max_length=20, blank=True, null=True)
     saldo = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True)
 
     def __str__(self):
@@ -218,9 +225,26 @@ class OtroIngreso(models.Model):
         related_name='otros_ingresos',
         on_delete=models.CASCADE
     )
+    TIPO_INGRESO_CHOICES = [
+        ('', '---------'),
+        ('LOCAL', 'LOCAL'),
+        ('EXTRANJERO', 'EXTRANJERO'),
+    ]
+    tipo_ingreso = models.CharField(
+        max_length=20,
+        choices=TIPO_INGRESO_CHOICES,
+        default='',
+        blank=True,
+        null=True
+    )
     fuente = models.CharField(max_length=100)
     monto = models.DecimalField(max_digits=12, decimal_places=2)
 
+    def __str__(self):
+        return self.fuente
+    def __str__(self):
+        return self.fuente
+        return self.fuente
     def __str__(self):
         return self.fuente
 

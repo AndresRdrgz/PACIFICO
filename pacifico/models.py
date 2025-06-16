@@ -118,21 +118,30 @@ TIPO_PRORRATEO_OPCIONES = [
         ('prima_produccion', 'Prima de Producción'),
     ]
 # Create your models here.
+from django.db import models
+from django.contrib.auth.models import User
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES, null=True)
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES, null=True)
-    auto_save_cotizaciones = models.BooleanField(default=False)
     pruebaFuncionalidades = models.BooleanField(default=False)
     rol = models.CharField(
         max_length=20,
-        choices=[('Oficial', 'Oficial'), ('Administrador', 'Administrador'), ('Supervisor', 'Supervisor')],
+        choices=[
+            ('Oficial', 'Oficial'),
+            ('Administrador', 'Administrador'),
+            ('Supervisor', 'Supervisor'),
+            ('Alumno', 'Alumno')
+        ],
         default='Oficial'
     )
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
 
     def __str__(self):
         return self.user.username
+
 class FormPago(models.Model):
     descripcion = models.CharField(max_length=100, null=True)
     codigo = models.IntegerField(null=True)
@@ -642,3 +651,27 @@ class CotizacionDocumento(models.Model):
 
     def __str__(self):
         return f"{self.cotizacion.NumeroCotizacion} - {self.tipo_documento}"
+    
+    from django.contrib import admin
+from .models import UserProfile
+
+#perfil de alumno
+
+from django.contrib import admin
+from .models import UserProfile
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'rol', 'sucursal', 'oficial']
+
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+
+        try:
+            if obj and obj.rol == 'Alumno':
+                fields = [f for f in fields if f not in ('oficial', 'sucursal')]
+        except Exception:
+            pass  # En caso de que obj no tenga rol todavía (nuevo registro)
+
+        return fields
+

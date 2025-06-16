@@ -20,11 +20,9 @@
         <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all duration-200"></div>
         <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-7 transition-transform duration-200"></div>
       </label>
-      <span id="autoriza_apc_label" class="ml-4 text-base font-medium text-gray-700">No</span>
+      <span id="autoriza_apc_label" class="ml-4 text-base font-medium text-gray-700">FALSO</span>
     </div>
-    <input type="hidden" name="{{ form.autoriza_apc.html_name }}" value="false">
-    <input type="checkbox" name="{{ form.autoriza_apc.html_name }}" id="{{ form.autoriza_apc.id_for_label }}"
-      value="true" class="hidden" {% if form.autoriza_apc.value %}checked{% endif %}>
+    <input type="hidden" name="{{ form.autoriza_apc.html_name }}" id="autoriza_apc_hidden" value="{% if form.autoriza_apc.value %}VERDADERO{% else %}FALSO{% endif %}">
   </div>
 
   <!-- ¿Acepta tratamiento de datos? -->
@@ -46,11 +44,9 @@
         <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all duration-200"></div>
         <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-7 transition-transform duration-200"></div>
       </label>
-      <span id="acepta_datos_label" class="ml-4 text-base font-medium text-gray-700">No</span>
+      <span id="acepta_datos_label" class="ml-4 text-base font-medium text-gray-700">FALSO</span>
     </div>
-    <input type="hidden" name="{{ form.acepta_datos.html_name }}" value="false">
-    <input type="checkbox" name="{{ form.acepta_datos.html_name }}" id="{{ form.acepta_datos.id_for_label }}"
-      value="true" class="hidden" {% if form.acepta_datos.value %}checked{% endif %}>
+    <input type="hidden" name="{{ form.acepta_datos.html_name }}" id="acepta_datos_hidden" value="{% if form.acepta_datos.value %}VERDADERO{% else %}FALSO{% endif %}">
   </div>
 
   <!-- ¿Es beneficiario final? -->
@@ -71,11 +67,9 @@
         <div class="w-14 h-7 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all duration-200"></div>
         <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-7 transition-transform duration-200"></div>
       </label>
-      <span id="es_beneficiario_final_label" class="ml-4 text-base font-medium text-gray-700">No</span>
+      <span id="es_beneficiario_final_label" class="ml-4 text-base font-medium text-gray-700">FALSO</span>
     </div>
-    <input type="hidden" name="{{ form.es_beneficiario_final.html_name }}" value="false">
-    <input type="checkbox" name="{{ form.es_beneficiario_final.html_name }}" id="{{ form.es_beneficiario_final.id_for_label }}"
-      value="true" class="hidden" {% if form.es_beneficiario_final.value %}checked{% endif %}>
+    <input type="hidden" name="{{ form.es_beneficiario_final.html_name }}" id="es_beneficiario_final_hidden" value="{% if form.es_beneficiario_final.value %}VERDADERO{% else %}FALSO{% endif %}">
   </div>
 </div>
 
@@ -84,34 +78,40 @@
     // Autoriza APC
     const apcToggle = document.getElementById('autoriza_apc_toggle');
     const apcLabel = document.getElementById('autoriza_apc_label');
-    const apcHidden = document.getElementById('{{ form.autoriza_apc.id_for_label }}');
-    apcToggle.checked = apcHidden.checked;
-    apcLabel.textContent = apcToggle.checked ? 'Sí' : 'No';
+    const apcHidden = document.getElementById('autoriza_apc_hidden');
+    apcToggle.checked = apcHidden.value === 'VERDADERO';
+    apcLabel.textContent = apcToggle.checked ? 'VERDADERO' : 'FALSO';
     apcToggle.addEventListener('change', function() {
-      apcHidden.checked = this.checked;
-      apcLabel.textContent = this.checked ? 'Sí' : 'No';
+      apcHidden.value = this.checked ? 'VERDADERO' : 'FALSO';
+      apcLabel.textContent = this.checked ? 'VERDADERO' : 'FALSO';
     });
 
     // Acepta datos
     const datosToggle = document.getElementById('acepta_datos_toggle');
     const datosLabel = document.getElementById('acepta_datos_label');
-    const datosHidden = document.getElementById('{{ form.acepta_datos.id_for_label }}');
-    datosToggle.checked = datosHidden.checked;
-    datosLabel.textContent = datosToggle.checked ? 'Sí' : 'No';
+    const datosHidden = document.getElementById('acepta_datos_hidden');
+    datosToggle.checked = datosHidden.value === 'VERDADERO';
+    datosLabel.textContent = datosToggle.checked ? 'VERDADERO' : 'FALSO';
     datosToggle.addEventListener('change', function() {
-      datosHidden.checked = this.checked;
-      datosLabel.textContent = this.checked ? 'Sí' : 'No';
+      datosHidden.value = this.checked ? 'VERDADERO' : 'FALSO';
+      datosLabel.textContent = this.checked ? 'VERDADERO' : 'FALSO';
     });
 
     // Beneficiario final
     const benToggle = document.getElementById('es_beneficiario_final_toggle');
     const benLabel = document.getElementById('es_beneficiario_final_label');
-    const benHidden = document.getElementById('{{ form.es_beneficiario_final.id_for_label }}');
-    benToggle.checked = benHidden.checked;
-    benLabel.textContent = benToggle.checked ? 'Sí' : 'No';
+    const benHidden = document.getElementById('es_beneficiario_final_hidden');
+    benToggle.checked = benHidden.value === 'VERDADERO';
+    benLabel.textContent = benToggle.checked ? 'VERDADERO' : 'FALSO';
+    benToggle.addEventListener('change', function() {
+      benHidden.value = this.checked ? 'VERDADERO' : 'FALSO';
+      benLabel.textContent = this.checked ? 'VERDADERO' : 'FALSO';
+    });
+  });
+</script>
     benToggle.addEventListener('change', function() {
       benHidden.checked = this.checked;
-      benLabel.textContent = this.checked ? 'Sí' : 'No';
+      benLabel.textContent = this.checked ? 'VERDADERO' : 'FALSO';
     });
   });
 </script>

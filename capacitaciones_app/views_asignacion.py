@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.utils.timezone import localtime
@@ -10,7 +10,7 @@ import pandas as pd
 
 from .models import (
     Curso, GrupoAsignacion, Asignacion, ProgresoCurso,
-    ProgresoTema, ResultadoQuiz, Quiz
+    ProgresoTema, ResultadoQuiz, Quiz, PerfilUsuario
 )
 
 
@@ -281,3 +281,32 @@ def historial_usuario(request):
         'asignaciones': asignaciones,
         'progreso': progreso_dict,
     })
+
+# Ejemplo: obtener solo los alumnos de un grupo
+def alumnos_de_grupo(grupo_id):
+    grupo = GrupoAsignacion.objects.get(id=grupo_id)
+    alumnos = grupo.usuarios_asignados.filter(perfil__tipo='alumno')
+    return alumnos
+
+@user_passes_test(lambda u: u.is_staff)
+@require_GET
+def usuarios_grupo_ajax(request, grupo_id):
+    grupo = GrupoAsignacion.objects.get(id=grupo_id)
+    alumnos = grupo.usuarios_asignados.filter(perfil__tipo='alumno')
+    data = list(alumnos.values('id', 'username', 'first_name', 'last_name'))
+    return JsonResponse({'usuarios': data})
+
+@require_POST
+@user_passes_test(lambda u: u.is_staff)
+def quitar_usuario_grupo_ajax(request):
+    try:
+        data = json.loads(request.body)
+        grupo_id = data.get('grupo_id')
+        usuario_id = data.get('usuario_id')
+
+        grupo = GrupoAsignacion.objects.get(id=grupo_id)
+        usuario = User.objects.get(id=usuario_id)
+        grupo.usuarios_asignados.remove(usuario)
+        return JsonResponse({'success': True, 'mensaje': 'Usuario removido del grupo correctamente'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'mensaje': str(e)})

@@ -2,6 +2,18 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
 
+# --- NUEVO: PerfilUsuario ---
+class PerfilUsuario(models.Model):
+    TIPO_CHOICES = [
+        ('alumno', 'Alumno'),
+        ('otro', 'Otro'),
+    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='alumno')
+
+    def __str__(self):
+        return f"{self.user.username} ({self.get_tipo_display()})"
+
 # 📘 CURSO
 class Curso(models.Model):
     titulo = models.CharField(max_length=100)
@@ -20,7 +32,12 @@ class Curso(models.Model):
 # 🧑‍🤝‍🧑 GRUPOS
 class GrupoAsignacion(models.Model):
     nombre = models.CharField(max_length=100)
-    usuarios_asignados = models.ManyToManyField(User, related_name='grupos_asignados')
+    # Solo usuarios cuyo perfil es "alumno"
+    usuarios_asignados = models.ManyToManyField(
+        User,
+        related_name='grupos_asignados',
+        limit_choices_to={'perfil__tipo': 'alumno'}
+    )
 
     def __str__(self):
         return self.nombre

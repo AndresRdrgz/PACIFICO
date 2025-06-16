@@ -1,9 +1,9 @@
 {# formulario/componentes/informacion_laboral.html #}
 <div id="informacion-laboral-seccion" class="flex flex-col gap-6">
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
     <!-- Dirección del trabajo -->
-    <div class="md:col-span-2">
+    <div class="md:col-span-3">
       <label for="{{ form.trabajo_direccion.id_for_label }}" class="block font-semibold mb-1">Dirección del trabajo</label>
       <div class="flex items-start border rounded-lg bg-white px-3 py-2">
         <span class="mr-2 text-green-500 pt-1"><i class="fas fa-map-marked-alt"></i></span>
@@ -133,23 +133,44 @@
       {% endif %}
     </div>
 
-    <!-- Extensión -->
-    <div>
-      <label for="{{ form.tel_ext.id_for_label }}" class="block font-semibold mb-1">Extensión</label>
-      <div class="flex items-center border rounded-lg bg-white px-3 py-2">
-        <span class="mr-2 text-green-500"><i class="fas fa-phone-alt"></i></span>
-        <input
-          type="text"
-          name="{{ form.tel_ext.html_name }}"
-          id="{{ form.tel_ext.id_for_label }}"
-          class="flex-1 outline-none bg-transparent"
-          placeholder="Extensión"
-          value="{{ form.tel_ext.value|default_if_none:'' }}"
-        >
+    <!-- Extensión y Fecha de inicio de trabajo en una sola fila de 2 columnas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+
+      <!-- Extensión -->
+      <div>
+        <label for="{{ form.tel_ext.id_for_label }}" class="block font-semibold mb-1">Extensión</label>
+        <div class="flex items-center border rounded-lg bg-white px-3 py-2">
+          <span class="mr-2 text-green-500"><i class="fas fa-phone-alt"></i></span>
+          <input
+            type="text"
+            name="{{ form.tel_ext.html_name }}"
+            id="{{ form.tel_ext.id_for_label }}"
+            class="flex-1 outline-none bg-transparent"
+            placeholder="Extensión"
+            value="{{ form.tel_ext.value|default_if_none:'' }}"
+          >
+        </div>
+        {% if form.tel_ext.errors %}
+          <div class="text-red-600 text-xs mt-1">{{ form.tel_ext.errors|striptags }}</div>
+        {% endif %}
       </div>
-      {% if form.tel_ext.errors %}
-        <div class="text-red-600 text-xs mt-1">{{ form.tel_ext.errors|striptags }}</div>
-      {% endif %}
+      <!-- Fecha de inicio de trabajo -->
+      <div>
+        <label for="{{ form.fecha_inicio_trabajo.id_for_label }}" class="block font-semibold mb-1">Fecha de inicio de trabajo</label>
+        <div class="flex items-center border rounded-lg bg-white px-3 py-2">
+          <span class="mr-2 text-green-500"><i class="fas fa-calendar-alt"></i></span>
+          <input
+            type="date"
+            name="{{ form.fecha_inicio_trabajo.html_name }}"
+            id="{{ form.fecha_inicio_trabajo.id_for_label }}"
+            class="flex-1 outline-none bg-transparent"
+            value="{{ form.fecha_inicio_trabajo.value|default_if_none:'' }}"
+          >
+        </div>
+        {% if form.fecha_inicio_trabajo.errors %}
+          <div class="text-red-600 text-xs mt-1">{{ form.fecha_inicio_trabajo.errors|striptags }}</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -179,12 +200,20 @@
 
   <div id="otros-ingresos-section" class="transition-all duration-300 mt-4" style="display:none;">
     <div class="bg-gray-50 rounded-xl p-6 shadow-inner border border-green-100">
+      {{ otros_ingresos_formset.management_form }}
       {% for form in otros_ingresos_formset %}
         <div class="mb-6 pb-3 border-b border-gray-200">
           <h5 class="text-green-600 font-semibold mb-3 flex items-center">
             <i class="fas fa-coins mr-2 text-green-500"></i> Otro Ingreso {{ forloop.counter }}
           </h5>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="{{ form.tipo_ingreso.id_for_label }}" class="block font-semibold mb-1">Tipo de Ingreso</label>
+              {{ form.tipo_ingreso }}
+              {% if form.tipo_ingreso.errors %}
+                <div class="text-red-600 text-xs mt-1">{{ form.tipo_ingreso.errors|striptags }}</div>
+              {% endif %}
+            </div>
             <div>
               <label for="{{ form.fuente.id_for_label }}" class="block font-semibold mb-1">Fuente</label>
               {{ form.fuente }}
@@ -204,74 +233,6 @@
       {% endfor %}
     </div>
   </div>
-
-  {% if otros_ingresos_formset %}
-    <div class="mt-6">
-      <h4 class="text-green-700 font-bold text-lg mb-2">Otros Ingresos</h4>
-      {{ otros_ingresos_formset.management_form }}
-      {% for ingreso_form in otros_ingresos_formset %}
-        <div class="mb-6 pb-3 border-b border-gray-200">
-          <h5 class="text-green-600 font-semibold mb-3 flex items-center">
-            <i class="fas fa-coins mr-2 text-green-500"></i> Otro Ingreso {{ forloop.counter }}
-          </h5>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Tipo de Ingreso -->
-            <div>
-              <label for="{{ ingreso_form.tipo_ingreso.id_for_label }}" class="block font-semibold mb-1">
-                {{ ingreso_form.tipo_ingreso.label }}
-              </label>
-              <input
-                type="text"
-                name="{{ ingreso_form.tipo_ingreso.html_name }}"
-                id="{{ ingreso_form.tipo_ingreso.id_for_label }}"
-                class="flex-1 outline-none bg-transparent border rounded-lg px-3 py-2 w-full"
-                placeholder="Tipo de Ingreso"
-                value="{{ ingreso_form.tipo_ingreso.value|default_if_none:'' }}"
-              >
-              {% if ingreso_form.tipo_ingreso.errors %}
-                <div class="text-red-600 text-xs mt-1">{{ ingreso_form.tipo_ingreso.errors|striptags }}</div>
-              {% endif %}
-            </div>
-            <!-- Descripción -->
-            <div>
-              <label for="{{ ingreso_form.descripcion.id_for_label }}" class="block font-semibold mb-1">
-                {{ ingreso_form.descripcion.label }}
-              </label>
-              <input
-                type="text"
-                name="{{ ingreso_form.descripcion.html_name }}"
-                id="{{ ingreso_form.descripcion.id_for_label }}"
-                class="flex-1 outline-none bg-transparent border rounded-lg px-3 py-2 w-full"
-                placeholder="Descripción"
-                value="{{ ingreso_form.descripcion.value|default_if_none:'' }}"
-              >
-              {% if ingreso_form.descripcion.errors %}
-                <div class="text-red-600 text-xs mt-1">{{ ingreso_form.descripcion.errors|striptags }}</div>
-              {% endif %}
-            </div>
-            <!-- Montos -->
-            <div>
-              <label for="{{ ingreso_form.montos.id_for_label }}" class="block font-semibold mb-1">
-                {{ ingreso_form.montos.label }}
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                name="{{ ingreso_form.montos.html_name }}"
-                id="{{ ingreso_form.montos.id_for_label }}"
-                class="flex-1 outline-none bg-transparent border rounded-lg px-3 py-2 w-full"
-                placeholder="Monto"
-                value="{{ ingreso_form.montos.value|default_if_none:'' }}"
-              >
-              {% if ingreso_form.montos.errors %}
-                <div class="text-red-600 text-xs mt-1">{{ ingreso_form.montos.errors|striptags }}</div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {

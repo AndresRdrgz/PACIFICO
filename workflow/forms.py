@@ -1,5 +1,5 @@
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import modelformset_factory
 from .models import ClienteEntrevista, OtroIngreso, ReferenciaPersonal, ReferenciaComercial
 
 class ClienteEntrevistaForm(forms.ModelForm):
@@ -39,10 +39,15 @@ class ClienteEntrevistaForm(forms.ModelForm):
     descripcion_ingreso_3 = forms.CharField(required=False, label='Descripción Ingreso 3')
     monto_ingreso_3 = forms.DecimalField(required=False, label='Monto Ingreso 3', min_value=0, decimal_places=2, max_digits=12)
 
+    tel_ext = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = ClienteEntrevista
         exclude = [
-            # ...existing code...
+            # No excluyas ningún campo relevante aquí
         ]
         widgets = {
             # Campos de texto y fechas
@@ -56,12 +61,8 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'pep_fam_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'telefono2': forms.TextInput(attrs={'class': 'form-control'}),
-            'tel_residencia': forms.TextInput(attrs={'class': 'form-control'}),
             'tel_trabajo': forms.TextInput(attrs={'class': 'form-control'}),
-            'tel_ext': forms.TextInput(attrs={'class': 'form-control'}),
-            'sector': forms.TextInput(attrs={'class': 'form-control'}),
-            'imc': forms.TextInput(attrs={'class': 'form-control'}),
+            'tel_ext': forms.TextInput(attrs={'class': 'form-control', 'required': False}),
             'salario': forms.NumberInput(attrs={'class': 'form-control'}),
             'ocupacion': forms.TextInput(attrs={'class': 'form-control'}),
             'trabajo_cargo': forms.TextInput(attrs={'class': 'form-control'}),
@@ -86,10 +87,8 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'estado_civil': forms.Select(attrs={'class': 'form-select'}),
             'tipo_trabajo': forms.Select(attrs={'class': 'form-select'}),
             'frecuencia_pago': forms.Select(attrs={'class': 'form-select'}),
-            'como_se_entero': forms.TextInput(attrs={'class': 'form-control'}),
             'lugar_nacimiento': forms.TextInput(attrs={'class': 'form-control'}),
             'titulo': forms.TextInput(attrs={'class': 'form-control'}),
-            'redes_sociales': forms.TextInput(attrs={'class': 'form-control'}),
             'direccion_completa': forms.Textarea(attrs={'class': 'form-control'}),
             'trabajo_direccion': forms.Textarea(attrs={'class': 'form-control'}),
             'barrio': forms.TextInput(attrs={'class': 'form-control'}),
@@ -97,6 +96,8 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'casa_apto': forms.TextInput(attrs={'class': 'form-control'}),
             'banco': forms.TextInput(attrs={'class': 'form-control'}),
             'numero_cuenta': forms.TextInput(attrs={'class': 'form-control'}),
+            'peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'estatura': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
 
             # Checkboxes (toggles)
             'autoriza_apc': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -125,6 +126,10 @@ class ClienteEntrevistaForm(forms.ModelForm):
                 'class': 'flex-1 outline-none bg-transparent',
                 'placeholder': 'Teléfono',
             }),
+            'conyuge_empresa': forms.TextInput(attrs={
+                'class': 'flex-1 outline-none bg-transparent',
+                'placeholder': 'Empresa',
+            }),
             'conyuge_lugar_trabajo': forms.TextInput(attrs={
                 'class': 'flex-1 outline-none bg-transparent',
                 'placeholder': 'Lugar de trabajo',
@@ -140,38 +145,61 @@ class ClienteEntrevistaForm(forms.ModelForm):
             }),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # Asegura que los toggles (checkboxes) se guarden como booleanos
+        for field in ['autoriza_apc', 'acepta_datos', 'es_beneficiario_final', 'es_pep', 'es_familiar_pep']:
+            cleaned_data[field] = bool(self.data.get(field, False))
+        return cleaned_data
+
     def clean_jubilado(self):
         value = self.cleaned_data['jubilado']
         return value == 'True'
 
     def clean_es_pep(self):
-        # Asegura que el valor sea booleano
         return bool(self.cleaned_data.get('es_pep', False))
 
     def clean_es_familiar_pep(self):
-        # Asegura que el valor sea booleano
         return bool(self.cleaned_data.get('es_familiar_pep', False))
 
 
 class OtroIngresoForm(forms.ModelForm):
+    TIPO_INGRESO_CHOICES = [
+        ('', '---------'),
+        ('LOCAL', 'LOCAL'),
+        ('EXTRANJERO', 'EXTRANJERO'),
+    ]
+    tipo_ingreso = forms.ChoiceField(
+        choices=TIPO_INGRESO_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Tipo de Ingreso'
+    )
+
+    fuente = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    monto = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
     class Meta:
         model = OtroIngreso
         exclude = ['cliente']
         widgets = {
-            'fuente': forms.TextInput(attrs={'class': 'form-control'}),
-            'monto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            # 'fuente' y 'monto' ya definidos arriba, así que puedes omitirlos aquí
         }
 
 
-OtroIngresoFormSet = inlineformset_factory(
-    ClienteEntrevista,
+OtroIngresoFormSet = modelformset_factory(
     OtroIngreso,
     form=OtroIngresoForm,
     extra=3,
     max_num=3,
-    can_delete=True  # Cambiado a True para flexibilidad
+    can_delete=True
 )
-
 
 class ReferenciaPersonalForm(forms.ModelForm):
     class Meta:
@@ -185,23 +213,31 @@ class ReferenciaPersonalForm(forms.ModelForm):
         }
 
 
-ReferenciaPersonalFormSet = inlineformset_factory(
-    ClienteEntrevista,
+ReferenciaPersonalFormSet = modelformset_factory(
     ReferenciaPersonal,
     form=ReferenciaPersonalForm,
-    extra=3,  # Siempre 3 formularios
+    extra=3,
     max_num=3,
     can_delete=True
 )
 
-
 class ReferenciaComercialForm(forms.ModelForm):
+    TIPO_CHOICES = [
+        ('', '---------'),
+        ('COMERCIAL', 'COMERCIAL'),
+        ('CLIENTES', 'CLIENTES'),
+    ]
+    tipo = forms.ChoiceField(
+        choices=TIPO_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Tipo'
+    )
+    nombre = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     class Meta:
         model = ReferenciaComercial
-        exclude = ['entrevista']  # Asegura que 'entrevista' es el campo correcto a excluir
+        exclude = ['entrevista']
         widgets = {
-            'tipo': forms.TextInput(attrs={'class': 'form-control'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'actividad': forms.TextInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'celular': forms.TextInput(attrs={'class': 'form-control'}),
@@ -209,8 +245,7 @@ class ReferenciaComercialForm(forms.ModelForm):
         }
 
 
-ReferenciaComercialFormSet = inlineformset_factory(
-    ClienteEntrevista,
+ReferenciaComercialFormSet = modelformset_factory(
     ReferenciaComercial,
     form=ReferenciaComercialForm,
     extra=1,

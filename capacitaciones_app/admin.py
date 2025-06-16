@@ -13,7 +13,8 @@ from .models import (
     Pregunta,
     Opcion,
     ResultadoQuiz,
-    GrupoAsignacion
+    GrupoAsignacion,
+    PerfilUsuario,
 )
 
 # 🔹 Opciones dentro de una pregunta
@@ -121,3 +122,9 @@ admin.site.register(ProgresoCurso)
 admin.site.register(ProgresoTema)
 admin.site.register(Quiz)
 admin.site.register(ResultadoQuiz, ResultadoQuizAdmin)
+
+# 🔹 Registro del perfil de usuario
+@admin.register(PerfilUsuario)
+class PerfilUsuarioAdmin(admin.ModelAdmin):
+    list_display = ('user', 'tipo')
+    search_fields = ('user__username', 'tipo')
