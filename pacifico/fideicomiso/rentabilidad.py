@@ -239,7 +239,7 @@ def calcular_promocion(params, fecha_calculo):
         producto=params['tipoPrestamo'],
     ).exclude(incentivo="FECHA PAGO")
 
-    #print("Cantidad de promociones activas:", promociones_activas.count())
+    print("Cantidad de promociones activas:", promociones_activas.count())
     promocion_aplicada = None  # Track which type applied
 
     for promocion in promociones_activas:
@@ -315,12 +315,6 @@ def calcular_promocion(params, fecha_calculo):
 
     return float(comisionTotal8)
 
-    # If no valid target found, return 0
-    if comisionTotal8 == 0:
-        print("No valid target found, returning 0.")
-        return 0
-
-    return float(comisionTotal8)
 
 def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     

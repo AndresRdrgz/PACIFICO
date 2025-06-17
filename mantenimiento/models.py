@@ -20,7 +20,7 @@ class Promocion(models.Model):
     activa = models.BooleanField(default=True)
     producto = models.CharField(
         max_length=20,
-        choices=[('PREST. AUTO', 'Prest. Auto'), ('PERSONAL', 'Personal')]
+        choices=[('PREST AUTO', 'Prest. Auto'), ('PERSONAL', 'Personal')]
     )
     incentivo = models.CharField(
         max_length=20,

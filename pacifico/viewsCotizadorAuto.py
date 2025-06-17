@@ -57,6 +57,7 @@ def cotizadorPrestAuto(request, pk=None):
                 codigoSeguro = aseguradora.codigo
                 r_deseada = Decimal(form.cleaned_data['r_deseada']) / Decimal(100)
                 comisionVendedor = form.cleaned_data['vendedorComision']
+                vendedorTipo = form.cleaned_data['vendedorTipo']
                 #CAMPOS SEGURO AUTO
                 financiaSeguro = form.cleaned_data['financiaSeguro']
                 mesesFinanciaSeguro = form.cleaned_data['mesesFinanciaSeguro']
@@ -113,6 +114,7 @@ def cotizadorPrestAuto(request, pk=None):
                     'selectDescuento': selectDescuento,
                     'porServDesc': porServDesc,
                     'pagaDiciembre': pagaDiciembre,
+                    'vendedorTipo': vendedorTipo,
 
                 }
                 #print('RESULTADO PARAMETROS', params)
@@ -204,8 +206,8 @@ def cotizadorPrestAuto(request, pk=None):
                 try:
                     #print form fields
                     #print all form fields in form instan
-                    for field in form.instance._meta.fields:
-                        print(field.name, field.value_from_object(form.instance))
+                    #for field in form.instance._meta.fields:
+                    #    print(field.name, field.value_from_object(form.instance))
 
                     print("intentando guardar")
                     try:
