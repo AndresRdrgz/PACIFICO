@@ -1,68 +1,8 @@
-<div class="mb-4 w-full flex flex-col sm:flex-row items-center justify-between">
-    <div class="relative w-full sm:w-2/3 mb-2 sm:mb-0">
-        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-            </svg>
-        </div>
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Buscar por nombre de cliente o número de cotización" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2">
-    </div>
-    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-        <button type="button" class="bg-[#22a650] text-white font-semibold py-2 px-4 rounded hover:bg-green-900" onclick="openNuevaCotizacionModal()">Nueva cotización 💰</button>
-        <a href="{% url 'download_cotizaciones_excel' %}" class="inline-block text-center bg-black hover:bg-black-700 text-white font-bold py-2 px-4 rounded">Exportar en Excel 📄</a>
-    </div>
-</div>
-
-<div class="overflow-x-auto w-full" style="max-height: calc(100vh - 300px);">
-    <table class="w-full text-xs text-left rtl:text-right text-gray-500">
-        <thead class="text-xs text-white uppercase sticky top-0 z-10" style="background-color: #22a650;">
-            <tr>
-                <th scope="col" class="px-2 py-3 w-1/12">Cotización</th>
-                <th scope="col" class="px-2 py-3">Tipo de Préstamo</th>
-                <th scope="col" class="px-2 py-3">Cliente</th>
-                <th scope="col" class="px-2 py-3">Cédula</th>
-                <th scope="col" class="px-2 py-3">Marca</th>
-                <th scope="col" class="px-2 py-3">Modelo</th>
-                <th scope="col" class="px-2 py-3">Plazo</th>
-                <th scope="col" class="px-2 py-3">Tasa (%)</th>
-                <th scope="col" class="px-2 py-3">Comi. Cierre (%)</th>
-                <th scope="col" class="px-2 py-3 w-1/12">Total Financiado</th>
-                <th scope="col" class="px-2 py-3">Oficial</th>
-                <th scope="col" class="px-2 py-3">Fecha Cotización</th>
-            </tr>
-        </thead>
-        <tbody id="deudas-table-body" class="bg-white border-b">
-            {% for cotizacion in cotizaciones %}
-            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 cursor-pointer">
-                <td class="px-2 py-4">{{ cotizacion.NumeroCotizacion }}</td>
-                <td class="px-2 py-4">{{ cotizacion.tipoPrestamo }}</td>
-                <td class="px-2 py-4">{{ cotizacion.nombreCliente }}</td>
-                <td class="px-2 py-4">{{ cotizacion.cedulaCliente }}</td>
-                <td class="px-2 py-4">{{ cotizacion.marca }}</td>
-                <td class="px-2 py-4">{{ cotizacion.modelo }}</td>                    
-                <td class="px-2 py-4">{{ cotizacion.plazoPago }}</td>
-                <td class="px-2 py-4">%{{ cotizacion.tasaEstimada }}</td>
-                <td class="px-2 py-4">%{{ cotizacion.calcComiCierreFinal }}</td>
-                <td class="px-2 py-4">${{ cotizacion.auxMonto2 }}</td>
-                <td class="px-2 py-4">{{ cotizacion.oficial }}</td>
-                <td class="px-2 py-4">{{ cotizacion.created_at|date:"d/m/Y" }}</td>
-            </tr>
-            {% empty %}
-            <tr id="noMatchRow">
-                <td colspan="11" class="px-2 py-4 text-center text-gray-500">
-                    No se encontraron cotizaciones que coincidan con la búsqueda.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-<div id="modalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden"></div>
 <div id="cotizacionModal" class="fixed inset-0 z-50 hidden overflow-y-auto transition-opacity duration-300 ease-in-out">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="relative w-full max-w-4xl bg-white rounded-xl shadow-2xl border border-gray-200">
+        <div class="relative w-full max-w-6xl bg-white rounded-lg shadow-lg">
             <!-- Header with gradient -->
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 rounded-t-xl">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 rounded-t-xl">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xl font-bold text-white flex items-center">
                         <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -73,12 +13,13 @@
                     <button onclick="closeModal()" class="text-white hover:text-gray-200 text-2xl font-bold transition-colors">&times;</button>
                 </div>
             </div>
-            
-            <!-- Content with organized sections -->
+              <!-- Content with organized sections -->
             <div class="p-6">
-                <!-- Basic Info Section -->
-                <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                    <h4 class="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+                <!-- 2x2 Grid for sections -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Basic Info Section -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-green-800 mb-3 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zM8 6a2 2 0 114 0v1H8V6z" clip-rule="evenodd"></path>
                         </svg>
@@ -86,38 +27,36 @@
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Cotización ID:</span>
                             <span class="ml-2 text-gray-900" id="modalCotizacionId"></span>
                         </div>
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Fecha:</span>
                             <span class="ml-2 text-gray-900" id="modalFecha"></span>
                         </div>
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0v1a2 2 0 11-4 0v-1zm6 0a2 2 0 114 0v1a2 2 0 11-4 0v-1z" clip-rule="evenodd"></path>
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Tipo de préstamo:</span>
                             <span class="ml-2 text-gray-900" id="modalTipoPrestamo"></span>
                         </div>
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Oficial:</span>
                             <span class="ml-2 text-gray-900" id="modalOficial"></span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Cliente Info Section -->
-                <div class="bg-green-50 rounded-lg p-4 mb-6">
+                </div>                    <!-- Cliente Info Section -->
+                    <div class="bg-green-50 rounded-lg p-4">
                     <h4 class="text-lg font-semibold text-green-800 mb-3 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
@@ -140,11 +79,9 @@
                             <span class="ml-2 text-gray-900" id="modalCedula"></span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Vehicle/Loan Info Section -->
-                <div class="bg-purple-50 rounded-lg p-4 mb-6">
-                    <h4 class="text-lg font-semibold text-purple-800 mb-3 flex items-center">
+                </div>                    <!-- Vehicle/Loan Info Section -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-green-800 mb-3 flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path>
                             <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-.293-.707L15 4.586A1 1 0 0014.414 4H14v3z"></path>
@@ -153,14 +90,14 @@
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Marca:</span>
                             <span class="ml-2 text-gray-900" id="modalMarca"></span>
                         </div>
                         <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
                             </svg>
                             <span class="font-medium text-gray-700">Modelo:</span>
@@ -176,7 +113,7 @@
                             <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path>
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path>
                         </svg>
-                        Detalles Financieros
+                        Detalles de la Cotización
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="flex items-center">
@@ -215,14 +152,14 @@
             <!-- Action buttons with improved styling -->
             <div class="bg-gray-50 px-6 py-4 rounded-b-xl border-t border-gray-200">
                 <div class="flex justify-end space-x-3">
-                    <a id="cotizacionDetailButton" href="#" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <a id="cotizacionDetailButton" href="#" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
                             <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
                         </svg>
                         Ver Cotización
                     </a>
-                    <a id="clienteProfileButton" href="#" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <a id="clienteProfileButton" href="#" class="inline-flex items-center px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
                         </svg>
@@ -234,42 +171,6 @@
     </div>
 </div>
 
-<!-- Modal Background -->
-<div id="nuevaCotizacionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
-    <!-- Modal Container -->
-    <div class="bg-white rounded-2xl shadow-lg w-full max-w-4xl p-6">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Tipo de préstamo</h2>
-            <button class="text-gray-500 hover:text-gray-700" onclick="closeNuevaCotizacionModal()">&times;</button>
-        </div>
-        <p class="text-sm text-gray-600 mt-1">Seleccione el tipo de préstamo.</p>
-        
-        <!-- Loan Options -->
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{% url 'fideicomiso' %}" class="block">
-            <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                <span class="text-4xl mb-4">🚗</span>
-                <div class="text-center">
-                    
-                        <p class="text-lg font-semibold">Préstamo de auto</p>
-                        <p class="text-sm text-gray-500">Financiamiento de autos nuevos y usados</p>
-                   
-                </div>
-            </button>
-        </a>
-            <a href="{% url 'prestPersonal' %}" class="block">
-                <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                    <span class="text-4xl mb-4">💰</span>
-                    <div class="text-center">
-                        <p class="text-lg font-semibold">Préstamo personal (En pruebas)</p>
-                        <p class="text-sm text-gray-500">Cotizador PP en construcción</p>
-                    </div>
-                </button>
-            </a>
-        </div>
-    </div>
-</div>
 
 <script>
     function openModal(cotizacion) {
@@ -296,35 +197,13 @@
         const modal = document.getElementById('cotizacionModal');
         const backdrop = document.getElementById('modalBackdrop');
         modal.classList.remove('hidden');
-        modal.classList.add('visible');
         backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
-
-    function openNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-        backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
-    
-    function closeNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.add('hidden');
-        modal.classList.remove('visible');
-        backdrop.classList.add('hidden');
-        backdrop.classList.remove('visible');
-    }
+    } // <-- Added missing closing brace
 
     function closeModal() {
         const modal = document.getElementById('cotizacionModal');
         const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('visible');
         modal.classList.add('hidden');
-        backdrop.classList.remove('visible');
         backdrop.classList.add('hidden');
     }
 
@@ -351,42 +230,5 @@
         });
     });
     
-    function filterTable() {
-        var input, filter, table, tr, td, i, txtValue, noMatch;
-        input = document.getElementById("searchInput");
-        filter = input.value.toUpperCase();
-        table = document.querySelector("table");
-        tr = table.getElementsByTagName("tr");
-        noMatch = true;
 
-        for (i = 1; i < tr.length; i++) {
-            var tdCotizacion = tr[i].getElementsByTagName("td")[1]; // Index 0 for Cotización column
-            var tdCliente = tr[i].getElementsByTagName("td")[2]; // Index 1 for Cliente column
-            if (tdCotizacion || tdCliente) {
-                var txtValueCotizacion = tdCotizacion ? tdCotizacion.textContent || tdCotizacion.innerText : "";
-                var txtValueCliente = tdCliente ? tdCliente.textContent || tdCliente.innerText : "";
-                if (txtValueCotizacion.toUpperCase().indexOf(filter) > -1 || txtValueCliente.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                    noMatch = false;
-                } else {
-                    tr[i].style.display = "none";
-                }
-            }
-        }
-
-        // Check if no matches are found
-        var noMatchRow = document.getElementById("noMatchRow");
-        if (noMatch) {
-            if (!noMatchRow) {
-                noMatchRow = document.createElement("tr");
-                noMatchRow.id = "noMatchRow";
-                noMatchRow.innerHTML = '<td colspan="11" class="px-6 py-4 text-center text-gray-500">No se encontraron cotizaciones que coincidan con la búsqueda.</td>';
-                table.querySelector("tbody").appendChild(noMatchRow);
-            }
-        } else {
-            if (noMatchRow) {
-                noMatchRow.remove();
-            }
-        }
-    }
 </script>

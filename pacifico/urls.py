@@ -8,11 +8,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
 from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
-
+from .viewsCotizadorAuto import cotizadorPrestAuto
 
 urlpatterns = [
     path('', main_menu, name='main_menu'),
-    path('cotizador/prestAuto/', fideicomiso_view, name='fideicomiso'),
+    path('cotizador/prestAuto/',cotizadorPrestAuto , name='fideicomiso'),
     path('cotizador/prestPersonal/', cotizacionPrestamoPersonal, name='prestPersonal'),  # No pk
     path('cotizador/prestPersonal/<int:pk>/', cotizacionPrestamoPersonal, name='prestPersonal_with_pk'),  # With pk
     path('cotizacionPP/', cotizacionPrestamoPersonal, name='cotizacionDetail_pp'),  # No pk
@@ -27,7 +27,7 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('clientes/', clientesList, name="clientesList"),
     path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),
-    path('cotizacion/<int:pk>/', views.cotizacionDetail, name='cotizacion_detail'),
+    path('cotizacion/<int:pk>/', cotizadorPrestAuto, name='cotizacion_detail'),
     #path('cotizacionPP/<int:pk>/', cotizacionDetail_pp, name='cotizacionDetail_pp'),
     path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),
     path('aseguradoras/', views.aseguradora_list, name='aseguradora_list'),

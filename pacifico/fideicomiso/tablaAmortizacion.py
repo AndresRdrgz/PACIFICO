@@ -192,9 +192,9 @@ def tablaAmortizacion(params):
         tablaTotalMontoCapital = 0
 
         wrkMontoLetraOfici = wrkMontoLetra
-        #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici,wrkMontoLetraOfici/2," + 0.001")
+        
         wrkMontoLetraOfici = round(wrkMontoLetraOfici / 2 + 0.001, 2) * 2
-        print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
+        #print("wrkMontoLetraOfici: ", wrkMontoLetraOfici)
        
         
         
@@ -218,7 +218,7 @@ def tablaAmortizacion(params):
         auxA = auxA_seguro
         auxB = 0    # VERIFICAR
         auxS = wrkSaldo13
-        print("auxA: ", auxA, "auxB: ", auxB, "auxS: ", auxS)
+        #print("auxA: ", auxA, "auxB: ", auxB, "auxS: ", auxS)
        
 
         if auxB != auxD:
@@ -617,7 +617,7 @@ def tablaAmortizacion(params):
         tablaTotalMontoCapital = round(tablaTotalMontoCapital, 2)
         wrkMontoLetra = round(wrkMontoLetra, 2)
 
-        print("wrkMontoLetraOfici",wrkMontoLetraOfici,"wrkmontoexceso: ", wrkMontoExceso,"wrkSaldoBruto",wrkSaldoBruto)
+        #print("wrkMontoLetraOfici",wrkMontoLetraOfici,"wrkmontoexceso: ", wrkMontoExceso,"wrkSaldoBruto",wrkSaldoBruto)
         #ojo - ajuste para minimizar el CR de colchon
         if wrkSaldoBruto < 0:
             wrkMontoBaloom = wrkSaldoBruto

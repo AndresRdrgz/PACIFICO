@@ -43,14 +43,14 @@
                     {{ filter.form.marca }}
                 </div>
                 <div class="flex justify-end p-2 w-full md:w-1/5">
-                    <button type="submit" class="bg-black hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center">
+                    <button type="submit" class="bg-black hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mr-2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
                         </svg>
                         Filtrar
                     </button>
                 </div>
-                </div>
+                </div> <!-- Added missing closing div for filter row -->
             </form>
             <div class="p-4 flex bg-white flex-col md:flex-row md:items-center md:justify-between gap-4">
                 
@@ -118,7 +118,7 @@
                             </tr>
                             {% empty %}
                             <tr id="noMatchRow">
-                                <td colspan="11" class="px-2 py-4 text-center text-gray-500">
+                                <td colspan="12" class="px-2 py-4 text-center text-gray-500">
                                     No se encontraron cotizaciones que coincidan con la búsqueda.
                                 </td>
                             </tr>
@@ -131,156 +131,14 @@
     </main>
 </div>
 
-
 <div id="modalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden"></div>
-<div id="cotizacionModal" class="fixed inset-0 z-50 hidden overflow-y-auto transition-opacity duration-300 ease-in-out">
-    <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-lg">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-lg font-semibold">Detalles de la Cotización</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
-            </div>
-            <div class="p-4">
-                <p><strong>Cotización ID:</strong> <span id="modalCotizacionId"></span></p>
-                <p><strong>Tipo de préstamo:</strong> <span id="modalTipoPrestamo"></span></p>
-                <p><strong>Cliente:</strong> <span id="modalCliente"></span></p>
-                <p><strong>Cédula:</strong> <span id="modalCedula"></span></p>
-                <p><strong>Marca:</strong> <span id="modalMarca"></span></p>
-                <p><strong>Modelo:</strong> <span id="modalModelo"></span></p>
-                <p><strong>Plazo:</strong> <span id="modalPlazo"></span></p>
-                <p><strong>Tasa (%):</strong> <span id="modalTasa"></span></p>
-                <p><strong>Comi. Cierre (%):</strong> <span id="modalComiCierre"></span></p>
-                <p><strong>Total Financiado:</strong> <span id="modalTotalFinanciado"></span></p>
-                <p><strong>Oficial:</strong> <span id="modalOficial"></span></p>
-                <p><strong>Fecha Cotización:</strong> <span id="modalFecha"></span></p>
-            </div>
-            <div class="flex justify-between items-center p-4 border-t">
-                <div class="flex space-x-2">
-                    <a id="cotizacionDetailButton" href="#" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Ver Cotización</a>
-                    <a id="clienteProfileButton" href="#" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Ver Cliente</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% include '_nueva_cotizacion_modal.html' %}
+{% include '_cotizacion_detalle_modal.html' %}
 
-<!-- Modal Background -->
-<div id="nuevaCotizacionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
-    <!-- Modal Container -->
-    <div class="bg-white rounded-2xl shadow-lg w-full max-w-4xl p-6">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold">Tipo de préstamo</h2>
-            <button class="text-gray-500 hover:text-gray-700" onclick="closeNuevaCotizacionModal()">&times;</button>
-        </div>
-        <p class="text-sm text-gray-600 mt-1">Seleccione el tipo de préstamo.</p>
-        
-        <!-- Loan Options -->
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{% url 'fideicomiso' %}" class="block">
-            <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                <span class="text-4xl mb-4">🚗</span>
-                <div class="text-center">
-                    
-                        <p class="text-lg font-semibold">Préstamo de auto</p>
-                        <p class="text-sm text-gray-500">Financiamiento de autos nuevos y usados</p>
-                   
-                </div>
-            </button>
-        </a>
-            <a href="{% url 'prestPersonal' %}" class="block">
-                <button class="flex flex-col items-center justify-between p-6 border-2 rounded-lg hover:bg-gray-100 w-full h-full">
-                    <span class="text-4xl mb-4">💰</span>
-                    <div class="text-center">
-                        <p class="text-lg font-semibold">Préstamo personal</p>
-                        <p class="text-sm text-gray-500">Cotizaciones de prestamos personales</p>
-                    </div>
-                </button>
-            </a>
-        </div>
-    </div>
-</div>
+
 
 <script>
-    function openModal(cotizacion) {
-        document.getElementById('modalCotizacionId').innerText = cotizacion.NumeroCotizacion;
-        document.getElementById('modalTipoPrestamo').innerText = cotizacion.tipoPrestamo;
-        document.getElementById('modalCliente').innerText = cotizacion.nombreCliente;
-        document.getElementById('modalCedula').innerText = cotizacion.cedulaCliente;
-        document.getElementById('modalMarca').innerText = cotizacion.marca;
-        document.getElementById('modalModelo').innerText = cotizacion.modelo;
-        document.getElementById('modalPlazo').innerText = cotizacion.plazoPago;
-        document.getElementById('modalTasa').innerText = cotizacion.tasaEstimada;
-        document.getElementById('modalComiCierre').innerText = cotizacion.calcComiCierreFinal;
-        document.getElementById('modalTotalFinanciado').innerText = cotizacion.auxMonto2;
-        document.getElementById('modalOficial').innerText = cotizacion.oficial;
-        document.getElementById('modalFecha').innerText = cotizacion.created_at;
 
-        if (cotizacion.tipoPrestamo.toLowerCase() === 'personal') {
-            document.getElementById('cotizacionDetailButton').href = `/cotizacionPP/${cotizacion.NumeroCotizacion}/`;
-        } else {
-            document.getElementById('cotizacionDetailButton').href = `/cotizacion/${cotizacion.NumeroCotizacion}/`;
-        }
-        document.getElementById('clienteProfileButton').href = `/cliente/${cotizacion.cedulaCliente}/`;
-
-        const modal = document.getElementById('cotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-        backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
-
-    function openNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-        backdrop.classList.remove('hidden');
-        backdrop.classList.add('visible');
-    }
-    
-    function closeNuevaCotizacionModal() {
-        const modal = document.getElementById('nuevaCotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.add('hidden');
-        modal.classList.remove('visible');
-        backdrop.classList.add('hidden');
-        backdrop.classList.remove('visible');
-    }
-
-    function closeModal() {
-        const modal = document.getElementById('cotizacionModal');
-        const backdrop = document.getElementById('modalBackdrop');
-        modal.classList.remove('visible');
-        modal.classList.add('hidden');
-        backdrop.classList.remove('visible');
-        backdrop.classList.add('hidden');
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const rows = document.querySelectorAll('#deudas-table-body tr');
-        rows.forEach(row => {
-            row.addEventListener('click', function() {
-                const cotizacion = {
-                    NumeroCotizacion: this.querySelector('td:nth-child(1)').innerText,
-                    tipoPrestamo: this.querySelector('td:nth-child(2)').innerText,
-                    nombreCliente: this.querySelector('td:nth-child(3)').innerText,
-                    cedulaCliente: this.querySelector('td:nth-child(4)').innerText,
-                    marca: this.querySelector('td:nth-child(5)').innerText,
-                    modelo: this.querySelector('td:nth-child(6)').innerText,
-                    plazoPago: this.querySelector('td:nth-child(7)').innerText,
-                    tasaEstimada: this.querySelector('td:nth-child(8)').innerText,
-                    calcComiCierreFinal: this.querySelector('td:nth-child(9)').innerText,
-                    auxMonto2: this.querySelector('td:nth-child(10)').innerText,
-                    oficial: this.querySelector('td:nth-child(11)').innerText,
-                    created_at: this.querySelector('td:nth-child(12)').innerText
-                };
-                openModal(cotizacion);
-            });
-        });
-    });
-    
     function filterTable() {
         var input, filter, table, tr, td, i, txtValue, noMatch;
         input = document.getElementById("searchInput");
@@ -320,5 +178,6 @@
         }
     }
 </script>
+
 
 {% endblock %}

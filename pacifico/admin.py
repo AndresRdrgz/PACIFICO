@@ -16,7 +16,15 @@ admin.site.register(User, UserAdmin)
 
 @admin.register(Cotizacion)
 class CotizacionAdmin(admin.ModelAdmin):
-    pass
+    list_display = (
+        'NumeroCotizacion', 'nombreCliente', 'cedulaCliente', 'tipoPrestamo', 'oficial', 'sucursal', 'vendedor', 'vendedorTipo', 'created_at'
+    )
+    search_fields = (
+        'NumeroCotizacion', 'nombreCliente', 'cedulaCliente', 'vendedor',
+    )
+    list_filter = (
+        'tipoPrestamo', 'oficial', 'sucursal', 'vendedorTipo', 'created_at',
+    )
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -41,3 +49,4 @@ class PruebaDarioAdmin(admin.ModelAdmin):
 @admin.register(CotizacionDocumento)
 class CotizacionDocumentoAdmin(admin.ModelAdmin):
     pass
+
