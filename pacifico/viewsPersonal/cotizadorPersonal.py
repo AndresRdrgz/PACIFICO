@@ -82,7 +82,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
             try:
                 # Extract form data and perform calculations (existing logic)
                 # ...existing code...
-                
+                print("Form:", form.cleaned_data)
                 edad = form.cleaned_data['edad']
                 sexo = form.cleaned_data['sexo']
                 jubilado = form.cleaned_data['jubilado']
@@ -123,6 +123,8 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 vendedorTipo = form.cleaned_data['vendedorTipo']
                 vendedorComisionPorcentaje = form.cleaned_data['vendedorComisionPorcentaje'] if form.cleaned_data['vendedorComisionPorcentaje'] is not None else 0
                 vendedorOtroPorcentaje = form.cleaned_data['vendedorOtroPorcentaje'] if form.cleaned_data['vendedorOtroPorcentaje'] is not None else 0
+                vendedorImpuesto = form.cleaned_data['vendedorImpuesto'] if form.cleaned_data['vendedorImpuesto'] is not None else "N"
+                print("vendedorImpuesto", vendedorImpuesto)
                 
                 #datos cancelaciones
                 cancDescripcion1 = form.cleaned_data['cancDescripcion1'] if form.cleaned_data['cancDescripcion1'] is not None else "-"

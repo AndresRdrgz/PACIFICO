@@ -124,24 +124,27 @@ class PrestamoPersonalForm(forms.ModelForm):
             }),
                                     'vendedorComision': forms.NumberInput(attrs={
                                         'placeholder': 'Comisión del Vendedor',
-                                        'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center',
-                                        'readonly': 'readonly',
+                                        'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
+                                         'readonly': 'readonly',
                                     }),
                                     'vendedorTipo': forms.Select(attrs={
-                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                        'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
+                                    }),
+                                    'vendedorImpuesto': forms.Select(attrs={
+                                      'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
+                                      'readonly': 'readonly',
                                     }),
                                     'vendedorComisionPorcentaje': forms.NumberInput(attrs={
                                         'placeholder': 'Porcentaje de Comisión del Vendedor',
-                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
-                                        
+                                        'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
                                     }),
                                     'vendedorOtroPorcentaje': forms.NumberInput(attrs={
                                         'placeholder': 'Porcentaje Otro Vendedor',
-                                        'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                                        'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
                                     }),
                                     'vendedorOtroComision': forms.NumberInput(attrs={
                                         'placeholder': 'Comisión Otro Vendedor',
-                                        'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-black rounded-md px-3 py-2 text-center',
+                                        'class': 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-center focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors',
                                         'readonly': 'readonly',
                                     }),
                                     

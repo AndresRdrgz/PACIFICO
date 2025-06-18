@@ -233,6 +233,13 @@ class Cotizacion(models.Model):
         null=True,
         blank=True
     )
+    vendedorImpuesto = models.CharField(
+        max_length=10,
+        choices=[('N', 'N'), ('Y', 'Y')],
+        default='N',
+        null=True,
+        blank=True
+    )
     #CANCELACION
     cancDescripcion1 = models.CharField(max_length=255, null=True, blank=True)
     cancMonto1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

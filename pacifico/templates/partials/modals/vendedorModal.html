@@ -1,30 +1,25 @@
 {% load static %}
-<div id="vendedorModal" class="fixed inset-0 bg-gray-800 bg-opacity-70 flex items-center justify-center z-50 hidden">
-    <div class="relative w-full max-w-2xl mx-2 sm:mx-auto p-4 sm:p-8 bg-white rounded-xl shadow-2xl border border-gray-200">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-900 flex-1 text-center sm:text-left">Buscar Vendedor</h3>
-            <button type="button" class="mt-2 sm:mt-0 sm:ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition" onclick="closeModalVendedor()">Cerrar</button>
+<div id="vendedorModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="relative w-full max-w-4xl mx-2 sm:mx-auto p-4 sm:p-8 bg-white rounded-2xl shadow-2xl border border-gray-200">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+            <h3 class="text-2xl font-extrabold text-gray-900 flex-1 text-center sm:text-left">Buscar Vendedor</h3>
+            <button type="button" class="mt-2 sm:mt-0 sm:ml-4 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400" onclick="closeModalVendedor()">Cerrar</button>
         </div>
-        <div class="mb-4">
-            <input type="text" id="searchVendedor" class="w-full bg-gray-100 text-slate-700 text-base border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="Buscar por nombre, código o tipo...">
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-100 bg-white shadow-sm">
+        <div class="mb-6">
+            <input type="text" id="searchVendedor" class="w-full bg-gray-100 text-gray-700 text-base border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 transition placeholder-gray-400" placeholder="Buscar por nombre, código o tipo...">
+        </div>        <div class="overflow-x-auto overflow-y-auto max-h-[45vh] rounded-xl border border-gray-100 bg-white shadow-sm">
             <table id="vendedorTable" class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-green-600 text-white sticky top-0">
                     <tr>
-                        <th scope="col" class="px-3 py-3 text-center font-semibold">Código</th>
-                        <th scope="col" class="px-3 py-3 text-center font-semibold">Nombre</th>
-                        <th scope="col" class="px-3 py-3 text-center font-semibold">Tipo</th>
+                        <th scope="col" class="px-4 py-3 text-center font-semibold">Código</th>
+                        <th scope="col" class="px-4 py-3 text-center font-semibold">Nombre</th>
+                        <th scope="col" class="px-4 py-3 text-center font-semibold">Tipo</th>
+                        <th scope="col" class="px-4 py-3 text-center font-semibold">Impuesto</th>
                     </tr>
-                </thead>
+                </thead>                <tbody id="vendedorList" class="bg-white divide-y divide-gray-100 text-center">
+                    <!-- Vendedor list will be populated here -->
+                </tbody>
             </table>
-            <div class="overflow-y-auto max-h-[45vh]">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <tbody id="vendedorList" class="bg-white divide-y divide-gray-100 text-center">
-                        <!-- Vendedor list will be populated here -->
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
 </div>
@@ -39,22 +34,25 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        fetch("{% static 'vendedores.json' %}")
+        fetch("{% static 'cotizadorVendedores.json' %}")
             .then(response => response.json())
             .then(dataVendedores => {
                 const vendedorList = document.getElementById('vendedorList');
                 vendedorList.innerHTML = '';
                 dataVendedores.forEach(vendedor => {
                     const tr = document.createElement('tr');
-                    tr.classList.add('cursor-pointer', 'hover:bg-blue-50', 'transition');
+                    tr.classList.add('cursor-pointer', 'hover:bg-green-50', 'transition', 'duration-150');
                     tr.innerHTML = `
-                        <td class="px-3 py-3 whitespace-nowrap font-medium text-gray-900">${vendedor.codigo}</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-gray-700">${vendedor.nombre}</td>
-                        <td class="px-3 py-3 whitespace-nowrap text-gray-500">${vendedor.tipo}</td>
+                        <td class="px-4 py-3 whitespace-nowrap font-semibold text-gray-900">${vendedor.codigo}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${vendedor.nombre}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-500">${vendedor.tipo}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-500">${vendedor.impuesto}</td>
                     `;
                     tr.addEventListener('click', () => {
                         document.getElementById('id_vendedor').value = vendedor.nombre;
                         document.getElementById('id_vendedorTipo').value = vendedor.tipo;
+                        document.getElementById('id_vendedorImpuesto').value = vendedor.impuesto;
+                        console.log(`Vendedor seleccionado: ${vendedor.nombre} (${vendedor.codigo} - ${vendedor.tipo} - ${vendedor.impuesto})`);
                         if (vendedor.codigo == 1) {
                             document.getElementById('id_vendedorComision').value = 0;
                         }
