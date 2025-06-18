@@ -3,45 +3,37 @@
 {% block content %}
 {% load static %}
 
-<div class="min-h-screen bg-gradient-to-br from-green-600 to-green-900 flex justify-center items-start py-10 px-4">
-  <div class="relative bg-white max-w-5xl w-full rounded-xl shadow-lg border border-gray-200 px-4 md:px-12 py-8 md:py-14 mb-10 transition-all duration-300 flex flex-col">
-    
+<div class="min-h-screen bg-gradient-to-br from-green-600 to-green-900 flex justify-center items-start py-8 px-2">
+  <div class="relative bg-white max-w-5xl w-full rounded-xl shadow-lg border border-gray-200 px-2 md:px-6 py-6 md:py-10 mb-10 transition-all duration-300 flex flex-col">
+
     <!-- Logo y título -->
-    <div class="flex flex-col items-center text-center mb-8">
-      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="w-50 h-auto object-cover mb-2" />
-      <h2 class="font-extrabold text-3xl md:text-4xl text-green-700 tracking-tight mb-1">Formulario de Datos Generales</h2>
+    <div class="flex flex-col items-center text-center mb-6">
+      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="w-36 h-auto object-cover mb-2" />
+      <h2 class="font-extrabold text-2xl md:text-3xl text-green-700 tracking-tight mb-1">Formulario de Datos Generales</h2>
       <p class="text-green-700 text-base md:text-lg font-medium">Complete todos los pasos con atención</p>
     </div>
 
-    <!-- Stepper mejorado con iconos y responsive -->
-    <div class="flex flex-col items-center mb-10 w-full">
-      <div class="flex w-full max-w-4xl md:max-w-5xl justify-between items-center overflow-x-auto px-1 md:px-8 py-4 md:py-6 bg-white/80 rounded-2xl shadow-lg border border-green-200">
-        {% for step, icon in steps_info %}
-          <div class="flex flex-col items-center flex-1 min-w-[60px]">
-            <div class="relative flex flex-col items-center">
-              <div id="circle-{{ forloop.counter0 }}"
-                class="flex items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-green-400 bg-white text-green-700 font-bold text-lg md:text-2xl transition-all duration-300 stepper-circle z-10 shadow-md">
-                <i class="fa {{ icon }}"></i>
-              </div>
-              {% if not forloop.last %}
-                <div class="hidden md:block absolute top-1/2 left-full w-20 h-1 bg-green-200 z-0"></div>
-                <div class="block md:hidden absolute top-1/2 left-full w-8 h-1 bg-green-200 z-0"></div>
-              {% endif %}
-            </div>
-            <span id="label-{{ forloop.counter0 }}" class="mt-2 text-xs md:text-base font-semibold text-gray-700 text-center leading-tight truncate max-w-[70px] md:max-w-[140px]">
-              {{ step }}
-            </span>
-          </div>
-        {% endfor %}
-      </div>
-      <div class="mt-4 text-green-700 font-semibold text-base">
-        <span id="stepper-label"></span>
-      </div>
+    <!-- Stepper Moderno y Responsive SOLO ICONOS -->
+    <nav class="flex w-full overflow-x-auto gap-2 md:gap-4 mb-8 px-1 py-2 bg-white/80 rounded-xl shadow border border-green-200" id="stepperNav">
+      {% for step, icon in steps_info %}
+        <button type="button"
+          class="stepper-btn group flex flex-col items-center flex-1 min-w-[44px] md:min-w-[56px] transition"
+          data-step="{{ forloop.counter0 }}"
+          aria-label="{{ step }}">
+          <span id="circle-{{ forloop.counter0 }}"
+            class="stepper-icon flex items-center justify-center w-11 h-11 md:w-14 md:h-14 rounded-full border-2 border-green-400 bg-white text-green-700 font-bold text-xl md:text-2xl transition-all duration-300 shadow-md">
+            <i class="fa {{ icon }}"></i>
+          </span>
+        </button>
+      {% endfor %}
+    </nav>
+    <div class="mt-2 text-green-700 font-semibold text-base text-center">
+      <span id="stepper-label"></span>
     </div>
 
     <!-- Mensaje de error general -->
     {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
-      <div class="bg-red-100 border border-red-300 text-red-700 px-6 py-4 mb-6 rounded-xl text-sm font-medium shadow-sm">
+      <div class="bg-red-100 border border-red-300 text-red-700 px-4 py-3 mb-6 rounded-xl text-sm font-medium shadow-sm">
         <strong>Corrija los campos obligatorios:</strong>
         <ul class="mt-2 space-y-1 list-disc list-inside text-xs">
           {# Errores del formulario principal #}
@@ -53,7 +45,6 @@
           {% for error in form.non_field_errors %}
             <li>{{ error|capfirst }}</li>
           {% endfor %}
-
           {# Errores de referencias_formset #}
           {% for subform in referencias_formset.forms %}
             {% for field in subform %}
@@ -65,7 +56,6 @@
               <li>Referencia personal: {{ error|capfirst }}</li>
             {% endfor %}
           {% endfor %}
-
           {# Errores de referencias_comerciales_formset #}
           {% for subform in referencias_comerciales_formset.forms %}
             {% for field in subform %}
@@ -77,7 +67,6 @@
               <li>Referencia comercial: {{ error|capfirst }}</li>
             {% endfor %}
           {% endfor %}
-
           {# Errores de otros_ingresos_formset #}
           {% for subform in otros_ingresos_formset.forms %}
             {% for field in subform %}
@@ -99,72 +88,72 @@
 
       <div id="steps-container" class="space-y-8 flex-1">
         <div class="step-content" data-step="0">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-user text-lg"></i> Datos Generales
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-user text-base"></i> Datos Generales
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/datos_generales.html' with form=form %}
           </div>
         </div>
         <div class="step-content hidden" data-step="1">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-location-dot text-lg"></i> Dirección Residencial
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-location-dot text-base"></i> Dirección Residencial
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/direccion_residencial.html' with form=form %}
           </div>
         </div>
         <div class="step-content hidden" data-step="2">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-people-roof text-lg"></i> Datos del Cónyuge
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-people-roof text-base"></i> Datos del Cónyuge
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/conyuge.html' with form=form %}
           </div>
         </div>
         <div class="step-content hidden" data-step="3">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-briefcase text-lg"></i> Información Laboral
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-briefcase text-base"></i> Información Laboral
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/informacion_laboral.html' with form=form otros_ingresos_formset=otros_ingresos_formset %}
           </div>
         </div>
         <div class="step-content hidden" data-step="4">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-shield-halved text-lg"></i> PEP
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-shield-halved text-base"></i> PEP
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/pep.html' with form=form %}
           </div>
         </div>
         <div class="step-content hidden" data-step="5">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-user-group text-lg"></i> Referencias Personales
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-user-group text-base"></i> Referencias Personales
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/referencias_personales.html' with referencias_formset=referencias_formset %}
           </div>
         </div>
         <div class="step-content hidden" data-step="6">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-building text-lg"></i> Referencias Comerciales
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-building text-base"></i> Referencias Comerciales
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/referencias_comerciales.html' with referencias_comerciales_formset=referencias_comerciales_formset %}
           </div>
         </div>
         <div class="step-content hidden" data-step="7">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-university text-lg"></i> Datos Bancarios
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-university text-base"></i> Datos Bancarios
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/datos_bancarios.html' with form=form %}
           </div>
         </div>
         <div class="step-content hidden" data-step="8">
-          <h3 class="text-green-700 text-xl font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
-            <i class="fa fa-circle-check text-lg"></i> Autorizaciones
+          <h3 class="text-green-700 text-lg font-bold mb-4 border-b border-green-100 pb-2 flex items-center gap-2">
+            <i class="fa fa-circle-check text-base"></i> Autorizaciones
           </h3>
           <div class="space-y-6">
             {% include 'formulario/componentes/autorizaciones.html' with form=form %}
@@ -195,7 +184,7 @@
   </div>
 </div>
 
-<!-- Script -->
+<!-- Stepper y navegación con Tailwind + JS -->
 <script>
   let currentStep = 0;
   const steps = document.querySelectorAll('.step-content');
@@ -203,6 +192,7 @@
   const nextBtn = document.getElementById('nextBtn');
   const submitBtn = document.getElementById('submitBtn');
   const stepperLabel = document.getElementById('stepper-label');
+  const stepperBtns = document.querySelectorAll('.stepper-btn');
   const stepNames = [
     "Datos Generales", "Dirección Residencial", "Datos del Cónyuge",
     "Información Laboral", "PEP", "Referencias Personales",
@@ -215,7 +205,7 @@
       // Stepper visual feedback
       const circle = document.getElementById(`circle-${i}`);
       if (circle) {
-        circle.classList.remove('bg-green-600', 'text-white', 'border-green-600', 'scale-110', 'shadow-lg', 'bg-green-400', 'text-green-700', 'border-green-400', 'bg-white');
+        circle.classList.remove('bg-green-600', 'text-white', 'border-green-600', 'scale-110', 'shadow-lg', 'bg-green-400', 'text-green-700', 'border-green-400', 'bg-white', 'ring-2', 'ring-red-500');
         if (i < index) {
           circle.classList.add('bg-green-400', 'text-white', 'border-green-400');
         } else if (i === index) {
@@ -233,8 +223,10 @@
     if (stepperLabel) {
       stepperLabel.textContent = `Paso ${index + 1} de ${steps.length}: ${stepNames[index]}`;
     }
+    currentStep = index;
   }
 
+  // Navegación con los botones
   nextBtn.addEventListener('click', () => {
     if (currentStep < steps.length - 1) {
       currentStep++;
@@ -249,9 +241,59 @@
     }
   });
 
+  // Navegación tocando el icono del stepper
+  stepperBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      showStep(idx);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // Validación visual de errores en el stepper
+  function marcarErroresStepper() {
+    stepperBtns.forEach(btn => btn.classList.remove('ring-2', 'ring-red-500'));
+    steps.forEach((sec, idx) => {
+      const invalid = sec.querySelector('.is-invalid, .error-label, .text-red-600');
+      if (invalid) {
+        const circle = document.getElementById(`circle-${idx}`);
+        if (circle) {
+          circle.classList.add('ring-2', 'ring-red-500');
+        }
+      }
+    });
+  }
+
+  // Al enviar, si hay errores, marca el stepper y navega al primero con error
+  document.getElementById('entrevista-form').addEventListener('submit', function(e) {
+    setTimeout(() => {
+      marcarErroresStepper();
+      let firstErrorStep = -1;
+      steps.forEach((sec, idx) => {
+        if (firstErrorStep === -1 && sec.querySelector('.is-invalid, .error-label, .text-red-600')) {
+          firstErrorStep = idx;
+        }
+      });
+      if (firstErrorStep >= 0) {
+        showStep(firstErrorStep);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 100);
+  });
+
+  // Inicializa
   document.addEventListener('DOMContentLoaded', () => {
     showStep(currentStep);
+    marcarErroresStepper();
+    // Si hay errores al cargar, navega al primer step con error
+    let firstErrorStep = -1;
+    steps.forEach((sec, idx) => {
+      if (firstErrorStep === -1 && sec.querySelector('.is-invalid, .error-label, .text-red-600')) {
+        firstErrorStep = idx;
+      }
+    });
+    if (firstErrorStep >= 0) {
+      showStep(firstErrorStep);
+    }
   });
 </script>
-
 {% endblock %}

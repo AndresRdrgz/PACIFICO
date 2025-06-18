@@ -44,6 +44,23 @@ class ClienteEntrevistaForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
 
+    peso = forms.DecimalField(
+        required=True,
+        label='Peso (lb)',
+        min_value=0,
+        decimal_places=2,
+        max_digits=5,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    estatura = forms.DecimalField(
+        required=True,
+        label='Estatura (m)',
+        min_value=0,
+        decimal_places=2,
+        max_digits=4,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
     class Meta:
         model = ClienteEntrevista
         exclude = [
@@ -92,8 +109,8 @@ class ClienteEntrevistaForm(forms.ModelForm):
             'casa_apto': forms.TextInput(attrs={'class': 'form-control'}),
             'banco': forms.TextInput(attrs={'class': 'form-control'}),
             'numero_cuenta': forms.TextInput(attrs={'class': 'form-control'}),
-            'peso': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'estatura': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'peso': forms.NumberInput(attrs={'class': 'form-control'}),
+            'estatura': forms.NumberInput(attrs={'class': 'form-control'}),
 
             # Checkboxes (toggles)
             'autoriza_apc': forms.CheckboxInput(attrs={'class': 'form-check-input', 'value': 'VERDADERO'}),

@@ -53,6 +53,7 @@ def entrevista_cliente_view(request):
         if (form.is_valid() and referencias_formset.is_valid() and
             referencias_comerciales_formset.is_valid() and otros_ingresos_formset.is_valid()):
             cliente = form.save(commit=False)
+            
             # Asigna explícitamente todos los datos generales si no están en fields automáticos
             cliente.primer_nombre = form.cleaned_data.get('primer_nombre')
             cliente.segundo_nombre = form.cleaned_data.get('segundo_nombre')
@@ -103,6 +104,7 @@ def entrevista_cliente_view(request):
             cliente.origen_fondos = form.cleaned_data.get('origen_fondos')
             cliente.fecha_inicio_trabajo = form.cleaned_data.get('fecha_inicio_trabajo')
 
+            
             cliente.save()
 
             # Guardar referencias personales correctamente
@@ -128,6 +130,11 @@ def entrevista_cliente_view(request):
                 for otro in otros_ingresos_formset.deleted_objects:
                     otro.delete()
             return redirect('formulario_gracias')
+        else:
+            print('Errores en el formulario principal:', form.errors.as_json())
+            print('Errores en referencias personales:', referencias_formset.errors)
+            print('Errores en referencias comerciales:', referencias_comerciales_formset.errors)
+            print('Errores en otros ingresos:', otros_ingresos_formset.errors)
 
     else:
         form = ClienteEntrevistaForm()
