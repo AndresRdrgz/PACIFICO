@@ -1,8 +1,8 @@
 from django.db import models
-from django.utils import timezone
+from django.contrib.auth.models import User
 
-class EncuestaSatisfaccion(models.Model):
-    DEPARTAMENTO_CHOICES = [
+class EncuestaSatisfaccionCurso(models.Model):
+    DEPARTAMENTOS = [
         ("CONTABILIDAD", "CONTABILIDAD"),
         ("COBROS", "COBROS"),
         ("CÓMPUTO", "CÓMPUTO"),
@@ -17,7 +17,7 @@ class EncuestaSatisfaccion(models.Model):
         ("SERVICIOS GENERALES", "SERVICIOS GENERALES"),
         ("TRAMITE", "TRAMITE"),
     ]
-    CARGO_CHOICES = [
+    CARGOS = [
         ("Asistente", "Asistente"),
         ("Analista", "Analista"),
         ("Oficial/Profesional", "Oficial/Profesional"),
@@ -26,16 +26,29 @@ class EncuestaSatisfaccion(models.Model):
         ("Jefe", "Jefe"),
         ("Gerente", "Gerente"),
     ]
-    departamento = models.CharField(max_length=40, choices=DEPARTAMENTO_CHOICES)
-    cargo = models.CharField(max_length=30, choices=CARGO_CHOICES)
-    expositor = models.PositiveSmallIntegerField()
-    utilidad = models.CharField(max_length=2)
-    satisfaccion = models.PositiveSmallIntegerField()
+    LUGARES = [
+        ("Presencial", "Presencial"),
+        ("Virtual", "Virtual"),
+        ("Mixto", "Mixto"),
+    ]
+    ROLES = [
+        ("Participante", "Participante"),
+        ("Expositor", "Expositor"),
+        ("Organizador", "Organizador"),
+        ("Otro", "Otro"),
+    ]
+
+    departamento = models.CharField(max_length=40, choices=DEPARTAMENTOS)
+    cargo = models.CharField(max_length=30, choices=CARGOS)
+    expositor = models.PositiveSmallIntegerField()  # 1-5
+    utilidad = models.CharField(max_length=2, choices=[('si', 'Sí'), ('no', 'No')])
+    satisfaccion = models.PositiveSmallIntegerField()  # 1-5
     aprendido = models.TextField(max_length=300)
-    lugar = models.CharField(max_length=20)
-    rol = models.CharField(max_length=20)
+    lugar = models.CharField(max_length=15, choices=LUGARES)
+    rol = models.CharField(max_length=20, choices=ROLES)
     recomendacion = models.TextField(max_length=200, blank=True)
-    fecha = models.DateTimeField(default=timezone.now)
+    usuario = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    fecha = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.departamento} - {self.cargo} ({self.fecha:%Y-%m-%d})"
+        return f"Encuesta {self.departamento} - {self.cargo} - {self.fecha:%Y-%m-%d}"

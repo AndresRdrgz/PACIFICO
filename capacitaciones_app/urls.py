@@ -19,7 +19,7 @@ from capacitaciones_app.views import (
 
 from .views_asignacion import historial_asignaciones_ajax
 from capacitaciones_app.views_asignacion import historial_usuario
-from capacitaciones_app.views_encuesta import encuesta_curso
+from capacitaciones_app.views_encuesta import encuesta_satisfaccion_curso
 
 urlpatterns = [
     # 🔐 Admin & Auth
@@ -49,8 +49,8 @@ urlpatterns = [
     path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
     path('mi-progreso/', historial_usuario, name='mi_progreso'),
 
-    # Encuesta
-    path('cursos/<int:curso_id>/encuesta/', encuesta_curso, name='encuesta_curso'),
+    # Encuesta de Satisfacción
+    path('encuesta/satisfaccion/', encuesta_satisfaccion_curso, name='encuesta_satisfaccion_curso'),
 
 ]
 

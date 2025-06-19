@@ -1,14 +1,18 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import EncuestaSatisfaccionCursoForm
 from django.contrib.auth.decorators import login_required
-from .models import Curso
 
 @login_required
-def encuesta_curso(request, curso_id):
-    curso = get_object_or_404(Curso, id=curso_id)
+def encuesta_satisfaccion_curso(request):
     if request.method == 'POST':
-        # Aquí puedes guardar las respuestas si lo deseas
-        # calidad = request.POST.get('calidad')
-        # utilidad = request.POST.get('utilidad')
-        # comentarios = request.POST.get('comentarios')
-        return render(request, 'capacitaciones_app/encuesta_curso.html', {'curso': curso, 'enviado': True})
-    return render(request, 'capacitaciones_app/encuesta_curso.html', {'curso': curso})
+        form = EncuestaSatisfaccionCursoForm(request.POST)
+        if form.is_valid():
+            encuesta = form.save(commit=False)
+            encuesta.usuario = request.user
+            encuesta.save()
+            messages.success(request, '¡Gracias por responder la encuesta!')
+            return redirect('encuesta_satisfaccion_curso')
+    else:
+        form = EncuestaSatisfaccionCursoForm()
+    return render(request, 'capacitaciones_app/encuesta_curso.html', {'form': form})
