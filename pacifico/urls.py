@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import fideicomiso_view, login_view, main_menu, get_lineas, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel,clientesList, view_active_sessions, terminate_all_sessions, download_merged_pdf
+from .views import fideicomiso_view, login_view, main_menu, get_lineas, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel, view_active_sessions, terminate_all_sessions, download_merged_pdf
 from . import views
+from . import viewsClientes
 from django.contrib.auth import views as auth_views
 from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 from .usuarios.vistasUsuarios import edit_profile
@@ -9,6 +10,7 @@ from django.conf.urls.static import static
 from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
 from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
 from .viewsCotizadorAuto import cotizadorPrestAuto
+
 
 urlpatterns = [
     path('', main_menu, name='main_menu'),
@@ -25,8 +27,10 @@ urlpatterns = [
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),
     path('cotizacion/<int:numero_cotizacion>/download/', download_merged_pdf, name='download_merged_pdf'),
     path('login/', login_view, name='login'),
-    path('clientes/', clientesList, name="clientesList"),
-    path('cliente/<str:cedula>/', views.cliente_profile, name='cliente_profile'),
+    # Cliente CRUD
+    path('clientes/create/', viewsClientes.cliente_create, name='cliente_create'),
+    path('clientes/', viewsClientes.clientesList, name="clientesList"),
+    path('cliente/<int:id>/', viewsClientes.cliente_profile, name='cliente_profile'),
     path('cotizacion/<int:pk>/', cotizadorPrestAuto, name='cotizacion_detail'),
     #path('cotizacionPP/<int:pk>/', cotizacionDetail_pp, name='cotizacionDetail_pp'),
     path('aseguradora/new/', views.aseguradora_create, name='aseguradora_create'),

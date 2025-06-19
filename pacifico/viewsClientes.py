@@ -1,0 +1,76 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Cliente, Cotizacion
+from .formsClientes import ClienteForm, EditClienteForm
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+
+
+
+@login_required
+def cliente_profile(request, id):
+    cliente = get_object_or_404(Cliente, id=id)
+    cotizaciones = Cotizacion.objects.filter(cedulaCliente=cliente.cedulaCliente).order_by('-created_at')
+
+    # Filter cotizaciones based on user unless they're staff
+    if request.user.is_authenticated and not request.user.is_staff:
+        cotizaciones = cotizaciones.filter(added_by=request.user)
+    
+    if request.method == 'POST':
+        form = EditClienteForm(request.POST, instance=cliente, user=request.user)
+        if form.is_valid():
+            cliente = form.save()
+            messages.success(request, f'Los datos del cliente {cliente.nombreCliente} han sido actualizados correctamente.')
+            return redirect('cliente_profile', id=cliente.id)
+        else:
+            messages.error(request, 'Por favor corrige los errores en el formulario.')
+    else:
+        form = EditClienteForm(instance=cliente, user=request.user)
+
+    context = {
+        'cliente': cliente,
+        'cotizaciones': cotizaciones,
+        'form': form,
+        'tab_active': request.GET.get('tab', 'datos'),
+    }
+    return render(request, 'clientes/cliente_profile.html', context)
+
+@login_required
+def clientesList(request):
+    clientes = Cliente.objects.all().order_by('-id')  # Sort by newest first
+    
+    return render(request, 'clientes/clientesList.html', {'clientes': clientes})
+
+@login_required
+@csrf_exempt
+def cliente_create(request):
+    # Handle AJAX GET: return form HTML
+    if request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        form = ClienteForm(user=request.user)
+        html = render_to_string('clientes/partials/cliente_form.html', {'form': form}, request=request)
+        return JsonResponse({'html': html})
+    # Handle POST submission
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, user=request.user)
+        if form.is_valid():
+            cliente = form.save(commit=False)
+            cliente.added_by = request.user
+            cliente.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                data = {
+                    'id': cliente.id,
+                    'cedulaCliente': cliente.cedulaCliente or '',
+                    'nombreCliente': cliente.nombreCliente
+                }
+                return JsonResponse({'success': True, 'cliente': data})
+            return redirect('clientesList')
+        else:
+            # Return form with errors for AJAX
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                html = render_to_string('clientes/partials/cliente_form.html', {'form': form}, request=request)
+                return JsonResponse({'success': False, 'html': html})
+    # Non-AJAX GET or fallback
+    form = ClienteForm(user=request.user)
+    return render(request, 'clientes/partials/cliente_form.html', {'form': form})

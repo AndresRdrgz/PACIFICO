@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de Clientes{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b p-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Clientes Registrados</h1>
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3" type="button">
+                <span class="relative flex shrink-0 overflow-hidden rounded-full h-6 w-6 mr-2">
+                    <span class="flex h-full w-full items-center justify-center rounded-full bg-muted">FP</span>
+                </span>
+                {{ user.username }}
+            </button>
+        </div>
+    </header>
+    <main class="flex-1 overflow-auto p-6">
+        <div class="bg-white rounded-lg shadow-sm border">
+            <div class="p-4 flex bg-white flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="relative flex-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                    <input type="text" id="searchInput" onkeyup="filterTable()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 max-w-xl" placeholder="Buscar por ID o nombre">
+                </div>
+                <div class="flex gap-2">
+                    <button id="createClienteBtn" class="inline-flex items-center text-white justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[#22a650] text-primary-foreground hover:bg-[#1e9445] h-10 px-4 py-2 gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus">
+                            <path d="M5 12h14"></path>
+                            <path d="M12 5v14"></path>
+                        </svg>
+                        Crear Cliente
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <div class="relative w-full overflow-auto" style="max-height: 80vh;">
+                    <table class="w-full caption-bottom text-sm">
+                        <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
+                            <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">ID</th>
+                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">NOMBRE</th>
+                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">PROPIETARIO</th>
+                                <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA CREACIÓN</th>
+                                <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA ACTUALIZADO</th>
+                                <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientesTableBody" class="bg-white border-b">
+                            {% for cliente in clientes %}
+                            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 border-b transition-colors cursor-pointer" data-href="{% url 'cliente_profile' cliente.id %}">
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center">{{ cliente.id }}</td>
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 font-medium">{{ cliente.nombreCliente }}</td>
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
+                                    {% if cliente.propietario %}
+                                        {{ cliente.propietario.get_full_name|default:cliente.propietario.username }}
+                                    {% else %}
+                                        <span class="text-gray-400">Sin asignar</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center text-sm">
+                                    {{ cliente.created_at|date:"d/m/Y h:i a" }}
+                                </td>
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center text-sm">
+                                    {{ cliente.updated_at|date:"d/m/Y h:i a" }}
+                                </td>
+                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center">
+                                    <a href="{% url 'cliente_profile' cliente.id %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 py-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye mr-2">
+                                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                        Ver perfil
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="noMatchRow">
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    No hay clientes registrados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal -->
+<div id="clienteModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg w-full max-w-md shadow-xl">
+        <div class="border-b p-4">
+            <h3 class="text-xl font-semibold">Crear Nuevo Cliente</h3>
+        </div>
+        <div id="modalContent">
+            <!-- Form content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+$(function() {
+    // Show modal and load form via AJAX
+    $('#createClienteBtn').click(function() {
+        // Load form content via AJAX
+        $.ajax({
+            url: "{% url 'cliente_create' %}",
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(data) {
+                $('#modalContent').html(data.html);
+                $('#clienteModal').removeClass('hidden');
+                
+                // Setup form submission handler
+                setupFormHandler();
+            },
+            error: function() {
+                alert('Error loading form');
+            }
+        });
+    });
+
+    // Setup form submission handler
+    function setupFormHandler() {
+        $('#clienteForm').off('submit').on('submit', function(e) {
+            e.preventDefault();
+            
+            $.ajax({
+                url: "{% url 'cliente_create' %}",
+                type: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(data) {
+                    if (data.success) {
+                        // Client created successfully, close modal and refresh page
+                        closeModal();
+                        location.reload(); // Refresh to show new client
+                    } else {
+                        // Form has errors, update modal content
+                        $('#modalContent').html(data.html);
+                        setupFormHandler(); // Re-setup handlers for new content
+                    }
+                },
+                error: function() {
+                    alert('Error creating client');
+                }
+            });
+        });
+        
+        // Cancel button closes modal
+        $('#cancelBtn').off('click').on('click', closeModal);
+    }
+
+    function closeModal() {
+        $('#clienteModal').addClass('hidden');
+        $('#modalContent').html('');
+    }
+    
+    // Close modal when clicking outside
+    $('#clienteModal').click(function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+});
+
+$(document).on('click', 'tr[data-href]', function(e) {
+    // Prevent click if the user clicked a link or button inside the row
+    if (!$(e.target).closest('a, button').length) {
+        window.location = $(this).data('href');
+    }
+});
+
+function filterTable() {
+    var input, filter, table, tr, i, txtValueId, txtValueNombre, noMatch;
+    input = document.getElementById("searchInput");
+    filter = input.value.toUpperCase();
+    table = document.querySelector("table");
+    tr = table.getElementsByTagName("tr");
+    noMatch = true;
+
+    // Skip header row, start at index 1
+    for (i = 1; i < tr.length; i++) {
+        var rowCells = tr[i].getElementsByTagName("td");
+        if (rowCells.length > 0) {
+            var txtValueId = rowCells[0].textContent || rowCells[0].innerText;
+            var txtValueNombre = rowCells[1].textContent || rowCells[1].innerText;
+            
+            if (txtValueId.toUpperCase().indexOf(filter) > -1 || txtValueNombre.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+                noMatch = false;
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+
+    // Check if no matches are found
+    var noMatchRow = document.getElementById("noMatchRow");
+    if (noMatch && !document.querySelector("#noMatchRow")) {
+        var tbody = table.querySelector("tbody");
+        var newRow = document.createElement("tr");
+        newRow.id = "noMatchRow";
+        newRow.innerHTML = '<td colspan="6" class="px-6 py-4 text-center text-gray-500">No se encontraron clientes que coincidan con la búsqueda.</td>';
+        tbody.appendChild(newRow);
+    } else if (!noMatch && noMatchRow) {
+        noMatchRow.remove();
+    }
+}
+</script>
+{% endblock %}

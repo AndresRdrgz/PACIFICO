@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil del Cliente - {{ cliente.nombreCliente }}{% endblock %}
+
+{% block content %}
+<div class="max-w-full bg-gray-50 py-6 min-h-[calc(100vh-4rem)]">
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-50 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %} border rounded-md p-4 mb-4 flex items-center justify-between" role="alert">
+            <div class="flex items-center">
+                {% if message.tags == 'success' %}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                {% elif message.tags == 'error' %}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                {% endif %}
+                <span>{{ message }}</span>
+            </div>
+            <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-md p-1.5 inline-flex focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600" onclick="this.parentElement.remove()">
+                <span class="sr-only">Dismiss</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header with Back Button and Client Name -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <a href="{% url 'clientesList' %}" class="mr-4 text-gray-600 hover:text-gray-900 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                        <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                    <span class="ml-1">Volver a la lista</span>
+                </a>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button type="button" id="saveChangesBtn" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#22a650] hover:bg-[#1b8a42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#22a650] transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Guardar cambios
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Client Card -->
+        <div class="bg-white shadow-lg rounded-xl overflow-hidden mb-6">
+            <!-- Client Header with Profile Image -->
+            <div class="bg-gradient-to-r from-[#22a650] to-[#139c3e] px-6 py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-white rounded-full p-2 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-10 h-10 text-[#22a650]">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-2xl font-bold text-white">{{ cliente.nombreCliente }}</h1>
+                        <p class="text-green-100">Cliente #{{ cliente.id }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client Info Summary -->
+            <div class="bg-white px-6 py-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">ID</span>
+                        <span class="mt-1 text-sm font-semibold">{{ cliente.id }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula</span>
+                        <span class="mt-1 text-sm font-semibold">{{ cliente.cedulaCliente|default:"No especificada" }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario</span>
+                        <span class="mt-1 text-sm font-semibold">
+                            {% if cliente.propietario %}
+                                {{ cliente.propietario.get_full_name|default:cliente.propietario.username }}
+                            {% else %}
+                                <span class="text-gray-400">Sin asignar</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de registro</span>
+                        <span class="mt-1 text-sm font-semibold">{{ cliente.created_at|date:"d/m/Y h:i a" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Tabs Navigation -->
+            <div class="px-6 pt-2 pb-0 bg-white border-b border-gray-100">
+                <nav class="flex space-x-8" aria-label="Tabs">
+                    <button id="tab-datos" class="tab-button tab-active border-[#22a650] text-[#22a650] whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200">
+                        Datos Generales
+                    </button>
+                    <button id="tab-cotizaciones" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200">
+                        Cotizaciones
+                    </button>
+                    <button id="tab-entrevista" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200">
+                        Entrevista
+                    </button>
+                    <button id="tab-diligencia" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200">
+                        Debida Diligencia
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="bg-white px-6 py-6">
+                <!-- Datos Generales Tab -->
+                <div id="content-datos" class="tab-content">
+                    <form method="post" id="clienteForm" class="space-y-6">
+                        {% csrf_token %}
+                        
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                            <div class="sm:col-span-3">
+                                <label for="id_nombreCliente" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                                {{ form.nombreCliente }}
+                            </div>
+                            
+                            <div class="sm:col-span-3">
+                                <label for="id_cedulaCliente" class="block text-sm font-medium text-gray-700">Cédula del Cliente</label>
+                                {{ form.cedulaCliente }}
+                            </div>
+                            
+                            <div class="sm:col-span-2">
+                                <label for="id_fechaNacimiento" class="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
+                                {{ form.fechaNacimiento }}
+                            </div>
+                            
+                            <div class="sm:col-span-1">
+                                <label for="id_edad" class="block text-sm font-medium text-gray-700">Edad</label>
+                                {{ form.edad }}
+                            </div>
+                            
+                            <div class="sm:col-span-1">
+                                <label for="id_sexo" class="block text-sm font-medium text-gray-700">Sexo</label>
+                                {{ form.sexo }}
+                            </div>
+                            
+                            <div class="sm:col-span-1">
+                                <label for="id_jubilado" class="block text-sm font-medium text-gray-700">Jubilado</label>
+                                {{ form.jubilado }}
+                            </div>
+                            
+                            <div class="sm:col-span-1">
+                                <label for="id_apcScore" class="block text-sm font-medium text-gray-700">Score</label>
+                                {{ form.apcScore }}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Cotizaciones Tab -->
+                <div id="content-cotizaciones" class="tab-content hidden">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Cotizaciones Asociadas</h3>
+                        <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#22a650] hover:bg-[#1b8a42] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#22a650] transition-all duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Nueva cotización
+                        </a>
+                    </div>
+
+                    <div class="bg-white shadow overflow-hidden rounded-md">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oficial</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for cotizacion in cotizaciones %}
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {{ cotizacion.id }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ cotizacion.created_at|date:"d/m/Y h:i a" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        {% if cotizacion.tipoPrestamo == 'auto' %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Auto</span>
+                                        {% elif cotizacion.tipoPrestamo == 'personal' %}  
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Personal</span>
+                                        {% else %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Otro</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                        {% if cotizacion.montoPrestamo %}
+                                            ${{ cotizacion.montoPrestamo|floatformat:2 }}
+                                        {% else %}
+                                            --
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ cotizacion.oficial|default:"--" }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-3">
+                                            <a href="{% url 'cotizacion_detail' cotizacion.id %}" class="text-[#22a650] hover:text-[#1b8a42] transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                            </a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="px-6 py-10 whitespace-nowrap text-sm text-gray-500 text-center">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 text-gray-300 mb-3">
+                                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                                <polyline points="13 2 13 9 20 9"></polyline>
+                                            </svg>
+                                            <p class="text-gray-500">No hay cotizaciones asociadas a este cliente.</p>
+                                            <a href="#" class="mt-3 inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-[#22a650] bg-green-50 hover:bg-green-100 transition-colors">
+                                                Crear una cotización
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Entrevista Tab -->
+                <div id="content-entrevista" class="tab-content hidden">
+                    <div class="bg-white shadow overflow-hidden rounded-md p-6">
+                        <div class="text-center py-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto h-12 w-12 text-gray-400">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                <path d="M13 8H7"></path>
+                                <path d="M17 12H7"></path>
+                            </svg>
+                            <h3 class="mt-2 text-lg font-medium text-gray-900">Entrevista al Cliente</h3>
+                            <p class="mt-1 text-sm text-gray-500">Esta sección está en desarrollo.</p>
+                            <div class="mt-5">
+                                <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                    Iniciar entrevista
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debida Diligencia Tab -->
+                <div id="content-diligencia" class="tab-content hidden">
+                    <div class="bg-white shadow overflow-hidden rounded-md p-6">
+                        <div class="text-center py-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto h-12 w-12 text-gray-400">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <path d="M14 2v6h6"></path>
+                                <path d="M16 13H8"></path>
+                                <path d="M16 17H8"></path>
+                                <path d="M10 9H8"></path>
+                            </svg>
+                            <h3 class="mt-2 text-lg font-medium text-gray-900">Debida Diligencia</h3>
+                            <p class="mt-1 text-sm text-gray-500">Esta sección está en desarrollo.</p>
+                            <div class="mt-5">
+                                <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <path d="M14 2v6h6"></path>
+                                        <path d="M9 15v-6"></path>
+                                        <path d="M12 12h.01"></path>
+                                        <path d="M15 15v-6"></path>
+                                    </svg>
+                                    Completar formulario
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Card (Optional) -->
+        <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h2 class="text-lg font-medium text-gray-900">Actividad reciente</h2>
+                <p class="mt-1 text-sm text-gray-500">Historial de cambios recientes en este cliente</p>
+            </div>
+            <div class="px-6 py-4">
+                <div class="flow-root">
+                    <ul role="list" class="-mb-8">
+                        <li>
+                            <div class="relative pb-8">
+                                <span class="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                                <div class="relative flex items-start space-x-3">
+                                    <div class="relative">
+                                        <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-8 ring-white">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-500">
+                                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                                <polyline points="7 3 7 8 15 8"></polyline>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div>
+                                            <div class="text-sm">
+                                                <a href="#" class="font-medium text-gray-900">Perfil actualizado</a>
+                                            </div>
+                                            <p class="mt-0.5 text-sm text-gray-500">
+                                                Última actualización {{ cliente.updated_at|date:"d/m/Y h:i a" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="relative pb-8">
+                                <div class="relative flex items-start space-x-3">
+                                    <div class="relative">
+                                        <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-8 ring-white">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-500">
+                                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                                <circle cx="8.5" cy="7" r="4"></circle>
+                                                <line x1="20" y1="8" x2="20" y2="14"></line>
+                                                <line x1="23" y1="11" x2="17" y2="11"></line>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div>
+                                            <div class="text-sm">
+                                                <a href="#" class="font-medium text-gray-900">Cliente creado</a>
+                                            </div>
+                                            <p class="mt-0.5 text-sm text-gray-500">
+                                                Creado el {{ cliente.created_at|date:"d/m/Y h:i a" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flash Messages -->
+{% if messages %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+    {% for message in messages %}
+    <div class="{% if message.tags == 'success' %}bg-green-50 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border-red-200{% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %} border rounded-md p-4 mb-4 flex items-center justify-between" role="alert">
+        <div class="flex items-center">
+            {% if message.tags == 'success' %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            {% elif message.tags == 'error' %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 mr-3">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            {% endif %}
+            <span>{{ message }}</span>
+        </div>
+        <button type="button" class="ml-auto -mx-1.5 -my-1.5 rounded-md p-1.5 inline-flex focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600" onclick="this.parentElement.remove()">
+            <span class="sr-only">Dismiss</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Function to activate a specific tab
+        function activateTab(tabId) {
+            const tabToActivate = document.getElementById('tab-' + tabId);
+            if (!tabToActivate) return;
+            
+            // Remove active class from all buttons and hide all content
+            tabButtons.forEach(btn => btn.classList.remove('tab-active', 'border-[#22a650]', 'text-[#22a650]'));
+            tabButtons.forEach(btn => btn.classList.add('border-transparent', 'text-gray-500'));
+            tabContents.forEach(content => content.classList.add('hidden'));
+            
+            // Add active class to clicked button and show corresponding content
+            tabToActivate.classList.remove('border-transparent', 'text-gray-500');
+            tabToActivate.classList.add('tab-active', 'border-[#22a650]', 'text-[#22a650]');
+            
+            const contentId = 'content-' + tabId;
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) {
+                contentEl.classList.remove('hidden');
+            }
+            
+            // Update URL with tab parameter
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.pushState({}, '', url);
+        }
+        
+        // Set click event for all tabs
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.id.split('-')[1];
+                activateTab(tabId);
+            });
+        });
+        
+        // Get active tab from URL or default to 'datos'
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeTab = urlParams.get('tab') || 'datos';
+        activateTab(activeTab);
+        
+        // Form submission via button outside form
+        const saveButton = document.getElementById('saveChangesBtn');
+        const clienteForm = document.getElementById('clienteForm');
+        
+        if (saveButton && clienteForm) {
+            saveButton.addEventListener('click', () => {
+                clienteForm.submit();
+            });
+        }
+        
+        // Calculate age from date of birth when changed
+        const fechaNacimientoInput = document.getElementById('id_fechaNacimiento');
+        const edadInput = document.getElementById('id_edad');
+        
+        if (fechaNacimientoInput && edadInput) {
+            // Set initial age if birth date is already set
+            if (fechaNacimientoInput.value) {
+                updateAge(fechaNacimientoInput.value);
+            }
+            
+            // Update age whenever birth date changes
+            fechaNacimientoInput.addEventListener('change', function() {
+                updateAge(this.value);
+            });
+        }
+        
+        // Dismiss alert messages after 5 seconds
+        const alerts = document.querySelectorAll('[role="alert"]');
+        if (alerts.length) {
+            setTimeout(() => {
+                alerts.forEach(alert => {
+                    alert.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                    setTimeout(() => alert.remove(), 500);
+                });
+            }, 5000);
+        }
+    });
+    
+    // Function to update age based on birth date
+    function updateAge(birthDateStr) {
+        if (birthDateStr) {
+            const birthDate = new Date(birthDateStr);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            document.getElementById('id_edad').value = age;
+        }
+    }
+</script>
+{% endblock %}

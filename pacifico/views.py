@@ -378,44 +378,6 @@ def cotizacionDetail(request, pk):
     return render(request, 'fideicomiso_form.html', context)
 
 
-@login_required
-def cliente_profile(request, cedula):
-    cliente = get_object_or_404(Cliente, cedulaCliente=cedula)
-    cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
-
-    if request.user.is_authenticated:
-        cotizaciones = cotizaciones.filter(added_by=request.user
-        )
-
-    #If user is staff show all cotizaciones
-    if request.user.is_staff:
-        cotizaciones = Cotizacion.objects.filter(cedulaCliente=cedula)
-    
-
-    if request.method == 'POST':
-        form = ClienteForm(request.POST, instance=cliente)
-        if form.is_valid():
-            form.save()
-            return redirect('cliente_profile', cedula=cliente.cedula)
-    else:
-        form = ClienteForm(instance=cliente)
-
-    context = {
-        'cliente': cliente,
-        'cotizaciones': cotizaciones,
-        'form': form,
-    }
-    return render(request, 'cliente_profile.html', context)
-
-@login_required
-def clientesList(request):
-    clientes = Cliente.objects.all()
-
-    #sort by newest first
-    
-    return render(request, 'clientesList.html', {'clientes': clientes})
-
-
 
 def download_cotizaciones_excel(request):
     cotizaciones = Cotizacion.objects.all()

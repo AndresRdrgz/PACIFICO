@@ -47,7 +47,9 @@ class CotizacionAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('cedulaCliente', 'nombreCliente', 'fechaNacimiento', 'edad', 'sexo', 'jubilado', 'created_at', 'updated_at', 'added_by', 'propietario')
+    search_fields = ('cedulaCliente', 'nombreCliente', 'propietario__username', 'added_by__username')
+    list_filter = ('sexo', 'jubilado', 'created_at', 'propietario', 'added_by')
 
 @admin.register(PeriodoPago)
 class PeriodoPagoAdmin(admin.ModelAdmin):
@@ -68,4 +70,10 @@ class PruebaDarioAdmin(admin.ModelAdmin):
 @admin.register(CotizacionDocumento)
 class CotizacionDocumentoAdmin(admin.ModelAdmin):
     pass
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'rol', 'sucursal', 'oficial', 'auto_save_cotizaciones', 'pruebaFuncionalidades')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'rol', 'sucursal', 'oficial')
+    list_filter = ('rol', 'sucursal', 'oficial', 'auto_save_cotizaciones', 'pruebaFuncionalidades')
 
