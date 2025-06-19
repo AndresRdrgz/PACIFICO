@@ -1,0 +1,308 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% block title %}Encuesta de Satisfacción{% endblock %}
+
+{% block content %}
+<div id="encuesta-wrapper" class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-4">
+  <div class="bg-white rounded-4 shadow-lg p-0 w-100 animate__animated animate__fadeIn" style="max-width: 540px;">
+    <!-- Barra de progreso -->
+    <div class="progress rounded-top-4" style="height: 8px;">
+      <div id="progress-bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: 12%"></div>
+    </div>
+    <div class="p-4 p-md-5">
+      <div class="text-center mb-4">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4da.svg" alt="Encuesta" width="56" class="mb-2 animate__animated animate__bounceIn"/>
+        <h2 class="fw-bold text-success">Encuesta de Satisfacción</h2>
+      </div>
+      <form id="encuesta-form" method="post" novalidate autocomplete="off">
+        {% csrf_token %}
+        <!-- Paso 1 -->
+        <div class="encuesta-step" data-step="1">
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                <select class="form-select" id="departamento" name="departamento" required>
+                  <option value="">---------</option>
+                  <option>CONTABILIDAD</option>
+                  <option>COBROS</option>
+                  <option>CÓMPUTO</option>
+                  <option>EXPERIENCIA AL CLIENTE</option>
+                  <option>FINANZAS</option>
+                  <option>GERENCIA</option>
+                  <option>ITICO</option>
+                  <option>LEGAL</option>
+                  <option>NEGOCIOS</option>
+                  <option>PROCESOS</option>
+                  <option>RECURSOS HUMANOS- ADM</option>
+                  <option>SERVICIOS GENERALES</option>
+                  <option>TRAMITE</option>
+                </select>
+                <label for="departamento">Departamento</label>
+                <div class="invalid-feedback">Seleccione un departamento.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                <select class="form-select" id="cargo" name="cargo" required>
+                  <option value="">---------</option>
+                  <option>Asistente</option>
+                  <option>Analista</option>
+                  <option>Oficial/Profesional</option>
+                  <option>Coordinador</option>
+                  <option>Encargada/Supervisor</option>
+                  <option>Jefe</option>
+                  <option>Gerente</option>
+                </select>
+                <label for="cargo">Seleccione su cargo</label>
+                <div class="invalid-feedback">Seleccione su cargo.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Paso 2 -->
+        <div class="encuesta-step d-none" data-step="2">
+          <div class="mb-4">
+            <label class="form-label">Califique el conocimiento y dominio del tema del expositor</label>
+            <div class="d-flex gap-2 justify-content-between" id="expositor-stars">
+              {% for i in "12345" %}
+              <input type="radio" class="btn-check" name="expositor" id="expositor{{i}}" value="{{i}}" required>
+              <label class="btn btn-outline-warning d-flex flex-column align-items-center px-2 py-1 rounded-3 shadow-sm star-label" for="expositor{{i}}" style="font-size:1.3em; transition: transform 0.2s;">
+                <span class="mb-1 star-icon" style="color:#ffc107;">&#9733;</span>
+                <span class="small text-muted">{{i}}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <div class="invalid-feedback d-block" id="expositor-feedback" style="display:none;">Seleccione una calificación.</div>
+          </div>
+        </div>
+        <!-- Paso 3 -->
+        <div class="encuesta-step d-none" data-step="3">
+          <div class="mb-3">
+            <label class="form-label">¿Los conocimientos adquiridos serán de utilidad para mejorar el desarrollo/desempeño de su cargo y actividades?</label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="utilidad" id="utilidad_si" value="si" required>
+              <label class="form-check-label" for="utilidad_si">Sí</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="utilidad" id="utilidad_no" value="no">
+              <label class="form-check-label" for="utilidad_no">No</label>
+            </div>
+            <div class="invalid-feedback d-block" id="utilidad-feedback" style="display:none;">Seleccione una opción.</div>
+          </div>
+        </div>
+        <!-- Paso 4 -->
+        <div class="encuesta-step d-none" data-step="4">
+          <div class="mb-4">
+            <label class="form-label">En general, ¿cuál es su nivel de satisfacción con el curso/seminario/capacitación?</label>
+            <div class="d-flex gap-2 justify-content-between" id="satisfaccion-stars">
+              {% for i in "12345" %}
+              <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion{{i}}" value="{{i}}" required>
+              <label class="btn btn-outline-warning d-flex flex-column align-items-center px-2 py-1 rounded-3 shadow-sm star-label" for="satisfaccion{{i}}" style="font-size:1.3em; transition: transform 0.2s;">
+                <span class="mb-1 star-icon" style="color:#ffc107;">&#9733;</span>
+                <span class="small text-muted">{{i}}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <div class="invalid-feedback d-block" id="satisfaccion-feedback" style="display:none;">Seleccione una calificación.</div>
+          </div>
+        </div>
+        <!-- Paso 5 -->
+        <div class="encuesta-step d-none" data-step="5">
+          <div class="mb-3">
+            <label class="form-label">Indique en resumen, los puntos más importantes que aprendió</label>
+            <textarea class="form-control rounded-3 shadow-sm" name="aprendido" id="aprendido" rows="2" maxlength="300" placeholder="Resuma lo aprendido..." required></textarea>
+            <div class="invalid-feedback">Este campo es obligatorio.</div>
+          </div>
+        </div>
+        <!-- Paso 6 -->
+        <div class="encuesta-step d-none" data-step="6">
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                <select class="form-select" id="lugar" name="lugar" required>
+                  <option value="">---------</option>
+                  <option>Presencial</option>
+                  <option>Virtual</option>
+                  <option>Mixto</option>
+                </select>
+                <label for="lugar">Lugar donde tomó/impartió el curso</label>
+                <div class="invalid-feedback">Seleccione una opción.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                <select class="form-select" id="rol" name="rol" required>
+                  <option value="">---------</option>
+                  <option>Participante</option>
+                  <option>Expositor</option>
+                  <option>Organizador</option>
+                  <option>Otro</option>
+                </select>
+                <label for="rol">Indique su ROL en la capacitación</label>
+                <div class="invalid-feedback">Seleccione una opción.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Paso 7 -->
+        <div class="encuesta-step d-none" data-step="7">
+          <div class="mb-3">
+            <label class="form-label">¿Considera que el curso le puede servir a otro colaborador y/o departamento? Indique el nombre del colaborador o departamento.</label>
+            <textarea class="form-control rounded-3 shadow-sm" name="recomendacion" id="recomendacion" rows="2" maxlength="200" placeholder="Nombre del colaborador o departamento..."></textarea>
+          </div>
+        </div>
+        <!-- Botones navegación -->
+        <div class="d-flex justify-content-between align-items-center mt-4 gap-2 animate__animated animate__fadeIn">
+          <button type="button" id="btn-prev" class="btn btn-outline-secondary px-4 py-2 rounded-pill d-none">Anterior</button>
+          <button type="button" id="btn-next" class="btn btn-success px-4 py-2 rounded-pill ms-auto">Siguiente</button>
+          <button type="submit" id="btn-submit" class="btn btn-success px-4 py-2 rounded-pill ms-auto d-none">Enviar encuesta</button>
+        </div>
+      </form>
+      <!-- Mensaje de éxito -->
+      <div id="encuesta-exito" class="text-center d-none animate__animated animate__fadeInUp mt-5">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f389.svg" alt="¡Gracias!" width="80" class="mb-3 animate__animated animate__tada"/>
+        <h3 class="fw-bold text-success mb-2">¡Gracias por tu respuesta!</h3>
+        <p class="lead">Tu opinión es muy valiosa para nosotros.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Animaciones y validación -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<script>
+(function() {
+  const steps = Array.from(document.querySelectorAll('.encuesta-step'));
+  const progressBar = document.getElementById('progress-bar');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const btnSubmit = document.getElementById('btn-submit');
+  const form = document.getElementById('encuesta-form');
+  const exito = document.getElementById('encuesta-exito');
+  let currentStep = 0;
+
+  function showStep(idx) {
+    steps.forEach((step, i) => {
+      step.classList.toggle('d-none', i !== idx);
+      if (i === idx) {
+        step.classList.add('animate__fadeIn');
+        step.classList.remove('animate__fadeOut');
+      } else {
+        step.classList.remove('animate__fadeIn');
+        step.classList.add('animate__fadeOut');
+      }
+    });
+    btnPrev.classList.toggle('d-none', idx === 0);
+    btnNext.classList.toggle('d-none', idx === steps.length - 1);
+    btnSubmit.classList.toggle('d-none', idx !== steps.length - 1);
+    progressBar.style.width = ((idx+1)/steps.length*100) + '%';
+  }
+
+  function validateStep(idx) {
+    let valid = true;
+    const step = steps[idx];
+    const inputs = step.querySelectorAll('input,select,textarea');
+    step.classList.remove('animate__shakeX');
+    inputs.forEach(input => {
+      input.classList.remove('is-invalid');
+      if (input.required && !input.value) {
+        input.classList.add('is-invalid');
+        valid = false;
+      }
+    });
+    // Feedback especial para estrellas y radios
+    if (step.querySelector('#expositor-stars')) {
+      if (!form.querySelector('input[name="expositor"]:checked')) {
+        document.getElementById('expositor-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('expositor-feedback').style.display = 'none';
+      }
+    }
+    if (step.querySelector('#satisfaccion-stars')) {
+      if (!form.querySelector('input[name="satisfaccion"]:checked')) {
+        document.getElementById('satisfaccion-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('satisfaccion-feedback').style.display = 'none';
+      }
+    }
+    if (step.querySelector('input[name="utilidad"]')) {
+      if (!form.querySelector('input[name="utilidad"]:checked')) {
+        document.getElementById('utilidad-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('utilidad-feedback').style.display = 'none';
+      }
+    }
+    if (!valid) {
+      step.classList.add('animate__shakeX');
+    }
+    return valid;
+  }
+
+  btnNext.addEventListener('click', function() {
+    if (validateStep(currentStep)) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  });
+  btnPrev.addEventListener('click', function() {
+    currentStep--;
+    showStep(currentStep);
+  });
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!validateStep(currentStep)) return;
+    form.classList.add('d-none');
+    exito.classList.remove('d-none');
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+      exito.classList.add('animate__tada');
+    }, 500);
+    // Aquí puedes hacer un fetch/ajax si quieres guardar sin recargar
+  });
+  // Microanimación: resaltar label flotante
+  document.querySelectorAll('.form-floating select, .form-floating textarea').forEach(el => {
+    el.addEventListener('focus', function() {
+      this.parentElement.classList.add('animate__pulse');
+    });
+    el.addEventListener('blur', function() {
+      this.parentElement.classList.remove('animate__pulse');
+    });
+  });
+  // Microanimación: estrellas
+  document.querySelectorAll('.star-label').forEach(label => {
+    label.addEventListener('mouseenter', function() {
+      this.style.transform = 'scale(1.15)';
+    });
+    label.addEventListener('mouseleave', function() {
+      this.style.transform = '';
+    });
+  });
+  // Accesibilidad: focus visible
+  document.querySelectorAll('input,select,textarea,button').forEach(el => {
+    el.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+    });
+    el.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+    });
+  });
+  // Iniciar
+  showStep(currentStep);
+})();
+</script>
+<style>
+.focus-visible, .form-select:focus, .form-control:focus {
+  outline: 2px solid #198754 !important;
+  box-shadow: 0 0 0 2px #b6e2c6 !important;
+}
+.star-label:active, .star-label:focus-within {
+  background: #ffe082 !important;
+  border-color: #ffc107 !important;
+}
+.animate__shakeX {
+  --animate-duration: 0.5s;
+}
+</style>
+{% endblock %}
