@@ -22,5 +22,7 @@ from .views_asignacion import (
     desasignar_curso_ajax,
     cursos_asignados_ajax,
     exportar_asignaciones_excel,
+    usuarios_grupo_ajax,         # <-- agregar
+    quitar_usuario_grupo_ajax,   # <-- agregar
 )
 

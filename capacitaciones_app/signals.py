@@ -1,6 +1,7 @@
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
-from capacitaciones_app.models import Curso, GrupoAsignacion
+from django.contrib.auth.models import User
+from capacitaciones_app.models import Curso, GrupoAsignacion, PerfilUsuario
 
 
 # 🔁 SINCRONIZACIÓN: cuando se asignan grupos a cursos
@@ -71,3 +72,15 @@ def sync_usuarios_grupo(sender, instance, action, pk_set, **kwargs):
             actuales = set(curso.usuarios_asignados.all())
             unificados = actuales.union(nuevos_usuarios)
             curso.usuarios_asignados.set(unificados)
+
+
+# Crea la señal para crear automáticamente el perfil al crear un usuario.
+@receiver(post_save, sender=User)
+def crear_perfil_usuario(sender, instance, created, **kwargs):
+    if created:
+        PerfilUsuario.objects.create(user=instance)
+
+
+@receiver(post_save, sender=User)
+def guardar_perfil_usuario(sender, instance, **kwargs):
+    instance.perfil.save()
