@@ -205,6 +205,7 @@ def cotizacionPrestamoPersonal(request, pk=None):
                     'vendedorOtroPorcentaje': float(vendedorOtroPorcentaje),
                     'calcNetoCancelacion': float(calcNetoCancelacion),
                     'aplicaPromocion': aplicaPromocion,
+                    'vendedorImpuesto': vendedorImpuesto,
                 }
                 #print("params",params)
                 

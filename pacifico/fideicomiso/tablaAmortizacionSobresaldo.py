@@ -610,7 +610,7 @@ def tablaAmortizacionSobresaldo(params):
                 calcFechaInicio = calcsobtFechaFin
                 calcFechaPromeCK = calcsobtFechaVenc
 
-            print(wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital,calcsobtFechaVenc.strftime('%d/%m/%Y'),calcsobtFechaFin.strftime('%d/%m/%Y'))
+            #print(wrkSecuencia, "Saldo anterior",calcsobtSaldoAnter,"Monto Letra: ", calcsobtMontoLetra, "Monto Seguro: ", calcsobtMontoSeguro, "Monto FECI: ", calcsobtMontoFECI, "Monto Interes: ", calcsobtMontoInteres, "Monto Capital: ", calcsobtMontoCapital,calcsobtFechaVenc.strftime('%d/%m/%Y'),calcsobtFechaFin.strftime('%d/%m/%Y'))
             
             iteration_data.append({
                 'Secuencia': wrkSecuencia,

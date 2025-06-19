@@ -7,6 +7,7 @@ def rentabilidadEfectiva(calcMonto2,sobresaldo,wrkMontoFECI,wrkNum7_2,plazoPago,
 
     montoServDes = params['montoServDesc']
     calcNetoCancelac = params['calcNetoCancelacion']
+    
     calcMontoRefi = 0
     calcDevInteres = 0
     calcDevSeguro = 0
@@ -397,6 +398,9 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     comisionComision = [0] * 11  # Assuming a list with 11 elements
     comisionPorcentaje = [0] * 11  # Assuming a list with 11 elements
     comisionTotal = [0] * 11  # Assuming a list with 11 elements
+    
+    vendedorImpuesto = params.get('vendedorImpuesto', "N")
+    print("Clase de vendedor:", claseVend, "Tipo de préstamo:", tipo_prestamo,"Impuesto vendedor:", vendedorImpuesto)
 
     if claseVend != "CHISPA" and tipo_prestamo != "PREST AUTO":
         comisionPorcentaje[2] = params['vendedorComisionPorcentaje']
@@ -460,7 +464,12 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                     comisionTotal[auxH] = comisionTotal[auxH] * comisionPorcentaje[auxH]
                     comisionTotal[auxH] = comisionTotal[auxH] / 100
                     comisionTotal[auxH] = round(comisionTotal[auxH], 2)
-                    # TTTT
+                    if vendedorImpuesto == "Y":
+                         # TTTT
+                        # Si es vendedor con impuesto
+                        comisionTotal[auxH] = comisionTotal[auxH] * 1.07
+                        comisionTotal[auxH] = round(comisionTotal[auxH], 2)
+                   
                     pass
                 else:
                     # TTTF
