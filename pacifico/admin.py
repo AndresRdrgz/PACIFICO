@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento
+from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .forms import UserProfileForm  # Importamos el formulario personalizado
@@ -76,4 +76,30 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'rol', 'sucursal', 'oficial', 'auto_save_cotizaciones', 'pruebaFuncionalidades')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'rol', 'sucursal', 'oficial')
     list_filter = ('rol', 'sucursal', 'oficial', 'auto_save_cotizaciones', 'pruebaFuncionalidades')
+
+@admin.register(DebidaDiligencia)
+class DebidaDiligenciaAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'estado', 'fecha_solicitud', 'solicitado_por', 'fecha_completado', 'archivos_completos')
+    list_filter = ('estado', 'fecha_solicitud', 'fecha_completado')
+    search_fields = ('cliente__nombreCliente', 'cliente__cedulaCliente', 'solicitado_por__username')
+    readonly_fields = ('created_at', 'updated_at', 'archivos_completos')
+    
+    fieldsets = (
+        ('Información del Cliente', {
+            'fields': ('cliente', 'estado')
+        }),
+        ('Solicitud', {
+            'fields': ('solicitado_por', 'fecha_solicitud')
+        }),
+        ('Archivos', {
+            'fields': ('busqueda_google', 'busqueda_registro_publico', 'comentarios')
+        }),
+        ('Completado', {
+            'fields': ('completado_por', 'fecha_completado')
+        }),
+        ('Metadatos', {
+            'fields': ('created_at', 'updated_at', 'archivos_completos'),
+            'classes': ('collapse',)
+        })
+    )
 

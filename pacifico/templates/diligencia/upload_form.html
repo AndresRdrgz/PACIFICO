@@ -1,0 +1,443 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>Debida Diligencia - {{ cliente.nombreCliente }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" /><style>
+        :root {
+            --verde-pacifico: #009c3c;
+            --verde-hover: #007529;
+            --verde-oscuro: #00692b;
+            --gris-texto: #4a4a4a;
+            --gris-fondo: #f9f9f9;
+            --gris-borde: #ddd;
+        }
+          body.form-bg {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-oscuro) 100%);
+            min-height: 100vh;
+            padding: 1rem 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--gris-texto);
+        }
+        
+        .form-container {
+            background: #ffffff;
+            max-width: 950px;
+            width: 100%;
+            padding: 1.5rem 2rem 1.5rem 2rem;
+            border-radius: 16px;
+            border: 1.5px solid #e2e8f0;
+            box-shadow: 0 8px 32px rgba(0, 156, 60, 0.10), 0 1.5px 8px rgba(0,0,0,0.06);
+            margin-bottom: 1.5rem;
+            position: relative;
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+        
+        .form-container:hover {
+            box-shadow: 0 16px 40px rgba(0, 156, 60, 0.18), 0 2px 12px rgba(0,0,0,0.10);
+            border-color: var(--verde-pacifico);
+        }
+        
+        .form-container::before {
+            content: "";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 7px;
+            border-radius: 22px 22px 0 0;
+            background: linear-gradient(90deg, var(--verde-pacifico) 0%, #00c86b 100%);
+        }          .form-header .logo {
+            max-width: 120px;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-header h1 {
+            color: var(--verde-pacifico);
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.2rem;
+            text-shadow: none;
+        }
+
+        .subtitulo {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #3a7a3a;
+            margin-bottom: 0.3rem;
+            text-shadow: none;
+        }
+
+        .seccion {
+            border-top: 2px solid var(--verde-pacifico);
+            padding-top: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .seccion h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--verde-pacifico);
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .seccion h2 .section-icon {
+            color: var(--verde-pacifico);
+            font-size: 1.3rem;
+        }
+        
+        .btn-pacifico {
+            background: var(--verde-pacifico);
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            padding: 0.7rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 156, 60, 0.5);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        
+        .btn-pacifico:hover {
+            background: var(--verde-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 117, 41, 0.7);
+            color: white;
+        }
+          .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-completado {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-pendiente {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-sin-solicitar {
+            background: #f3f4f6;
+            color: #374151;
+        }          .file-upload-area {
+            border: 2px dashed var(--gris-borde);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            background: var(--gris-fondo);
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--verde-pacifico);
+            background: #f0f9f5;
+        }
+        
+        .file-upload-area .form-control {
+            border: none;
+            background: transparent;
+            padding: 0.5rem 0;
+        }
+        
+        .file-upload-area .form-control:focus {
+            box-shadow: none;
+            border: none;
+        }
+        
+        .form-input {
+            border-radius: 8px;
+            border: 1.5px solid var(--gris-borde);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .form-input:focus {
+            border-color: var(--verde-pacifico);
+            box-shadow: 0 0 8px var(--verde-pacifico);
+            outline: none;
+        }        @media (max-width: 576px) {
+            .form-container {
+                padding: 1rem 1rem;
+            }
+
+            .form-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .seccion h2 {
+                font-size: 1.1rem;
+            }
+
+            .btn-pacifico {
+                font-size: 1rem;
+                padding: 0.6rem 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="form-bg">
+    <div class="form-container">        <!-- Logo and Header -->
+        <div class="form-header text-center pt-2 mb-2">
+            <img src="{% static 'logoBlanco.png' %}" alt="Logo Pacífico" class="logo mx-auto d-block">
+        </div>            <!-- Header -->
+            <div class="text-center mb-3">
+                <div class="d-flex justify-content-center align-items-center mb-2">
+                    <div class="bg-success bg-opacity-25 p-2 rounded-circle me-3">
+                        <i class="fas fa-file-shield fs-4 text-success"></i>
+                    </div>
+                    <div class="text-start">
+                        <h1 class="mb-1" style="color: var(--verde-pacifico); font-size: 1.8rem;">
+                            Debida Diligencia
+                        </h1>
+                        <p class="subtitulo mb-0">
+                            Complete los archivos requeridos para la debida diligencia del cliente
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <span class="status-badge 
+                        {% if diligencia.estado == 'completado' %}status-completado
+                        {% elif diligencia.estado == 'pendiente' %}status-pendiente
+                        {% else %}status-sin-solicitar{% endif %}">
+                        {% if diligencia.estado == 'completado' %}
+                            <i class="fas fa-check-circle me-2"></i> Completado
+                        {% elif diligencia.estado == 'pendiente' %}
+                            <i class="fas fa-clock me-2"></i> Pendiente
+                        {% else %}
+                            <i class="fas fa-minus-circle me-2"></i> Sin Solicitar
+                        {% endif %}
+                    </span>
+                </div>
+            </div><!-- Cliente Info -->
+            <div class="seccion">
+                <h2 class="seccion h2">
+                    <i class="fas fa-user-circle section-icon"></i>
+                    Información del Cliente
+                </h2>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-success small">Nombre</label>
+                            <p class="fs-6 fw-bold text-dark mb-0">{{ cliente.nombreCliente }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-success small">Cédula</label>
+                            <p class="fs-6 fw-bold text-dark mb-0">{{ cliente.cedulaCliente }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-info{% endif %} d-flex align-items-center" role="alert">
+                        <div class="me-3">
+                            {% if message.tags == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}            <!-- Upload Form -->
+            <div class="seccion">
+                <h2 class="seccion h2">
+                    <i class="fas fa-cloud-upload-alt section-icon"></i>
+                    Cargar Archivos de Debida Diligencia
+                </h2>                <p class="subtitulo mb-3">
+                    Suba los archivos requeridos para completar la debida diligencia. Formatos aceptados: PDF, PNG, JPG, JPEG
+                </p>
+                
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                      <!-- Búsqueda Google -->
+                    <div class="mb-3">
+                        <label for="{{ form.busqueda_google.id_for_label }}" class="form-label fs-6 fw-bold">
+                            <i class="fab fa-google text-primary me-2"></i>
+                            {{ form.busqueda_google.label }}
+                        </label>
+                        <div class="file-upload-area">
+                            {{ form.busqueda_google }}
+                            {% if form.busqueda_google.help_text %}
+                                <p class="mt-2 text-muted small">{{ form.busqueda_google.help_text }}</p>
+                            {% endif %}
+                        </div>
+                        {% if diligencia.busqueda_google %}
+                            <div class="mt-3 p-3 bg-success bg-opacity-10 border border-success rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-paperclip me-1"></i>
+                                        Archivo cargado exitosamente
+                                    </span>
+                                    <a href="{{ diligencia.busqueda_google.url }}" target="_blank" class="btn btn-pacifico btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        Ver archivo
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if form.busqueda_google.errors %}
+                            {% for error in form.busqueda_google.errors %}
+                                <div class="text-danger fw-bold small">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>                    <!-- Búsqueda Registro Público -->
+                    <div class="mb-3">
+                        <label for="{{ form.busqueda_registro_publico.id_for_label }}" class="form-label fs-6 fw-bold">
+                            <i class="fas fa-building text-secondary me-2"></i>
+                            {{ form.busqueda_registro_publico.label }}
+                        </label>
+                        <div class="file-upload-area">
+                            {{ form.busqueda_registro_publico }}
+                            {% if form.busqueda_registro_publico.help_text %}
+                                <p class="mt-2 text-muted small">{{ form.busqueda_registro_publico.help_text }}</p>
+                            {% endif %}
+                        </div>
+                        {% if diligencia.busqueda_registro_publico %}
+                            <div class="mt-3 p-3 bg-success bg-opacity-10 border border-success rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-paperclip me-1"></i>
+                                        Archivo cargado exitosamente
+                                    </span>
+                                    <a href="{{ diligencia.busqueda_registro_publico.url }}" target="_blank" class="btn btn-pacifico btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>
+                                        Ver archivo
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if form.busqueda_registro_publico.errors %}
+                            {% for error in form.busqueda_registro_publico.errors %}
+                                <div class="text-danger fw-bold small">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>                    <!-- Comentarios -->
+                    <div class="mb-3">
+                        <label for="{{ form.comentarios.id_for_label }}" class="form-label fs-6 fw-bold">
+                            <i class="fas fa-comment-alt text-secondary me-2"></i>
+                            {{ form.comentarios.label }}
+                        </label>
+                        {{ form.comentarios }}
+                        {% if form.comentarios.help_text %}
+                            <div class="form-text">{{ form.comentarios.help_text }}</div>
+                        {% endif %}
+                        {% if form.comentarios.errors %}
+                            {% for error in form.comentarios.errors %}
+                                <div class="text-danger fw-bold small">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>                    <!-- Submit Button -->
+                    <div class="text-center pt-2">
+                        <button type="submit" class="btn btn-pacifico">
+                            <i class="fas fa-save me-2"></i>
+                            Guardar Archivos
+                        </button>
+                    </div>
+                </form>
+            </div>            <!-- Status Info -->
+            {% if diligencia.fecha_solicitud %}
+                <div class="seccion">
+                    <h3 class="fs-4 fw-bold text-secondary mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información de la Solicitud
+                    </h3>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-muted small text-uppercase mb-2">Solicitado por</div>
+                                    <div class="fw-bold">{{ diligencia.solicitado_por.get_full_name|default:diligencia.solicitado_por.username }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-muted small text-uppercase mb-2">Fecha de solicitud</div>
+                                    <div class="fw-bold">{{ diligencia.fecha_solicitud|date:"d/m/Y H:i" }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% if diligencia.fecha_completado %}
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="text-muted small text-uppercase mb-2">Fecha de completado</div>
+                                        <div class="fw-bold">{{ diligencia.fecha_completado|date:"d/m/Y H:i" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Auto-submit progress feedback
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            if (form) {
+                const fileInputs = form.querySelectorAll('input[type="file"]');
+                
+                fileInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        if (this.files.length > 0) {
+                            // Show loading indicator
+                            const label = document.querySelector(`label[for="${this.id}"]`);
+                            if (label) {
+                                const icon = label.querySelector('i');
+                                if (icon) {
+                                    icon.className = 'fas fa-spinner fa-spin text-primary me-2';
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // Form submit loading state
+                form.addEventListener('submit', function() {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Guardando...
+                        `;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

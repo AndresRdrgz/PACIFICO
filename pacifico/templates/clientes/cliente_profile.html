@@ -289,31 +289,14 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Debida Diligencia Tab -->
+                  <!-- Debida Diligencia Tab -->
                 <div id="content-diligencia" class="tab-content hidden">
                     <div class="bg-white shadow overflow-hidden rounded-md p-6">
-                        <div class="text-center py-10">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto h-12 w-12 text-gray-400">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <path d="M14 2v6h6"></path>
-                                <path d="M16 13H8"></path>
-                                <path d="M16 17H8"></path>
-                                <path d="M10 9H8"></path>
-                            </svg>
-                            <h3 class="mt-2 text-lg font-medium text-gray-900">Debida Diligencia</h3>
-                            <p class="mt-1 text-sm text-gray-500">Esta sección está en desarrollo.</p>
-                            <div class="mt-5">
-                                <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <path d="M14 2v6h6"></path>
-                                        <path d="M9 15v-6"></path>
-                                        <path d="M12 12h.01"></path>
-                                        <path d="M15 15v-6"></path>
-                                    </svg>
-                                    Completar formulario
-                                </button>
+                        <div id="diligencia-content">
+                            <!-- Content will be loaded by JavaScript -->
+                            <div class="text-center py-10">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                                <p class="mt-2 text-sm text-gray-500">Cargando información de debida diligencia...</p>
                             </div>
                         </div>
                     </div>
@@ -513,8 +496,7 @@
     // Function to update age based on birth date
     function updateAge(birthDateStr) {
         if (birthDateStr) {
-            const birthDate = new Date(birthDateStr);
-            const today = new Date();
+            const birthDate = new Date(birthDateStr);            const today = new Date();
             let age = today.getFullYear() - birthDate.getFullYear();
             const m = today.getMonth() - birthDate.getMonth();
             if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -523,5 +505,273 @@
             document.getElementById('id_edad').value = age;
         }
     }
+
+    // =====================================
+    // DEBIDA DILIGENCIA FUNCTIONALITY
+    // =====================================
+    
+    // Load due diligence status when diligencia tab is activated
+    function loadDebidaDiligenciaStatus() {
+        const clienteId = {{ cliente.id }};
+        
+        fetch(`/debida-diligencia/status/${clienteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderDebidaDiligenciaContent(data);
+                } else {
+                    console.error('Error loading due diligence status:', data.message);
+                    renderDebidaDiligenciaError();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                renderDebidaDiligenciaError();
+            });
+    }
+
+    function renderDebidaDiligenciaContent(data) {
+        const container = document.getElementById('diligencia-content');
+        const { estado, fecha_solicitud, fecha_completado, archivos_completos, busqueda_google, busqueda_registro_publico, comentarios } = data;
+        
+        let statusBadge = '';
+        let statusIcon = '';
+        let actionButton = '';
+        let filesSection = '';
+        
+        // Status badge and icon
+        if (estado === 'completado') {
+            statusBadge = '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i> Completado</span>';
+            statusIcon = '<i class="fas fa-shield-check text-green-600"></i>';
+        } else if (estado === 'pendiente') {
+            statusBadge = '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800"><i class="fas fa-clock mr-1"></i> Pendiente</span>';
+            statusIcon = '<i class="fas fa-hourglass-half text-yellow-600"></i>';
+        } else {
+            statusBadge = '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800"><i class="fas fa-minus-circle mr-1"></i> Sin Solicitar</span>';
+            statusIcon = '<i class="fas fa-shield-alt text-gray-400"></i>';
+        }
+
+        // Action button
+        if (estado === 'sin_solicitar') {
+            actionButton = `
+                <button onclick="solicitarDebidaDiligencia()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Solicitar Debida Diligencia
+                </button>
+            `;
+        } else if (estado === 'pendiente') {
+            actionButton = `
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Debida diligencia solicitada. Se ha enviado un email de notificación.
+                </div>
+            `;
+        }
+
+        // Files section
+        if (estado === 'completado' || (busqueda_google || busqueda_registro_publico)) {
+            filesSection = `
+                <div class="mt-8 border-t border-gray-200 pt-6">
+                    <h4 class="text-lg font-medium text-gray-900 mb-4">Archivos de Debida Diligencia</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <h5 class="text-sm font-medium text-gray-700 flex items-center">
+                                <i class="fab fa-google text-blue-600 mr-2"></i>
+                                Búsqueda Google
+                            </h5>
+                            ${busqueda_google ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-paperclip mr-1"></i> Archivo disponible
+                                    </span>
+                                    <a href="${busqueda_google}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-external-link-alt mr-1"></i> Ver archivo
+                                    </a>
+                                </div>
+                            ` : `
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <i class="fas fa-minus-circle mr-1"></i> No disponible
+                                </span>
+                            `}
+                        </div>
+                        <div class="space-y-3">
+                            <h5 class="text-sm font-medium text-gray-700 flex items-center">
+                                <i class="fas fa-building text-gray-600 mr-2"></i>
+                                Búsqueda Registro Público
+                            </h5>
+                            ${busqueda_registro_publico ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-paperclip mr-1"></i> Archivo disponible
+                                    </span>
+                                    <a href="${busqueda_registro_publico}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-external-link-alt mr-1"></i> Ver archivo
+                                    </a>
+                                </div>
+                            ` : `
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <i class="fas fa-minus-circle mr-1"></i> No disponible
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                    ${comentarios ? `
+                        <div class="mt-6">
+                            <h5 class="text-sm font-medium text-gray-700 mb-2">Comentarios/Observaciones</h5>
+                            <div class="bg-gray-50 rounded-md p-3">
+                                <p class="text-sm text-gray-700">${comentarios}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Dates section
+        let datesSection = '';
+        if (fecha_solicitud) {
+            datesSection = `
+                <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-3">Información de la Solicitud</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Fecha de solicitud:</span>
+                            <p class="font-medium">${new Date(fecha_solicitud).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                        ${fecha_completado ? `
+                            <div>
+                                <span class="text-gray-500">Fecha de completado:</span>
+                                <p class="font-medium">${new Date(fecha_completado).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="text-center py-6">
+                <div class="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
+                    ${statusIcon}
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Debida Diligencia</h3>
+                <div class="mb-4">${statusBadge}</div>
+                <p class="text-sm text-gray-500 mb-6">
+                    ${estado === 'sin_solicitar' ? 'Inicie el proceso de debida diligencia para este cliente.' : 
+                      estado === 'pendiente' ? 'La debida diligencia está en proceso.' : 
+                      'La debida diligencia ha sido completada.'}
+                </p>
+                <div class="mb-6">${actionButton}</div>
+            </div>
+            ${filesSection}
+            ${datesSection}
+        `;
+    }
+
+    function renderDebidaDiligenciaError() {
+        const container = document.getElementById('diligencia-content');
+        container.innerHTML = `
+            <div class="text-center py-10">
+                <i class="fas fa-exclamation-triangle text-red-400 text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Error</h3>
+                <p class="text-sm text-gray-500">No se pudo cargar la información de debida diligencia.</p>
+                <button onclick="loadDebidaDiligenciaStatus()" class="mt-4 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-redo mr-2"></i>
+                    Reintentar
+                </button>
+            </div>
+        `;
+    }
+
+    function solicitarDebidaDiligencia() {
+        const clienteId = {{ cliente.id }};
+        const clienteNombre = "{{ cliente.nombreCliente }}";
+        const clienteCedula = "{{ cliente.cedulaCliente }}";
+        
+        // Show confirmation modal
+        if (confirm(`¿Está seguro que desea solicitar la debida diligencia para el siguiente cliente?\\n\\nNombre: ${clienteNombre}\\nCédula: ${clienteCedula}`)) {
+            // Show loading state
+            const container = document.getElementById('diligencia-content');
+            container.innerHTML = `
+                <div class="text-center py-10">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p class="text-sm text-gray-500">Enviando solicitud...</p>
+                </div>
+            `;
+            
+            // Send request
+            fetch(`/debida-diligencia/solicitar/${clienteId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showNotification('Debida diligencia solicitada correctamente. Se ha enviado un email de notificación.', 'success');
+                    // Reload the content
+                    loadDebidaDiligenciaStatus();
+                } else {
+                    showNotification(data.message || 'Error al solicitar la debida diligencia', 'error');
+                    loadDebidaDiligenciaStatus();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error al solicitar la debida diligencia', 'error');
+                loadDebidaDiligenciaStatus();
+            });
+        }
+    }
+
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 ${type === 'success' ? 'border-l-4 border-green-400' : type === 'error' ? 'border-l-4 border-red-400' : 'border-l-4 border-blue-400'}`;
+        notification.innerHTML = `
+            <div class="p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        ${type === 'success' ? '<i class="fas fa-check-circle text-green-400"></i>' : 
+                          type === 'error' ? '<i class="fas fa-exclamation-circle text-red-400"></i>' : 
+                          '<i class="fas fa-info-circle text-blue-400"></i>'}
+                    </div>
+                    <div class="ml-3 w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-900">${message}</p>
+                    </div>
+                    <div class="ml-4 flex-shrink-0 flex">
+                        <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Load due diligence status when the tab is clicked
+    document.addEventListener('DOMContentLoaded', function() {
+        const diligenciaTab = document.getElementById('tab-diligencia');
+        if (diligenciaTab) {
+            diligenciaTab.addEventListener('click', function() {
+                // Small delay to ensure tab content is visible
+                setTimeout(() => {
+                    loadDebidaDiligenciaStatus();
+                }, 100);
+            });
+        }
+    });
 </script>
 {% endblock %}

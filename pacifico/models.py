@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.contrib.postgres.fields import JSONField
+from django.core.validators import FileExtensionValidator
 
 SEXO_OPCIONES = [
         ('MASCULINO', 'Masculino'),
@@ -185,8 +186,7 @@ class Cliente(models.Model):
     
     
     def __str__(self):
-        return f"{self.nombreCliente} - {self.cedulaCliente}"
-    
+        return f"{self.nombreCliente} - {self.cedulaCliente}"    
 
 
 class Cotizacion(models.Model):
@@ -661,3 +661,50 @@ class CotizacionDocumento(models.Model):
 
     def __str__(self):
         return f"{self.cotizacion.NumeroCotizacion} - {self.tipo_documento}"
+
+class DebidaDiligencia(models.Model):
+    ESTADO_CHOICES = [
+        ('sin_solicitar', 'Sin Solicitar'),
+        ('pendiente', 'Pendiente'),
+        ('completado', 'Completado'),
+    ]
+    
+    cliente = models.OneToOneField(Cliente, on_delete=models.CASCADE, related_name='debida_diligencia')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='sin_solicitar')
+    solicitado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='diligencias_solicitadas')
+    fecha_solicitud = models.DateTimeField(null=True, blank=True)
+    
+    # Archivos de búsqueda
+    busqueda_google = models.FileField(
+        upload_to='diligencia/google/', 
+        null=True, 
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'png', 'jpg', 'jpeg'])]
+    )
+    busqueda_registro_publico = models.FileField(
+        upload_to='diligencia/registro_publico/', 
+        null=True, 
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'png', 'jpg', 'jpeg'])]
+    )
+    
+    # Comentarios/observaciones
+    comentarios = models.TextField(blank=True, null=True)
+    
+    # Fechas de completado
+    fecha_completado = models.DateTimeField(null=True, blank=True)
+    completado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='diligencias_completadas')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Diligencia - {self.cliente.nombreCliente} ({self.get_estado_display()})"
+    
+    @property
+    def archivos_completos(self):
+        return bool(self.busqueda_google and self.busqueda_registro_publico)
+    
+    class Meta:
+        verbose_name = 'Debida Diligencia'
+        verbose_name_plural = 'Debidas Diligencias'
