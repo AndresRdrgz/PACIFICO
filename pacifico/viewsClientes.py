@@ -40,7 +40,13 @@ def cliente_profile(request, id):
 
 @login_required
 def clientesList(request):
-    clientes = Cliente.objects.all().order_by('-id')  # Sort by newest first
+    # Filter clients based on user role
+    if request.user.groups.filter(name='Oficial').exists():
+        # Oficial users can only see clients where they are the propietario
+        clientes = Cliente.objects.filter(propietario=request.user).order_by('-id')
+    else:
+        # All other users can see all clients
+        clientes = Cliente.objects.all().order_by('-id')
     
     # Apply filter only for Supervisors and Administrators
     cliente_filter = ClienteFilter(request.GET, queryset=clientes, user=request.user)
