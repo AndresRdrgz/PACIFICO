@@ -53,13 +53,15 @@ def detalle_curso(request, curso_id):
 
     total_temas = sum(mod.temas.count() for mod in curso.modulos.all())
     total_quizzes = Quiz.objects.filter(modulo__curso=curso).count()
-    total_elementos = total_temas + total_quizzes
-    total_completados = len(temas_completados_ids) + quizzes_aprobados_count
+    encuesta_completada = progreso.encuesta_completada  # Nuevo campo para verificar si la encuesta está completada
+
+    total_elementos = total_temas + total_quizzes + 1  # Se suma 1 por la encuesta
+    total_completados = len(temas_completados_ids) + quizzes_aprobados_count + (1 if encuesta_completada else 0)
 
     progreso_percent = round((total_completados / total_elementos) * 100) if total_elementos > 0 else 0
     progreso_percent = min(progreso_percent, 100)
 
-    curso_completado = (progreso_percent == 100)
+    curso_completado = (progreso_percent == 100) and encuesta_completada
 
     return render(request, 'capacitaciones_app/detalle_curso.html', {
         'curso': curso,
@@ -107,14 +109,7 @@ def ver_tema(request, curso_id, tema_id):
 @login_required
 def marcar_tema_completado(request, tema_id):
     tema = get_object_or_404(Tema, id=tema_id)
-    try:
-        fb = Feedback.objects.get(usuario=request.user, tema=tema)
-        if fb.puntuacion is None:
-            raise Feedback.DoesNotExist
-    except Feedback.DoesNotExist:
-        messages.error(request, "Por favor completa la encuesta antes de marcar como completado.")
-        return redirect('ver_tema', curso_id=tema.modulo.curso.id, tema_id=tema.id)
-
+    # Ya no se requiere feedback para marcar como completado
     progreso, _ = ProgresoTema.objects.get_or_create(usuario=request.user, tema=tema)
     progreso.completado = True
     progreso.fecha_completado = timezone.now()

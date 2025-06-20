@@ -15,6 +15,7 @@ from .models import (
     ResultadoQuiz,
     GrupoAsignacion
 )
+from .models_encuesta import EncuestaSatisfaccionCurso
 
 # 🔹 Opciones dentro de una pregunta
 class OpcionInline(nested_admin.NestedTabularInline):
@@ -112,12 +113,26 @@ class ResultadoQuizAdmin(admin.ModelAdmin):
     list_filter = ('aprobado',)
     search_fields = ('usuario__username',)
 
+# 🔹 Encuestas de satisfacción del curso
+class EncuestaSatisfaccionCursoAdmin(admin.ModelAdmin):
+    list_display = ('departamento', 'cargo', 'expositor', 'utilidad', 'satisfaccion', 'lugar', 'rol', 'usuario', 'fecha')
+    list_filter = ('departamento', 'cargo', 'lugar', 'rol', 'fecha')
+    search_fields = ('departamento', 'cargo', 'aprendido', 'recomendacion', 'usuario__username')
+    readonly_fields = ('fecha',)
+
+# 🔹 Progreso del curso
+class ProgresoCursoAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'curso', 'completado', 'encuesta_completada', 'fecha_completado')
+    list_filter = ('completado', 'encuesta_completada')
+    search_fields = ('usuario__username', 'curso__titulo')
+
 # 🔹 Registro final
 admin.site.register(Curso, CursoAdmin)
 admin.site.register(Modulo)
 admin.site.register(Tema, TemaAdmin)
 admin.site.register(ArchivoAdicional)
-admin.site.register(ProgresoCurso)
+admin.site.register(ProgresoCurso, ProgresoCursoAdmin)
 admin.site.register(ProgresoTema)
 admin.site.register(Quiz)
 admin.site.register(ResultadoQuiz, ResultadoQuizAdmin)
+admin.site.register(EncuestaSatisfaccionCurso, EncuestaSatisfaccionCursoAdmin)

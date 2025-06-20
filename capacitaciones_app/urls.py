@@ -19,6 +19,8 @@ from capacitaciones_app.views import (
 
 from .views_asignacion import historial_asignaciones_ajax
 from capacitaciones_app.views_asignacion import historial_usuario
+from capacitaciones_app.views_encuesta import encuesta_satisfaccion_curso
+from capacitaciones_app.api import encuestas_json, actualizar_progreso
 
 urlpatterns = [
     # 🔐 Admin & Auth
@@ -48,6 +50,12 @@ urlpatterns = [
     path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
     path('mi-progreso/', historial_usuario, name='mi_progreso'),
 
+    # Encuesta de Satisfacción
+    path('encuesta/satisfaccion/', encuesta_satisfaccion_curso, name='encuesta_satisfaccion_curso'),
+
+    # API Endpoints
+    path('api/encuestas/', encuestas_json, name='encuestas_json'),
+    path('api/actualizar_progreso/', actualizar_progreso, name='actualizar_progreso'),
 ]
 
 if settings.DEBUG:

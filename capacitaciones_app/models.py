@@ -114,9 +114,10 @@ class ProgresoCurso(models.Model):
     modulos_completados = models.ManyToManyField(Modulo, blank=True)
     completado = models.BooleanField(default=False)
     fecha_completado = models.DateTimeField(null=True, blank=True)
+    encuesta_completada = models.BooleanField(default=False)  # Confirmación de encuesta completada
 
     def __str__(self):
-        return f"{self.usuario.username} - {self.curso.titulo}"
+        return f"Progreso de {self.usuario} en {self.curso}"
 
 
 # ✅ PROGRESO POR TEMA
