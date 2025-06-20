@@ -7,4 +7,11 @@ from .models import UserProfile
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
-    instance.userprofile.save()
+    else:
+        # Only try to save the userprofile if it exists
+        try:
+            if hasattr(instance, 'userprofile'):
+                instance.userprofile.save()
+        except UserProfile.DoesNotExist:
+            # Create a profile if it doesn't exist
+            UserProfile.objects.create(user=instance)

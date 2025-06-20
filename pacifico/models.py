@@ -171,7 +171,7 @@ class PeriodoPago(models.Model):
          
 
 class Cliente(models.Model):
-    cedulaCliente = models.CharField(max_length=255, null=True)
+    cedulaCliente = models.CharField(max_length=255, null=True,blank=True)
     nombreCliente = models.CharField(max_length=255, null=True)
     fechaNacimiento = models.DateField(null=True,blank=True)
     edad = models.IntegerField(null=True,blank=True)

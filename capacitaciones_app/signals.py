@@ -83,4 +83,10 @@ def crear_perfil_usuario(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=User)
 def guardar_perfil_usuario(sender, instance, **kwargs):
-    instance.perfil.save()
+    try:
+        # First check if the perfil exists
+        if hasattr(instance, 'perfil'):
+            instance.perfil.save()
+    except PerfilUsuario.DoesNotExist:
+        # Create a profile if it doesn't exist
+        PerfilUsuario.objects.create(user=instance)
