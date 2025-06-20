@@ -65,25 +65,3 @@ class AsignacionCursoForm(forms.Form):
         label="Cursos a asignar"
     )
 
-from django import forms
-from .models_encuesta import EncuestaSatisfaccionCurso
-
-class EncuestaSatisfaccionCursoForm(forms.ModelForm):
-    class Meta:
-        model = EncuestaSatisfaccionCurso
-        fields = [
-            'departamento', 'cargo', 'expositor', 'utilidad', 'satisfaccion',
-            'aprendido', 'lugar', 'rol', 'recomendacion'
-        ]
-        widgets = {
-            'departamento': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'cargo': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'expositor': forms.NumberInput(attrs={'type': 'range', 'min': 1, 'max': 5, 'step': 1, 'class': 'form-range neumorphic-slider', 'required': True}),
-            'utilidad': forms.RadioSelect(attrs={'class': 'btn-check', 'required': True}),
-            'satisfaccion': forms.NumberInput(attrs={'type': 'range', 'min': 1, 'max': 5, 'step': 1, 'class': 'form-range neumorphic-slider', 'required': True}),
-            'aprendido': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'maxlength': 300, 'required': True}),
-            'lugar': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'rol': forms.Select(attrs={'class': 'form-select', 'required': True}),
-            'recomendacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'maxlength': 200}),
-        }
-
