@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Cliente, Cotizacion
+from .models import Cliente, Cotizacion, UserProfile
 from .formsClientes import ClienteForm, EditClienteForm
 from .filtersClientes import ClienteFilter
 from django.http import JsonResponse
@@ -40,8 +40,15 @@ def cliente_profile(request, id):
 
 @login_required
 def clientesList(request):
+    # Get user profile to check role
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+        user_rol = user_profile.rol
+    except UserProfile.DoesNotExist:
+        user_rol = 'Supervisor'  # Default role if no profile exists
+    
     # Filter clients based on user role
-    if request.user.groups.filter(name='Oficial').exists():
+    if user_rol == 'Oficial':
         # Oficial users can only see clients where they are the propietario
         clientes = Cliente.objects.filter(propietario=request.user).order_by('-id')
     else:
@@ -54,7 +61,7 @@ def clientesList(request):
     
     # Check if user can see the filter
     show_filter = (
-        request.user.groups.filter(name__in=['Supervisor', 'Administrador']).exists() or 
+        user_rol in ['Supervisor', 'Administrador'] or 
         request.user.is_superuser
     )
     
