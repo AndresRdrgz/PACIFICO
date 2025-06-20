@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Cliente, Cotizacion
 from .formsClientes import ClienteForm, EditClienteForm
+from .filtersClientes import ClienteFilter
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
@@ -41,7 +42,23 @@ def cliente_profile(request, id):
 def clientesList(request):
     clientes = Cliente.objects.all().order_by('-id')  # Sort by newest first
     
-    return render(request, 'clientes/clientesList.html', {'clientes': clientes})
+    # Apply filter only for Supervisors and Administrators
+    cliente_filter = ClienteFilter(request.GET, queryset=clientes, user=request.user)
+    clientes = cliente_filter.qs
+    
+    # Check if user can see the filter
+    show_filter = (
+        request.user.groups.filter(name__in=['Supervisor', 'Administrador']).exists() or 
+        request.user.is_superuser
+    )
+    
+    context = {
+        'clientes': clientes,
+        'filter': cliente_filter,
+        'show_filter': show_filter,
+    }
+    
+    return render(request, 'clientes/clientesList.html', context)
 
 @login_required
 @csrf_exempt
