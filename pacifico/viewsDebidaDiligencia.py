@@ -111,12 +111,57 @@ def debida_diligencia_upload(request, diligencia_id):
         form = DebidaDiligenciaForm(request.POST, request.FILES, instance=diligencia)
         if form.is_valid():
             diligencia = form.save(commit=False)
-            
-            # Si ambos archivos están presentes, marcar como completado
+              # Si ambos archivos están presentes, marcar como completado
             if diligencia.archivos_completos:
                 diligencia.estado = 'completado'
                 diligencia.fecha_completado = timezone.now()
                 diligencia.completado_por = request.user
+                
+                # Enviar notificación por email al usuario que solicitó la debida diligencia
+                if diligencia.solicitado_por and diligencia.solicitado_por.email:
+                    try:
+                        subject = f'Debida Diligencia Completada - {diligencia.cliente.nombreCliente}'
+                        
+                        # URL para ver el perfil del cliente
+                        cliente_profile_url = request.build_absolute_uri(
+                            reverse('cliente_profile', args=[diligencia.cliente.id])
+                        )
+                        
+                        message = f"""
+Estimado/a {diligencia.solicitado_por.get_full_name() or diligencia.solicitado_por.username},
+
+La debida diligencia que solicitó ha sido completada exitosamente.
+
+Detalles del cliente:
+Cliente: {diligencia.cliente.nombreCliente}
+Cédula: {diligencia.cliente.cedulaCliente}
+Fecha de solicitud: {diligencia.fecha_solicitud.strftime('%d/%m/%Y %H:%M')}
+Fecha de completado: {diligencia.fecha_completado.strftime('%d/%m/%Y %H:%M')}
+Completado por: {diligencia.completado_por.get_full_name() or diligencia.completado_por.username}
+
+Los archivos de debida diligencia ya están disponibles para su revisión.
+
+Para ver los resultados, ingrese al siguiente enlace:
+{cliente_profile_url}?tab=diligencia
+
+Saludos,
+Sistema Pacífico - Makito RPA
+"""
+                        
+                        email = EmailMessage(
+                            subject=subject,
+                            body=message,
+                            from_email='aplicacion@fpacifico.com',
+                            to=[diligencia.solicitado_por.email],
+                            cc=['arodriguez@fpacifico.com', 'jacastillo@fpacifico.com'],
+                        )
+                        email.send(fail_silently=False)
+                        
+                        print(f"Email de completado enviado a: {diligencia.solicitado_por.email}")
+                        
+                    except Exception as e:
+                        print(f"Error enviando email de completado: {e}")
+                        # No interrumpir el flujo si falla el email
             
             diligencia.save()
             
