@@ -7,7 +7,7 @@ from django.contrib import messages
 @login_required
 def edit_profile(request):
     user = request.user
-    user_profile = UserProfile.objects.get(user=user)
+    user_profile, created = UserProfile.objects.get_or_create(user=user)
 
     if request.method == 'POST':
         user_form = UserForm(request.POST, instance=user)
@@ -15,10 +15,17 @@ def edit_profile(request):
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
             profile_form.save()
-            messages.success(request, 'Your profile was successfully updated!')
+            messages.success(request, 'Perfil actualizado exitosamente!')
             return redirect('edit_profile')
         else:
-            messages.error(request, 'Please correct the error below.')
+            messages.error(request, 'Por favor corrija los errores a continuación.')
+            # Add form errors to messages for debugging
+            for field, errors in user_form.errors.items():
+                for error in errors:
+                    messages.error(request, f'Error en {field}: {error}')
+            for field, errors in profile_form.errors.items():
+                for error in errors:
+                    messages.error(request, f'Error en {field}: {error}')
     else:
         user_form = UserForm(instance=user)
         profile_form = UserProfileForm(instance=user_profile)

@@ -619,6 +619,7 @@ class Cotizacion(models.Model):
             'sexo': self.sexo,
             'jubilado': self.jubilado,
             'propietario': self.added_by,
+            'added_by': self.added_by,
             
             }
         )
@@ -629,6 +630,8 @@ class Cotizacion(models.Model):
             cliente.edad = self.edad
             cliente.sexo = self.sexo
             cliente.jubilado = self.jubilado
+            cliente.propietario = self.added_by
+            
 
             
             

@@ -72,6 +72,7 @@
                         <thead class="text-xs text-white uppercase sticky top-0" style="background-color: #22a650;">
                             <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">                                <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">ID</th>
                                 <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">NOMBRE</th>
+                                <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">CÉDULA</th>
                                 <th class="h-12 px-4 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">PROPIETARIO</th>
                                 <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA CREACIÓN</th>
                                 <th class="h-12 px-4 text-center align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 font-semibold">FECHA ACTUALIZADO</th>
@@ -80,12 +81,26 @@
                         </thead>
                         <tbody id="clientesTableBody" class="bg-white border-b">
                             {% for cliente in clientes %}
-                            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 border-b transition-colors cursor-pointer" data-href="{% url 'cliente_profile' cliente.id %}">
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center">{{ cliente.id }}</td>
+                            <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-200 border-b transition-colors cursor-pointer" data-href="{% url 'cliente_profile' cliente.id %}">                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center">{{ cliente.id }}</td>
                                 <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 font-medium">{{ cliente.nombreCliente }}</td>
                                 <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
+                                    {% if cliente.cedulaCliente %}
+                                        {{ cliente.cedulaCliente }}
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
                                     {% if cliente.propietario %}
-                                        {{ cliente.propietario.get_full_name|default:cliente.propietario.username }}
+                                        <div class="flex items-center gap-2">
+                                            {% if cliente.propietario.userprofile.profile_picture %}
+                                                <img src="{{ cliente.propietario.userprofile.profile_picture.url }}" alt="Profile" class="w-8 h-8 rounded-full object-cover">
+                                            {% else %}
+                                                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-600">
+                                                    {{ cliente.propietario.get_full_name|default:cliente.propietario.username|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                            <span class="text-sm">{{ cliente.propietario.get_full_name|default:cliente.propietario.username }}</span>
+                                        </div>
                                     {% else %}
                                         <span class="text-gray-400">Sin asignar</span>
                                     {% endif %}
@@ -94,17 +109,27 @@
                                     {{ cliente.created_at|date:"d/m/Y h:i a" }}
                                 </td>                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-center text-sm">
                                     {{ cliente.updated_at|date:"d/m/Y h:i a" }}
-                                </td>
-                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
+                                </td>                                <td class="p-4 align-middle [&:has([role=checkbox])]:pr-0">
                                     {% if cliente.added_by %}
-                                        <div class="text-sm text-gray-900">{{ cliente.added_by.get_full_name|default:cliente.added_by.username }}</div>
-                                       
+                                        <div class="flex items-center gap-2">
+                                            {% if cliente.added_by.userprofile.profile_picture %}
+                                                <img src="{{ cliente.added_by.userprofile.profile_picture.url }}" alt="Profile" class="w-8 h-8 rounded-full object-cover">
+                                            {% else %}
+                                                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-600">
+                                                    {{ cliente.added_by.get_full_name|default:cliente.added_by.username|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="text-sm text-gray-900">{{ cliente.added_by.get_full_name|default:cliente.added_by.username }}</div>
+                                                
+                                            </div>
+                                        </div>
                                     {% else %}
                                         <span class="text-gray-400">-</span>
                                     {% endif %}
                                 </td>
                             </tr>                            {% empty %}                            <tr id="noMatchRow">
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                                     No hay clientes registrados.
                                 </td>
                             </tr>
@@ -262,7 +287,7 @@ function filterTable() {
         var tbody = table.querySelector("tbody");
         var newRow = document.createElement("tr");
         newRow.id = "noMatchRow";
-        newRow.innerHTML = '<td colspan="6" class="px-6 py-4 text-center text-gray-500">No se encontraron clientes que coincidan con la búsqueda.</td>';
+        newRow.innerHTML = '<td colspan="7" class="px-6 py-4 text-center text-gray-500">No se encontraron clientes que coincidan con la búsqueda.</td>';
         tbody.appendChild(newRow);    } else if (!noMatch && noMatchRow) {
         noMatchRow.remove();
     }
