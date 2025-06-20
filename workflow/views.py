@@ -166,8 +166,15 @@ def gracias(request):
 
 
 def lista_entrevistas(request):
-    entrevistas = ClienteEntrevista.objects.all()
-    return render(request, 'formulario/lista_entrevistas.html', {'entrevistas': entrevistas})
+    entrevistas = ClienteEntrevista.objects.values(
+        'id', 'primer_nombre', 'primer_apellido', 'email', 'telefono', 'tipo_producto', 'oficial',
+        'provincia_cedula', 'tipo_letra', 'tomo_cedula', 'partida_cedula', 'fecha_entrevista'
+    )
+    total_entrevistas = entrevistas.count()
+    return render(request, 'formulario/lista_entrevistas.html', {
+        'entrevistas': entrevistas,
+        'total_entrevistas': total_entrevistas
+    })
 
 
 def descargar_entrevistas_excel(request):
