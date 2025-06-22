@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from .forms import EncuestaSatisfaccionCursoForm
 from .models import ProgresoCurso, Curso
 from .models_encuesta import EncuestaSatisfaccionCurso
@@ -22,8 +24,9 @@ def encuesta_satisfaccion_curso(request):
 
     encuesta_existente = EncuestaSatisfaccionCurso.objects.filter(usuario=request.user, curso=curso).first()
     if encuesta_existente:
-        messages.info(request, 'Ya has completado la encuesta para este curso.')
-        return redirect('detalle_curso', curso_id=curso.id)
+        # Redirigir con parámetro para mostrar notificación en detalle del curso
+        url = reverse('detalle_curso', kwargs={'curso_id': curso.id})
+        return HttpResponseRedirect(f'{url}?encuesta_ya_completada=true')
 
     if request.method == 'POST':
         form = EncuestaSatisfaccionCursoForm(request.POST)

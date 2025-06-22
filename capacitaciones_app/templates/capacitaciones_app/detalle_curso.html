@@ -2,6 +2,16 @@
 {% block title %}{{ curso.titulo }}{% endblock %}
 
 {% block content %}
+<!-- Notificación flotante para encuesta ya completada -->
+<div id="notificacion-encuesta" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-info alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>¡Ya completaste esta encuesta!</strong>
+        <br>No puedes volver a completar la encuesta de satisfacción de este curso.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
 <!-- 🌀 Contenedor principal con transición -->
 <div 
     x-data="{ visible: false }"
@@ -232,7 +242,32 @@ p {
     </div>
 {% endif %}
 
-
-
+<script>
+// Verificar si debe mostrar la notificación de encuesta ya completada
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar el parámetro en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('encuesta_ya_completada') === 'true') {
+        // Mostrar la notificación
+        const notificacion = document.getElementById('notificacion-encuesta');
+        if (notificacion) {
+            notificacion.style.display = 'block';
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                const alert = notificacion.querySelector('.alert');
+                if (alert) {
+                    alert.classList.remove('show');
+                    setTimeout(() => {
+                        notificacion.style.display = 'none';
+                        // Limpiar la URL sin recargar la página
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }, 150);
+                }
+            }, 5000);
+        }
+    }
+});
+</script>
 
 {% endblock %}

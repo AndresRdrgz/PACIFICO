@@ -549,32 +549,18 @@
   const form = document.getElementById('encuesta-form');
   const exito = document.getElementById('encuesta-exito');
 
+  // El formulario se envía normalmente, solo manejamos la animación de éxito
   form.addEventListener('submit', function(e) {
-    // Simular envío de datos y actualización de progreso
-    fetch('/api/actualizar_progreso/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({ curso_id: 3, progreso_incremento: 10 })
-    })
-    .then(response => {
-      if (response.ok) {
+    // No interceptamos el envío, dejamos que Django lo maneje
+    // Solo mostramos la animación si no hay errores de validación
+    if (form.checkValidity()) {
+      // Mostrar mensaje de éxito después de un breve delay para que se vea la animación
+      setTimeout(() => {
         form.classList.add('d-none');
         exito.classList.remove('d-none');
-        setTimeout(() => {
-          window.location.href = '{% url "detalle_curso" 3 %}';
-        }, 2000);
-      } else {
-        alert('Hubo un error al enviar la encuesta. Por favor, inténtelo de nuevo.');
-        console.error('Error en la respuesta del servidor:', response.statusText);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Hubo un error al enviar la encuesta. Por favor, inténtelo de nuevo.');
-    });
+        exito.classList.add('animate__tada');
+      }, 500);
+    }
   });
 })();
 </script>

@@ -50,11 +50,11 @@ def detalle_curso(request, curso_id):
         quiz__modulo__curso=curso,
         aprobado=True
     ).count()
-
+    
     total_temas = sum(mod.temas.count() for mod in curso.modulos.all())
     total_quizzes = Quiz.objects.filter(modulo__curso=curso).count()
     encuesta_completada = progreso.encuesta_completada  # Nuevo campo para verificar si la encuesta está completada
-
+    
     total_elementos = total_temas + total_quizzes + 1  # Se suma 1 por la encuesta
     total_completados = len(temas_completados_ids) + quizzes_aprobados_count + (1 if encuesta_completada else 0)
 
@@ -63,6 +63,9 @@ def detalle_curso(request, curso_id):
 
     curso_completado = (progreso_percent == 100) and encuesta_completada
 
+    # Verificar si viene de un intento de completar encuesta ya realizada
+    mostrar_notificacion_encuesta = request.GET.get('encuesta_ya_completada') == 'true'
+
     return render(request, 'capacitaciones_app/detalle_curso.html', {
         'curso': curso,
         'progreso': progreso,
@@ -70,7 +73,8 @@ def detalle_curso(request, curso_id):
         'progreso_percent': progreso_percent,
         'temas_completados_ids': temas_completados_ids,
         'curso_completado': curso_completado, 
-         'cert_warning': False,
+        'cert_warning': False,
+        'mostrar_notificacion_encuesta': mostrar_notificacion_encuesta,
     })
 
 
