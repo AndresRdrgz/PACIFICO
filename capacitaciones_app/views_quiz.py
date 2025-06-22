@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 from .models import Modulo, Quiz, ResultadoQuiz, Opcion
 from .forms import QuizRespuestaForm
@@ -27,7 +29,12 @@ def quiz_modulo(request, curso_id, modulo_id):
                 if resp_id:
                     opcion = Opcion.objects.get(id=resp_id)
                     if opcion.es_correcta:
-                        puntaje += pregunta.puntaje
+                        puntaje += pregunta.puntaje            # Verificar si ya completó el quiz antes
+            quiz_ya_completado = ResultadoQuiz.objects.filter(
+                usuario=request.user,
+                quiz=quiz,
+                aprobado=True
+            ).exists()
 
             aprobado = puntaje >= 81
             ResultadoQuiz.objects.create(
@@ -36,8 +43,14 @@ def quiz_modulo(request, curso_id, modulo_id):
                 puntaje=puntaje,
                 aprobado=aprobado
             )
-            messages.success(request, f"Tu puntaje es: {puntaje}/100")
-            return redirect(f"{request.path}?reintentar=0")
+            
+            if aprobado:
+                # Redirigir con parámetro para mostrar notificación de éxito
+                url = reverse('detalle_curso', kwargs={'curso_id': modulo.curso.id})
+                return HttpResponseRedirect(f'{url}?quiz_completado_exitoso=true&puntaje={puntaje}')
+            else:
+                messages.error(request, f"No aprobaste. Tu puntaje es: {puntaje}/100. Necesitas 81 puntos para aprobar.")
+                return redirect(f"{request.path}?reintentar=0")
     else:
         form = QuizRespuestaForm(preguntas=preguntas)
 

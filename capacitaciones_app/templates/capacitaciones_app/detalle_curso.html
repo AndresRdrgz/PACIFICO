@@ -2,12 +2,33 @@
 {% block title %}{{ curso.titulo }}{% endblock %}
 
 {% block content %}
-<!-- Notificación flotante para encuesta ya completada -->
+<!-- Toast Notifications -->
+<!-- Encuesta ya completada -->
 <div id="notificacion-encuesta" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
     <div class="alert alert-info alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
         <i class="fas fa-info-circle me-2"></i>
         <strong>¡Ya completaste esta encuesta!</strong>
         <br>No puedes volver a completar la encuesta de satisfacción de este curso.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- Quiz completado exitosamente -->
+<div id="notificacion-quiz" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-success alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>¡Quiz completado exitosamente!</strong>
+        <br>Tu puntaje: <span id="puntaje-quiz"></span>/100 - ¡Aprobado!
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- Certificado ya descargado -->
+<div id="notificacion-certificado" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-warning alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-certificate me-2"></i>
+        <strong>¡Certificado ya descargado!</strong>
+        <br>Ya descargaste el certificado de este curso anteriormente.
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 </div>
@@ -132,9 +153,7 @@
             {% empty %}
                 <p class="text-muted">Este curso aún no tiene módulos definidos.</p>
             {% endfor %}
-        </div>
-
-        <!-- 🎨 Estilos neumórficos -->
+        </div>        <!-- 🎨 Estilos neumórficos CORREGIDOS -->
 <style>
 /* Contenedor principal */
 .fade-wrapper {
@@ -150,8 +169,8 @@
     opacity: 0;
 }
 
-/* Botones neumórficos */
-.btn {
+/* Botones neumórficos - NO aplicar al acordeón */
+.btn:not(.accordion-button) {
     border-radius: 12px;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -162,7 +181,7 @@
     font-size: 1rem;
     border: 2px solid #198754; /* Marco verde */
 }
-.btn:hover {
+.btn:not(.accordion-button):hover {
     box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
     background-color: #d1d9e6;
     color: #495057;
@@ -181,20 +200,99 @@
     box-shadow: 4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff;
 }
 
-/* Tarjetas neumórficas */
+/* ACORDEÓN FUNCIONAL - Estilos mínimos que NO interfieren con Bootstrap */
 .accordion-item {
-    border-radius: 12px;
-    border: none;
-    box-shadow: 4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff;
-    background-color: #e0e5ec;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.accordion-header {
-    background-color: #e0e5ec;
-    box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
+
+.accordion-button {
+    color: #198754;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
 }
+
+.accordion-button:not(.collapsed) {
+    background-color: #198754;
+    color: white;
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+}
+
 .accordion-body {
     background-color: #ffffff;
-    box-shadow: inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #ffffff;
+    padding: 1.25rem;
+}
+
+/* FORZAR VISIBILIDAD DEL CONTENIDO DEL ACORDEÓN */
+.accordion-collapse.show {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+}
+
+.accordion-collapse.show .accordion-body {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.accordion-collapse.show .list-group {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.accordion-collapse.show .list-group-item {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Botones dentro del acordeón */
+.accordion-body .btn {
+    box-shadow: none;
+    background-color: transparent;
+    border: 1px solid #198754;
+    color: #198754;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 6px;
+}
+
+.accordion-body .btn:hover {
+    background-color: #198754;
+    color: white;
+    box-shadow: none;
+}
+
+.accordion-body .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+.accordion-body .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+}
+
+/* Lista de temas */
+.list-group-item {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 0.25rem;
+    background-color: #f8f9fa;
+}
+
+.list-group-item:hover {
+    background-color: #e9ecef;
+    transition: background-color 0.3s ease;
 }
 
 /* Tipografía */
@@ -243,29 +341,47 @@ p {
 {% endif %}
 
 <script>
-// Verificar si debe mostrar la notificación de encuesta ya completada
+// Sistema de notificaciones toast expandido
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar el parámetro en la URL
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('encuesta_ya_completada') === 'true') {
-        // Mostrar la notificación
-        const notificacion = document.getElementById('notificacion-encuesta');
+    
+    // Función para mostrar notificación
+    function mostrarNotificacion(elementId, autoHide = true, hideDelay = 5000) {
+        const notificacion = document.getElementById(elementId);
         if (notificacion) {
             notificacion.style.display = 'block';
             
-            // Auto-ocultar después de 5 segundos
-            setTimeout(() => {
-                const alert = notificacion.querySelector('.alert');
-                if (alert) {
-                    alert.classList.remove('show');
-                    setTimeout(() => {
-                        notificacion.style.display = 'none';
-                        // Limpiar la URL sin recargar la página
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }, 150);
-                }
-            }, 5000);
+            if (autoHide) {
+                setTimeout(() => {
+                    const alert = notificacion.querySelector('.alert');
+                    if (alert) {
+                        alert.classList.remove('show');
+                        setTimeout(() => {
+                            notificacion.style.display = 'none';
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }, 150);
+                    }
+                }, hideDelay);
+            }
+        }    }
+    
+    // Verificar encuesta ya completada
+    if (urlParams.get('encuesta_ya_completada') === 'true') {
+        mostrarNotificacion('notificacion-encuesta');
+    }
+    
+    // Verificar quiz completado exitosamente
+    if (urlParams.get('quiz_completado_exitoso') === 'true') {
+        const puntaje = urlParams.get('puntaje');
+        const elementoPuntaje = document.getElementById('puntaje-quiz');
+        if (elementoPuntaje && puntaje) {
+            elementoPuntaje.textContent = puntaje;
         }
+        mostrarNotificacion('notificacion-quiz');
+    }
+      // Verificar certificado ya descargado
+    if (urlParams.get('certificado_ya_descargado') === 'true') {
+        mostrarNotificacion('notificacion-certificado');
     }
 });
 </script>

@@ -21,6 +21,7 @@ from .views_asignacion import (
     asignar_curso_ajax,
     desasignar_curso_ajax,
     cursos_asignados_ajax,
+    miembros_grupo_ajax,
     exportar_asignaciones_excel,
 )
 

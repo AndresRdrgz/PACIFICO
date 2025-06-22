@@ -18,10 +18,11 @@
          x-transition:leave-end="opacity-0">
 
         <div class="container my-5">
-            <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>
-
-            <!-- Tabs funcionales -->
+            <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>            <!-- Tabs funcionales -->
             <div class="mb-4 d-flex gap-2 flex-wrap">
+                <a href="?estado=todos" class="btn {% if estado == 'todos' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Todos los cursos
+                </a>
                 <a href="?estado=en-progreso" class="btn {% if estado == 'en-progreso' %}btn-success{% else %}btn-outline-success{% endif %}">
                     Continuar viendo
                 </a>
@@ -41,8 +42,7 @@
                     <div class="card h-100 shadow-sm border-0">
                         {% if curso.portada %}
                         <img src="{{ curso.portada.url }}" class="card-img-top rounded-top" style="height: 160px; object-fit: cover;">
-                        {% endif %}
-                        <div class="card-body d-flex flex-column">
+                        {% endif %}                        <div class="card-body d-flex flex-column">
                             <h5 class="fw-bold text-success">{{ curso.titulo }}</h5>
                             <p class="text-muted small mb-2">
                                 {{ curso.descripcion|truncatechars:100 }}
@@ -50,17 +50,39 @@
                             <p class="mb-1 small">
                                 <strong>Inicio:</strong> {{ curso.fecha_inicio }}<br>
                                 <strong>Fin:</strong> {{ curso.fecha_fin }}
-                            </p>
+                            </p>                            {% if curso.progreso_percent is not None %}
+                            <!-- Barra de progreso -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="fw-semibold text-muted">Progreso</small>
+                                    <small class="fw-semibold text-success">{{ curso.progreso_percent }}%</small>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         role="progressbar" 
+                                         style="width: {{ curso.progreso_percent }}%"
+                                         aria-valuenow="{{ curso.progreso_percent }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
 
-                            <div class="mt-auto">
-                                <a href="{% url 'detalle_curso' curso.id %}" 
+                            <div class="mt-auto">                                <a href="{% url 'detalle_curso' curso.id %}" 
                                    class="btn btn-outline-success w-100 mt-2"
                                    x-data
                                    @click.prevent="
                                        document.getElementById('fadeContainer').classList.add('fade-out');
                                        setTimeout(() => window.location.href = $el.href, 700)
                                    ">
-                                    Iniciar
+                                    {% if curso.progreso_percent == 100 %}
+                                        ✅ Completado
+                                    {% elif curso.progreso_percent > 0 %}
+                                        📖 Continuar
+                                    {% else %}
+                                        🚀 Iniciar
+                                    {% endif %}
                                 </a>
                             </div>
                         </div>
@@ -89,6 +111,14 @@
 }
 .card-img-top {
     border-bottom: 1px solid #dee2e6;
+}
+.progress {
+    border-radius: 10px;
+    background-color: #e9ecef;
+}
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
 }
 </style>
 {% endblock %}

@@ -70,12 +70,12 @@ class ModuloInline(nested_admin.NestedStackedInline):
 
 # 🔹 Cursos completos
 class CursoAdmin(nested_admin.NestedModelAdmin):
-    list_display = ('titulo', 'fecha_inicio', 'fecha_fin')
+    list_display = ('titulo', 'fecha_inicio', 'fecha_fin', 'duracion_horas')
     inlines = [ModuloInline]
     search_fields = ('titulo',)
     list_filter = ('fecha_inicio',)
     filter_horizontal = ('usuarios_asignados', 'grupos_asignados')  # ✅ Si quieres ver grupos también
-    fields = ('titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'portada', 'usuarios_asignados', 'grupos_asignados')
+    fields = ('titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'duracion_horas', 'portada', 'usuarios_asignados', 'grupos_asignados')
 
 # 🔹 Grupos de asignación (corregido)
 @admin.register(GrupoAsignacion)

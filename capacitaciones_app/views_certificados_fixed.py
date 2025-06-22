@@ -15,13 +15,12 @@ from .models import Curso, ProgresoTema, ProgresoCurso
 
 @login_required
 def certificado(request, curso_id):
-    curso = get_object_or_404(Curso, id=curso_id)    # Verificar si ya descargó el certificado antes
+    curso = get_object_or_404(Curso, id=curso_id)
+
+    # Verificar si ya descargó el certificado antes
     progreso_curso = ProgresoCurso.objects.filter(usuario=request.user, curso=curso).first()
-    referer = request.META.get('HTTP_REFERER', '')
-    
-    # Solo mostrar notificación si NO viene de mi-progreso (permite re-descarga desde progreso)
-    if progreso_curso and progreso_curso.certificado_descargado and 'mi-progreso' not in referer:
-        # Redirigir a detalle del curso con notificación
+    if progreso_curso and progreso_curso.certificado_descargado:
+        # Redirigir con parámetro para mostrar notificación
         url = reverse('detalle_curso', kwargs={'curso_id': curso.id})
         return HttpResponseRedirect(f'{url}?certificado_ya_descargado=true')
 

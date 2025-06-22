@@ -5,82 +5,749 @@
 {% block title %}Mi Progreso{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <h2 class="fw-bold text-success text-center mb-4">📈 Mi Progreso</h2>
+<!-- Corporate Mi Historial with Modern Design -->
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-slate-100 to-emerald-50 py-8">
+    <!-- Toast Notification para certificado ya descargado -->
+    <div id="notificacion-certificado-progreso" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+        <div class="alert alert-warning alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+            <i class="fas fa-certificate me-2"></i>
+            <strong>¡Certificado ya descargado!</strong>
+            <br>Ya descargaste el certificado de "<span id="curso-nombre"></span>" anteriormente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
 
-    <div class="table-responsive">
-        <table id="tabla-progreso" class="table table-bordered table-hover align-middle table-sm">
-            <thead class="table-success">
-                <tr>
-                    <th>#</th>
-                    <th>📅 Fecha</th>
-                    <th>📚 Curso</th>
-                    <th>📈 Progreso</th>
-                    <th>✅ Módulos</th>
-                    <th>📅 Finalizado</th>
-                    <th>🕒 Último ingreso</th>
-                    <th>📝 Método</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for asignacion in asignaciones %}
-                    {% with curso=asignacion.curso %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ asignacion.fecha|date:"d/m/Y H:i" }}</td>
-                        <td>{{ curso.titulo }}</td>
-                        <td>
-                            {% with p=progreso|get_item:curso.id %}
-                                {% if p %}
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" style="width: {{ p.porcentaje }}%">
-                                            {{ p.porcentaje }}%
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    —
-                                {% endif %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header con efecto glassmorphism corporativo -->
+        <div class="backdrop-blur-sm bg-white/40 rounded-2xl border border-gray-200/30 shadow-lg p-8 mb-8 animate-fade-in">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-800 bg-clip-text text-transparent mb-4 animate-slide-up">
+                    📈 Mi Progreso de Capacitaciones
+                </h1>
+                <p class="text-slate-600 text-lg animate-fade-in" style="animation-delay: 0.2s;">
+                    Panel Personal · Revisa tu avance y descarga tus certificados
+                </p>
+            </div>
+        </div>
+
+        <!-- Estadísticas Personales -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Total de Cursos -->
+            <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-bounce-in">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-white/20 rounded-xl animate-float">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold mb-1">{{ asignaciones|length }}</div>
+                            <div class="text-emerald-100 text-sm">📚 Cursos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cursos Completados -->
+            <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-bounce-in" style="animation-delay: 0.1s;">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-white/20 rounded-xl animate-float" style="animation-delay: 0.5s;">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold mb-1" id="cursos-completados">0</div>
+                            <div class="text-emerald-100 text-sm">✅ Completados</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Certificados Disponibles -->
+            <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-bounce-in" style="animation-delay: 0.2s;">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-white/20 rounded-xl animate-float" style="animation-delay: 1s;">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold mb-1" id="certificados-disponibles">0</div>
+                            <div class="text-emerald-100 text-sm">📄 Certificados</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progreso Promedio -->
+            <div class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-bounce-in" style="animation-delay: 0.3s;">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-500"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-white/20 rounded-xl animate-float" style="animation-delay: 1.5s;">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-bold mb-1" id="progreso-promedio">0%</div>
+                            <div class="text-emerald-100 text-sm">📊 Promedio</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>        <!-- Tabla de Progreso Moderna -->
+        <div class="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 hover:shadow-3xl transition-all duration-300 animate-scale-in" style="margin: 0 -30px;">
+            <div class="flex items-center mb-6 px-6">
+                <div class="w-12 h-12 bg-gradient-to-r from-emerald-600 to-emerald-800 rounded-2xl flex items-center justify-center text-white text-xl mr-4 animate-bounce-in">
+                    📊
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Detalle de Mi Progreso</h3>
+            </div>
+            <div class="table-responsive" style="margin: 20px 0; padding: 0 16px; overflow-x: auto; min-height: 400px;">
+                <table id="tabla-progreso" class="table table-bordered table-hover align-middle modern-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>📅 Fecha</th>
+                            <th>📚 Curso</th>
+                            <th>📈 Progreso</th>
+                            <th>✅ Módulos</th>
+                            <th>📅 Finalizado</th>
+                            <th>🕒 Último ingreso</th>
+                            <th>📝 Método</th>
+                            <th>📄 Certificado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asignacion in asignaciones %}
+                            {% with curso=asignacion.curso %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ asignacion.fecha|date:"d/m/Y H:i" }}</td>
+                                <td class="fw-semibold">{{ curso.titulo }}</td>
+                                <td>
+                                    {% with p=progreso|get_item:curso.id %}
+                                        {% if p %}
+                                            <div class="progress modern-progress">
+                                                <div class="progress-bar bg-gradient-to-r from-emerald-500 to-emerald-600" style="width: {{ p.porcentaje }}%">
+                                                    {{ p.porcentaje }}%
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Sin iniciar</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% with p=progreso|get_item:curso.id %}
+                                        {% if p %}
+                                            <span class="badge bg-emerald-100 text-emerald-800 px-3 py-2">
+                                                {{ p.modulos_completados.count }}/{{ curso.modulos.count }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-gray-100 text-gray-600 px-3 py-2">
+                                                0/{{ curso.modulos.count }}
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    {% with p=progreso|get_item:curso.id %}
+                                        {% if p and p.completado %}
+                                            <span class="text-emerald-600 fw-semibold">
+                                                {{ p.fecha_completado|date:"d/m/Y" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-gray-400">—</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td><span class="text-gray-400">—</span></td>
+                                <td>
+                                    <span class="badge {% if asignacion.metodo == 'manual' %}bg-blue-100 text-blue-800{% else %}bg-purple-100 text-purple-800{% endif %} px-3 py-2">
+                                        {{ asignacion.metodo }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% with p=progreso|get_item:curso.id %}
+                                        {% if p and p.completado and p.encuesta_completada and p.porcentaje == 100 %}
+                                            <a href="{% url 'certificado' curso.id %}" 
+                                               class="btn btn-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-0 rounded-xl px-4 py-2 transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"
+                                               title="Descargar certificado PDF">
+                                                📄 Descargar
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-gray-200 text-gray-600 px-3 py-2 rounded-xl">
+                                                Pendiente
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                            </tr>
                             {% endwith %}
-                        </td>
-                        <td>
-                            {% with p=progreso|get_item:curso.id %}
-                                {% if p %}
-                                    {{ p.modulos_completados.count }}/{{ curso.modulos.count }}
-                                {% else %}
-                                    0/{{ curso.modulos.count }}
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-                        <td>
-                            {% with p=progreso|get_item:curso.id %}
-                                {% if p and p.completado %}
-                                    {{ p.fecha_completado|date:"d/m/Y" }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-                        <td>—</td>
-                        <td>{{ asignacion.metodo }}</td>
-                    </tr>
-                    {% endwith %}
-                {% endfor %}
-            </tbody>
-        </table>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
+    // Calcular estadísticas dinámicas
+    calcularEstadisticas();
+    
+    // Animar contadores
+    animarContadores();
+    
+    // Inicializar DataTable moderna
     $('#tabla-progreso').DataTable({
         language: {
-            search: "🔍 Buscar:",
-            paginate: { previous: "Anterior", next: "Siguiente" },
+            search: "🔍 Buscar en mi progreso:",
+            paginate: { previous: "‹ Anterior", next: "Siguiente ›" },
             info: "Mostrando _START_ a _END_ de _TOTAL_ cursos",
-            lengthMenu: "Mostrar _MENU_ cursos"
+            lengthMenu: "Mostrar _MENU_ cursos por página",
+            emptyTable: "No hay cursos asignados",
+            zeroRecords: "No se encontraron cursos que coincidan con la búsqueda"
         },
-        pageLength: 10
+        pageLength: 10,
+        lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+        columnDefs: [
+            { width: "140px", targets: -1 }, // Ancho fijo para columna de certificado
+            { orderable: false, targets: -1 }, // No ordenable la columna de certificado
+            { width: "60px", targets: 0 }, // Ancho fijo para número
+            { width: "120px", targets: 1 }, // Ancho fijo para fecha
+            { width: "150px", targets: 4 }, // Ancho fijo para módulos
+            { width: "120px", targets: 5 }, // Ancho fijo para finalizado
+        ],
+        responsive: true,
+        dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip',
+        order: [[1, 'desc']], // Ordenar por fecha más reciente
+        drawCallback: function() {
+            // Reactivar animaciones después de cada redibujado
+            $('.modern-table tbody tr').each(function(index) {
+                $(this).css('animation-delay', (index * 0.1) + 's');
+            });
+        }
     });
+
+    // Sistema de notificaciones
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Verificar certificado ya descargado
+    if (urlParams.get('certificado_ya_descargado') === 'true') {
+        const nombreCurso = urlParams.get('curso') || 'este curso';
+        const elementoNombre = document.getElementById('curso-nombre');
+        if (elementoNombre) {
+            elementoNombre.textContent = nombreCurso;
+        }
+        
+        const notificacion = document.getElementById('notificacion-certificado-progreso');
+        if (notificacion) {
+            notificacion.style.display = 'block';
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                const alert = notificacion.querySelector('.alert');
+                if (alert) {
+                    alert.classList.remove('show');
+                    setTimeout(() => {
+                        notificacion.style.display = 'none';
+                        // Limpiar la URL sin recargar la página
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }, 150);
+                }
+            }, 5000);
+        }
+    }
+    
+    // Efectos adicionales para cards KPI
+    $('.group').hover(
+        function() {
+            $(this).css('transform', 'translateY(-8px) scale(1.02)');
+        },
+        function() {
+            $(this).css('transform', 'translateY(0) scale(1)');
+        }
+    );
 });
+
+function calcularEstadisticas() {
+    // Contar cursos completados (que tengan 100% de progreso)
+    let cursosCompletados = 0;
+    let certificadosDisponibles = 0;
+    let totalProgreso = 0;
+    let cursosConProgreso = 0;
+    
+    // Obtener datos de la tabla
+    $('#tabla-progreso tbody tr').each(function() {
+        const progressBar = $(this).find('.progress-bar');
+        if (progressBar.length > 0) {
+            const progressText = progressBar.text().trim();
+            const progressValue = parseInt(progressText.replace('%', ''));
+            
+            if (!isNaN(progressValue)) {
+                totalProgreso += progressValue;
+                cursosConProgreso++;
+                
+                if (progressValue === 100) {
+                    cursosCompletados++;
+                    
+                    // Verificar si hay certificado disponible
+                    const certificadoBtn = $(this).find('a[href*="certificado"]');
+                    if (certificadoBtn.length > 0) {
+                        certificadosDisponibles++;
+                    }
+                }
+            }
+        }
+    });
+    
+    // Calcular promedio
+    const promedioProgreso = cursosConProgreso > 0 ? Math.round(totalProgreso / cursosConProgreso) : 0;
+    
+    // Actualizar elementos
+    $('#cursos-completados').text(cursosCompletados);
+    $('#certificados-disponibles').text(certificadosDisponibles);
+    $('#progreso-promedio').text(promedioProgreso + '%');
+}
+
+function animarContadores() {
+    // Animar contadores con efecto counting up
+    $('.text-3xl.font-bold').each(function() {
+        const $element = $(this);
+        const targetText = $element.text();
+        
+        // Si es un número, animar
+        const targetValue = parseInt(targetText);
+        if (!isNaN(targetValue)) {
+            let current = 0;
+            const increment = Math.ceil(targetValue / 30);
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= targetValue) {
+                    $element.text(targetValue);
+                    clearInterval(timer);
+                } else {
+                    $element.text(current);
+                }
+            }, 50);
+        }
+        
+        // Si es un porcentaje, animar
+        if (targetText.includes('%')) {
+            const targetValue = parseInt(targetText.replace('%', ''));
+            if (!isNaN(targetValue)) {
+                let current = 0;
+                const increment = Math.ceil(targetValue / 30);
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= targetValue) {
+                        $element.text(targetValue + '%');
+                        clearInterval(timer);
+                    } else {
+                        $element.text(current + '%');
+                    }
+                }, 50);
+            }
+        }
+    });
+}
 </script>
+
+
+<style>
+/* Modern Corporate Mi Historial Styles */
+
+/* Animaciones personalizadas */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.8s ease-out;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.8s ease-out;
+}
+
+.animate-bounce-in {
+    animation: bounce-in 0.6s ease-out;
+}
+
+.animate-scale-in {
+    animation: scale-in 0.6s ease-out;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Glassmorphism efecto mejorado */
+.backdrop-blur-sm {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-md {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Estilos para la tabla moderna */
+.modern-table {
+    font-size: 0.95rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 1200px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: none !important;
+}
+
+.modern-table th {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    padding: 16px 12px;
+    border: none !important;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+.modern-table td {
+    padding: 14px 12px;
+    vertical-align: middle;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.modern-table tbody tr {
+    border-bottom: 1px solid rgba(209, 213, 219, 0.3) !important;
+    transition: all 0.3s ease;
+}
+
+.modern-table tbody tr:hover {
+    background-color: rgba(16, 185, 129, 0.05) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+}
+
+/* Columna de certificado centrada */
+.modern-table th:last-child,
+.modern-table td:last-child {
+    text-align: center;
+    vertical-align: middle;
+    width: 140px;
+}
+
+/* Progreso moderno */
+.modern-progress {
+    height: 28px;
+    background-color: rgba(229, 231, 235, 0.5);
+    border-radius: 14px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.modern-progress .progress-bar {
+    background: linear-gradient(90deg, #10b981 0%, #047857 100%) !important;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border-radius: 14px;
+    transition: all 0.6s ease;
+}
+
+/* Badges modernos */
+.badge {
+    font-size: 0.8rem !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.75rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px;
+}
+
+.bg-emerald-100 {
+    background-color: rgba(209, 250, 229, 0.8) !important;
+}
+
+.text-emerald-800 {
+    color: #065f46 !important;
+}
+
+.bg-gray-100 {
+    background-color: rgba(243, 244, 246, 0.8) !important;
+}
+
+.text-gray-600 {
+    color: #4b5563 !important;
+}
+
+.bg-blue-100 {
+    background-color: rgba(219, 234, 254, 0.8) !important;
+}
+
+.text-blue-800 {
+    color: #1e40af !important;
+}
+
+.bg-purple-100 {
+    background-color: rgba(237, 233, 254, 0.8) !important;
+}
+
+.text-purple-800 {
+    color: #5b21b6 !important;
+}
+
+.bg-gray-200 {
+    background-color: rgba(229, 231, 235, 0.8) !important;
+}
+
+/* Botones modernos */
+.btn.bg-gradient-to-r {
+    background: linear-gradient(90deg, #10b981 0%, #047857 100%) !important;
+    border: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn.bg-gradient-to-r:hover {
+    background: linear-gradient(90deg, #047857 0%, #065f46 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+/* Hover effects para tarjetas KPI */
+.group:hover .group-hover\:scale-110 {
+    transform: scale(1.1);
+}
+
+/* DataTables customization moderna con espaciado mejorado */
+.dataTables_wrapper {
+    padding: 0 !important;
+}
+
+.dataTables_wrapper .row:first-child {
+    margin-bottom: 24px !important; /* Espaciado entre controles superiores y tabla */
+    padding: 0 8px;
+}
+
+.dataTables_wrapper .row:last-child {
+    margin-top: 24px !important; /* Espaciado entre tabla y paginación */
+    padding: 0 8px;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 0 !important;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin-top: 0 !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(209, 213, 219, 0.5);
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    outline: none;
+}
+
+.dataTables_wrapper .dataTables_filter label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0;
+}
+
+.dataTables_wrapper .dataTables_length label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 10px 16px !important;
+    margin-left: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(209, 213, 219, 0.3) !important;
+    color: #374151 !important;
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+    color: white !important;
+    border-color: #047857 !important;
+}
+
+.dataTables_info {
+    color: #6b7280 !important;
+    font-weight: 500;
+}
+
+/* Responsive mejorado */
+@media (max-width: 992px) {
+    .modern-table {
+        font-size: 0.85rem;
+    }
+    
+    .modern-table th,
+    .modern-table td {
+        padding: 10px 8px;
+    }
+    
+    .grid.grid-cols-1.md\:grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Ocultar columnas menos importantes en móviles */
+    .modern-table th:nth-child(2),
+    .modern-table td:nth-child(2),
+    .modern-table th:nth-child(7),
+    .modern-table td:nth-child(7),
+    .modern-table th:nth-child(8),
+    .modern-table td:nth-child(8) {
+        display: none;
+    }
+    
+    .modern-table {
+        font-size: 0.8rem;
+        min-width: 800px;
+    }
+    
+    .grid.grid-cols-1.md\:grid-cols-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .text-4xl.md\:text-5xl {
+        font-size: 2rem !important;
+    }
+}
+
+/* Efectos adicionales */
+.fw-semibold {
+    font-weight: 600 !important;
+}
+
+.text-emerald-600 {
+    color: #059669 !important;
+}
+
+.text-gray-400 {
+    color: #9ca3af !important;
+}
+
+.rounded-xl {
+    border-radius: 0.75rem !important;
+}
+
+/* Efecto de entrada para filas de tabla */
+.modern-table tbody tr {
+    animation: fade-in 0.6s ease-out;
+}
+
+.modern-table tbody tr:nth-child(odd) {
+    animation-delay: 0.1s;
+}
+
+.modern-table tbody tr:nth-child(even) {
+    animation-delay: 0.2s;
+}
+</style>
 {% endblock %}

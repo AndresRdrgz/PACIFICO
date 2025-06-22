@@ -10,15 +10,21 @@ from capacitaciones_app.views import (
     marcar_tema_completado,
     quiz_modulo,
     certificado,
+)
+
+from .views_asignacion import (
     asignacion_admin,
     asignar_curso_ajax,
     cursos_asignados_ajax,
+    miembros_grupo_ajax,
     desasignar_curso_ajax,
     exportar_asignaciones_excel,
+    historial_asignaciones_ajax,
+    historial_usuario,
+    usuarios_disponibles_grupo,    agregar_miembros_grupo,    remover_miembro_grupo,
 )
 
-from .views_asignacion import historial_asignaciones_ajax
-from capacitaciones_app.views_asignacion import historial_usuario
+from .views_dashboard import dashboard_view
 from capacitaciones_app.views_encuesta import encuesta_satisfaccion_curso
 from capacitaciones_app.api import encuestas_json, actualizar_progreso
 
@@ -35,17 +41,23 @@ urlpatterns = [
     path('temas/<int:tema_id>/completado/', marcar_tema_completado, name='marcar_tema_completado'),
 
     # 📝 Quiz by module
-    path('cursos/<int:curso_id>/modulo/<int:modulo_id>/quiz/', quiz_modulo, name='quiz_modulo'),
-
-    # 🎓 Certificate
-    path('cursos/<int:curso_id>/certificado/', certificado, name='certificado'),
-
-    # 👨‍💼 Admin Asignación
+    path('cursos/<int:curso_id>/modulo/<int:modulo_id>/quiz/', quiz_modulo, name='quiz_modulo'),    # 🎓 Certificate
+    path('cursos/<int:curso_id>/certificado/', certificado, name='certificado'),    # 👨‍💼 Admin Asignación
     path('capacitaciones/asignacion/', asignacion_admin, name='asignacion_admin'),
-
+    
+    # 📊 Dashboard
+    path('capacitaciones/dashboard/', dashboard_view, name='dashboard'),
+    
+    # AJAX endpoints para asignación
     path('asignar-curso/', asignar_curso_ajax, name='asignar_curso_ajax'),
     path('cursos-asignados/<int:usuario_id>/', cursos_asignados_ajax, name='cursos_asignados_ajax'),
+    path('miembros-grupo/<int:grupo_id>/', miembros_grupo_ajax, name='miembros_grupo_ajax'),
     path('desasignar-curso/', desasignar_curso_ajax, name='desasignar_curso_ajax'),
+
+    # Gestión de grupos
+    path('usuarios-disponibles-grupo/<int:grupo_id>/', usuarios_disponibles_grupo, name='usuarios_disponibles_grupo'),
+    path('agregar-miembros-grupo/', agregar_miembros_grupo, name='agregar_miembros_grupo'),
+    path('remover-miembro-grupo/', remover_miembro_grupo, name='remover_miembro_grupo'),
     path('exportar-asignaciones-excel/', exportar_asignaciones_excel, name='exportar_asignaciones_excel'),
     path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
     path('mi-progreso/', historial_usuario, name='mi_progreso'),

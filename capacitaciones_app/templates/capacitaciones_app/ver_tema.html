@@ -2,6 +2,27 @@
 {% block title %}{{ tema.titulo }}{% endblock %}
 
 {% block content %}
+<!-- Toast Notifications para Feedback -->
+<!-- Feedback ya enviado -->
+<div id="notificacion-feedback-enviado" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-warning alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>¡Feedback ya enviado!</strong>
+        <br>Ya enviaste tu comentario para este tema anteriormente.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- Feedback enviado exitosamente -->
+<div id="notificacion-feedback-exitoso" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-success alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>¡Feedback enviado!</strong>
+        <br>Gracias por tu comentario sobre este tema.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
 <div class="container my-5">
     <h1 class="text-success mb-3">{{ tema.titulo }}</h1>
 
@@ -80,9 +101,45 @@
                 <button type="submit" class="btn btn-outline-success">Marcar como completado</button>
             </form>
         {% endif %}
-    </div>
-
-    <!-- Volver -->
+    </div>    <!-- Volver -->
     <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-outline-secondary mt-4">← Volver al curso</a>
 </div>
+
+<script>
+// Sistema de notificaciones para feedback
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Función para mostrar notificación
+    function mostrarNotificacion(elementId, autoHide = true, hideDelay = 5000) {
+        const notificacion = document.getElementById(elementId);
+        if (notificacion) {
+            notificacion.style.display = 'block';
+            
+            if (autoHide) {
+                setTimeout(() => {
+                    const alert = notificacion.querySelector('.alert');
+                    if (alert) {
+                        alert.classList.remove('show');
+                        setTimeout(() => {
+                            notificacion.style.display = 'none';
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }, 150);
+                    }
+                }, hideDelay);
+            }
+        }
+    }
+    
+    // Verificar feedback ya enviado
+    if (urlParams.get('feedback_ya_enviado') === 'true') {
+        mostrarNotificacion('notificacion-feedback-enviado');
+    }
+    
+    // Verificar feedback enviado exitosamente
+    if (urlParams.get('feedback_enviado_exitoso') === 'true') {
+        mostrarNotificacion('notificacion-feedback-exitoso');
+    }
+});
+</script>
 {% endblock %}

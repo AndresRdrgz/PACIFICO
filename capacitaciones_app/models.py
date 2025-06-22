@@ -8,6 +8,14 @@ class Curso(models.Model):
     descripcion = models.TextField()
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
+    duracion_horas = models.DecimalField(
+        'Duración en horas',
+        max_digits=5, 
+        decimal_places=1, 
+        null=True, 
+        blank=True,
+        help_text='Duración estimada del curso en horas (ej: 8.5)'
+    )
     portada = models.ImageField(upload_to='portadas/', null=True, blank=True)
 
     usuarios_asignados = models.ManyToManyField(User, blank=True, related_name='cursos_asignados')
@@ -115,6 +123,8 @@ class ProgresoCurso(models.Model):
     completado = models.BooleanField(default=False)
     fecha_completado = models.DateTimeField(null=True, blank=True)
     encuesta_completada = models.BooleanField(default=False)  # Confirmación de encuesta completada
+    certificado_descargado = models.BooleanField(default=False)  # Tracking de descarga de certificado
+    fecha_descarga_certificado = models.DateTimeField(null=True, blank=True)  # Fecha de primera descarga
 
     def __str__(self):
         return f"Progreso de {self.usuario} en {self.curso}"
