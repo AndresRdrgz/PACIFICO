@@ -57,3 +57,5 @@ def actualizar_progreso(request):
             return JsonResponse({'error': 'Progreso no encontrado'}, status=404)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+# http://127.0.0.1:8000/api/encuestas/
