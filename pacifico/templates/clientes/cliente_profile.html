@@ -93,16 +93,26 @@
                     <div class="flex flex-col">
                         <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cédula</span>
                         <span class="mt-1 text-sm font-semibold">{{ cliente.cedulaCliente|default:"No especificada" }}</span>
-                    </div>
-                    <div class="flex flex-col">
+                    </div>                    <div class="flex flex-col">
                         <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario</span>
-                        <span class="mt-1 text-sm font-semibold">
+                        <div class="mt-1 flex items-center space-x-2">
                             {% if cliente.propietario %}
-                                {{ cliente.propietario.get_full_name|default:cliente.propietario.username }}
+                                {% if cliente.propietario.userprofile.profile_picture %}
+                                    <img src="{{ cliente.propietario.userprofile.profile_picture.url }}" 
+                                         alt="{{ cliente.propietario.get_full_name|default:cliente.propietario.username }}"
+                                         class="w-6 h-6 rounded-full object-cover border">
+                                {% else %}
+                                    <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-600">
+                                        {{ cliente.propietario.first_name|first|default:cliente.propietario.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <span class="text-sm font-semibold">
+                                    {{ cliente.propietario.get_full_name|default:cliente.propietario.username }}
+                                </span>
                             {% else %}
-                                <span class="text-gray-400">Sin asignar</span>
+                                <span class="text-gray-400 text-sm font-semibold">Sin asignar</span>
                             {% endif %}
-                        </span>
+                        </div>
                     </div>
                     <div class="flex flex-col">
                         <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de registro</span>
@@ -645,7 +655,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Makito está trabajando...
+                    Makito está trabajando, puedes avanzar con otras tareas. Será notificado cuando esté listo via correo.
                 </div>
             `;
         }        // Files section

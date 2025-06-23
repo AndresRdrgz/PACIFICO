@@ -1,11 +1,14 @@
 import django_filters
 from django import forms
 from django.contrib.auth.models import User
-from .models import Cliente
+from .models import Cliente, UserProfile
 
 class ClienteFilter(django_filters.FilterSet):
     propietario = django_filters.ModelMultipleChoiceFilter(
-        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
+        queryset=User.objects.filter(
+            is_active=True,
+            userprofile__rol__in=['Oficial', 'Supervisor', 'Administrador']
+        ).order_by('first_name', 'last_name', 'username'),
         label='Propietario',
         widget=forms.SelectMultiple(attrs={
             'class': 'hidden',  # We'll hide the default widget and use our custom one
