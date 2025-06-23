@@ -1,3 +1,33 @@
+
+def calcular_impuesto_sobre_la_renta(salario_anual):
+    """
+    Calcula el impuesto sobre la renta mensual basado en el salario anual.
+    
+    Args:
+        salario_anual (float): Salario anual para el cálculo del impuesto
+        
+    Returns:
+        float: Impuesto sobre la renta mensual
+    """
+    if salario_anual < 11000:
+        aux_isr_15 = 0
+        aux_isr_25 = 0
+    elif 11000 <= salario_anual < 50000:
+        aux_isr_15 = (salario_anual - 11000) * 0.15
+        aux_isr_25 = 0
+    else:
+        aux_isr_15 = (50000 - 11000) * 0.15
+        aux_isr_25 = (salario_anual - 50000) * 0.25
+    
+    impuesto_anual = aux_isr_15 + aux_isr_25
+    return impuesto_anual / 13
+
+
+def ImpuestoSobreLaRenta(resultado):
+    # Legacy function - use calcular_impuesto_sobre_la_renta instead
+    pass
+
+
 def nivelEndeudamiento(resultado):
     #print("------nivel de endeudamiento ------")
     
@@ -57,39 +87,26 @@ def nivelEndeudamiento(resultado):
 
     print("Seguro Educativo: ", seguroEducativo)
 
-    #IMPUESTO SOBRE LA RENTAa
+    #IMPUESTO SOBRE LA RENTA
+    print("Impuesto sobre la renta - Cartera:", resultado['cartera'])
     if resultado['cartera'] in ['JUBILADO RIESGOS PROF. CSS', 'JUBILADO CONTRALORIA', 'JUBILADO DE LA ZONA', 'JUBILADO CSS', 'INDEPENDIENTE']:
         impuestoSobreLaRenta = 0
         impuestoSobreLaRentaCompleto = 0
     else:
         salarioAnual = totalIngresosMensuales * 13
         salarioAnualCompleto = totalIngresosMensualesCompleto * 13
-        if salarioAnual < 11000:
-            auxISR15 = 0
-            auxISR25 = 0
-            auxISR15Completo = 0
-            auxISR25Completo = 0
-        elif 11000 <= salarioAnual < 50000:
-            auxISR15 = (salarioAnual - 11000) * 0.15
-            auxISR25 = 0
-            auxISR15Completo = (salarioAnualCompleto - 11000) * 0.15
-            auxISR25Completo = 0
-
-        else:
-            auxISR15 = (50000 - 11000) * 0.15
-            auxISR25 = (salarioAnual - 50000) * 0.25
-            auxISR15Completo = (50000 - 11000) * 0.15
-            auxISR25Completo = (salarioAnualCompleto - 50000) * 0.25
-
-
-        impuestoSobreLaRentaAnual = auxISR15 + auxISR25
-        impuestoSobreLaRenta = impuestoSobreLaRentaAnual / 13
-        impuestoSobreLaRentaAnualCompleto = auxISR15Completo + auxISR25Completo
-        impuestoSobreLaRentaCompleto = impuestoSobreLaRentaAnualCompleto / 13
+        print("Salario Anual: ", salarioAnual, " - Salario Anual Completo: ", salarioAnualCompleto)
+        
+        # Calcular impuesto para salario base
+        impuestoSobreLaRenta = calcular_impuesto_sobre_la_renta(salarioAnual)
+        
+        # Calcular impuesto para salario completo
+        impuestoSobreLaRentaCompleto = calcular_impuesto_sobre_la_renta(salarioAnualCompleto)
         
 
 
     print("Impuesto Sobre la Renta: ", impuestoSobreLaRenta)
+    print("Impuesto Sobre la Renta Completo: ", impuestoSobreLaRentaCompleto)
 
 
     totalDescuentosLegales = seguroSocial + seguroEducativo + impuestoSobreLaRenta

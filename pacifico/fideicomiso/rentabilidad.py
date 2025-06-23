@@ -400,7 +400,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     comisionTotal = [0] * 11  # Assuming a list with 11 elements
     
     vendedorImpuesto = params.get('vendedorImpuesto', "N")
-    print("Clase de vendedor:", claseVend, "Tipo de préstamo:", tipo_prestamo,"Impuesto vendedor:", vendedorImpuesto)
+    #print("Clase de vendedor:", claseVend, "Tipo de préstamo:", tipo_prestamo,"Impuesto vendedor:", vendedorImpuesto)
 
     if claseVend != "CHISPA" and tipo_prestamo != "PREST AUTO":
         comisionPorcentaje[2] = params['vendedorComisionPorcentaje']
