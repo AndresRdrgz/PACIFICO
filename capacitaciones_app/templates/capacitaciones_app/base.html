@@ -114,35 +114,158 @@
             padding: 10px;
             display: block;
             border-radius: 8px;
-        }
-        .sidebar a:hover {
+        }        .sidebar a:hover {
             background-color: #006341;
             text-decoration: none;
         }
+          /* Estilos para la sección de perfil */
+        .user-profile-section {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            z-index: 1 !important;
+        }
+        
+        .user-profile-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%) !important;
+            pointer-events: none;
+        }
+        
+        .user-profile-section:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .user-profile-section img, .user-profile-section .bg-white {
+            transition: transform 0.3s ease !important;
+        }
+        
+        .user-profile-section:hover img, 
+        .user-profile-section:hover .bg-white {
+            transform: scale(1.05) !important;
+        }
+        
+        /* Forzar colores consistentes */
+        .user-profile-section .text-white,
+        .user-profile-section .text-white h6,
+        .user-profile-section .text-white p {
+            color: white !important;
+        }
+        
+        .user-profile-section .btn-outline-light {
+            color: white !important;
+            border-color: rgba(255,255,255,0.6) !important;
+            background-color: rgba(255,255,255,0.1) !important;
+        }
+        
+        .user-profile-section .btn-outline-light:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.8) !important;
+            transform: translateY(-1px) !important;
+            color: white !important;
+        }
+        
+        /* Estilos adicionales para el perfil */
+        .user-profile-section h6 {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .user-profile-section .bg-success {
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.6);
+        }
+        
+        /* Animación de entrada para el perfil */
+        @keyframes profile-fade-in {
+            0% { 
+                opacity: 0; 
+                transform: translateY(-20px) scale(0.95); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        
+        .user-profile-section {
+            animation: profile-fade-in 0.8s ease-out;
+        }
+        
+        /* Mejorar la navegación del sidebar */
+        .sidebar .nav-link {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar .nav-link:hover {
+            border-left: 3px solid #ffffff;
+            padding-left: 15px;
+        }
     </style>
 </head>
-<body>
-
-    <!-- 🔝 Navbar superior -->
+<body>    <!-- 🔝 Navbar superior -->
     <nav class="navbar navbar-expand-lg px-4">
-        <a class="navbar-brand fw-bold" href="#">Pacífico Cursos</a>
-        <div class="ms-auto">
-            <a class="nav-link d-inline text-white" href="#">Perfil</a>
-            <a class="nav-link d-inline text-white" href="#">Cerrar sesión</a>
+        <a class="navbar-brand fw-bold" href="{% url 'lista_cursos' %}?estado=todos">Academia Pacífico</a><div class="ms-auto">
+            <a class="nav-link d-inline text-white" href="{% url 'perfil_usuario' %}">👤 Perfil</a>
+            <a class="nav-link d-inline text-white" href="{% url 'admin:logout' %}">🚪 Cerrar sesión</a>
         </div>
     </nav>
 
     <div class="container-fluid">
-        <div class="row">
-            <!-- 📚 Sidebar -->
+        <div class="row">            <!-- 📚 Sidebar -->
             <nav class="col-md-2 d-none d-md-block sidebar">
-                <ul class="nav flex-column">
+                <!-- � Sección de Perfil del Usuario -->
+                <div class="user-profile-section mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, #006341 0%, #004d33 100%); border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
+                    <div class="text-center">                        <!-- Avatar del usuario mejorado -->                        <div class="position-relative mb-3 d-inline-block">
+                            {% if user.userprofile.profile_picture %}
+                                <img src="{{ user.userprofile.profile_picture.url }}" 
+                                     alt="Foto de {{ user.get_full_name|default:user.username }}" 
+                                     class="rounded-circle border border-white border-3 shadow-lg" 
+                                     style="width: 90px; height: 90px; object-fit: cover; display: block;">
+                            {% else %}
+                                <div class="bg-white rounded-circle d-flex align-items-center justify-content-center border border-white border-3 shadow-lg mx-auto" 
+                                     style="width: 90px; height: 90px; color: #006341; font-size: 36px; font-weight: bold;">
+                                    {{ user.first_name|default:user.username|first|upper }}{{ user.last_name|first|upper|default:'' }}
+                                </div>
+                            {% endif %}
+                            <!-- Indicador de estado online -->
+                            <span class="position-absolute bottom-0 end-0 bg-success border border-white border-2 rounded-circle" 
+                                  style="width: 22px; height: 22px; right: 5px; bottom: 5px;"></span>
+                        </div>                        <!-- Información del usuario -->
+                        <div class="text-white">
+                            <h6 class="mb-2 fw-bold text-white" style="font-size: 16px; line-height: 1.2;">
+                                {{ user.get_full_name|default:user.username }}
+                            </h6>
+                            <p class="small mb-2 text-white opacity-75" style="font-size: 12px;">
+                                📋 {{ user.userprofile.rol|default:"Usuario" }}
+                            </p>
+                            {% if user.userprofile.sucursal %}
+                                <p class="small mb-0 text-white opacity-50" style="font-size: 11px;">
+                                    🏢 {{ user.userprofile.sucursal }}
+                                </p>
+                            {% endif %}
+                        </div>                        <!-- Botón de perfil -->
+                        <div class="mt-3">
+                            <a href="{% url 'perfil_usuario' %}" class="btn btn-outline-light btn-sm w-100 text-white" style="font-size: 11px; border-color: rgba(255,255,255,0.6); background-color: rgba(255,255,255,0.1);">
+                                ⚙️ Editar Perfil
+                            </a>
+                        </div>
+                    </div>
+                </div>                <ul class="nav flex-column">
                     <li class="nav-item">
                         <a href="{% url 'lista_cursos' %}?estado=en-progreso" class="nav-link">📚 Cursos</a>
                     </li>
                     <li class="nav-item">
-                        <li class="nav-item">
-                            <a href="{% url 'mi_progreso' %}" class="nav-link">📈 Progreso</a>                        </li>                    </li>                      {% if user.userprofile.rol == "Administrador" or user.userprofile.rol == "Supervisor" %}
+                        <a href="{% url 'mi_progreso' %}" class="nav-link">📈 Progreso</a>
+                    </li>
+                    {% if user.userprofile.rol == "Administrador" or user.userprofile.rol == "Supervisor" %}
                     <li class="nav-item">
                         <a href="{% url 'asignacion_admin' %}" class="nav-link">🧩 Asignar Cursos</a>
                     </li>

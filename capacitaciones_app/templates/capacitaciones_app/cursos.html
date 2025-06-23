@@ -1,124 +1,341 @@
 {% extends 'capacitaciones_app/base.html' %}
 {% load static %}
 
-{% block title %}Cursos disponibles{% endblock %}
+{% block title %}Cursos Disponibles - Pacífico Cursos{% endblock %}
 
 {% block content %}
-<div id="fadeContainer"
-     x-data="{ mostrar: true }"
-     x-init="setTimeout(() => mostrar = true, 50)"
-     x-bind:class="{ 'fade-out': !mostrar }">
-
-    <div x-show="mostrar"
-         x-transition:enter="transition ease-out duration-700"
-         x-transition:enter-start="opacity-0 translate-y-3"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-500"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0">
-
-        <div class="container my-5">
-            <h1 class="mb-4 fw-bold text-success">Cursos disponibles</h1>            <!-- Tabs funcionales -->
-            <div class="mb-4 d-flex gap-2 flex-wrap">
-                <a href="?estado=todos" class="btn {% if estado == 'todos' %}btn-success{% else %}btn-outline-success{% endif %}">
-                    Todos los cursos
-                </a>
-                <a href="?estado=en-progreso" class="btn {% if estado == 'en-progreso' %}btn-success{% else %}btn-outline-success{% endif %}">
-                    Continuar viendo
-                </a>
-                <a href="?estado=no-iniciados" class="btn {% if estado == 'no-iniciados' %}btn-success{% else %}btn-outline-success{% endif %}">
-                    Cursos no Iniciados
-                </a>
-                <a href="?estado=completados" class="btn {% if estado == 'completados' %}btn-success{% else %}btn-outline-success{% endif %}">
-                    Cursos Completados
-                </a>
+<!-- Corporate Cursos Dashboard with Tailwind CSS -->
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-slate-100 to-emerald-50 py-6"><!-- Header con efecto glassmorphism corporativo - Más compacto -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="backdrop-blur-sm bg-white/40 rounded-2xl border border-gray-200/30 shadow-lg p-6 mb-6 animate-fade-in">
+            <div class="text-center">
+                <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-800 bg-clip-text text-transparent mb-3 animate-slide-up">
+                    📚 Cursos Disponibles
+                </h1>
+                <p class="text-slate-600 text-base animate-fade-in" style="animation-delay: 0.2s;">
+                    Gestiona tu aprendizaje · Centro de Capacitaciones
+                </p>
             </div>
-
-            <!-- Rejilla de tarjetas -->
-            {% if cursos %}
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                {% for curso in cursos %}
-                <div class="col">
-                    <div class="card h-100 shadow-sm border-0">
-                        {% if curso.portada %}
-                        <img src="{{ curso.portada.url }}" class="card-img-top rounded-top" style="height: 160px; object-fit: cover;">
-                        {% endif %}                        <div class="card-body d-flex flex-column">
-                            <h5 class="fw-bold text-success">{{ curso.titulo }}</h5>
-                            <p class="text-muted small mb-2">
-                                {{ curso.descripcion|truncatechars:100 }}
+        </div><!-- Filtros modernos con Tailwind - Más compacto -->
+        <div class="mb-6">
+            <div class="bg-white/90 backdrop-blur-md rounded-xl p-4 shadow-lg border border-white/20 animate-scale-in">
+                <div class="flex flex-wrap gap-3">
+                    <a href="?estado=todos" 
+                       class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 {% if estado == 'todos' %}bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg{% else %}bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                        🔍 Todos los cursos
+                    </a>
+                    <a href="?estado=en-progreso" 
+                       class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 {% if estado == 'en-progreso' %}bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg{% else %}bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                        ⏳ Continuar viendo
+                    </a>
+                    <a href="?estado=no-iniciados" 
+                       class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 {% if estado == 'no-iniciados' %}bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg{% else %}bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                        🚀 Cursos no Iniciados
+                    </a>
+                    <a href="?estado=completados" 
+                       class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 {% if estado == 'completados' %}bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg{% else %}bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                        ✅ Cursos Completados
+                    </a>
+                </div>
+            </div>
+        </div><!-- Grid de Cursos con diseño moderno -->
+        {% if cursos %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+            {% for curso in cursos %}            <div class="group relative overflow-hidden rounded-2xl bg-white/90 backdrop-blur-md shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 animate-bounce-in border border-white/20" style="animation-delay: {{ forloop.counter0|floatformat:1|add:'0.1' }}s;">
+                <!-- Imagen del curso - Área más grande -->
+                {% if curso.portada %}
+                <div class="relative overflow-hidden">
+                    <img src="{{ curso.portada.url }}" 
+                         alt="{{ curso.titulo }}"
+                         class="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+                {% else %}
+                <div class="w-full h-56 bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                    <span class="text-7xl text-white/80">📚</span>
+                </div>
+                {% endif %}                <!-- Contenido del curso - Muy compacto -->
+                <div class="p-3 flex flex-col">
+                    <!-- Título y descripción -->
+                    <h3 class="text-lg font-bold text-gray-800 mb-1.5 group-hover:text-emerald-700 transition-colors duration-300">
+                        {{ curso.titulo }}
+                    </h3>
+                    <p class="text-gray-600 text-sm mb-2 line-clamp-1">
+                        {{ curso.descripcion|truncatechars:80 }}
+                    </p>                    <!-- Fechas en línea compacta -->
+                    <div class="mb-2">
+                        <div class="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg p-2">
+                            <p class="text-xs font-medium text-gray-500 mb-0.5">📅 Fechas del curso</p>
+                            <p class="text-sm font-semibold text-gray-700">
+                                {% if curso.fecha_inicio and curso.fecha_fin %}
+                                    <span class="text-emerald-700">Inicio:</span> {{ curso.fecha_inicio|date:"d/m/Y" }} 
+                                    <span class="mx-2 text-gray-400">•</span> 
+                                    <span class="text-blue-700">Fin:</span> {{ curso.fecha_fin|date:"d/m/Y" }}
+                                {% elif curso.fecha_inicio %}
+                                    <span class="text-emerald-700">Inicio:</span> {{ curso.fecha_inicio|date:"d/m/Y" }}
+                                {% elif curso.fecha_fin %}
+                                    <span class="text-blue-700">Fin:</span> {{ curso.fecha_fin|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-gray-500">Fechas por definir</span>
+                                {% endif %}
                             </p>
-                            <p class="mb-1 small">
-                                <strong>Inicio:</strong> {{ curso.fecha_inicio }}<br>
-                                <strong>Fin:</strong> {{ curso.fecha_fin }}
-                            </p>                            {% if curso.progreso_percent is not None %}
-                            <!-- Barra de progreso -->
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <small class="fw-semibold text-muted">Progreso</small>
-                                    <small class="fw-semibold text-success">{{ curso.progreso_percent }}%</small>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-success" 
-                                         role="progressbar" 
-                                         style="width: {{ curso.progreso_percent }}%"
-                                         aria-valuenow="{{ curso.progreso_percent }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-
-                            <div class="mt-auto">                                <a href="{% url 'detalle_curso' curso.id %}" 
-                                   class="btn btn-outline-success w-100 mt-2"
-                                   x-data
-                                   @click.prevent="
-                                       document.getElementById('fadeContainer').classList.add('fade-out');
-                                       setTimeout(() => window.location.href = $el.href, 700)
-                                   ">
-                                    {% if curso.progreso_percent == 100 %}
-                                        ✅ Completado
-                                    {% elif curso.progreso_percent > 0 %}
-                                        📖 Continuar
-                                    {% else %}
-                                        🚀 Iniciar
-                                    {% endif %}
-                                </a>
-                            </div>
                         </div>
                     </div>
+
+                    <!-- Barra de progreso - Muy compacta -->
+                    {% if curso.progreso_percent is not None %}
+                    <div class="mb-2">
+                        <div class="flex justify-content-between items-center mb-1">
+                            <span class="text-xs font-medium text-gray-600">📊 Progreso</span>
+                            <span class="text-xs font-bold text-emerald-600">{{ curso.progreso_percent }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 h-1.5 rounded-full transition-all duration-1000 ease-out" 
+                                 style="width: {{ curso.progreso_percent }}%; animation: progress-fill 1.5s ease-out {{ forloop.counter0|floatformat:1|add:'0.5' }}s both;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Botón de acción - Pegado al contenido -->
+                    <div class="mt-1">
+                        <a href="{% url 'detalle_curso' curso.id %}" 
+                           class="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg
+                           {% if curso.progreso_percent == 100 %}
+                               bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800
+                           {% elif curso.progreso_percent > 0 %}
+                               bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800
+                           {% else %}
+                               bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800
+                           {% endif %}">
+                            {% if curso.progreso_percent == 100 %}
+                                ✅ Completado
+                            {% elif curso.progreso_percent > 0 %}
+                                📖 Continuar Curso
+                            {% else %}
+                                🚀 Iniciar Curso
+                            {% endif %}
+                        </a>
+                    </div>
                 </div>
-                {% endfor %}
             </div>
-            {% else %}
-                <p class="text-muted">No tienes cursos asignados en esta categoría.</p>
-            {% endif %}
+            {% endfor %}
         </div>
+        {% else %}
+        <!-- Estado vacío -->
+        <div class="text-center py-16">
+            <div class="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-lg border border-white/20 animate-fade-in">
+                <div class="text-6xl mb-4">📚</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">No hay cursos disponibles</h3>
+                <p class="text-gray-600">No tienes cursos asignados en esta categoría.</p>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
+<!-- CSS Personalizado para animaciones avanzadas -->
 <style>
-.fade-out {
-    opacity: 0;
-    transition: opacity 0.7s ease-out;
-}
-.card {
-    transition: transform 0.2s ease-in-out;
-    border-radius: 12px;
-}
-.card:hover {
-    transform: scale(1.02);
-}
-.card-img-top {
-    border-bottom: 1px solid #dee2e6;
-}
-.progress {
-    border-radius: 10px;
-    background-color: #e9ecef;
-}
-.progress-bar {
-    border-radius: 10px;
-    transition: width 0.6s ease;
-}
+    /* Animaciones personalizadas del dashboard moderno */
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes slide-up {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes bounce-in {
+        0% {
+            opacity: 0;
+            transform: scale(0.3);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        70% {
+            transform: scale(0.9);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    @keyframes scale-in {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    @keyframes progress-fill {
+        from {
+            width: 0%;
+        }
+        to {
+            width: var(--progress-width);
+        }
+    }
+    
+    .animate-fade-in {
+        animation: fade-in 0.8s ease-out;
+    }
+    
+    .animate-slide-up {
+        animation: slide-up 0.8s ease-out;
+    }
+    
+    .animate-bounce-in {
+        animation: bounce-in 0.6s ease-out;
+    }
+    
+    .animate-scale-in {
+        animation: scale-in 0.6s ease-out;
+    }
+    
+    /* Glassmorphism efecto mejorado */
+    .backdrop-blur-sm {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .backdrop-blur-md {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* Hover effects mejorados */
+    .group:hover .group-hover\:scale-110 {
+        transform: scale(1.1);
+    }
+      /* Líneas de texto limitadas */
+    .line-clamp-1 {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-clamp: 1;
+    }
+    
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-clamp: 3;
+    }
+      /* Efectos de card hover */
+    .group {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .group:hover {
+        transform: translateY(-8px) scale(1.02);
+    }
+    
+    /* Asegurar que todas las tarjetas tengan la misma altura */
+    .grid {
+        display: grid;
+        grid-template-rows: masonry; /* Para navegadores compatibles */
+    }
+    
+    /* Fallback para navegadores que no soportan masonry */
+    @supports not (grid-template-rows: masonry) {
+        .grid > * {
+            height: 100%;
+        }
+    }
+    
+    /* Gradientes mejorados para botones */
+    .bg-gradient-to-r {
+        background-image: linear-gradient(to right, var(--tw-gradient-stops));
+    }
+    
+    /* Efectos de focus para accesibilidad */
+    .focus\:ring-2:focus {
+        ring-width: 2px;
+    }
+    
+    .focus\:ring-emerald-500:focus {
+        ring-color: rgb(16 185 129);
+    }
+    
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
 </style>
+
+<!-- JavaScript para interactividad adicional -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animación de entrada escalonada para las tarjetas
+        const cards = document.querySelectorAll('.group');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+        
+        // Efectos de hover mejorados
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-12px) scale(1.03)';
+                this.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.15)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)';
+            });
+        });
+        
+        // Efectos para botones de filtro
+        const filterButtons = document.querySelectorAll('a[href*="estado="]');
+        filterButtons.forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('from-emerald-600')) {
+                    this.style.transform = 'translateY(-2px) scale(1.05)';
+                }
+            });
+            
+            button.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('from-emerald-600')) {
+                    this.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+        });
+        
+        // Animación de progreso para las barras
+        const progressBars = document.querySelectorAll('[style*="progress-fill"]');
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.setProperty('--progress-width', width);
+            bar.style.width = '0%';
+            
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 1000);
+        });
+    });
+</script>
 {% endblock %}

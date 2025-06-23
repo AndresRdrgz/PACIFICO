@@ -10,6 +10,7 @@ from capacitaciones_app.views import (
     marcar_tema_completado,
     quiz_modulo,
     certificado,
+    perfil_usuario,  # Nueva vista agregada
 )
 
 from .views_asignacion import (
@@ -30,11 +31,12 @@ from capacitaciones_app.api import encuestas_json, actualizar_progreso
 
 urlpatterns = [
     # 🔐 Admin & Auth
-    # path('nested_admin/', include('nested_admin.urls')),
-
-    # 📚 Courses
+    # path('nested_admin/', include('nested_admin.urls')),    # 📚 Courses
     path('cursos/', lista_cursos, name='lista_cursos'),
     path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),
+
+    # 👤 Perfil de Usuario
+    path('perfil/', perfil_usuario, name='perfil_usuario'),
 
     # 📖 Topics
     path('cursos/<int:curso_id>/tema/<int:tema_id>/', ver_tema, name='ver_tema'),
