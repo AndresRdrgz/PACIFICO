@@ -11,6 +11,7 @@ from capacitaciones_app.views import (
     quiz_modulo,
     certificado,
     perfil_usuario,  # Nueva vista agregada
+    validacion_ui,  # Vista de validación UI
 )
 
 from .views_asignacion import (
@@ -33,10 +34,11 @@ urlpatterns = [
     # 🔐 Admin & Auth
     # path('nested_admin/', include('nested_admin.urls')),    # 📚 Courses
     path('cursos/', lista_cursos, name='lista_cursos'),
-    path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),
-
-    # 👤 Perfil de Usuario
+    path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),    # 👤 Perfil de Usuario
     path('perfil/', perfil_usuario, name='perfil_usuario'),
+
+    # 🔍 Validación UI
+    path('validacion-ui/', validacion_ui, name='validacion_ui'),
 
     # 📖 Topics
     path('cursos/<int:curso_id>/tema/<int:tema_id>/', ver_tema, name='ver_tema'),
@@ -44,7 +46,9 @@ urlpatterns = [
 
     # 📝 Quiz by module
     path('cursos/<int:curso_id>/modulo/<int:modulo_id>/quiz/', quiz_modulo, name='quiz_modulo'),    # 🎓 Certificate
-    path('cursos/<int:curso_id>/certificado/', certificado, name='certificado'),    # 👨‍💼 Admin Asignación
+    path('cursos/<int:curso_id>/certificado/', certificado, name='certificado'),
+
+    # 👨‍💼 Admin Asignación
     path('capacitaciones/asignacion/', asignacion_admin, name='asignacion_admin'),
     
     # 📊 Dashboard

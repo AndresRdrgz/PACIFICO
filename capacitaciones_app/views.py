@@ -49,3 +49,8 @@ def perfil_usuario(request):
     }
     return render(request, 'capacitaciones_app/perfil_usuario.html', context)
 
+@login_required
+def validacion_ui(request):
+    """Vista para validar visualmente los componentes modernizados de la UI"""
+    return render(request, 'capacitaciones_app/validacion_ui.html')
+

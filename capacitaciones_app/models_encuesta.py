@@ -47,6 +47,7 @@ class EncuestaSatisfaccionCurso(models.Model):
     lugar = models.CharField(max_length=50, choices=LUGARES)
     rol = models.CharField(max_length=20, choices=ROLES)
     recomendacion = models.TextField(max_length=200, blank=True)
+    comentarios_curso = models.TextField(max_length=500, blank=False, help_text="Comentarios sobre el curso o recomendaciones para mejorarlo")
     usuario = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     curso = models.ForeignKey('capacitaciones_app.Curso', null=True, blank=True, on_delete=models.SET_NULL)
     fecha = models.DateTimeField(auto_now_add=True)
