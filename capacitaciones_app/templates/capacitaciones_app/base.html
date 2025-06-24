@@ -104,6 +104,42 @@
         .navbar-brand, .nav-link {
             color: white !important;
         }
+        
+        /* Eliminar efectos de glow/highlight del botón de logout */
+        .logout-btn {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: none !important;
+            text-shadow: none !important;
+            transition: none !important;
+        }
+        
+        .logout-btn:hover,
+        .logout-btn:focus,
+        .logout-btn:active,
+        .logout-btn:focus-visible,
+        .logout-btn:focus-within {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: none !important;
+            text-shadow: none !important;
+            color: white !important;
+            text-decoration: none !important;
+            opacity: 0.8;
+        }
+        
+        /* Override Bootstrap's btn-link styles for logout */
+        .logout-btn.btn-link {
+            text-decoration: none !important;
+        }
+        
+        .logout-btn.btn-link:hover,
+        .logout-btn.btn-link:focus {
+            text-decoration: none !important;
+            color: white !important;
+        }
         .sidebar {
             min-height: 100vh;
             background-color: #004d33;
@@ -212,9 +248,14 @@
 </head>
 <body>    <!-- 🔝 Navbar superior -->
     <nav class="navbar navbar-expand-lg px-4">
-        <a class="navbar-brand fw-bold" href="{% url 'lista_cursos' %}?estado=todos">Academia Pacífico</a><div class="ms-auto">
+        <a class="navbar-brand fw-bold" href="{% url 'lista_cursos' %}?estado=todos">Academia Pacífico</a>        <div class="ms-auto">
             <a class="nav-link d-inline text-white" href="{% url 'perfil_usuario' %}">👤 Perfil</a>
-            <a class="nav-link d-inline text-white" href="{% url 'admin:logout' %}">🚪 Cerrar sesión</a>
+            <form method="post" action="{% url 'custom_logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="nav-link btn btn-link text-white logout-btn p-0 border-0 bg-transparent" style="text-decoration: none; outline: none; box-shadow: none; text-shadow: none;">
+                    🚪 Cerrar sesión
+                </button>
+            </form>
         </div>
     </nav>
 
@@ -235,9 +276,9 @@
                                     {{ user.first_name|default:user.username|first|upper }}{{ user.last_name|first|upper|default:'' }}
                                 </div>
                             {% endif %}
-                            <!-- Indicador de estado online -->
-                            <span class="position-absolute bottom-0 end-0 bg-success border border-white border-2 rounded-circle" 
-                                  style="width: 22px; height: 22px; right: 5px; bottom: 5px;"></span>
+                            <!-- Indicador de estado online - Temporalmente oculto -->
+                            <!-- <span class="position-absolute bg-success border border-white border-2 rounded-circle" 
+                                  style="width: 22px; height: 22px; right: 5px; bottom: 5px;"></span> -->
                         </div>                        <!-- Información del usuario -->
                         <div class="text-white">
                             <h6 class="mb-2 fw-bold text-white" style="font-size: 16px; line-height: 1.2;">

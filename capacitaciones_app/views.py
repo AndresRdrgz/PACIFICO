@@ -30,7 +30,23 @@ from .views_asignacion import (
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth import logout
+from django.contrib.messages import get_messages
 from pacifico.models import UserProfile
+
+def custom_logout(request):
+    """Vista personalizada de logout que limpia los mensajes antes de cerrar sesión"""
+    # Limpiar todos los mensajes de la sesión
+    storage = get_messages(request)
+    for message in storage:
+        pass  # Esto consume todos los mensajes
+    storage.used = True
+    
+    # Realizar logout
+    logout(request)
+    
+    # Redirigir al login
+    return redirect('/accounts/login/')
 
 @login_required
 def perfil_usuario(request):
