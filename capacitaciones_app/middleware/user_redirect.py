@@ -20,8 +20,7 @@ class UserRoleRedirectMiddleware:
     EXCEPCIONES:
     - Usuarios STAFF: Tienen acceso libre a todo el sistema
     - Usuarios con otros roles: Acceso normal sin restricciones
-    
-    Flujo:
+      Flujo:
     1. Usuario con rol "Usuario" (no staff) hace login
     2. Intenta acceder a cualquier URL del sistema
     3. Middleware intercepta y redirige a /cursos/
@@ -33,21 +32,22 @@ class UserRoleRedirectMiddleware:
         Inicialización del middleware
         """
         self.get_response = get_response
-          # URLs que están permitidas para usuarios con rol "Usuario"
+        # URLs que están permitidas para usuarios con rol "Usuario"
         self.allowed_paths = [
             '/cursos/',           # App de capacitaciones
             '/perfil/',           # Perfil de usuario
-            '/logout/',           # Logout
-            '/accounts/logout/',  # Logout alternativo
-            '/admin/logout/',     # Logout admin
+            '/mi-progreso/',      # Progreso del usuario
             '/static/',           # Archivos estáticos
             '/media/',            # Archivos de media
         ]
-          # URLs que NO deben ser interceptadas (evitar loops)
+        # URLs que NO deben ser interceptadas (evitar loops)
         self.exempt_paths = [
             '/admin/login/',      # Login del admin
             '/accounts/login/',   # Login
             '/login/',            # Login alternativo
+            '/logout/',           # Logout
+            '/accounts/logout/',  # Logout alternativo
+            '/admin/logout/',     # Logout admin
         ]
 
     def __call__(self, request):

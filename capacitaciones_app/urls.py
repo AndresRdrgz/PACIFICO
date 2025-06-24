@@ -58,6 +58,7 @@ urlpatterns = [
     path('asignar-curso/', asignar_curso_ajax, name='asignar_curso_ajax'),
     path('cursos-asignados/<int:usuario_id>/', cursos_asignados_ajax, name='cursos_asignados_ajax'),
     path('miembros-grupo/<int:grupo_id>/', miembros_grupo_ajax, name='miembros_grupo_ajax'),
+    path('usuarios-grupo/<int:grupo_id>/', miembros_grupo_ajax, name='usuarios_grupo_ajax'),  # Alias para compatibilidad
     path('desasignar-curso/', desasignar_curso_ajax, name='desasignar_curso_ajax'),
 
     # Gestión de grupos
