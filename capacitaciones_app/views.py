@@ -23,8 +23,7 @@ from .views_asignacion import (
     cursos_asignados_ajax,
     miembros_grupo_ajax,
     exportar_asignaciones_excel,
-    usuarios_grupo_ajax,         # <-- agregar
-    quitar_usuario_grupo_ajax,   # <-- agregar
+   
 )
 
 # Vista adicional para perfil de usuario

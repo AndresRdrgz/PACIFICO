@@ -171,6 +171,7 @@ class ClienteEntrevista(models.Model):
 
     # SISTEMA
     fecha_entrevista = models.DateTimeField(auto_now_add=True)
+    empresa = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return f"{self.primer_nombre} {self.primer_apellido}"
