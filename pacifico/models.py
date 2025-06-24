@@ -133,7 +133,7 @@ class UserProfile(models.Model):
             ('Supervisor', 'Supervisor'),
             ('Usuario', 'Usuario'),
         ],
-        default='Oficial'
+        default='Usuario'
     )
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
 
