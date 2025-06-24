@@ -10,48 +10,70 @@ from capacitaciones_app.views import (
     marcar_tema_completado,
     quiz_modulo,
     certificado,
+    perfil_usuario,  # Nueva vista agregada
+    validacion_ui,  # Vista de validación UI
+)
+
+from .views_asignacion import (
     asignacion_admin,
     asignar_curso_ajax,
     cursos_asignados_ajax,
+    miembros_grupo_ajax,
     desasignar_curso_ajax,
     exportar_asignaciones_excel,
+    historial_asignaciones_ajax,
+    historial_usuario,
+    usuarios_disponibles_grupo,    agregar_miembros_grupo,    remover_miembro_grupo,
 )
 
-from .views_asignacion import historial_asignaciones_ajax
-from capacitaciones_app.views_asignacion import historial_usuario
-from . import views
+from .views_dashboard import dashboard_view
+from capacitaciones_app.views_encuesta import encuesta_satisfaccion_curso
+from capacitaciones_app.api import encuestas_json, actualizar_progreso
 
 urlpatterns = [
     # 🔐 Admin & Auth
-    # path('nested_admin/', include('nested_admin.urls')),
-
-    # 📚 Courses
+    # path('nested_admin/', include('nested_admin.urls')),    # 📚 Courses
     path('cursos/', lista_cursos, name='lista_cursos'),
-    path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),
+    path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),    # 👤 Perfil de Usuario
+    path('perfil/', perfil_usuario, name='perfil_usuario'),
+
+    # 🔍 Validación UI
+    path('validacion-ui/', validacion_ui, name='validacion_ui'),
 
     # 📖 Topics
     path('cursos/<int:curso_id>/tema/<int:tema_id>/', ver_tema, name='ver_tema'),
     path('temas/<int:tema_id>/completado/', marcar_tema_completado, name='marcar_tema_completado'),
 
     # 📝 Quiz by module
-    path('cursos/<int:curso_id>/modulo/<int:modulo_id>/quiz/', quiz_modulo, name='quiz_modulo'),
-
-    # 🎓 Certificate
+    path('cursos/<int:curso_id>/modulo/<int:modulo_id>/quiz/', quiz_modulo, name='quiz_modulo'),    # 🎓 Certificate
     path('cursos/<int:curso_id>/certificado/', certificado, name='certificado'),
 
     # 👨‍💼 Admin Asignación
     path('capacitaciones/asignacion/', asignacion_admin, name='asignacion_admin'),
-
+    
+    # 📊 Dashboard
+    path('capacitaciones/dashboard/', dashboard_view, name='dashboard'),
+    
+    # AJAX endpoints para asignación
     path('asignar-curso/', asignar_curso_ajax, name='asignar_curso_ajax'),
     path('cursos-asignados/<int:usuario_id>/', cursos_asignados_ajax, name='cursos_asignados_ajax'),
+    path('miembros-grupo/<int:grupo_id>/', miembros_grupo_ajax, name='miembros_grupo_ajax'),
     path('desasignar-curso/', desasignar_curso_ajax, name='desasignar_curso_ajax'),
+
+    # Gestión de grupos
+    path('usuarios-disponibles-grupo/<int:grupo_id>/', usuarios_disponibles_grupo, name='usuarios_disponibles_grupo'),
+    path('agregar-miembros-grupo/', agregar_miembros_grupo, name='agregar_miembros_grupo'),
+    path('remover-miembro-grupo/', remover_miembro_grupo, name='remover_miembro_grupo'),
     path('exportar-asignaciones-excel/', exportar_asignaciones_excel, name='exportar_asignaciones_excel'),
     path('capacitaciones/historial_asignaciones_ajax/', historial_asignaciones_ajax, name='historial_asignaciones_ajax'),
     path('mi-progreso/', historial_usuario, name='mi_progreso'),
 
-    # AJAX Group Views
-    path('ajax/usuarios-grupo/<int:grupo_id>/', views.usuarios_grupo_ajax, name='usuarios_grupo_ajax'),
-    path('ajax/quitar-usuario-grupo/', views.quitar_usuario_grupo_ajax, name='quitar_usuario_grupo_ajax'),
+    # Encuesta de Satisfacción
+    path('encuesta/satisfaccion/', encuesta_satisfaccion_curso, name='encuesta_satisfaccion_curso'),
+
+    # API Endpoints
+    path('api/encuestas/', encuestas_json, name='encuestas_json'),
+    path('api/actualizar_progreso/', actualizar_progreso, name='actualizar_progreso'),
 ]
 
 if settings.DEBUG:

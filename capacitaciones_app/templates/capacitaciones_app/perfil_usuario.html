@@ -1,0 +1,240 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% load static %}
+
+{% block title %}Mi Perfil - Pacífico Cursos{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-slate-100 to-emerald-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header del Perfil -->
+        <div class="backdrop-blur-sm bg-white/40 rounded-2xl border border-gray-200/30 shadow-lg p-8 mb-8 animate-fade-in">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-800 bg-clip-text text-transparent mb-4 animate-slide-up">
+                    👤 Mi Perfil
+                </h1>
+                <p class="text-slate-600 text-lg animate-fade-in" style="animation-delay: 0.2s;">
+                    Gestiona tu información personal y preferencias
+                </p>
+            </div>
+        </div>
+
+        <!-- Contenido del Perfil -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Tarjeta de Información Principal -->
+            <div class="lg:col-span-1">
+                <div class="bg-white/90 backdrop-blur-md rounded-xl p-6 shadow-lg border border-white/20 animate-scale-in">
+                    <div class="text-center">
+                        <!-- Avatar grande -->
+                        <div class="position-relative mb-4 d-inline-block">
+                            {% if user.userprofile.profile_picture %}
+                                <img src="{{ user.userprofile.profile_picture.url }}" 
+                                     alt="Foto de {{ user.get_full_name|default:user.username }}" 
+                                     class="rounded-circle border border-emerald-500 border-4 shadow-lg hover:scale-105 transition-transform duration-300" 
+                                     style="width: 150px; height: 150px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-circle d-flex align-items-center justify-content-center border border-4 border-emerald-500 shadow-lg" 
+                                     style="width: 150px; height: 150px; color: white; font-size: 48px; font-weight: bold;">
+                                    {{ user.first_name|default:user.username|first|upper }}{{ user.last_name|first|upper|default:'' }}
+                                </div>
+                            {% endif %}
+                            <!-- Indicador online -->
+                            <span class="position-absolute bottom-2 end-2 bg-success border border-white border-3 rounded-circle animate-pulse" 
+                                  style="width: 30px; height: 30px;"></span>
+                        </div>
+                        
+                        <!-- Información del usuario -->
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">
+                            {{ user.get_full_name|default:user.username }}
+                        </h3>
+                        <p class="text-emerald-600 font-semibold mb-2">
+                            📋 {{ user.userprofile.rol|default:"Usuario" }}
+                        </p>
+                        {% if user.userprofile.sucursal %}
+                            <p class="text-gray-600 mb-4">
+                                🏢 {{ user.userprofile.sucursal }}
+                            </p>
+                        {% endif %}
+                        
+                        <!-- Botón para cambiar foto -->
+                        <form method="post" enctype="multipart/form-data" class="mt-4">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="profile_picture" class="btn btn-outline-emerald-600 btn-sm w-100 cursor-pointer hover:bg-emerald-50 transition-colors duration-300">
+                                    📷 Cambiar Foto
+                                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*" class="d-none" onchange="this.form.submit()">
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información Detallada -->
+            <div class="lg:col-span-2">
+                <div class="bg-white/90 backdrop-blur-md rounded-xl p-6 shadow-lg border border-white/20 animate-scale-in" style="animation-delay: 0.1s;">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        📊 Información Personal
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Usuario -->
+                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">👤 Usuario</label>
+                            <p class="text-lg text-gray-800 font-semibold">{{ user.username }}</p>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">📧 Email</label>
+                            <p class="text-lg text-gray-800 font-semibold">{{ user.email|default:"No registrado" }}</p>
+                        </div>
+                        
+                        <!-- Nombre -->
+                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">📝 Nombre</label>
+                            <p class="text-lg text-gray-800 font-semibold">{{ user.first_name|default:"No registrado" }}</p>
+                        </div>
+                        
+                        <!-- Apellido -->
+                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">📝 Apellido</label>
+                            <p class="text-lg text-gray-800 font-semibold">{{ user.last_name|default:"No registrado" }}</p>
+                        </div>
+                        
+                        <!-- Rol -->
+                        <div class="bg-emerald-50 rounded-lg p-4 hover:bg-emerald-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-emerald-600 mb-1">🎭 Rol</label>
+                            <p class="text-lg text-emerald-800 font-semibold">{{ user.userprofile.rol }}</p>
+                        </div>
+                        
+                        <!-- Sucursal -->
+                        {% if user.userprofile.sucursal %}
+                        <div class="bg-blue-50 rounded-lg p-4 hover:bg-blue-100 transition-colors duration-300">
+                            <label class="block text-sm font-medium text-blue-600 mb-1">🏢 Sucursal</label>
+                            <p class="text-lg text-blue-800 font-semibold">{{ user.userprofile.sucursal }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Fecha de último login -->
+                    <div class="mt-6 bg-yellow-50 rounded-lg p-4 hover:bg-yellow-100 transition-colors duration-300">
+                        <label class="block text-sm font-medium text-yellow-600 mb-1">🕒 Último acceso</label>
+                        <p class="text-lg text-yellow-800 font-semibold">
+                            {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="flex justify-center mt-8 animate-fade-in" style="animation-delay: 0.3s;">
+            <a href="{% url 'lista_cursos' %}" 
+               class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-8 py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-emerald-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+                📚 Volver a Cursos
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- CSS Personalizado -->
+<style>
+    /* Animaciones personalizadas */
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes slide-up {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes scale-in {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    .animate-fade-in {
+        animation: fade-in 0.8s ease-out;
+    }
+    
+    .animate-slide-up {
+        animation: slide-up 0.8s ease-out;
+    }
+    
+    .animate-scale-in {
+        animation: scale-in 0.6s ease-out;
+    }
+    
+    /* Glassmorphism */
+    .backdrop-blur-sm {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .backdrop-blur-md {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* Hover effects */
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    /* Botón personalizado para emerald */
+    .btn-outline-emerald-600 {
+        color: #059669;
+        border-color: #059669;
+    }
+    
+    .btn-outline-emerald-600:hover {
+        background-color: #ecfdf5;
+        border-color: #047857;
+        color: #047857;
+    }
+</style>
+
+<!-- JavaScript para UX mejorada -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mostrar loading al cambiar foto
+        const fileInput = document.getElementById('profile_picture');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                const label = this.parentElement.querySelector('label');
+                label.innerHTML = '⏳ Subiendo...';
+                label.classList.add('opacity-50');
+            });
+        }
+        
+        // Animaciones adicionales
+        const elements = document.querySelectorAll('.bg-gray-50, .bg-emerald-50, .bg-blue-50, .bg-yellow-50');
+        elements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+            el.classList.add('animate-scale-in');
+        });
+    });
+</script>
+{% endblock %}

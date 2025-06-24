@@ -1,20 +1,25 @@
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    function toggleTodosCheckbox(source) {
-        const items = document.querySelectorAll('.curso-item');
+document.addEventListener("DOMContentLoaded", function () {    function toggleTodosCheckbox(source) {
+        // Solo seleccionar/deseleccionar cursos visibles (no filtrados)
+        const items = document.querySelectorAll('.curso-item:not(.filtro-oculto)');
         items.forEach(item => {
             const checkbox = item.querySelector('.curso-checkbox');
             checkbox.checked = source.checked;
             item.classList.toggle('seleccionado', source.checked);
         });
+        
+        // Actualizar contador de seleccionados
+        actualizarContadorSeleccionados();
+        
         console.log("🟢 Script de asignación cargado correctamente");
     }
-    window.toggleTodosCheckbox = toggleTodosCheckbox;
-
-    document.querySelectorAll('.curso-checkbox').forEach(cb => {
+    window.toggleTodosCheckbox = toggleTodosCheckbox;    document.querySelectorAll('.curso-checkbox').forEach(cb => {
         cb.addEventListener('change', () => {
             const li = cb.closest('.curso-item');
             li.classList.toggle('seleccionado', cb.checked);
+            
+            // Actualizar contador de seleccionados
+            actualizarContadorSeleccionados();
         });
     });
 
@@ -124,15 +129,823 @@ document.addEventListener("DOMContentLoaded", function () {
                     new bootstrap.Modal(document.getElementById('modalCursosAsignados')).show();
                 });
         });
+    });    // Event listener para botones de ver miembros del grupo
+    document.querySelectorAll('.ver-miembros-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const grupoId = button.dataset.grupoId;
+            const grupoNombre = button.closest('li').dataset.grupoNombre;
+            
+            // Almacenar ID del grupo para uso en agregar miembros
+            window.grupoIdActual = grupoId;
+            
+            // Mostrar loading
+            document.getElementById('loading-miembros').style.display = 'block';
+            document.getElementById('contenedor-miembros').style.display = 'none';
+            document.getElementById('empty-miembros').style.display = 'none';
+            
+            // Actualizar título del modal
+            document.getElementById('nombre-grupo-modal').textContent = grupoNombre;
+            
+            // Mostrar modal
+            new bootstrap.Modal(document.getElementById('modalMiembrosGrupo')).show();
+            
+            // Hacer petición AJAX
+            fetch(`/miembros-grupo/${grupoId}/`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('loading-miembros').style.display = 'none';
+                    
+                    if (data.success) {
+                        const listaMiembros = document.getElementById('lista-miembros-grupo');
+                        listaMiembros.innerHTML = '';
+                        
+                        if (data.miembros.length === 0) {
+                            document.getElementById('empty-miembros').style.display = 'block';
+                        } else {
+                            document.getElementById('contenedor-miembros').style.display = 'block';
+                            
+                            data.miembros.forEach(miembro => {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td>
+                                        <div>
+                                            <strong>${miembro.username}</strong>
+                                            ${miembro.first_name || miembro.last_name ? 
+                                                `<br><small class="text-muted">${miembro.first_name} ${miembro.last_name}</small>` : 
+                                                ''
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        ${miembro.email ? 
+                                            `<a href="mailto:${miembro.email}" class="text-decoration-none">${miembro.email}</a>` : 
+                                            '<span class="text-muted">Sin email</span>'
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">${miembro.cursos_count} cursos</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">${miembro.date_joined}</small>
+                                    </td>
+                                    <td>
+                                        ${miembro.is_active ? 
+                                            '<span class="badge bg-success">✅ Activo</span>' : 
+                                            '<span class="badge bg-secondary">❌ Inactivo</span>'
+                                        }
+                                        ${miembro.is_staff ? 
+                                            '<br><span class="badge bg-warning mt-1">⭐ Staff</span>' : 
+                                            ''
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary ver-cursos-usuario-btn" 
+                                                    data-usuario-id="${miembro.id}"
+                                                    title="Ver cursos del usuario">
+                                                📚
+                                            </button>
+                                            <button class="btn btn-outline-danger remover-miembro-btn" 
+                                                    data-usuario-id="${miembro.id}"
+                                                    data-grupo-id="${grupoId}"
+                                                    title="Remover del grupo">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </td>
+                                `;
+                                listaMiembros.appendChild(tr);
+                            });
+                            
+                            // Agregar event listeners para los botones de acción
+                            agregarEventListenersMiembros();
+                        }
+                    } else {
+                        alert('Error al cargar miembros: ' + data.error);
+                        document.getElementById('empty-miembros').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('loading-miembros').style.display = 'none';
+                    document.getElementById('empty-miembros').style.display = 'block';
+                    alert('Error al cargar los miembros del grupo');
+                });
+        });
     });
 
-    // DataTable inicialización
+    // Función para agregar event listeners a los botones de acción de miembros
+    function agregarEventListenersMiembros() {
+        // Botones para ver cursos del usuario (reutilizar funcionalidad existente)
+        document.querySelectorAll('.ver-cursos-usuario-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const usuarioId = button.dataset.usuarioId;
+                const lista = document.getElementById('lista-cursos-asignados');
+                lista.innerHTML = '<li class="list-group-item">Cargando...</li>';
+                
+                fetch(`/cursos-asignados/${usuarioId}/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        lista.innerHTML = '';
+                        if (data.cursos.length === 0) {
+                            lista.innerHTML = '<li class="list-group-item">Sin cursos asignados</li>';
+                        } else {
+                            data.cursos.forEach(curso => {
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                                li.innerHTML = `
+                                    <span>${curso.titulo}</span>
+                                    <button class="btn btn-sm btn-danger" onclick="desasignarCurso(${curso.id}, ${usuarioId}, this)">❌</button>
+                                `;
+                                lista.appendChild(li);
+                            });
+                        }
+                        new bootstrap.Modal(document.getElementById('modalCursosAsignados')).show();
+                    });
+            });
+        });        // Botones para remover miembros del grupo
+        document.querySelectorAll('.remover-miembro-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const usuarioId = button.dataset.usuarioId;
+                const grupoId = button.dataset.grupoId;
+                const usuarioNombre = button.closest('tr').querySelector('strong').textContent;
+                
+                if (confirm(`¿Estás seguro de que deseas remover a "${usuarioNombre}" del grupo?`)) {
+                    removerMiembroGrupo(usuarioId, grupoId, button);
+                }
+            });
+        });
+    }
+
+    // Función para remover miembro del grupo
+    function removerMiembroGrupo(usuarioId, grupoId, button) {
+        // Deshabilitar botón temporalmente
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        
+        fetch('/remover-miembro-grupo/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                grupo_id: grupoId,
+                usuario_id: usuarioId
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Remover fila de la tabla con animación
+                const fila = button.closest('tr');
+                fila.style.transition = 'opacity 0.3s ease';
+                fila.style.opacity = '0';
+                
+                setTimeout(() => {
+                    fila.remove();
+                    
+                    // Verificar si ya no hay miembros
+                    const filasRestantes = document.querySelectorAll('#lista-miembros-grupo tr').length;
+                    if (filasRestantes === 0) {
+                        document.getElementById('contenedor-miembros').style.display = 'none';
+                        document.getElementById('empty-miembros').style.display = 'block';
+                    }
+                }, 300);
+                
+                // Mostrar mensaje de éxito
+                alert('✅ ' + data.mensaje);
+            } else {
+                alert('Error al remover miembro: ' + data.error);
+                // Restaurar botón
+                button.disabled = false;
+                button.innerHTML = '🗑️';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de red al remover miembro');
+            // Restaurar botón
+            button.disabled = false;
+            button.innerHTML = '🗑️';
+        });
+    }
+
+    // Event listener para el botón "Agregar Miembros"
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'agregar-miembros-btn') {
+            const nombreGrupo = document.getElementById('nombre-grupo-modal').textContent;
+            const grupoId = obtenerGrupoIdActual();
+            
+            if (grupoId) {
+                mostrarModalAgregarMiembros(grupoId, nombreGrupo);
+            } else {
+                alert('Error: No se pudo obtener el ID del grupo');
+            }
+        }
+    });
+
+    // Función para obtener el ID del grupo actual
+    function obtenerGrupoIdActual() {
+        // Buscar el botón que abrió el modal de miembros
+        const btnVerMiembros = document.querySelector('.ver-miembros-btn');
+        if (btnVerMiembros) {
+            return btnVerMiembros.dataset.grupoId;
+        }
+        
+        // Como alternativa, podemos almacenar el ID en una variable global
+        return window.grupoIdActual || null;
+    }
+
+    // Función para mostrar el modal de agregar miembros
+    function mostrarModalAgregarMiembros(grupoId, nombreGrupo) {
+        // Actualizar título del modal
+        document.getElementById('nombre-grupo-agregar').textContent = nombreGrupo;
+        
+        // Almacenar ID del grupo para uso posterior
+        window.grupoIdActual = grupoId;
+        
+        // Mostrar loading y ocultar contenido
+        document.getElementById('loading-usuarios-disponibles').style.display = 'block';
+        document.getElementById('contenedor-usuarios-disponibles').style.display = 'none';
+        document.getElementById('empty-usuarios-disponibles').style.display = 'none';
+        document.getElementById('usuarios-seleccionados-container').style.display = 'none';
+        
+        // Limpiar selecciones anteriores
+        limpiarSeleccionUsuarios();
+        
+        // Mostrar modal
+        new bootstrap.Modal(document.getElementById('modalAgregarMiembros')).show();
+        
+        // Cargar usuarios disponibles
+        cargarUsuariosDisponibles(grupoId);
+    }
+
+    // Función para cargar usuarios disponibles
+    function cargarUsuariosDisponibles(grupoId) {
+        fetch(`/usuarios-disponibles-grupo/${grupoId}/`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading-usuarios-disponibles').style.display = 'none';
+                
+                if (data.success) {
+                    const listaUsuarios = document.getElementById('lista-usuarios-disponibles');
+                    listaUsuarios.innerHTML = '';
+                    
+                    if (data.usuarios.length === 0) {
+                        document.getElementById('empty-usuarios-disponibles').style.display = 'block';
+                    } else {
+                        document.getElementById('contenedor-usuarios-disponibles').style.display = 'block';
+                        
+                        data.usuarios.forEach(usuario => {
+                            const item = document.createElement('div');
+                            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center usuario-disponible';
+                            item.dataset.usuarioId = usuario.id;
+                            item.innerHTML = `
+                                <div class="form-check">
+                                    <input class="form-check-input usuario-checkbox" type="checkbox" 
+                                           id="usuario-${usuario.id}" value="${usuario.id}">
+                                    <label class="form-check-label ms-2" for="usuario-${usuario.id}">
+                                        <strong>${usuario.username}</strong>
+                                        ${usuario.first_name || usuario.last_name ? 
+                                            `<br><small class="text-muted">${usuario.first_name} ${usuario.last_name}</small>` : 
+                                            ''
+                                        }
+                                        ${usuario.email ? 
+                                            `<br><small class="text-muted">${usuario.email}</small>` : 
+                                            ''
+                                        }
+                                    </label>
+                                </div>
+                                <div>
+                                    ${usuario.is_active ? 
+                                        '<span class="badge bg-success">✅ Activo</span>' : 
+                                        '<span class="badge bg-secondary">❌ Inactivo</span>'
+                                    }
+                                    ${usuario.is_staff ? 
+                                        '<br><span class="badge bg-warning mt-1">⭐ Staff</span>' : 
+                                        ''
+                                    }
+                                </div>
+                            `;
+                            listaUsuarios.appendChild(item);
+                        });
+                        
+                        // Agregar event listeners para checkboxes
+                        agregarEventListenersUsuariosDisponibles();
+                        
+                        // Agregar funcionalidad de filtro
+                        configurarFiltroUsuariosDisponibles();
+                    }
+                } else {
+                    alert('Error al cargar usuarios: ' + data.error);
+                    document.getElementById('empty-usuarios-disponibles').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading-usuarios-disponibles').style.display = 'none';
+                document.getElementById('empty-usuarios-disponibles').style.display = 'block';                alert('Error al cargar los usuarios disponibles');
+            });
+    }
+
+    // Función para agregar event listeners a los checkboxes de usuarios disponibles
+    function agregarEventListenersUsuariosDisponibles() {
+        document.querySelectorAll('.usuario-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                actualizarUsuariosSeleccionados();
+            });
+        });
+    }
+
+    // Función para configurar el filtro de usuarios disponibles
+    function configurarFiltroUsuariosDisponibles() {
+        const filtro = document.getElementById('filtro-usuarios-disponibles');
+        if (filtro) {
+            filtro.addEventListener('input', function() {
+                const busqueda = this.value.toLowerCase().trim();
+                filtrarUsuariosDisponibles(busqueda);
+            });
+        }
+    }
+
+    // Función para filtrar usuarios disponibles
+    function filtrarUsuariosDisponibles(busqueda) {
+        const usuarios = document.querySelectorAll('.usuario-disponible');
+        let usuariosVisibles = 0;
+        
+        usuarios.forEach(usuario => {
+            const texto = usuario.textContent.toLowerCase();
+            const coincide = busqueda === '' || texto.includes(busqueda);
+            
+            if (coincide) {
+                usuario.style.display = 'block';
+                usuariosVisibles++;
+            } else {
+                usuario.style.display = 'none';
+            }
+        });
+        
+        // Mostrar/ocultar mensaje de "sin resultados"
+        const contenedor = document.getElementById('contenedor-usuarios-disponibles');
+        let mensaje = contenedor.querySelector('.filtro-sin-resultados');
+        
+        if (usuariosVisibles === 0 && busqueda !== '') {
+            if (!mensaje) {
+                mensaje = document.createElement('div');
+                mensaje.className = 'filtro-sin-resultados text-center text-muted py-4';
+                mensaje.innerHTML = `
+                    <i class="fas fa-user-slash fa-2x mb-2"></i>
+                    <p class="mb-0">No se encontraron usuarios que coincidan con "<strong>${busqueda}</strong>"</p>
+                    <small>Intenta con otros términos de búsqueda</small>
+                `;
+                contenedor.appendChild(mensaje);
+            } else {
+                mensaje.querySelector('strong').textContent = busqueda;
+            }
+            mensaje.style.display = 'block';
+        } else if (mensaje) {
+            mensaje.style.display = 'none';
+        }
+    }
+
+    // Función para actualizar la lista de usuarios seleccionados
+    function actualizarUsuariosSeleccionados() {
+        const checkboxes = document.querySelectorAll('.usuario-checkbox:checked');
+        const contenedor = document.getElementById('usuarios-seleccionados');
+        const contenedorPrincipal = document.getElementById('usuarios-seleccionados-container');
+        const contador = document.getElementById('contador-seleccionados-agregar');
+        const btnConfirmar = document.getElementById('confirmar-agregar-miembros');
+        
+        // Limpiar contenedor
+        contenedor.innerHTML = '';
+        
+        if (checkboxes.length === 0) {
+            contenedorPrincipal.style.display = 'none';
+            btnConfirmar.disabled = true;
+        } else {
+            contenedorPrincipal.style.display = 'block';
+            btnConfirmar.disabled = false;
+            
+            checkboxes.forEach(checkbox => {
+                const usuarioItem = checkbox.closest('.usuario-disponible');
+                const username = usuarioItem.querySelector('strong').textContent;
+                const usuarioId = checkbox.value;
+                
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary d-flex align-items-center gap-1';
+                badge.innerHTML = `
+                    ${username}
+                    <button type="button" class="btn-close btn-close-white btn-sm" 
+                            onclick="deseleccionarUsuario('${usuarioId}')" aria-label="Quitar"></button>
+                `;
+                contenedor.appendChild(badge);
+            });
+        }
+        
+        // Actualizar contador
+        contador.textContent = checkboxes.length;
+    }
+
+    // Función para deseleccionar un usuario específico
+    window.deseleccionarUsuario = function(usuarioId) {
+        const checkbox = document.getElementById(`usuario-${usuarioId}`);
+        if (checkbox) {
+            checkbox.checked = false;
+            actualizarUsuariosSeleccionados();
+        }
+    }
+
+    // Función para limpiar selecciones de usuarios
+    function limpiarSeleccionUsuarios() {
+        document.querySelectorAll('.usuario-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        actualizarUsuariosSeleccionados();
+    }
+
+    // Event listener para confirmar agregar miembros
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'confirmar-agregar-miembros') {
+            confirmarAgregarMiembros();
+        }
+    });
+
+    // Función para confirmar agregar miembros
+    function confirmarAgregarMiembros() {
+        const checkboxes = document.querySelectorAll('.usuario-checkbox:checked');
+        const usuariosIds = Array.from(checkboxes).map(cb => cb.value);
+        const grupoId = window.grupoIdActual;
+        
+        if (usuariosIds.length === 0) {
+            alert('No hay usuarios seleccionados');
+            return;
+        }
+        
+        if (!grupoId) {
+            alert('Error: No se pudo obtener el ID del grupo');
+            return;
+        }
+        
+        // Mostrar confirmación
+        const confirmacion = confirm(`¿Estás seguro de agregar ${usuariosIds.length} usuario(s) al grupo?`);
+        if (!confirmacion) return;
+        
+        // Deshabilitar botón para evitar doble clic
+        const btnConfirmar = document.getElementById('confirmar-agregar-miembros');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Agregando...';
+        
+        // Realizar petición AJAX
+        fetch('/agregar-miembros-grupo/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                grupo_id: grupoId,
+                usuarios_ids: usuariosIds
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.agregados} usuario(s) agregado(s) al grupo correctamente`);
+                
+                // Cerrar modal de agregar miembros
+                bootstrap.Modal.getInstance(document.getElementById('modalAgregarMiembros')).hide();
+                
+                // Recargar la lista de miembros del grupo
+                const grupoNombre = document.getElementById('nombre-grupo-modal').textContent;
+                setTimeout(() => {
+                    // Simular clic en el botón de ver miembros para recargar la lista
+                    document.querySelector(`[data-grupo-id="${grupoId}"]`)?.click();
+                }, 500);
+                
+            } else {
+                alert('Error al agregar miembros: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de red al agregar miembros');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '✅ Agregar Seleccionados (<span id="contador-seleccionados-agregar">0</span>)';
+        });
+    }
+
+    // ===================================
+    // FUNCIONALIDAD DE FILTROS
+    // ===================================
+    
+    // Variables globales para los filtros
+    let cursosFiltrados = [];
+    let usuariosFiltrados = [];
+      // Inicializar filtros cuando el DOM esté listo
+    function inicializarFiltros() {
+        const filtroCursos = document.getElementById('filtro-cursos');
+        const filtroUsuarios = document.getElementById('filtro-usuarios');
+        const limpiarFiltros = document.getElementById('limpiar-filtros');
+        
+        console.log('🔧 Inicializando filtros...');
+        console.log('- Filtro cursos encontrado:', !!filtroCursos);
+        console.log('- Filtro usuarios encontrado:', !!filtroUsuarios);
+        console.log('- Botón limpiar encontrado:', !!limpiarFiltros);
+        
+        // Filtro de cursos en tiempo real
+        if (filtroCursos) {
+            filtroCursos.addEventListener('input', function() {
+                const busqueda = this.value.toLowerCase().trim();
+                console.log('🎯 Filtrando cursos:', busqueda);
+                filtrarCursos(busqueda);
+                actualizarContadorCursos();
+            });
+            console.log('✅ Event listener de cursos agregado');
+        }
+        
+        // Filtro de usuarios en tiempo real
+        if (filtroUsuarios) {
+            filtroUsuarios.addEventListener('input', function() {
+                const busqueda = this.value.toLowerCase().trim();
+                console.log('🎯 Filtrando usuarios:', busqueda);
+                filtrarUsuarios(busqueda);
+                actualizarContadorUsuarios();
+            });
+            console.log('✅ Event listener de usuarios agregado');
+        }
+          // Botón limpiar filtros
+        if (limpiarFiltros) {
+            limpiarFiltros.addEventListener('click', function() {
+                console.log('🧹 Limpiando filtros...');
+                limpiarTodosFiltros();
+            });
+            console.log('✅ Event listener de limpiar agregado');
+        }
+          // Botón de test de filtros (temporal para debug)
+        const testFiltros = document.getElementById('test-filtros');
+        if (testFiltros) {
+            testFiltros.addEventListener('click', function() {
+                console.log('🧪 EJECUTANDO TEST DE FILTROS...');
+                
+                // Test básico: verificar que los elementos existen
+                const totalCursos = document.querySelectorAll('#lista-cursos .curso-item').length;
+                const totalUsuarios = document.querySelectorAll('#lista-usuarios li').length;
+                
+                console.log(`📊 ELEMENTOS: ${totalCursos} cursos, ${totalUsuarios} usuarios`);
+                
+                alert('🧪 Test de filtros ejecutado. Revisa la consola para ver los resultados.');
+            });
+        }
+        
+        console.log('✅ Filtros inicializados correctamente');
+    }    // Función para filtrar cursos
+    function filtrarCursos(busqueda) {
+        const listaCursos = document.querySelectorAll('#lista-cursos .curso-item');
+        let cursosVisibles = 0;
+        
+        listaCursos.forEach((curso, index) => {
+            const titulo = curso.dataset.cursoTitulo || curso.querySelector('.texto-curso')?.textContent?.trim() || '';
+            const coincide = busqueda === '' || titulo.toLowerCase().includes(busqueda);
+            
+            if (coincide) {
+                curso.style.display = 'block';
+                curso.classList.remove('filtro-oculto');
+                cursosVisibles++;
+            } else {
+                curso.style.display = 'none';
+                curso.classList.add('filtro-oculto');
+                // Desmarcar checkbox si está oculto
+                const checkbox = curso.querySelector('.curso-checkbox');
+                if (checkbox && checkbox.checked) {
+                    checkbox.checked = false;
+                    curso.classList.remove('seleccionado');
+                }
+            }
+        });
+        
+        // Mostrar mensaje si no hay resultados
+        mostrarMensajeCursos(cursosVisibles, busqueda);
+        
+        // Actualizar contador de seleccionados
+        actualizarContadorSeleccionados();
+    }    // Función para filtrar usuarios
+    function filtrarUsuarios(busqueda) {
+        const listaUsuarios = document.querySelectorAll('#lista-usuarios li');
+        let usuariosVisibles = 0;
+        
+        if (listaUsuarios.length === 0) {
+            console.warn('⚠️ No se encontraron elementos de usuario');
+            return;
+        }
+        
+        listaUsuarios.forEach((usuario, index) => {
+            const usuarioId = usuario.dataset.usuarioId;
+            const username = usuario.dataset.usuarioNombre || '';
+            
+            if (!usuarioId) {
+                return;
+            }
+            
+            // Obtener textos para búsqueda
+            const nombrePrincipal = usuario.querySelector('.nombre-principal')?.textContent?.trim() || '';
+            const usernameSec = usuario.querySelector('.username-secundario')?.textContent?.replace('@', '').trim() || '';
+            
+            // Crear texto completo para búsqueda (normalizado)
+            const textoCompleto = `${username} ${nombrePrincipal} ${usernameSec}`.toLowerCase().trim();
+            
+            // Verificar coincidencia
+            const coincide = busqueda === '' || textoCompleto.includes(busqueda);
+            
+            if (coincide) {
+                // Mostrar usuario - remover clase y estilo inline
+                usuario.classList.remove('filtro-oculto');
+                usuario.style.display = '';
+                usuariosVisibles++;
+            } else {
+                // Ocultar usuario - agregar clase y estilo inline como respaldo
+                usuario.classList.add('filtro-oculto');
+                usuario.style.display = 'none';
+            }
+        });
+        
+        // Mostrar mensaje si no hay resultados
+        mostrarMensajeUsuarios(usuariosVisibles, busqueda);
+    }
+    
+    // Función para mostrar mensaje de cursos
+    function mostrarMensajeCursos(cursosVisibles, busqueda) {
+        const contenedor = document.getElementById('lista-cursos').parentElement;
+        let mensaje = contenedor.querySelector('.filtro-sin-resultados');
+        
+        if (cursosVisibles === 0 && busqueda !== '') {
+            if (!mensaje) {
+                mensaje = document.createElement('div');
+                mensaje.className = 'filtro-sin-resultados text-center text-muted py-4';
+                mensaje.innerHTML = `
+                    <i class="fas fa-search fa-2x mb-2"></i>
+                    <p class="mb-0">No se encontraron cursos que coincidan con "<strong>${busqueda}</strong>"</p>
+                    <small>Intenta con otros términos de búsqueda</small>
+                `;
+                contenedor.appendChild(mensaje);
+            } else {
+                mensaje.querySelector('strong').textContent = busqueda;
+            }
+            mensaje.style.display = 'block';
+        } else if (mensaje) {
+            mensaje.style.display = 'none';
+        }
+    }
+    
+    // Función para mostrar mensaje de usuarios
+    function mostrarMensajeUsuarios(usuariosVisibles, busqueda) {
+        const contenedor = document.getElementById('lista-usuarios').parentElement;
+        let mensaje = contenedor.querySelector('.filtro-sin-resultados');
+        
+        if (usuariosVisibles === 0 && busqueda !== '') {
+            if (!mensaje) {
+                mensaje = document.createElement('div');
+                mensaje.className = 'filtro-sin-resultados text-center text-muted py-4';
+                mensaje.innerHTML = `
+                    <i class="fas fa-user-slash fa-2x mb-2"></i>
+                    <p class="mb-0">No se encontraron usuarios que coincidan con "<strong>${busqueda}</strong>"</p>
+                    <small>Intenta con otros términos de búsqueda</small>
+                `;
+                contenedor.appendChild(mensaje);
+            } else {
+                mensaje.querySelector('strong').textContent = busqueda;
+            }
+            mensaje.style.display = 'block';
+        } else if (mensaje) {
+            mensaje.style.display = 'none';
+        }
+    }
+    
+    // Función para actualizar contador de cursos
+    function actualizarContadorCursos() {
+        const contador = document.getElementById('contador-cursos');
+        const cursosVisibles = document.querySelectorAll('#lista-cursos .curso-item:not(.filtro-oculto)').length;
+        const cursosTotal = document.querySelectorAll('#lista-cursos .curso-item').length;
+        
+        if (contador) {
+            const filtroCursos = document.getElementById('filtro-cursos');
+            const hayFiltro = filtroCursos && filtroCursos.value.trim() !== '';
+            
+            if (hayFiltro) {
+                contador.textContent = `${cursosVisibles}/${cursosTotal}`;
+                contador.className = 'badge bg-warning';
+            } else {
+                contador.textContent = cursosTotal;
+                contador.className = 'badge bg-primary';
+            }
+        }
+    }
+      // Función para actualizar contador de usuarios
+    function actualizarContadorUsuarios() {
+        const contador = document.getElementById('contador-usuarios');
+        const usuariosVisibles = document.querySelectorAll('#lista-usuarios li:not(.filtro-oculto)').length;
+        const usuariosTotal = document.querySelectorAll('#lista-usuarios li').length;
+        
+        if (contador) {
+            const filtroUsuarios = document.getElementById('filtro-usuarios');
+            const hayFiltro = filtroUsuarios && filtroUsuarios.value.trim() !== '';
+            
+            if (hayFiltro) {
+                contador.textContent = `${usuariosVisibles}/${usuariosTotal}`;
+                contador.className = 'badge bg-warning';
+            } else {
+                contador.textContent = usuariosTotal;
+                contador.className = 'badge bg-success';
+            }
+        }
+    }
+    
+    // Función para actualizar contador de seleccionados
+    function actualizarContadorSeleccionados() {
+        const contador = document.getElementById('contador-seleccionados');
+        const seleccionados = document.querySelectorAll('#lista-cursos .curso-item:not(.filtro-oculto) .curso-checkbox:checked').length;
+        
+        if (contador) {
+            contador.textContent = `${seleccionados} seleccionados`;
+            
+            if (seleccionados > 0) {
+                contador.className = 'badge bg-success';
+            } else {
+                contador.className = 'badge bg-secondary';
+            }
+        }
+    }
+    
+    // Función para limpiar todos los filtros
+    function limpiarTodosFiltros() {
+        const filtroCursos = document.getElementById('filtro-cursos');
+        const filtroUsuarios = document.getElementById('filtro-usuarios');
+        
+        // Limpiar campos de búsqueda
+        if (filtroCursos) {
+            filtroCursos.value = '';
+            filtrarCursos('');
+        }
+        
+        if (filtroUsuarios) {
+            filtroUsuarios.value = '';
+            filtrarUsuarios('');
+        }
+        
+        // Actualizar contadores
+        actualizarContadorCursos();
+        actualizarContadorUsuarios();
+        actualizarContadorSeleccionados();
+        
+        // Mostrar mensaje temporal
+        mostrarNotificacionFiltros('Filtros limpiados correctamente', 'success');
+    }
+    
+    // Función para mostrar notificaciones de filtros
+    function mostrarNotificacionFiltros(mensaje, tipo = 'info') {
+        // Crear toast notification simple
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            if (toast && toast.parentNode) {
+                toast.remove();
+            }
+        }, 3000);
+    }
+    
+    // Inicializar filtros al cargar la página
+    inicializarFiltros();
+    
+    // ===================================
+    // FIN FUNCIONALIDAD DE FILTROS
+    // ===================================    // DataTable inicialización
     window.tablaHistorial = $('#tabla-historial-completa').DataTable({
         responsive: true,
         language: {
             url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
-        }
+        },
+        pageLength: 25,
+        order: [[1, 'desc']], // Ordenar por fecha descendente por defecto
+        columnDefs: [
+            { targets: [5, 8], orderable: false } // No ordenar columnas de progreso y acciones
+        ]
     });
+
+    // Configurar filtros del historial
+    configurarFiltrosHistorial();
 
     cargarHistorial(); // 🚀 Carga inicial
     setInterval(cargarHistorial, 60000); // ⏱️ Actualización automática cada 60s
@@ -201,11 +1014,167 @@ function cargarHistorial() {
             });
 
             window.tablaHistorial.draw();
+            
+            // Actualizar estadísticas
+            actualizarEstadisticasHistorial(data.historial);
         })
         .catch(error => {
             console.error("❌ Error al cargar historial:", error);
         });
 }
+
+// 📊 Función para actualizar estadísticas del historial
+function actualizarEstadisticasHistorial(historial) {
+    const total = historial.length;
+    const completados = historial.filter(item => parseInt(item.progreso) === 100).length;
+    const enProgreso = historial.filter(item => parseInt(item.progreso) > 0 && parseInt(item.progreso) < 100).length;
+    
+    const progresoTotal = historial.reduce((sum, item) => sum + parseInt(item.progreso), 0);
+    const promedio = total > 0 ? Math.round(progresoTotal / total) : 0;
+
+    document.getElementById('stat-total-asignaciones').textContent = total;
+    document.getElementById('stat-completados').textContent = completados;
+    document.getElementById('stat-en-progreso').textContent = enProgreso;
+    document.getElementById('stat-promedio').textContent = promedio + '%';
+}
+
+// 🔄 Función para actualización manual del historial
+function actualizarManualHistorial() {
+    const boton = document.getElementById('btnActualizarHistorial');
+    const textoOriginal = boton.innerHTML;
+    
+    boton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Actualizando...';
+    boton.disabled = true;
+    
+    cargarHistorial();
+    
+    setTimeout(() => {
+        boton.innerHTML = textoOriginal;
+        boton.disabled = false;
+        
+        // Notificación de actualización exitosa
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+            ✅ <strong>Historial actualizado</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }, 1000);
+}
+
+// 🔍 Configurar filtros del historial
+function configurarFiltrosHistorial() {
+    const buscarInput = document.getElementById('buscar-historial');
+    const filtroCurso = document.getElementById('filtro-curso-historial');
+    const filtroFecha = document.getElementById('filtro-fecha-desde');
+    const btnLimpiar = document.getElementById('limpiar-filtros-historial');
+
+    // Filtro de búsqueda general
+    if (buscarInput) {
+        buscarInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            if (window.tablaHistorial) {
+                window.tablaHistorial.search(searchTerm).draw();
+            }
+        });
+    }
+
+    // Filtro por curso
+    if (filtroCurso) {
+        filtroCurso.addEventListener('change', function() {
+            const cursoSeleccionado = this.value;
+            
+            if (window.tablaHistorial) {
+                if (cursoSeleccionado === '') {
+                    // Mostrar todos los cursos
+                    window.tablaHistorial.column(2).search('').draw();
+                } else {
+                    // Filtrar por curso específico
+                    window.tablaHistorial.column(2).search(cursoSeleccionado, true, false).draw();
+                }
+            }
+        });
+    }    // Filtro por fecha
+    if (filtroFecha) {
+        filtroFecha.addEventListener('change', function() {
+            const fechaSeleccionada = this.value;
+            
+            if (window.tablaHistorial && fechaSeleccionada) {
+                // Crear función de filtro personalizada para fechas
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    if (settings.nTable.id !== 'tabla-historial-completa') return true;
+                    
+                    const fechaFila = data[1]; // Columna de fecha
+                    const fechaTexto = $(fechaFila).text() || fechaFila; // Extraer texto si es HTML
+                    
+                    // Convertir fechas a objetos Date para comparación
+                    const fechaFilaDate = new Date(fechaTexto);
+                    const fechaFiltroDate = new Date(fechaSeleccionada);
+                    
+                    return fechaFilaDate >= fechaFiltroDate;
+                });
+                
+                window.tablaHistorial.draw();
+            } else if (window.tablaHistorial) {
+                // Limpiar filtro personalizado
+                $.fn.dataTable.ext.search.pop();
+                window.tablaHistorial.draw();
+            }
+        });
+    }    // Botón limpiar filtros
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function() {
+            // Limpiar campos de filtro
+            if (buscarInput) buscarInput.value = '';
+            if (filtroCurso) filtroCurso.selectedIndex = 0;
+            if (filtroFecha) filtroFecha.value = '';
+            
+            // Limpiar filtros personalizados de DataTable
+            if (window.tablaHistorial) {
+                // Limpiar filtros personalizados de fecha
+                $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(function(fn) {
+                    return fn.toString().indexOf('tabla-historial-completa') === -1;
+                });
+                
+                // Limpiar filtros estándar
+                window.tablaHistorial.search('').columns().search('').draw();
+            }
+            
+            // Notificación
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                🧹 <strong>Filtros limpiados</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 2000);
+        });
+    }
+}
+
+// Llamar a la función de configuración de filtros de historial al cargar el DOM
+document.addEventListener("DOMContentLoaded", function() {
+    configurarFiltrosHistorial();
+});
+
 
 function getProgressClass(p) {
     const percent = parseInt(p);

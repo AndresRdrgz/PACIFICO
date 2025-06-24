@@ -1,53 +1,518 @@
-<!-- Estilos -->
+<!-- Estilos Mejorados -->
 <style>
-/* Ítems de curso */
+/* Variables CSS para consistencia */
+:root {
+    --color-primary: #198754;
+    --color-secondary: #6c757d;
+    --color-success: #28a745;
+    --color-warning: #ffc107;
+    --color-info: #17a2b8;
+    --color-light: #f8f9fa;
+    --border-radius: 8px;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Contenedores uniformes mejorados */
+.contenedor-uniforme {
+    min-height: 500px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.contenedor-uniforme:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary);
+}
+
+/* Ítems de curso mejorados */
 .curso-item {
     user-select: none;
-    padding: 8px 12px;
+    padding: 12px;
     background-color: #fff;
     border: 1px solid #dee2e6;
-    border-radius: 6px;
-    margin-bottom: 8px;
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
     cursor: grab;
-    transition: box-shadow 0.2s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
+
+.curso-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: var(--color-primary);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.curso-item:hover::before {
+    transform: scaleY(1);
+}
+
+.curso-item:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
 .curso-item.seleccionado {
-    background-color: #e0fce6;
+    background-color: #e8f5e8;
+    border-color: var(--color-success);
+    box-shadow: var(--shadow-sm);
 }
+
+.curso-item.seleccionado::before {
+    transform: scaleY(1);
+}
+
 .curso-item:active {
     cursor: grabbing;
 }
+
 .curso-item.dragging {
-    opacity: 0.8;
-    transform: scale(1.05);
+    opacity: 0.9;
+    transform: scale(1.05) rotate(2deg);
     z-index: 9999;
     background-color: #d1e7dd;
     border-color: #0f5132;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Zona de drop */
+/* Zona de drop mejorada */
 .drop-target {
     display: block;
-    padding: 10px;
-    border-radius: 6px;
+    padding: 12px;
+    border-radius: var(--border-radius);
     border: 2px solid transparent;
-    transition: background-color 0.2s ease, border 0.3s ease;
+    transition: all 0.3s ease;
     position: relative;
+    background-color: #fff;
 }
+
+.drop-target:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
 .drop-target.bg-light {
-    background-color: #e0f7fa !important;
-    border-color: #198754;
-    box-shadow: inset 0 0 0 2px #198754;
-    transform: scale(1.01);
+    background-color: #e3f2fd !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: inset 0 0 0 2px var(--color-primary);
+    transform: scale(1.02);
+    animation: pulse-highlight 1s ease-in-out infinite;
 }
+
+@keyframes pulse-highlight {
+    0%, 100% { box-shadow: inset 0 0 0 2px var(--color-primary); }
+    50% { box-shadow: inset 0 0 0 4px var(--color-primary); }
+}
+
 .drop-target.success-highlight {
-    animation: flash-success 1s ease;
+    animation: flash-success 0.8s ease;
 }
+
 @keyframes flash-success {
-    0%   { background-color: #a5d6a7; }
-    100% { background-color: transparent; }
+    0% { background-color: #d4edda; transform: scale(1); }
+    50% { background-color: #a5d6a7; transform: scale(1.02); }
+    100% { background-color: transparent; transform: scale(1); }
 }
+
+/* Columnas scrolleables */
+.columna-scroll {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.columna-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.columna-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.columna-scroll::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.columna-scroll::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Cards del dashboard */
+.card.bg-gradient {
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    transition: all 0.3s ease;
+}
+
+.card.bg-gradient:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Badges mejorados */
+.badge {
+    font-size: 0.75em;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+}
+
+/* Botones de acción */
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-sm:hover {
+    transform: scale(1.05);
+}
+
+/* Filtros */
+.form-control:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Animaciones de entrada */
+.curso-item, .drop-target {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toast notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+}
+
+/* Modal mejorado */
+.modal-content {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    border-bottom: 1px solid #dee2e6;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+/* Estados de filtros */
+.filtro-oculto {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Específicamente para usuarios en filtros */
+#lista-usuarios .filtro-oculto {
+    display: none !important;
+}
+
+/* Específicamente para cursos en filtros */
+#lista-cursos .filtro-oculto {
+    display: none !important;
+}
+
+.filtro-sin-resultados {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.filtro-sin-resultados i {
+    opacity: 0.5;
+}
+
+/* Estilos para campos de filtro */
+#filtro-cursos:focus,
+#filtro-usuarios:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+#filtro-cursos:not(:placeholder-shown),
+#filtro-usuarios:not(:placeholder-shown) {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+}
+
+/* Contadores dinámicos */
+.badge.bg-warning {
+    animation: pulse-counter 1s ease-in-out;
+}
+
+@keyframes pulse-counter {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Notificaciones de filtros */
+.alert.position-fixed {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ==========================================
+   ESTILOS MODERNOS PARA DATATABLE HISTORIAL
+   ========================================== */
+
+/* Tabla moderna del historial */
+.modern-table-historial {
+    font-size: 0.875rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: none !important;
+    background-color: #ffffff;
+}
+
+.modern-table-historial thead th {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: left;
+    vertical-align: middle;
+    padding: 12px 10px;
+    border: none !important;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modern-table-historial tbody td {
+    padding: 10px;
+    vertical-align: middle;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5) !important;
+    font-size: 0.8rem;
+}
+
+.modern-table-historial tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3) !important;
+}
+
+.modern-table-historial tbody tr:hover {
+    background-color: rgba(71, 85, 105, 0.04) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.08);
+}
+
+/* DataTables personalización para historial */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin: 8px 0 !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 6px 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 0.8rem !important;
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #475569 !important;
+    box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1) !important;
+    outline: none;
+}
+
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_length label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px !important;
+    margin: 0 2px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(226, 232, 240, 0.6) !important;
+    color: #475569 !important;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.2);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+    color: white !important;
+    border-color: #334155 !important;
+}
+
+.dataTables_info {
+    color: #64748b !important;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+/* Estados y badges en la tabla */
+.badge-historial {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px;
+}
+
+.badge-completado {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    color: #059669 !important;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge-en-progreso {
+    background-color: rgba(251, 191, 36, 0.1) !important;
+    color: #d97706 !important;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.badge-sin-iniciar {
+    background-color: rgba(156, 163, 175, 0.1) !important;
+    color: #6b7280 !important;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Progreso en la tabla */
+.progreso-historial {
+    height: 20px;
+    background-color: rgba(226, 232, 240, 0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(71, 85, 105, 0.1);
+    min-width: 80px;
+}
+
+.progreso-historial .progress-bar {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border-radius: 10px;
+    transition: all 0.6s ease;
+}
+
+/* Botones de acción en la tabla */
+.btn-historial {
+    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-historial:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .contenedor-uniforme {
+        min-height: 300px;
+    }
+    
+    .columna-scroll {
+        max-height: 250px;
+    }
+    
+    .curso-item {
+        padding: 8px;
+        margin-bottom: 6px;
+    }
+    
+    .drop-target {
+        padding: 8px;
+    }
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 
 /* Contenedor uniforme */
 .contenedor-uniforme {
@@ -171,4 +636,672 @@
     margin-bottom: 2rem;
 }
 
+/* Tarjetas de usuario uniformes */
+.usuario-card-uniforme {
+    min-height: 90px;
+    max-height: 120px;
+    overflow: hidden;
+    display: flex !important;
+    align-items: center !important;
+    transition: all 0.2s ease-in-out;
+    border-radius: var(--border-radius);
+    border: 1px solid #dee2e6;
+    margin-bottom: 8px;
+    background-color: #fff;
+}
+
+.usuario-card-uniforme .usuario-info {
+    min-width: 0; /* Permite que el texto se trunque */
+    flex: 1;
+}
+
+.usuario-card-uniforme .nombre-principal {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #2c3e50;
+    line-height: 1.2;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.usuario-card-uniforme .username-secundario {
+    font-size: 0.8rem;
+    color: #6c757d;
+    line-height: 1;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.usuario-card-uniforme .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.5em;
+}
+
+/* ==========================================
+   ESTILOS MODERNOS PARA DATATABLE HISTORIAL
+   ========================================== */
+
+/* Tabla moderna del historial */
+.modern-table-historial {
+    font-size: 0.875rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: none !important;
+    background-color: #ffffff;
+}
+
+.modern-table-historial thead th {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: left;
+    vertical-align: middle;
+    padding: 12px 10px;
+    border: none !important;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modern-table-historial tbody td {
+    padding: 10px;
+    vertical-align: middle;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5) !important;
+    font-size: 0.8rem;
+}
+
+.modern-table-historial tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3) !important;
+}
+
+.modern-table-historial tbody tr:hover {
+    background-color: rgba(71, 85, 105, 0.04) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.08);
+}
+
+/* DataTables personalización para historial */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin: 8px 0 !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 6px 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 0.8rem !important;
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #475569 !important;
+    box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1) !important;
+    outline: none;
+}
+
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_length label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px !important;
+    margin: 0 2px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(226, 232, 240, 0.6) !important;
+    color: #475569 !important;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.2);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+    color: white !important;
+    border-color: #334155 !important;
+}
+
+.dataTables_info {
+    color: #64748b !important;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+/* Estados y badges en la tabla */
+.badge-historial {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px;
+}
+
+.badge-completado {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    color: #059669 !important;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge-en-progreso {
+    background-color: rgba(251, 191, 36, 0.1) !important;
+    color: #d97706 !important;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.badge-sin-iniciar {
+    background-color: rgba(156, 163, 175, 0.1) !important;
+    color: #6b7280 !important;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Progreso en la tabla */
+.progreso-historial {
+    height: 20px;
+    background-color: rgba(226, 232, 240, 0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(71, 85, 105, 0.1);
+    min-width: 80px;
+}
+
+.progreso-historial .progress-bar {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border-radius: 10px;
+    transition: all 0.6s ease;
+}
+
+/* Botones de acción en la tabla */
+.btn-historial {
+    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-historial:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .contenedor-uniforme {
+        min-height: 300px;
+    }
+    
+    .columna-scroll {
+        max-height: 250px;
+    }
+    
+    .curso-item {
+        padding: 8px;
+        margin-bottom: 6px;
+    }
+    
+    .drop-target {
+        padding: 8px;
+    }
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* Contenedor uniforme */
+.contenedor-uniforme {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Scroll interno */
+.columna-scroll {
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    flex-grow: 1;
+}
+.columna-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.columna-scroll::-webkit-scrollbar-thumb {
+    background-color: #198754;
+    border-radius: 10px;
+}
+
+/* Panel general */
+.panel-asignacion {
+    background-color: #f0f2f5d3;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+    height: 100%;
+    min-height: 500px;
+}
+.panel-asignacion h5 {
+    font-weight: bold;
+    color: #198754;
+    margin-bottom: 20px;
+}
+
+.curso-item,
+.list-group-item {
+    border-radius: 6px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease-in-out;
+}
+.curso-item:hover {
+    background-color: #e8f5e9;
+    transform: scale(1.01);
+}
+
+/* 🔍 DataTables Estilo personalizado */
+.dataTables_length label,
+.dataTables_filter label {
+    font-weight: 500;
+    color: #006341;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.dataTables_filter input,
+.dataTables_length select {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 5px 10px;
+    outline: none;
+}
+
+.dataTables_info {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.dataTables_paginate {
+    margin-top: 1rem;
+}
+
+.dataTables_paginate .paginate_button {
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    padding: 4px 10px;
+    margin: 0 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #006341 !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.dataTables_paginate .paginate_button.current {
+    background-color: #006341 !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+.dataTables_paginate .paginate_button:hover {
+    background-color: #d4ede3;
+    color: #004d33 !important;
+}
+
+.encabezado-cinta-verde {
+    background-color: #006341;
+    color: white;
+    font-weight: bold;
+    font-size: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Tarjetas de usuario uniformes */
+.usuario-card-uniforme {
+    min-height: 90px;
+    max-height: 120px;
+    overflow: hidden;
+    display: flex !important;
+    align-items: center !important;
+    transition: all 0.2s ease-in-out;
+    border-radius: var(--border-radius);
+    border: 1px solid #dee2e6;
+    margin-bottom: 8px;
+    background-color: #fff;
+}
+
+.usuario-card-uniforme .usuario-info {
+    min-width: 0; /* Permite que el texto se trunque */
+    flex: 1;
+}
+
+.usuario-card-uniforme .nombre-principal {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #2c3e50;
+    line-height: 1.2;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.usuario-card-uniforme .username-secundario {
+    font-size: 0.8rem;
+    color: #6c757d;
+    line-height: 1;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.usuario-card-uniforme .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.5em;
+}
+
+/* ==========================================
+   ESTILOS MODERNOS PARA DATATABLE HISTORIAL
+   ========================================== */
+
+/* Tabla moderna del historial */
+.modern-table-historial {
+    font-size: 0.875rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: none !important;
+    background-color: #ffffff;
+}
+
+.modern-table-historial thead th {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: left;
+    vertical-align: middle;
+    padding: 12px 10px;
+    border: none !important;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modern-table-historial tbody td {
+    padding: 10px;
+    vertical-align: middle;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5) !important;
+    font-size: 0.8rem;
+}
+
+.modern-table-historial tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3) !important;
+}
+
+.modern-table-historial tbody tr:hover {
+    background-color: rgba(71, 85, 105, 0.04) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.08);
+}
+
+/* DataTables personalización para historial */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin: 8px 0 !important;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 6px 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 0.8rem !important;
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: #475569 !important;
+    box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.1) !important;
+    outline: none;
+}
+
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_length label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px !important;
+    margin: 0 2px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(226, 232, 240, 0.6) !important;
+    color: #475569 !important;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.2);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%) !important;
+    color: white !important;
+    border-color: #334155 !important;
+}
+
+.dataTables_info {
+    color: #64748b !important;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+/* Estados y badges en la tabla */
+.badge-historial {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px;
+}
+
+.badge-completado {
+    background-color: rgba(34, 197, 94, 0.1) !important;
+    color: #059669 !important;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge-en-progreso {
+    background-color: rgba(251, 191, 36, 0.1) !important;
+    color: #d97706 !important;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.badge-sin-iniciar {
+    background-color: rgba(156, 163, 175, 0.1) !important;
+    color: #6b7280 !important;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Progreso en la tabla */
+.progreso-historial {
+    height: 20px;
+    background-color: rgba(226, 232, 240, 0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(71, 85, 105, 0.1);
+    min-width: 80px;
+}
+
+.progreso-historial .progress-bar {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border-radius: 10px;
+    transition: all 0.6s ease;
+}
+
+/* Botones de acción en la tabla */
+.btn-historial {
+    padding: 4px 8px !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-historial:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive mejoras */
+@media (max-width: 992px) {
+    .modern-table-historial {
+        font-size: 0.75rem;
+    }
+    
+    .modern-table-historial thead th,
+    .modern-table-historial tbody td {
+        padding: 8px 6px;
+    }
+    
+    /* Ocultar columnas menos importantes en tabletas */
+    .modern-table-historial th:nth-child(5),
+    .modern-table-historial td:nth-child(5),
+    .modern-table-historial th:nth-child(8),
+    .modern-table-historial td:nth-child(8) {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .modern-table-historial {
+        font-size: 0.7rem;
+    }
+    
+    /* Ocultar más columnas en móviles */
+    .modern-table-historial th:nth-child(2),
+    .modern-table-historial td:nth-child(2),
+    .modern-table-historial th:nth-child(5),
+    .modern-table-historial td:nth-child(5),
+    .modern-table-historial th:nth-child(7),
+    .modern-table-historial td:nth-child(7),
+    .modern-table-historial th:nth-child(8),
+    .modern-table-historial td:nth-child(8) {
+        display: none;
+    }
+}
+
+/* Efectos de entrada */
+.modern-table-historial tbody tr {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.modern-table-historial tbody tr:nth-child(odd) {
+    animation-delay: 0.05s;
+}
+
+.modern-table-historial tbody tr:nth-child(even) {
+    animation-delay: 0.1s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 </style>

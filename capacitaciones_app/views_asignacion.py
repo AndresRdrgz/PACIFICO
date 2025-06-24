@@ -158,6 +158,43 @@ def cursos_asignados_ajax(request, usuario_id):
     return JsonResponse({'cursos': data})
 
 
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def miembros_grupo_ajax(request, grupo_id):
+    """Vista para obtener los miembros de un grupo específico"""
+    try:
+        grupo = GrupoAsignacion.objects.get(id=grupo_id)
+        miembros = grupo.usuarios_asignados.all()
+        
+        data = []
+        for usuario in miembros:
+            # Contar cursos asignados al usuario
+            cursos_count = usuario.cursos_asignados.count()
+            
+            data.append({
+                'id': usuario.id,
+                'username': usuario.username,
+                'first_name': usuario.first_name or '',
+                'last_name': usuario.last_name or '',
+                'email': usuario.email or '',
+                'is_active': usuario.is_active,
+                'is_staff': usuario.is_staff,
+                'cursos_count': cursos_count,
+                'date_joined': usuario.date_joined.strftime('%d/%m/%Y') if usuario.date_joined else '',
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'grupo_nombre': grupo.nombre,
+            'miembros': data
+        })
+    except GrupoAsignacion.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Grupo no encontrado'
+        })
+
+
 @user_passes_test(lambda u: u.is_staff)
 def exportar_asignaciones_excel(request):
     asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
@@ -282,31 +319,135 @@ def historial_usuario(request):
         'progreso': progreso_dict,
     })
 
-# Ejemplo: obtener solo los alumnos de un grupo
-def alumnos_de_grupo(grupo_id):
-    grupo = GrupoAsignacion.objects.get(id=grupo_id)
-    alumnos = grupo.usuarios_asignados.filter(perfil__tipo='alumno')
-    return alumnos
 
+@login_required
 @user_passes_test(lambda u: u.is_staff)
-@require_GET
-def usuarios_grupo_ajax(request, grupo_id):
-    grupo = GrupoAsignacion.objects.get(id=grupo_id)
-    alumnos = grupo.usuarios_asignados.filter(perfil__tipo='alumno')
-    data = list(alumnos.values('id', 'username', 'first_name', 'last_name'))
-    return JsonResponse({'usuarios': data})
+def usuarios_disponibles_grupo(request, grupo_id):
+    """
+    Devuelve los usuarios que NO están en el grupo especificado
+    """
+    try:
+        grupo = GrupoAsignacion.objects.get(id=grupo_id)
+        
+        # Obtener usuarios que NO están en el grupo
+        usuarios_en_grupo = grupo.usuarios_asignados.all()
+        usuarios_disponibles = User.objects.exclude(id__in=usuarios_en_grupo).order_by('username')
+        
+        usuarios_data = []
+        for usuario in usuarios_disponibles:
+            usuarios_data.append({
+                'id': usuario.id,
+                'username': usuario.username,
+                'first_name': usuario.first_name,
+                'last_name': usuario.last_name,
+                'email': usuario.email,
+                'is_active': usuario.is_active,
+                'is_staff': usuario.is_staff,
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'usuarios': usuarios_data
+        })
+        
+    except GrupoAsignacion.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Grupo no encontrado'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
 
 @require_POST
+@login_required
 @user_passes_test(lambda u: u.is_staff)
-def quitar_usuario_grupo_ajax(request):
+def agregar_miembros_grupo(request):
+    """
+    Agrega usuarios a un grupo
+    """
+    try:
+        data = json.loads(request.body)
+        grupo_id = data.get('grupo_id')
+        usuarios_ids = data.get('usuarios_ids', [])
+        
+        if not grupo_id or not usuarios_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Faltan datos requeridos'
+            })
+        
+        grupo = GrupoAsignacion.objects.get(id=grupo_id)
+        usuarios = User.objects.filter(id__in=usuarios_ids)
+        
+        # Agregar usuarios al grupo
+        agregados = 0
+        for usuario in usuarios:
+            if not grupo.usuarios_asignados.filter(id=usuario.id).exists():
+                grupo.usuarios_asignados.add(usuario)
+                agregados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'agregados': agregados,
+            'total_seleccionados': len(usuarios_ids)
+        })
+        
+    except GrupoAsignacion.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Grupo no encontrado'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@require_POST
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def remover_miembro_grupo(request):
+    """
+    Remueve un usuario de un grupo
+    """
     try:
         data = json.loads(request.body)
         grupo_id = data.get('grupo_id')
         usuario_id = data.get('usuario_id')
-
+        
+        if not grupo_id or not usuario_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Faltan datos requeridos'
+            })
+        
         grupo = GrupoAsignacion.objects.get(id=grupo_id)
         usuario = User.objects.get(id=usuario_id)
-        grupo.usuarios_asignados.remove(usuario)
-        return JsonResponse({'success': True, 'mensaje': 'Usuario removido del grupo correctamente'})
+        
+        if grupo.usuarios_asignados.filter(id=usuario.id).exists():
+            grupo.usuarios_asignados.remove(usuario)
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Usuario {usuario.username} removido del grupo'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'El usuario no está en el grupo'
+            })
+        
+    except (GrupoAsignacion.DoesNotExist, User.DoesNotExist):
+        return JsonResponse({
+            'success': False,
+            'error': 'Grupo o usuario no encontrado'
+        })
     except Exception as e:
-        return JsonResponse({'success': False, 'mensaje': str(e)})
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

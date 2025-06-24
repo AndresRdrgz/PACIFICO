@@ -2,6 +2,27 @@
 {% block title %}{{ tema.titulo }}{% endblock %}
 
 {% block content %}
+<!-- Toast Notifications para Feedback -->
+<!-- Feedback ya enviado -->
+<div id="notificacion-feedback-enviado" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-warning alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>¡Feedback ya enviado!</strong>
+        <br>Ya enviaste tu comentario para este tema anteriormente.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
+<!-- Feedback enviado exitosamente -->
+<div id="notificacion-feedback-exitoso" class="position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <div class="alert alert-success alert-dismissible fade show shadow-lg" role="alert" style="max-width: 350px;">
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>¡Feedback enviado!</strong>
+        <br>Gracias por tu comentario sobre este tema.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+
 <div class="container my-5">
     <h1 class="text-success mb-3">{{ tema.titulo }}</h1>
 
@@ -13,16 +34,19 @@
     {% if tema.video_local %}
     <div class="mb-4">
         <h5 class="text-success">🎥 Video</h5>
-        <video width="100%" controls>
+        <br>
+                <video width="100%" controls>
             <source src="{{ tema.video_local.url }}" type="video/mp4">
             Tu navegador no soporta el video.
         </video>
     </div>
+    
 {% endif %}
 
 {% if tema.video_externo %}
     <div class="mb-4">
         <h5 class="text-success">🎥 Video externo</h5>
+        <br>
         <div style="width: 100%; height: 600px;">
             {{ tema.video_externo|safe }}
         </div>
@@ -35,6 +59,7 @@
 {% if tema.video_youtube %}
     <div class="mb-4">
         <h5 class="text-success">🎥 Video de YouTube</h5>
+        <br>
         <div class="ratio ratio-16x9">
             <iframe src="{{ tema.video_youtube }}" frameborder="0" allowfullscreen></iframe>
         </div>
@@ -80,60 +105,45 @@
                 <button type="submit" class="btn btn-outline-success">Marcar como completado</button>
             </form>
         {% endif %}
-    </div>
-
-    <!-- 🔽 Encuesta de satisfacción -->
-    <div x-data="{ abierto: false }" class="mt-5">
-        <button @click="abierto = !abierto"
-                class="btn btn-outline-primary w-100 text-start d-flex justify-content-between align-items-center"
-                type="button">
-            <span>📋 ¿Qué te pareció este tema?</span>
-            <span x-show="!abierto">➕</span>
-            <span x-show="abierto">➖</span>
-        </button>
-
-        <div x-show="abierto" x-transition class="border rounded mt-3 p-4 bg-light shadow-sm">
-            <form method="post" class="needs-validation">
-                {% csrf_token %}
-                {{ form.non_field_errors }}
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Tu calificación:</label>
-                    <div class="d-flex gap-4 flex-wrap">
-                        {% for radio in form.puntuacion %}
-                            <label class="form-check">
-                                {{ radio.tag }}
-                                <span class="ms-1">{{ radio.choice_label }}</span>
-                            </label>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.comentario.id_for_label }}" class="form-label fw-bold">Tu comentario:</label>
-                    {{ form.comentario }}
-                </div>
-
-                <button type="submit" class="btn btn-primary">Enviar feedback</button>
-            </form>
-        </div>
-    </div>
-
-    {% if feedbacks %}
-        <h6 class="mt-5">🗣 Últimos comentarios</h6>
-        <ul class="list-group">
-            {% for fb in feedbacks %}
-                <li class="list-group-item">
-                    <strong>{{ fb.usuario.username }}</strong> 
-                    – {{ fb.puntuacion }} ⭐<br>
-                    <small class="text-muted">{{ fb.creado_en|date:"d/m/Y H:i" }}</small>
-                    <p class="mt-2">{{ fb.comentario }}</p>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    <!-- Volver -->
+    </div>    <!-- Volver -->
     <a href="{% url 'detalle_curso' curso.id %}" class="btn btn-outline-secondary mt-4">← Volver al curso</a>
 </div>
+
+<script>
+// Sistema de notificaciones para feedback
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Función para mostrar notificación
+    function mostrarNotificacion(elementId, autoHide = true, hideDelay = 5000) {
+        const notificacion = document.getElementById(elementId);
+        if (notificacion) {
+            notificacion.style.display = 'block';
+            
+            if (autoHide) {
+                setTimeout(() => {
+                    const alert = notificacion.querySelector('.alert');
+                    if (alert) {
+                        alert.classList.remove('show');
+                        setTimeout(() => {
+                            notificacion.style.display = 'none';
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }, 150);
+                    }
+                }, hideDelay);
+            }
+        }
+    }
+    
+    // Verificar feedback ya enviado
+    if (urlParams.get('feedback_ya_enviado') === 'true') {
+        mostrarNotificacion('notificacion-feedback-enviado');
+    }
+    
+    // Verificar feedback enviado exitosamente
+    if (urlParams.get('feedback_enviado_exitoso') === 'true') {
+        mostrarNotificacion('notificacion-feedback-exitoso');
+    }
+});
+</script>
 {% endblock %}

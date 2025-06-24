@@ -16,6 +16,7 @@ from .models import (
     GrupoAsignacion,
     PerfilUsuario,
 )
+from .models_encuesta import EncuestaSatisfaccionCurso
 
 # 🔹 Opciones dentro de una pregunta
 class OpcionInline(nested_admin.NestedTabularInline):
@@ -70,12 +71,12 @@ class ModuloInline(nested_admin.NestedStackedInline):
 
 # 🔹 Cursos completos
 class CursoAdmin(nested_admin.NestedModelAdmin):
-    list_display = ('titulo', 'fecha_inicio', 'fecha_fin')
+    list_display = ('titulo', 'fecha_inicio', 'fecha_fin', 'duracion_horas')
     inlines = [ModuloInline]
     search_fields = ('titulo',)
     list_filter = ('fecha_inicio',)
     filter_horizontal = ('usuarios_asignados', 'grupos_asignados')  # ✅ Si quieres ver grupos también
-    fields = ('titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'portada', 'usuarios_asignados', 'grupos_asignados')
+    fields = ('titulo', 'descripcion', 'fecha_inicio', 'fecha_fin', 'duracion_horas', 'portada', 'usuarios_asignados', 'grupos_asignados')
 
 # 🔹 Grupos de asignación (corregido)
 @admin.register(GrupoAsignacion)
@@ -113,18 +114,26 @@ class ResultadoQuizAdmin(admin.ModelAdmin):
     list_filter = ('aprobado',)
     search_fields = ('usuario__username',)
 
+# 🔹 Encuestas de satisfacción del curso
+class EncuestaSatisfaccionCursoAdmin(admin.ModelAdmin):
+    list_display = ('departamento', 'cargo', 'expositor', 'utilidad', 'satisfaccion', 'lugar', 'rol', 'usuario', 'fecha')
+    list_filter = ('departamento', 'cargo', 'lugar', 'rol', 'fecha')
+    search_fields = ('departamento', 'cargo', 'aprendido', 'recomendacion', 'usuario__username')
+    readonly_fields = ('fecha',)
+
+# 🔹 Progreso del curso
+class ProgresoCursoAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'curso', 'completado', 'encuesta_completada', 'fecha_completado')
+    list_filter = ('completado', 'encuesta_completada')
+    search_fields = ('usuario__username', 'curso__titulo')
+
 # 🔹 Registro final
 admin.site.register(Curso, CursoAdmin)
 admin.site.register(Modulo)
 admin.site.register(Tema, TemaAdmin)
 admin.site.register(ArchivoAdicional)
-admin.site.register(ProgresoCurso)
+admin.site.register(ProgresoCurso, ProgresoCursoAdmin)
 admin.site.register(ProgresoTema)
 admin.site.register(Quiz)
 admin.site.register(ResultadoQuiz, ResultadoQuizAdmin)
-
-# 🔹 Registro del perfil de usuario
-@admin.register(PerfilUsuario)
-class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ('user', 'tipo')
-    search_fields = ('user__username', 'tipo')
+admin.site.register(EncuestaSatisfaccionCurso, EncuestaSatisfaccionCursoAdmin)

@@ -1,0 +1,858 @@
+{% extends 'capacitaciones_app/base.html' %}
+{% block title %}Encuesta de Satisfacción{% endblock %}
+
+{% block content %}
+<div id="encuesta-wrapper" class="min-vh-100 d-flex align-items-start justify-content-center bg-light py-4">
+  <div class="bg-white rounded-4 shadow-lg p-0 encuesta-responsive-container animate__animated animate__fadeIn" style="max-width: 480px; min-width: 0; min-height: 0; margin-top: 48px;">
+    <!-- Barra de progreso -->
+    <div class="progress rounded-top-4" style="height: 8px;">
+      <div id="progress-bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: 12%"></div>
+    </div>
+    <div class="p-4 p-md-5">
+      <div class="text-center mb-4">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4da.svg" alt="Encuesta" width="56" class="mb-2 animate__animated animate__bounceIn"/>
+        <h2 class="fw-bold text-success">Encuesta de Satisfacción</h2>
+      </div>
+      <!-- Mensajes del sistema (éxito/error) -->
+      {% if messages %}
+      <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} animate__animated animate__fadeIn" role="alert">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form id="encuesta-form" method="post" novalidate autocomplete="off">
+        {% csrf_token %}
+        {% if form %}{{ form.non_field_errors }}{% endif %}
+        <!-- Campo oculto para curso_id -->
+        {% if curso %}
+        <input type="hidden" name="curso_id" value="{{ curso.id }}">
+        {% else %}
+        <p class="text-danger">Error: No se encontró el curso. Por favor, contacte al administrador.</p>
+        {% endif %}
+        <!-- Paso 1 -->
+        <div class="encuesta-step" data-step="1">
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                {% if form %}{{ form.departamento }}{% else %}
+                <select class="form-select" id="departamento" name="departamento" required>
+                  <option value="">---------</option>
+                  <option>CONTABILIDAD</option>
+                  <option>COBROS</option>
+                  <option>CÓMPUTO</option>
+                  <option>EXPERIENCIA AL CLIENTE</option>
+                  <option>FINANZAS</option>
+                  <option>GERENCIA</option>
+                  <option>ITICO</option>
+                  <option>LEGAL</option>
+                  <option>NEGOCIOS</option>
+                  <option>PROCESOS</option>
+                  <option>RECURSOS HUMANOS- ADM</option>
+                  <option>SERVICIOS GENERALES</option>
+                  <option>TRAMITE</option>
+                </select>{% endif %}
+                <label for="departamento">Departamento</label>
+                <div class="invalid-feedback">Seleccione un departamento.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                {% if form %}{{ form.cargo }}{% else %}
+                <select class="form-select" id="cargo" name="cargo" required>
+                  <option value="">---------</option>
+                  <option>Asistente</option>
+                  <option>Analista</option>
+                  <option>Oficial/Profesional</option>
+                  <option>Coordinador</option>
+                  <option>Encargada/Supervisor</option>
+                  <option>Jefe</option>
+                  <option>Gerente</option>
+                </select>{% endif %}
+                <label for="cargo">Seleccione su cargo</label>
+                <div class="invalid-feedback">Seleccione su cargo.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Paso 2 -->
+        <div class="encuesta-step d-none" data-step="2">
+          <div class="mb-4">
+            <label class="form-label fw-bold">Califique el conocimiento y dominio del tema del expositor</label>
+            <!-- Responsive neumorphic rating -->
+            <div class="neumorphic-rating" id="expositor-rating">
+              <!-- Desktop: slider -->
+              <div class="d-none d-md-flex align-items-center gap-3 position-relative">
+                <span class="rating-label">1</span>
+                <div class="slider-container position-relative" style="flex:1;">
+                  <input type="range" min="1" max="5" step="1" value="3" class="form-range neumorphic-slider" id="expositor-slider" name="expositor" required aria-label="Calificación expositor" autocomplete="off">
+                  <span id="slider-thumb-label" class="slider-thumb-label" aria-live="polite">3</span>
+                </div>
+                <span class="rating-label">5</span>
+              </div>
+              <!-- Mobile: emojis neumórficos -->
+              <div class="emoji-rating-row d-flex d-md-none justify-content-between align-items-center mt-2">
+                <input type="radio" class="btn-check" name="expositor" id="expositor_emoji1" value="1" required>
+                <label class="neumorphic-emoji" for="expositor_emoji1" tabindex="0" aria-label="1 estrellas"><span style="font-size:2.2em;">😐</span></label>
+                <input type="radio" class="btn-check" name="expositor" id="expositor_emoji2" value="2" required>
+                <label class="neumorphic-emoji" for="expositor_emoji2" tabindex="0" aria-label="2 estrellas"><span style="font-size:2.2em;">😕</span></label>
+                <input type="radio" class="btn-check" name="expositor" id="expositor_emoji3" value="3" required checked>
+                <label class="neumorphic-emoji" for="expositor_emoji3" tabindex="0" aria-label="3 estrellas"><span style="font-size:2.2em;">😶</span></label>
+                <input type="radio" class="btn-check" name="expositor" id="expositor_emoji4" value="4" required>
+                <label class="neumorphic-emoji" for="expositor_emoji4" tabindex="0" aria-label="4 estrellas"><span style="font-size:2.2em;">😊</span></label>
+                <input type="radio" class="btn-check" name="expositor" id="expositor_emoji5" value="5" required>
+                <label class="neumorphic-emoji" for="expositor_emoji5" tabindex="0" aria-label="5 estrellas"><span style="font-size:2.2em;">🤩</span></label>
+              </div>
+            </div>
+            <div class="invalid-feedback d-block" id="expositor-feedback" style="display:none;">Seleccione una calificación.</div>
+          </div>
+        </div>
+        <!-- Paso 3 -->
+        <div class="encuesta-step d-none" data-step="3">
+          <div class="mb-3">
+            <label class="form-label fw-bold">¿Los conocimientos adquiridos serán de utilidad para mejorar el desarrollo/desempeño de su cargo y actividades?</label>
+            <div class="d-flex justify-content-center gap-4 neumorphic-binary-group" role="radiogroup" aria-label="Utilidad de los conocimientos">
+              <input class="btn-check" type="radio" name="utilidad" id="utilidad_si" value="si" required autocomplete="off">
+              <label class="neumorphic-binary" for="utilidad_si" tabindex="0" aria-label="Sí, serán útiles">
+                <span class="binary-icon">👍</span>
+                <span class="binary-label">Sí</span>
+              </label>
+              <input class="btn-check" type="radio" name="utilidad" id="utilidad_no" value="no" autocomplete="off">
+              <label class="neumorphic-binary" for="utilidad_no" tabindex="0" aria-label="No, no serán útiles">
+                <span class="binary-icon">👎</span>
+                <span class="binary-label">No</span>
+              </label>
+            </div>
+            <div class="invalid-feedback d-block" id="utilidad-feedback" style="display:none;">Seleccione una opción.</div>
+          </div>
+        </div>
+        <!-- Paso 4 -->
+        <div class="encuesta-step d-none" data-step="4">
+          <div class="mb-4">
+            <label class="form-label fw-bold">En general, ¿cuál es su nivel de satisfacción con el curso/seminario/capacitación?</label>
+            <div class="neumorphic-rating" id="satisfaccion-rating">
+              <!-- Desktop: slider -->
+              <div class="d-none d-md-flex align-items-center gap-3 position-relative">
+                <span class="rating-label">1</span>
+                <div class="slider-container position-relative" style="flex:1;">
+                  <input type="range" min="1" max="5" step="1" value="3" class="form-range neumorphic-slider" id="satisfaccion-slider" name="satisfaccion" required aria-label="Nivel de satisfacción" autocomplete="off">
+                  <span id="satisfaccion-slider-thumb-label" class="slider-thumb-label" aria-live="polite">3</span>
+                </div>
+                <span class="rating-label">5</span>
+              </div>
+              <!-- Mobile: emojis neumórficos -->
+              <div class="emoji-rating-row d-flex d-md-none justify-content-between align-items-center mt-2">
+                <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion_emoji1" value="1" required>
+                <label class="neumorphic-emoji" for="satisfaccion_emoji1" tabindex="0" aria-label="1 estrellas"><span style="font-size:2.2em;">😐</span></label>
+                <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion_emoji2" value="2" required>
+                <label class="neumorphic-emoji" for="satisfaccion_emoji2" tabindex="0" aria-label="2 estrellas"><span style="font-size:2.2em;">😕</span></label>
+                <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion_emoji3" value="3" required checked>
+                <label class="neumorphic-emoji" for="satisfaccion_emoji3" tabindex="0" aria-label="3 estrellas"><span style="font-size:2.2em;">😶</span></label>
+                <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion_emoji4" value="4" required>
+                <label class="neumorphic-emoji" for="satisfaccion_emoji4" tabindex="0" aria-label="4 estrellas"><span style="font-size:2.2em;">😊</span></label>
+                <input type="radio" class="btn-check" name="satisfaccion" id="satisfaccion_emoji5" value="5" required>
+                <label class="neumorphic-emoji" for="satisfaccion_emoji5" tabindex="0" aria-label="5 estrellas"><span style="font-size:2.2em;">🤩</span></label>
+              </div>
+            </div>
+            <div class="invalid-feedback d-block" id="satisfaccion-feedback" style="display:none;">Seleccione una calificación.</div>
+          </div>
+        </div>        <!-- Paso 5 -->
+        <div class="encuesta-step d-none" data-step="5">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Indique en resumen, los puntos más importantes que aprendió</label>
+            <textarea class="form-control rounded-3 shadow-sm" name="aprendido" id="aprendido" rows="2" maxlength="300" placeholder="Resuma lo aprendido..." required></textarea>
+            <div class="invalid-feedback">Este campo es obligatorio.</div>
+          </div>
+        </div>
+        <!-- Paso 6 -->
+        <div class="encuesta-step d-none" data-step="6">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Indique si tiene comentarios sobre el curso, o recomendaciones para mejorar las mismas</label>
+            <textarea class="form-control rounded-3 shadow-sm" name="comentarios_curso" id="comentarios_curso" rows="3" maxlength="500" placeholder="Escriba sus comentarios sobre el curso o recomendaciones para mejorarlo..." required></textarea>
+            <div class="invalid-feedback">Este campo es obligatorio.</div>
+          </div>
+        </div>        <!-- Paso 7 -->
+        <div class="encuesta-step d-none" data-step="7">
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                {% if form %}{{ form.lugar }}{% else %}
+                <select class="form-select neumorphic-select" id="lugar" name="lugar" required>
+                  <option value="">---------</option>
+                  <option>En la Oficina/Sucursal (puesto, sala de reunión)</option>
+                  <option>En la Casa</option>
+                  <option>En el transporte público/privado</option>
+                </select>{% endif %}
+                <label for="lugar">Lugar donde tomó/impartió el curso</label>
+                <div class="invalid-feedback">Seleccione una opción.</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-floating animate__animated">
+                {% if form %}{{ form.rol }}{% else %}
+                <select class="form-select neumorphic-select" id="rol" name="rol" required>
+                  <option value="">---------</option>
+                  <option>Participante</option>
+                  <option>Expositor</option>
+                  <option>Organizador</option>
+                  <option>Otro</option>
+                </select>{% endif %}
+                <label for="rol">Indique su ROL en la capacitación</label>
+                <div class="invalid-feedback">Seleccione una opción.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Paso 8 -->
+        <div class="encuesta-step d-none" data-step="8">
+          <div class="mb-3">
+            <label class="form-label fw-bold">¿Considera que el curso le puede servir a otro colaborador y/o departamento? Indique el nombre del colaborador o departamento.</label>
+            <textarea class="form-control rounded-3 shadow-sm" name="recomendacion" id="recomendacion" rows="2" maxlength="200" placeholder="Nombre del colaborador o departamento..."></textarea>
+          </div>
+        </div>
+        <!-- Botones navegación -->
+        <div class="d-flex justify-content-between align-items-center mt-4 gap-2 animate__animated animate__fadeIn">
+          <button type="button" id="btn-prev" class="btn btn-outline-secondary px-4 py-2 rounded-pill d-none">Anterior</button>
+          <button type="button" id="btn-next" class="btn btn-success px-4 py-2 rounded-pill ms-auto">Siguiente</button>
+          <button type="submit" id="btn-submit" class="btn btn-success px-4 py-2 rounded-pill ms-auto d-none">Enviar encuesta</button>
+        </div>
+      </form>
+      <!-- Mensaje de éxito -->
+      <div id="encuesta-exito" class="text-center d-none animate__animated animate__fadeInUp mt-5">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f389.svg" alt="¡Gracias!" width="80" class="mb-3 animate__animated animate__tada"/>
+        <h3 class="fw-bold text-success mb-2">¡Gracias por tu respuesta!</h3>
+        <p class="lead">Tu opinión es muy valiosa para nosotros.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Animaciones y validación -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<script>
+(function() {
+  const steps = Array.from(document.querySelectorAll('.encuesta-step'));
+  const progressBar = document.getElementById('progress-bar');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const btnSubmit = document.getElementById('btn-submit');
+  const form = document.getElementById('encuesta-form');
+  const exito = document.getElementById('encuesta-exito');
+  let currentStep = 0;
+
+  function showStep(idx) {
+    steps.forEach((step, i) => {
+      step.classList.toggle('d-none', i !== idx);
+      if (i === idx) {
+        step.classList.add('animate__fadeIn');
+        step.classList.remove('animate__fadeOut');
+      } else {
+        step.classList.remove('animate__fadeIn');
+        step.classList.add('animate__fadeOut');
+      }
+    });
+    btnPrev.classList.toggle('d-none', idx === 0);
+    btnNext.classList.toggle('d-none', idx === steps.length - 1);
+    btnSubmit.classList.toggle('d-none', idx !== steps.length - 1);
+    progressBar.style.width = ((idx+1)/steps.length*100) + '%';
+  }
+
+  function validateStep(idx) {
+    let valid = true;
+    const step = steps[idx];
+    const inputs = step.querySelectorAll('input,select,textarea');
+    step.classList.remove('animate__shakeX');
+    inputs.forEach(input => {
+      input.classList.remove('is-invalid');
+      if (input.required && !input.value) {
+        input.classList.add('is-invalid');
+        valid = false;
+      }
+    });
+    // Feedback especial para estrellas y radios
+    if (step.querySelector('#expositor-rating')) {
+      // Desktop
+      const slider = document.getElementById('expositor-slider');
+      const radios = document.querySelectorAll('input[name="expositor"]');
+      let checked = false;
+      radios.forEach(r => { if (r.checked) checked = true; });
+      if (!checked && (!slider || !slider.value)) {
+        document.getElementById('expositor-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('expositor-feedback').style.display = 'none';
+      }
+    }
+    if (step.querySelector('#satisfaccion-rating')) {
+      if (!form.querySelector('input[name="satisfaccion"]:checked')) {
+        document.getElementById('satisfaccion-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('satisfaccion-feedback').style.display = 'none';
+      }
+    }
+    if (step.querySelector('input[name="utilidad"]')) {
+      if (!form.querySelector('input[name="utilidad"]:checked')) {
+        document.getElementById('utilidad-feedback').style.display = '';
+        valid = false;
+      } else {
+        document.getElementById('utilidad-feedback').style.display = 'none';
+      }
+    }
+    if (!valid) {
+      step.classList.add('animate__shakeX');
+    }
+    return valid;
+  }
+
+  btnNext.addEventListener('click', function() {
+    if (validateStep(currentStep)) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  });
+  btnPrev.addEventListener('click', function() {
+    currentStep--;
+    showStep(currentStep);
+  });
+  form.addEventListener('submit', function(e) {
+    // Eliminar e.preventDefault para permitir el envío nativo del formulario
+    if (!validateStep(currentStep)) return;
+    form.classList.add('d-none');
+    exito.classList.remove('d-none');
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+      exito.classList.add('animate__tada');
+    }, 500);
+  });
+  // Microanimación: resaltar label flotante
+  document.querySelectorAll('.form-floating select, .form-floating textarea').forEach(el => {
+    el.addEventListener('focus', function() {
+      this.parentElement.classList.add('animate__pulse');
+    });
+    el.addEventListener('blur', function() {
+      this.parentElement.classList.remove('animate__pulse');
+    });
+  });
+  // Microanimación: estrellas
+  document.querySelectorAll('.star-label').forEach(label => {
+    label.addEventListener('mouseenter', function() {
+      this.style.transform = 'scale(1.15)';
+    });
+    label.addEventListener('mouseleave', function() {
+      this.style.transform = '';
+    });
+  });
+  // Accesibilidad: focus visible
+  document.querySelectorAll('input,select,textarea,button').forEach(el => {
+    el.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+    });
+    el.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+    });
+  });
+
+  // --- NEUMORPHIC RATING SYNC & FEEDBACK ---
+  // Desktop slider
+  const slider = document.getElementById('expositor-slider');
+  const thumbLabel = document.getElementById('slider-thumb-label');
+  const colorScale = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#198754'];
+  function updateSliderUI(val, interaction) {
+    // Color dinámico
+    const idx = Math.max(1, Math.min(5, parseInt(val))) - 1;
+    const color = colorScale[idx];
+    slider.style.setProperty('--slider-thumb-color', color);
+    slider.style.setProperty('--slider-track-color', color);
+    thumbLabel.textContent = val;
+    thumbLabel.style.background = color;
+    thumbLabel.style.color = idx < 2 ? '#fff' : '#222';
+    // Posicionar la etiqueta sobre el thumb
+    const percent = (val-1)/4;
+    thumbLabel.style.left = `calc(${percent*100}% - 12px)`;
+    if (interaction === 'vibrate') {
+      thumbLabel.classList.add('vibrate');
+      setTimeout(()=>thumbLabel.classList.remove('vibrate'), 300);
+    }
+  }
+  if (slider && thumbLabel) {
+    updateSliderUI(slider.value);
+    slider.addEventListener('input', function() {
+      updateSliderUI(this.value);
+      // Sincroniza radios móviles
+      const radio = document.getElementById('expositor_emoji'+this.value);
+      if (radio) radio.checked = true;
+      document.querySelectorAll('.neumorphic-emoji').forEach(l => l.classList.remove('selected'));
+      const label = document.querySelector('label[for="expositor_emoji'+this.value+'"]');
+      if (label) label.classList.add('selected');
+    });
+    slider.addEventListener('mousedown', function() {
+      thumbLabel.classList.add('active');
+    });
+    slider.addEventListener('mouseup', function() {
+      thumbLabel.classList.remove('active');
+      updateSliderUI(this.value, 'vibrate');
+    });
+    slider.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+      thumbLabel.classList.add('active');
+    });
+    slider.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+      thumbLabel.classList.remove('active');
+    });
+    slider.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        this.value = Math.max(1, parseInt(this.value)-1);
+        updateSliderUI(this.value);
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        this.value = Math.min(5, parseInt(this.value)+1);
+        updateSliderUI(this.value);
+        e.preventDefault();
+      }
+    });
+  }
+  // Mobile emojis
+  const emojiRadios = document.querySelectorAll('input[name="expositor"][id^="expositor_emoji"]');
+  emojiRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        emojiRadios.forEach(r => r.nextElementSibling.classList.remove('selected'));
+        this.nextElementSibling.classList.add('selected');
+        // Sincroniza slider escritorio
+        if (slider) {
+          slider.value = this.value;
+          updateSliderUI(this.value);
+        }
+      }
+    });
+    radio.nextElementSibling.addEventListener('mouseenter', function() {
+      this.classList.add('hovered');
+    });
+    radio.nextElementSibling.addEventListener('mouseleave', function() {
+      this.classList.remove('hovered');
+    });
+    radio.nextElementSibling.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+    });
+    radio.nextElementSibling.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+    });
+  });
+  // Micro-interacciones y feedback para utilidad
+  const utilidadRadios = document.querySelectorAll('input[name="utilidad"]');
+  utilidadRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        utilidadRadios.forEach(r => r.nextElementSibling.classList.remove('selected'));
+        this.nextElementSibling.classList.add('selected');
+      }
+    });
+    radio.nextElementSibling.addEventListener('mouseenter', function() {
+      this.classList.add('hovered');
+    });
+    radio.nextElementSibling.addEventListener('mouseleave', function() {
+      this.classList.remove('hovered');
+    });
+    radio.nextElementSibling.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+    });
+    radio.nextElementSibling.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+    });
+  });
+  // --- NEUMORPHIC RATING SYNC & FEEDBACK para satisfacción ---
+  const satSlider = document.getElementById('satisfaccion-slider');
+  const satThumbLabel = document.getElementById('satisfaccion-slider-thumb-label');
+  const satColorScale = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#198754'];
+  function updateSatSliderUI(val, interaction) {
+    const idx = Math.max(1, Math.min(5, parseInt(val))) - 1;
+    const color = satColorScale[idx];
+    satSlider.style.setProperty('--slider-thumb-color', color);
+    satSlider.style.setProperty('--slider-track-color', color);
+    satThumbLabel.textContent = val;
+    satThumbLabel.style.background = color;
+    satThumbLabel.style.color = idx < 2 ? '#fff' : '#222';
+    const percent = (val-1)/4;
+    satThumbLabel.style.left = `calc(${percent*100}% - 12px)`;
+    if (interaction === 'vibrate') {
+      satThumbLabel.classList.add('vibrate');
+      setTimeout(()=>satThumbLabel.classList.remove('vibrate'), 300);
+    }
+  }
+  if (satSlider && satThumbLabel) {
+    updateSatSliderUI(satSlider.value);
+    satSlider.addEventListener('input', function() {
+      updateSatSliderUI(this.value);
+      // Sincroniza radios móviles
+      const radio = document.getElementById('satisfaccion_emoji'+this.value);
+      if (radio) radio.checked = true;
+      document.querySelectorAll('label[for^="satisfaccion_emoji"]').forEach(l => l.classList.remove('selected'));
+      const label = document.querySelector('label[for="satisfaccion_emoji'+this.value+'"]');
+      if (label) label.classList.add('selected');
+    });
+    satSlider.addEventListener('mousedown', function() {
+      satThumbLabel.classList.add('active');
+    });
+    satSlider.addEventListener('mouseup', function() {
+      satThumbLabel.classList.remove('active');
+      updateSatSliderUI(this.value, 'vibrate');
+    });
+    satSlider.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+      satThumbLabel.classList.add('active');
+    });
+    satSlider.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+      satThumbLabel.classList.remove('active');
+    });
+    satSlider.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+        this.value = Math.max(1, parseInt(this.value)-1);
+        updateSatSliderUI(this.value);
+        e.preventDefault();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+        this.value = Math.min(5, parseInt(this.value)+1);
+        updateSatSliderUI(this.value);
+        e.preventDefault();
+      }
+    });
+  }
+  // Mobile emojis para satisfacción
+  const satEmojiRadios = document.querySelectorAll('input[name="satisfaccion"][id^="satisfaccion_emoji"]');
+  satEmojiRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        satEmojiRadios.forEach(r => r.nextElementSibling.classList.remove('selected'));
+        this.nextElementSibling.classList.add('selected');
+        // Sincroniza slider escritorio
+        if (satSlider) {
+          satSlider.value = this.value;
+          updateSatSliderUI(this.value);
+        }
+      }
+    });
+    radio.nextElementSibling.addEventListener('mouseenter', function() {
+      this.classList.add('hovered');
+    });
+    radio.nextElementSibling.addEventListener('mouseleave', function() {
+      this.classList.remove('hovered');
+    });
+    radio.nextElementSibling.addEventListener('focus', function() {
+      this.classList.add('focus-visible');
+    });
+    radio.nextElementSibling.addEventListener('blur', function() {
+      this.classList.remove('focus-visible');
+    });
+  });
+})();
+</script>
+<script>
+(function() {
+  const form = document.getElementById('encuesta-form');
+  const exito = document.getElementById('encuesta-exito');
+
+  // El formulario se envía normalmente, solo manejamos la animación de éxito
+  form.addEventListener('submit', function(e) {
+    // No interceptamos el envío, dejamos que Django lo maneje
+    // Solo mostramos la animación si no hay errores de validación
+    if (form.checkValidity()) {
+      // Mostrar mensaje de éxito después de un breve delay para que se vea la animación
+      setTimeout(() => {
+        form.classList.add('d-none');
+        exito.classList.remove('d-none');
+        exito.classList.add('animate__tada');
+      }, 500);
+    }
+  });
+})();
+</script>
+<style>
+.encuesta-responsive-container {
+  max-width: 480px;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 48px;
+}
+#encuesta-wrapper {
+  align-items: flex-start !important;
+}
+@media (max-width: 600px) {
+  .encuesta-responsive-container {
+    max-width: 98vw;
+    margin-top: 16px;
+  }
+}
+.focus-visible, .form-select:focus, .form-control:focus {
+  outline: 2px solid #198754 !important;
+  box-shadow: 0 0 0 2px #b6e2c6 !important;
+}
+.star-label:active, .star-label:focus-within {
+  background: #ffe082 !important;
+  border-color: #ffc107 !important;
+}
+.animate__shakeX {
+  --animate-duration: 0.5s;
+}
+.neumorphic-rating {
+  margin-top: 1rem;
+}
+
+/* Espaciado entre la pregunta y el control de calificación */
+.neumorphic-rating, .neumorphic-binary-group {
+  margin-top: 2rem;
+}
+@media (max-width: 600px) {
+  .neumorphic-rating, .neumorphic-binary-group {
+    margin-top: 1.1rem;
+  }
+}
+
+.slider-container { position: relative; width: 100%; }
+.neumorphic-slider {
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: linear-gradient(90deg, #e53935 0%, #198754 100%);
+  border-radius: 12px;
+  box-shadow: 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  outline: none;
+  transition: box-shadow 0.2s, background 0.3s;
+}
+.neumorphic-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #43a047);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px #b6e2c6;
+  transition: background 0.3s, box-shadow 0.2s;
+}
+.neumorphic-slider:focus::-webkit-slider-thumb,
+.neumorphic-slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px #b6e2c6, 0 2px 8px #b6e2c6;
+  animation: vibrate 0.2s linear 2;
+}
+.neumorphic-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #43a047);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px #b6e2c6;
+  transition: background 0.3s, box-shadow 0.2s;
+}
+.neumorphic-slider:focus::-moz-range-thumb,
+.neumorphic-slider:hover::-moz-range-thumb {
+  box-shadow: 0 0 0 4px #b6e2c6, 0 2px 8px #b6e2c6;
+  animation: vibrate 0.2s linear 2;
+}
+.neumorphic-slider::-ms-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--slider-thumb-color, #43a047);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px #b6e2c6;
+  transition: background 0.3s, box-shadow 0.2s;
+}
+.neumorphic-slider:focus::-ms-thumb,
+.neumorphic-slider:hover::-ms-thumb {
+  box-shadow: 0 0 0 4px #b6e2c6, 0 2px 8px #b6e2c6;
+  animation: vibrate 0.2s linear 2;
+}
+.neumorphic-slider::-webkit-slider-runnable-track {
+  height: 16px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #e53935 0%, #198754 100%);
+}
+.neumorphic-slider::-ms-fill-lower {
+  background: #e53935;
+}
+.neumorphic-slider::-ms-fill-upper {
+  background: #198754;
+}
+.slider-thumb-label {
+  position: absolute;
+  top: -38px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 16px;
+  background: #43a047;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px #b6e2c6;
+  pointer-events: none;
+  transition: left 0.2s, background 0.3s, color 0.2s;
+  z-index: 2;
+}
+.slider-thumb-label.active, .slider-thumb-label.vibrate {
+  animation: vibrate 0.2s linear 2;
+}
+.neumorphic-binary-group {
+  margin-top: 1rem;
+}
+.neumorphic-binary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f1f3f6;
+  border-radius: 18px;
+  box-shadow: 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  padding: 0.7em 2.2em 0.5em 2.2em;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s, transform 0.2s;
+  outline: none;
+  border: 2px solid transparent;
+  min-width: 90px;
+}
+.neumorphic-binary .binary-icon {
+  font-size: 2.1em;
+  margin-bottom: 0.2em;
+  transition: transform 0.2s;
+}
+.neumorphic-binary .binary-label {
+  font-weight: 600;
+  color: #198754;
+  letter-spacing: 0.5px;
+}
+.neumorphic-binary.selected, .neumorphic-binary:active {
+  background: #e0ffe0;
+  box-shadow: 0 0 0 4px #b6e2c6, 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  border-color: #198754;
+  transform: scale(1.08);
+}
+.neumorphic-binary.hovered {
+  box-shadow: 0 0 0 2px #b6e2c6, 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  transform: scale(1.04);
+}
+.neumorphic-binary.focus-visible {
+  outline: 2px solid #198754 !important;
+  box-shadow: 0 0 0 2px #b6e2c6 !important;
+}
+.neumorphic-emoji {
+  display: inline-block;
+  min-width: 48px;
+  min-height: 48px;
+  max-width: 56px;
+  max-height: 56px;
+  line-height: 48px;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: #f1f3f6;
+  box-shadow: 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  font-size: 2.2em;
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s, transform 0.2s, border-color 0.2s;
+  outline: none;
+  border: 2px solid transparent;
+  margin-right: 0;
+}
+.neumorphic-emoji.selected, .neumorphic-emoji:active {
+  background: #e0ffe0;
+  box-shadow: 0 0 0 4px #b6e2c6, 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  border-color: #198754;
+  transform: scale(1.08);
+}
+/* Neumorphic select style */
+.neumorphic-select, .form-select {
+  background: #f1f3f6;
+  border-radius: 18px;
+  box-shadow: 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  border: 2px solid transparent;
+  transition: box-shadow 0.2s, background 0.2s, border-color 0.2s;
+  font-weight: 500;
+  color: #222;
+}
+.neumorphic-select:focus, .form-select:focus {
+  background: #e0ffe0;
+  border-color: #198754;
+  box-shadow: 0 0 0 4px #b6e2c6, 2px 2px 8px #e0e0e0, -2px -2px 8px #fff;
+  outline: none;
+}
+.neumorphic-select:active, .form-select:active {
+  background: #e0ffe0;
+  border-color: #198754;
+}
+.neumorphic-select option, .form-select option {
+  background: #fff;
+  color: #222;
+}
+@media (max-width: 767px) {
+  .encuesta-responsive-container {
+    max-width: 98vw;
+    min-width: 0;
+    min-height: 90vh;
+    padding: 0 !important;
+  }
+  .form-floating > .form-select, .form-floating > .form-control {
+    font-size: 1em;
+    min-height: 44px;
+  }
+  .slider-thumb-label {
+    font-size: 1em;
+    min-width: 24px;
+    height: 24px;
+    top: -30px;
+  }
+  .neumorphic-binary {
+    font-size: 1em;
+    padding: 0.6em 0.7em 0.4em 0.7em;
+    min-width: 60px;
+  }
+  .neumorphic-binary .binary-icon {
+    font-size: 1.3em;
+  }
+  .neumorphic-rating {
+    margin-top: 0.7rem;
+  }
+  .form-label, label, .binary-label {
+    font-size: 1em !important;
+  }
+  .btn, .btn-success, .btn-outline-secondary {
+    font-size: 1em !important;
+    padding: 0.7em 1.2em !important;
+  }
+}
+@media (max-width: 600px) {
+  .emoji-rating-row {
+    gap: 0;
+    padding: 0 8px;
+    justify-content: flex-start;
+  }
+  .neumorphic-emoji {
+    min-width: 48px;
+    min-height: 48px;
+    max-width: 48px;
+    max-height: 48px;
+    margin: 0 12px 0 0;
+    font-size: 2em;
+  }
+  .neumorphic-emoji:last-child {
+    margin-right: 0;
+  }
+}
+@media (max-width: 400px) {
+  .encuesta-responsive-container {
+    min-width: 100vw;
+    padding: 0 !important;
+  }
+  .form-label, label, .binary-label {
+    font-size: 0.95em !important;
+  }
+}
+</style>
+{% endblock %}

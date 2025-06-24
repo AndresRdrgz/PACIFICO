@@ -1,20 +1,29 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
+from django.urls import reverse
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import landscape, letter
 from PyPDF2 import PdfReader, PdfWriter
 import io
 
-from .models import Curso, ProgresoTema
+from .models import Curso, ProgresoTema, ProgresoCurso
 
 @login_required
 def certificado(request, curso_id):
-    curso = get_object_or_404(Curso, id=curso_id)
+    curso = get_object_or_404(Curso, id=curso_id)    # Verificar si ya descargó el certificado antes
+    progreso_curso = ProgresoCurso.objects.filter(usuario=request.user, curso=curso).first()
+    referer = request.META.get('HTTP_REFERER', '')
+    
+    # Solo mostrar notificación si NO viene de mi-progreso (permite re-descarga desde progreso)
+    if progreso_curso and progreso_curso.certificado_descargado and 'mi-progreso' not in referer:
+        # Redirigir a detalle del curso con notificación
+        url = reverse('detalle_curso', kwargs={'curso_id': curso.id})
+        return HttpResponseRedirect(f'{url}?certificado_ya_descargado=true')
 
     total_temas = sum(m.temas.count() for m in curso.modulos.all())
     temas_completados = ProgresoTema.objects.filter(
@@ -57,18 +66,24 @@ def certificado(request, curso_id):
     c.save()
 
     packet.seek(0)
-
+    
     plantilla_pdf = PdfReader(str(plantilla_path))
     overlay_pdf = PdfReader(packet)
     writer = PdfWriter()
-
+    
     page = plantilla_pdf.pages[0]
     page.merge_page(overlay_pdf.pages[0])
     writer.add_page(page)
-
+    
     output = io.BytesIO()
     writer.write(output)
     output.seek(0)
+
+    # Marcar certificado como descargado
+    if progreso_curso:
+        progreso_curso.certificado_descargado = True
+        progreso_curso.fecha_descarga_certificado = timezone.now()
+        progreso_curso.save()
 
     response = HttpResponse(output.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="certificado_{nombre}.pdf"'

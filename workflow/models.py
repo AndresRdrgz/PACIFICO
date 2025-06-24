@@ -56,7 +56,7 @@ class ClienteEntrevista(models.Model):
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100)
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
-    provincia_cedula = models.CharField(max_length=2, choices=PROVINCIA_CHOICES, blank=True, null=True,default='8')
+    provincia_cedula = models.CharField(max_length=2, choices=PROVINCIA_CHOICES, blank=True, null=True)
     tipo_letra = models.CharField(max_length=5, choices=LETRA_CEDULA_CHOICES, blank=True, null=True)
     tomo_cedula = models.CharField(max_length=10)
     partida_cedula = models.CharField(max_length=10)
