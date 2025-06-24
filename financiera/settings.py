@@ -19,7 +19,6 @@ if DEBUG:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-
 else:
     DATABASES = {
         'default': dj_database_url.config(
