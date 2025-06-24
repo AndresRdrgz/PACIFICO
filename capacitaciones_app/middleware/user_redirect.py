@@ -34,11 +34,25 @@ class UserRoleRedirectMiddleware:
         self.get_response = get_response
         # URLs que están permitidas para usuarios con rol "Usuario"
         self.allowed_paths = [
-            '/cursos/',           # App de capacitaciones
-            '/perfil/',           # Perfil de usuario
-            '/mi-progreso/',      # Progreso del usuario
-            '/static/',           # Archivos estáticos
-            '/media/',            # Archivos de media
+            '/cursos/',                    # App de capacitaciones
+            '/perfil/',                    # Perfil de usuario
+            '/mi-progreso/',               # Progreso del usuario
+            '/validacion-ui/',             # Validación UI
+            '/temas/',                     # Temas (completar, ver)
+            '/capacitaciones/',            # Dashboard y asignaciones
+            '/asignar-curso/',             # AJAX asignación
+            '/cursos-asignados/',          # AJAX cursos asignados
+            '/miembros-grupo/',            # AJAX miembros grupo
+            '/usuarios-grupo/',            # AJAX usuarios grupo
+            '/desasignar-curso/',          # AJAX desasignar
+            '/usuarios-disponibles-grupo/', # Gestión grupos
+            '/agregar-miembros-grupo/',    # Gestión grupos
+            '/remover-miembro-grupo/',     # Gestión grupos
+            '/exportar-asignaciones-excel/', # Exportar Excel
+            '/encuesta/',                  # Encuestas de satisfacción
+            '/api/',                       # API endpoints
+            '/static/',                    # Archivos estáticos
+            '/media/',                     # Archivos de media
         ]
         # URLs que NO deben ser interceptadas (evitar loops)
         self.exempt_paths = [

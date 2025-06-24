@@ -24,14 +24,7 @@ def lista_cursos(request):
     if not usuario.is_superuser:
         cursos = cursos.filter(Q(usuarios_asignados=usuario) | Q(grupos_asignados__usuarios_asignados=usuario))
 
-    if estado == "no-iniciados":
-        cursos = cursos.exclude(progresocurso__usuario=usuario)
-    elif estado == "en-progreso":
-        cursos = cursos.filter(progresocurso__usuario=usuario, progresocurso__completado=False)
-    elif estado == "completados":
-        cursos = cursos.filter(progresocurso__usuario=usuario, progresocurso__completado=True)
-
-    # Calcular el progreso de cada curso para todas las pestañas
+    # Primero calcular el progreso de TODOS los cursos
     cursos_con_progreso = []
     for curso in cursos:
         progreso, _ = ProgresoCurso.objects.get_or_create(usuario=usuario, curso=curso)
@@ -63,9 +56,21 @@ def lista_cursos(request):
         curso.progreso_percent = progreso_percent
         cursos_con_progreso.append(curso)
     
-    cursos = cursos_con_progreso
+    # DESPUÉS filtrar por estado basado en el progreso calculado
+    if estado == "no-iniciados":
+        # Cursos con 0% de progreso
+        cursos_filtrados = [curso for curso in cursos_con_progreso if curso.progreso_percent == 0]
+    elif estado == "en-progreso":
+        # Cursos con progreso > 0% y < 100%
+        cursos_filtrados = [curso for curso in cursos_con_progreso if 0 < curso.progreso_percent < 100]
+    elif estado == "completados":
+        # Cursos con 100% de progreso
+        cursos_filtrados = [curso for curso in cursos_con_progreso if curso.progreso_percent == 100]
+    else:
+        # Todos los cursos
+        cursos_filtrados = cursos_con_progreso
 
-    return render(request, 'capacitaciones_app/cursos.html', {'cursos': cursos, 'estado': estado})
+    return render(request, 'capacitaciones_app/cursos.html', {'cursos': cursos_filtrados, 'estado': estado})
 
 
 @login_required
