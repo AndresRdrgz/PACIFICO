@@ -627,20 +627,6 @@ def main_menu(request):
     
     return render(request, 'main_menu.html', context)
 
-def login_view(request):
-    
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        print('user', user, username, password)
-        if user is not None:
-            login(request, user)
-            return redirect('main_menu')  # Redirect to the main menu after successful login
-        else:
-            messages.error(request, 'Invalid username or password')
-            print('Invalid username or password')
-    return render(request, 'registration/login.html')
 
 
 @login_required

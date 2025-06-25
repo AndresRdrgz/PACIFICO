@@ -9,6 +9,7 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     form = UserProfileForm  # Conectamos el formulario con validación condicional
     can_delete = False
+    fields = ('rol', 'oficial', 'sucursal', 'profile_picture', 'auto_save_cotizaciones', 'pruebaFuncionalidades', 'numeroColaborador')  # Añadimos 'rol' y 'numeroColaborador' explícitamente
 
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
@@ -17,7 +18,7 @@ class UserProfileInline(admin.StackedInline):
             def get_form(self, form_index, **kwargs):
                 form = super().get_form(form_index, **kwargs)
                 try:
-                    if obj and hasattr(obj, 'userprofile') and obj.userprofile.rol == 'Alumno':
+                    if obj and hasattr(obj, 'userprofile') and obj.userprofile.rol == 'Usuario':
                         form.base_fields.pop('oficial', None)
                         form.base_fields.pop('sucursal', None)
                 except Exception:
@@ -29,6 +30,7 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
+    list_filter = BaseUserAdmin.list_filter + ('email',)  # Add email filter
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

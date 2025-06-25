@@ -136,6 +136,7 @@ class UserProfile(models.Model):
         default='Usuario'
     )
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
+    numeroColaborador = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.user.username

@@ -1,5 +1,6 @@
 {% extends 'capacitaciones_app/base.html' %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}Mi Perfil - Pacífico Cursos{% endblock %}
 
@@ -125,6 +126,150 @@
                             {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}
                         </p>
                     </div>
+                    
+                    <!-- Cambiar contraseña -->
+                    <div class="mt-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-emerald-700 flex items-center">🔒 Cambiar contraseña</h3>
+                            <button id="togglePasswordForm" type="button" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1 rounded-md text-sm font-medium transition-colors duration-300">
+                                <span id="toggleText">Mostrar formulario</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Mensaje de confirmación personalizado -->
+                        <div id="passwordSuccessMessage" class="hidden bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 p-6 mb-6 rounded-lg shadow-md">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-lg font-bold text-green-800">🎉 ¡Contraseña actualizada con éxito!</h4>
+                                    <p class="text-green-700 mt-1">
+                                        Tu contraseña ha sido cambiada correctamente. Tu sesión permanece activa y segura.
+                                    </p>
+                                    <div class="mt-3 flex items-center space-x-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            ✅ Completado
+                                        </span>
+                                        <span class="text-xs text-green-600">Hace unos segundos</span>
+                                    </div>
+                                </div>
+                                <div class="ml-auto">
+                                    <button type="button" onclick="document.getElementById('passwordSuccessMessage').classList.add('hidden')" class="text-green-400 hover:text-green-600 transition-colors duration-200">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Información de seguridad -->
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        <strong>Requisitos de seguridad:</strong> La contraseña debe tener al menos 8 caracteres y no puede ser completamente numérica.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="passwordFormContainer" class="{% if not show_password_form %}hidden{% endif %}">
+                            <form method="post" class="space-y-4 max-w-lg" autocomplete="off" id="passwordChangeForm">
+                                {% csrf_token %}
+                                
+                                <!-- Errores no específicos de campo -->
+                                {% if password_form.non_field_errors %}
+                                    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div class="ml-3">
+                                                {% for error in password_form.non_field_errors %}
+                                                    <p class="text-sm text-red-700">{{ error }}</p>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Contraseña actual -->
+                                <div>
+                                    <label for="id_old_password" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Contraseña actual <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ password_form.old_password|add_class:'w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200' }}
+                                    {% if password_form.old_password.errors %}
+                                        <div class="mt-1">
+                                            {% for error in password_form.old_password.errors %}
+                                                <p class="text-sm text-red-600">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Nueva contraseña -->
+                                <div>
+                                    <label for="id_new_password1" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Nueva contraseña <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ password_form.new_password1|add_class:'w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200' }}
+                                    {% if password_form.new_password1.errors %}
+                                        <div class="mt-1">
+                                            {% for error in password_form.new_password1.errors %}
+                                                <p class="text-sm text-red-600">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div id="passwordStrength" class="mt-2 hidden">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2">
+                                                <div id="strengthBar" class="h-2 rounded-full transition-all duration-300"></div>
+                                            </div>
+                                            <span id="strengthText" class="text-xs font-medium"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Confirmar nueva contraseña -->
+                                <div>
+                                    <label for="id_new_password2" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Confirmar nueva contraseña <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ password_form.new_password2|add_class:'w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200' }}
+                                    {% if password_form.new_password2.errors %}
+                                        <div class="mt-1">
+                                            {% for error in password_form.new_password2.errors %}
+                                                <p class="text-sm text-red-600">{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div id="passwordMatch" class="mt-1 text-sm hidden"></div>
+                                </div>
+                                
+                                <!-- Botones -->
+                                <div class="flex space-x-3 pt-4">
+                                    <button type="submit" id="submitBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                        <span id="submitText">🔒 Actualizar contraseña</span>
+                                    </button>
+                                    <button type="button" id="cancelBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-300">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -229,12 +374,164 @@
             });
         }
         
+        // Funcionalidad del formulario de contraseña
+        const toggleBtn = document.getElementById('togglePasswordForm');
+        const formContainer = document.getElementById('passwordFormContainer');
+        const toggleText = document.getElementById('toggleText');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const form = document.getElementById('passwordChangeForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        
+        // Toggle del formulario
+        if (toggleBtn && formContainer) {
+            toggleBtn.addEventListener('click', function() {
+                const isHidden = formContainer.classList.contains('hidden');
+                if (isHidden) {
+                    formContainer.classList.remove('hidden');
+                    toggleText.textContent = 'Ocultar formulario';
+                    formContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    formContainer.classList.add('hidden');
+                    toggleText.textContent = 'Mostrar formulario';
+                    form.reset();
+                }
+            });
+        }
+        
+        // Cancelar formulario
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                formContainer.classList.add('hidden');
+                toggleText.textContent = 'Mostrar formulario';
+                form.reset();
+                // Limpiar indicadores
+                document.getElementById('passwordStrength').classList.add('hidden');
+                document.getElementById('passwordMatch').classList.add('hidden');
+            });
+        }
+        
+        // Validación en tiempo real
+        const newPassword1 = document.getElementById('id_new_password1');
+        const newPassword2 = document.getElementById('id_new_password2');
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+        const strengthContainer = document.getElementById('passwordStrength');
+        const matchIndicator = document.getElementById('passwordMatch');
+        
+        if (newPassword1) {
+            newPassword1.addEventListener('input', function() {
+                const password = this.value;
+                strengthContainer.classList.remove('hidden');
+                
+                // Calcular fuerza de contraseña
+                let strength = 0;
+                let feedback = [];
+                
+                if (password.length >= 8) strength += 25;
+                else feedback.push('mín. 8 caracteres');
+                
+                if (/[a-z]/.test(password)) strength += 25;
+                else feedback.push('minúscula');
+                
+                if (/[A-Z]/.test(password)) strength += 25;
+                else feedback.push('mayúscula');
+                
+                if (/[0-9]/.test(password) && !/^\d+$/.test(password)) strength += 25;
+                else if (/^\d+$/.test(password)) feedback.push('no solo números');
+                else feedback.push('número');
+                
+                // Actualizar barra de progreso
+                strengthBar.style.width = strength + '%';
+                
+                if (strength < 50) {
+                    strengthBar.className = 'h-2 rounded-full transition-all duration-300 bg-red-500';
+                    strengthText.textContent = 'Débil';
+                    strengthText.className = 'text-xs font-medium text-red-600';
+                } else if (strength < 75) {
+                    strengthBar.className = 'h-2 rounded-full transition-all duration-300 bg-yellow-500';
+                    strengthText.textContent = 'Regular';
+                    strengthText.className = 'text-xs font-medium text-yellow-600';
+                } else {
+                    strengthBar.className = 'h-2 rounded-full transition-all duration-300 bg-green-500';
+                    strengthText.textContent = 'Fuerte';
+                    strengthText.className = 'text-xs font-medium text-green-600';
+                }
+                
+                checkPasswordMatch();
+            });
+        }
+        
+        if (newPassword2) {
+            newPassword2.addEventListener('input', checkPasswordMatch);
+        }
+        
+        function checkPasswordMatch() {
+            if (newPassword1 && newPassword2 && newPassword2.value) {
+                matchIndicator.classList.remove('hidden');
+                if (newPassword1.value === newPassword2.value) {
+                    matchIndicator.textContent = '✅ Las contraseñas coinciden';
+                    matchIndicator.className = 'mt-1 text-sm text-green-600';
+                } else {
+                    matchIndicator.textContent = '❌ Las contraseñas no coinciden';
+                    matchIndicator.className = 'mt-1 text-sm text-red-600';
+                }
+            }
+        }
+        
+        // Loading en submit
+        if (form) {
+            form.addEventListener('submit', function() {
+                submitBtn.disabled = true;
+                submitText.textContent = '⏳ Actualizando...';
+                submitBtn.classList.add('opacity-75');
+            });
+        }
+        
         // Animaciones adicionales
         const elements = document.querySelectorAll('.bg-gray-50, .bg-emerald-50, .bg-blue-50, .bg-yellow-50');
         elements.forEach((el, index) => {
             el.style.animationDelay = `${index * 0.1}s`;
             el.classList.add('animate-scale-in');
         });
+        
+        // Auto-mostrar formulario si hay errores
+        {% if show_password_form %}
+            if (formContainer && formContainer.classList.contains('hidden')) {
+                formContainer.classList.remove('hidden');
+                toggleText.textContent = 'Ocultar formulario';
+            }
+        {% endif %}
+        
+        // Mostrar mensaje de éxito personalizado si existe el mensaje de Django
+        {% if messages %}
+            {% for message in messages %}
+                {% if '🔒 ¡Contraseña actualizada exitosamente!' in message.message %}
+                    const successMessage = document.getElementById('passwordSuccessMessage');
+                    if (successMessage) {
+                        successMessage.classList.remove('hidden');
+                        // Auto-ocultar después de 8 segundos
+                        setTimeout(() => {
+                            successMessage.style.transition = 'opacity 0.5s ease-out';
+                            successMessage.style.opacity = '0';
+                            setTimeout(() => {
+                                successMessage.classList.add('hidden');
+                                successMessage.style.opacity = '1';
+                            }, 500);
+                        }, 8000);
+                        
+                        // Ocultar el formulario de contraseña
+                        if (formContainer && !formContainer.classList.contains('hidden')) {
+                            formContainer.classList.add('hidden');
+                            toggleText.textContent = 'Mostrar formulario';
+                        }
+                        
+                        // Scroll suave al mensaje
+                        successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                {% endif %}
+            {% endfor %}
+        {% endif %}
     });
 </script>
 {% endblock %}
