@@ -68,7 +68,7 @@ def calculo_servicio_descuento(params):
     auxB = 0
     montoLetra = params['wrkMontoLetra']
     noLetras = params['auxPeriocidad'] * params['auxPlazoPago']
-    #print((params, 'noLetras:', noLetras)
+    print('noLetras:', noLetras)
 
 
     if edad >= edadJubFem and sexo == "FEMENINO":
@@ -85,6 +85,7 @@ def calculo_servicio_descuento(params):
            pass
 
     if porServDesc > 0:
+        print('porServDesc:', porServDesc, 'montoLetra:', montoLetra, 'noLetras:', noLetras)
         auxA = noLetras * montoLetra
         auxb = porServDesc
         auxb = auxb / 100

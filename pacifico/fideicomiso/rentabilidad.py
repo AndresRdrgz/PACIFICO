@@ -469,7 +469,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                         # Si es vendedor con impuesto
                         comisionTotal[auxH] = comisionTotal[auxH] * 1.07
                         comisionTotal[auxH] = round(comisionTotal[auxH], 2)
-                   
+                    #print("Comision Total:", comisionTotal[auxH], "Porcentaje:", comisionPorcentaje[auxH], "AuxH:", auxH)
                     pass
                 else:
                     # TTTF
@@ -483,7 +483,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
                 comisionTotal[auxH] = 0
             comisionGastoComisio += comisionTotal[auxH]
     
-    #print(("comisionGastoComisio:", comisionGastoComisio)
+    print("comisionGastoComisio:", comisionGastoComisio)
     
     if sobresaldo == "Y":
         wrkMontoFECI=0
@@ -492,7 +492,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
         auxQ = wrkMontoFECI
     else:
         pass
-    ###print(("wrkMontoFECI:",wrkMontoFECI,"wrkNum7_2:",wrkNum7_2)
+    #print("wrkMontoFECI:",wrkMontoFECI,"wrkNum7_2:",wrkNum7_2)
     auxQ = auxQ / plazoPago
     auxQ = round(auxQ, 3)
     ###print(("auxQ =", auxQ)
@@ -512,12 +512,12 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
        
         wrkNetoTotal += 291.90
     
-    ##print(("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"calcMontoServDes:",calcMontoServDes,"calcMontoServDes2:",calcMontoServDes2,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCanc:",calcNetoCanc,"calcMontoREFI:",calcMontoREFI,"manejo_5porc:",manejo_5porc)
+    print("wrkNetoTotal:",wrkNetoTotal,"calcMontoNetoBruto:",calcMontoNetoBruto,"calcMontoTimbres:",calcMontoTimbres,"calcMontoServDes:",calcMontoServDes,"calcMontoServDes2:",calcMontoServDes2,"calcMontoNotaria:",calcMontoNotaria,"calcNetoCanc:",calcNetoCanc,"calcMontoREFI:",calcMontoREFI,"manejo_5porc:",manejo_5porc)
     
     ###print(('manejo_5porc:', manejo_5porc)
     ###print(('wrkNetoTotal:', wrkNetoTotal)
 
-    ####print(("wrkNetoTotal =", wrkNetoTotal
+    print("wrkNetoTotal =", wrkNetoTotal)
     # Calcular 5% devolución de impuesto de seguro
     wrkDes5Porciento = 0
     # Evaluar 5% seguro REFI
@@ -547,6 +547,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     
     ###print(("comisionVendedor =", comisionVendedor, "parmgralComisionPers =", parmgralComisionPers)
     wrkNetoTotal2 = wrkNetoTotal
+    print("wrkNetoTotal2:", wrkNetoTotal2)
     auxP = tipopagoPeriocidad
     auxW = 0
     wrkcontador = 0

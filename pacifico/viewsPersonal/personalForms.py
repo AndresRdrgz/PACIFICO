@@ -975,7 +975,7 @@ class PrestamoPersonalForm(forms.ModelForm):
 
     periodoPago = forms.ChoiceField(
         choices=[(1, 'MENSUAL'), (2, 'QUINCENAL')],
-        initial=1,
+        initial=2,
         required=False,
         widget=forms.Select(attrs={
            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',

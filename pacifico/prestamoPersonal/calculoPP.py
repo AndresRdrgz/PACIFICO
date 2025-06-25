@@ -161,6 +161,8 @@ def generarPP(params):
                 resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
                 resultados['tasaEstimada'] = round(resultados['tasaEstimada'], 4)
         else:
+            params['calcTasaInteres'] = 12.03/100 # Set initial value for calcTasaInteres PRUEBAS PERASTAMO PERSONAL
+            print("Max iterations is 1, running rutinaCalculo once with initial calcTasaInteres,", params['calcTasaInteres'] * 100)
             r1, resultados,iteration_data = rutinaCalculo(params)
             resultados['r1'] = r1 * 100
             resultados['tasaEstimada'] = params['calcTasaInteres'] * 100
