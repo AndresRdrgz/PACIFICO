@@ -46,7 +46,7 @@ class CustomPasswordResetForm(PasswordResetForm):
                 'uid': context['uid'],
                 'token': context['token'],
                 'site_name': 'Aplicación Web',
-                'reset_url': f"{context['protocol']}://{context['domain']}/accounts/reset/{context['uid']}/{context['token']}/",
+                'reset_url': f"{context['protocol']}://{context['domain']}/passwordReset/confirm/{context['uid']}/{context['token']}/",
             }
             
             # Create the email content
