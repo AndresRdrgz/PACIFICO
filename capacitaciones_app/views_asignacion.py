@@ -299,18 +299,34 @@ def historial_usuario(request):
         if temas_completados > 0 or a.curso.usuarios_asignados.filter(id=usuario.id).exists():
             asignaciones.append(a)
 
-    # 📊 Preparar progreso detallado
+    # 📊 Preparar progreso detallado (usando la misma lógica que detalle_curso)
     progreso_qs = ProgresoCurso.objects.filter(usuario=usuario).select_related('curso')
     progreso_dict = {}
 
     for p in progreso_qs:
-        total_temas = sum(m.temas.count() for m in p.curso.modulos.all())
-        temas_completados = p.usuario.progresotema_set.filter(
+        # Calcular igual que en detalle_curso
+        temas_completados_count = ProgresoTema.objects.filter(
+            usuario=usuario,
             tema__modulo__curso=p.curso,
             completado=True
         ).count()
 
-        porcentaje = int((temas_completados / total_temas) * 100) if total_temas else 0
+        quizzes_aprobados_count = ResultadoQuiz.objects.filter(
+            usuario=usuario,
+            quiz__modulo__curso=p.curso,
+            aprobado=True
+        ).count()
+        
+        total_temas = sum(mod.temas.count() for mod in p.curso.modulos.all())
+        total_quizzes = Quiz.objects.filter(modulo__curso=p.curso).count()
+        encuesta_completada = p.encuesta_completada
+        
+        total_elementos = total_temas + total_quizzes + 1  # Se suma 1 por la encuesta
+        total_completados = temas_completados_count + quizzes_aprobados_count + (1 if encuesta_completada else 0)
+
+        porcentaje = round((total_completados / total_elementos) * 100) if total_elementos > 0 else 0
+        porcentaje = min(porcentaje, 100)
+        
         p.porcentaje = porcentaje
         progreso_dict[p.curso.id] = p
 

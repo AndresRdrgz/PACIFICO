@@ -73,7 +73,7 @@ class EncuestaSatisfaccionCursoForm(forms.ModelForm):
         model = EncuestaSatisfaccionCurso
         fields = [
             'departamento', 'cargo', 'expositor', 'utilidad', 'satisfaccion',
-            'aprendido', 'lugar', 'rol', 'recomendacion'
+            'aprendido', 'lugar', 'rol', 'recomendacion', 'comentarios_curso'
         ]
         widgets = {
             'departamento': forms.Select(attrs={'class': 'form-select', 'required': True}),
@@ -85,5 +85,6 @@ class EncuestaSatisfaccionCursoForm(forms.ModelForm):
             'lugar': forms.Select(attrs={'class': 'form-select', 'required': True}),
             'rol': forms.Select(attrs={'class': 'form-select', 'required': True}),
             'recomendacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'maxlength': 200}),
+            'comentarios_curso': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'maxlength': 500, 'required': True}),
         }
 
