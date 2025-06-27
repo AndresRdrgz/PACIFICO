@@ -102,6 +102,9 @@ def detalle_curso(request, curso_id):
     progreso_percent = round((total_completados / total_elementos) * 100) if total_elementos > 0 else 0
     progreso_percent = min(progreso_percent, 100)
 
+    # Lógica para habilitar la encuesta: Solo se deben completar todos los temas
+    temas_y_quizzes_completados = len(temas_completados_ids) == total_temas if total_temas > 0 else True
+
     curso_completado = (progreso_percent == 100) and encuesta_completada    # Verificar diferentes tipos de notificaciones
     mostrar_notificacion_encuesta = request.GET.get('encuesta_ya_completada') == 'true'
     mostrar_notificacion_quiz = request.GET.get('quiz_completado_exitoso') == 'true'
@@ -115,6 +118,7 @@ def detalle_curso(request, curso_id):
         'progreso_percent': progreso_percent,
         'temas_completados_ids': temas_completados_ids,
         'curso_completado': curso_completado, 
+        'temas_y_quizzes_completados': temas_y_quizzes_completados,
         'cert_warning': False,
         'mostrar_notificacion_encuesta': mostrar_notificacion_encuesta,
         'mostrar_notificacion_quiz': mostrar_notificacion_quiz,

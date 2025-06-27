@@ -21,7 +21,9 @@ def encuestas_json(request):
             "comentarios_curso": encuesta.comentarios_curso,
             "usuario": encuesta.usuario.username if encuesta.usuario else None,
             "nombre_usuario": encuesta.usuario.get_full_name() if encuesta.usuario else None,
+            "NumeroColaborador": encuesta.usuario.username if encuesta.usuario else None,
             "nombre_curso": encuesta.curso.titulo if encuesta.curso else None,
+            "Tipo de curso": encuesta.curso.get_tipo_curso_display() if encuesta.curso else None,
             "duracion_horas": encuesta.curso.duracion_horas if encuesta.curso else None,
             "fecha": encuesta.fecha,
         }

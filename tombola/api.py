@@ -138,13 +138,20 @@ def download_participantes_excel(request):
         if formulario and formulario.nombre and formulario.apellido:
             nombre = formulario.nombre
             apellido = formulario.apellido
-        else:
+        elif cliente:
             nombre_parts = cliente.nombreCliente.split() if cliente.nombreCliente else []
             nombre = nombre_parts[0] if len(nombre_parts) > 0 else ""
             apellido = " ".join(nombre_parts[1:]) if len(nombre_parts) > 1 else ""
+        else:
+            nombre = ""
+            apellido = ""
 
         # Datos comunes
-        cedula = cliente.cedulaCliente or ""
+        if cliente:
+            cedula = cliente.cedulaCliente or ""
+        else:
+            cedula = ""
+        
         celular = getattr(formulario, 'celular', "") or ""
         correo = getattr(formulario, 'correo_electronico', "") or ""
         edad = getattr(formulario, 'edad', "") or ""

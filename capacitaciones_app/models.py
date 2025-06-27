@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 
 # --- NUEVO: PerfilUsuario ---
 class PerfilUsuario(models.Model):
@@ -16,6 +18,13 @@ class PerfilUsuario(models.Model):
 
 # 📘 CURSO
 class Curso(models.Model):
+    TIPO_CURSO_CHOICES = [
+        ('INDUCCION', 'Inducción Personal Nuevo Ingreso'),
+        ('GESTION', 'Gestión Organizacional(CMA, Planeación Estratégica, Evaluación Desempeño, Políticas y Manuales internos)'),
+        ('TECNICO', 'Técnico para el cargo (conocimiento técnico, procesos del área, ,cumplimiento, riesgos, etc)'),
+        ('HERRAMIENTAS', 'Herramientas Técnicas( libre office, excel, software, power bi, visio, APPX, VIsio,etc)'),
+        ('DESARROLLO', 'Desarrollo Personal/Habilidades Blandas (Competencias, personalidad, aptitudes, cualidades, manejo de estrés,etc)'),
+    ]
     titulo = models.CharField(max_length=100)
     descripcion = models.TextField()
     fecha_inicio = models.DateField(null=True, blank=True)
@@ -29,6 +38,14 @@ class Curso(models.Model):
         help_text='Duración estimada del curso en horas (ej: 8.5)'
     )
     portada = models.ImageField(upload_to='portadas/', null=True, blank=True)
+    color_portada = models.CharField(max_length=7, default='#009c3c', help_text="Color hexadecimal para la portada (ej: #FFFFFF)")
+    tipo_curso = models.CharField(
+        "Tipo de curso",
+        max_length=20,
+        choices=TIPO_CURSO_CHOICES,
+        null=True,
+        blank=True
+    )
 
     usuarios_asignados = models.ManyToManyField(User, blank=True, related_name='cursos_asignados')
     grupos_asignados = models.ManyToManyField('GrupoAsignacion', blank=True, related_name='cursos_asignados')
@@ -210,3 +227,57 @@ class ResultadoQuiz(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.quiz.modulo.titulo}: {self.puntaje} puntos"
+
+
+# SEÑALES PARA SINCRONIZAR ASIGNACIONES
+
+@receiver(m2m_changed, sender=Curso.usuarios_asignados.through)
+def crear_asignacion_usuario(sender, instance, action, pk_set, **kwargs):
+    """
+    Crea un registro de Asignacion y ProgresoCurso cuando un usuario es 
+    añadido a un curso desde el admin o cualquier otro lugar que 
+    modifique la relación m2m.
+    """
+    if action == 'post_add':
+        for user_pk in pk_set:
+            usuario = User.objects.get(pk=user_pk)
+            # Se usa get_or_create para no duplicar registros si ya existe
+            Asignacion.objects.get_or_create(
+                curso=instance,
+                usuario=usuario,
+                defaults={'metodo': 'manual'}
+            )
+            # Crear también el ProgresoCurso
+            ProgresoCurso.objects.get_or_create(
+                curso=instance,
+                usuario=usuario
+            )
+
+@receiver(m2m_changed, sender=Curso.grupos_asignados.through)
+def crear_asignacion_grupo(sender, instance, action, pk_set, **kwargs):
+    """
+    Crea registros de Asignacion y ProgresoCurso cuando un grupo es añadido a un curso.
+    Crea una asignación para el grupo y para cada usuario dentro del grupo.
+    """
+    if action == 'post_add':
+        for group_pk in pk_set:
+            grupo = GrupoAsignacion.objects.get(pk=group_pk)
+            # 1. Crear la asignación para el grupo
+            Asignacion.objects.get_or_create(
+                curso=instance,
+                grupo=grupo,
+                defaults={'metodo': 'grupo'}
+            )
+            # 2. Crear asignaciones y progreso para los miembros del grupo
+            for usuario in grupo.usuarios_asignados.all():
+                Asignacion.objects.get_or_create(
+                    curso=instance,
+                    usuario=usuario,
+                    grupo=grupo,
+                    defaults={'metodo': 'grupo'}
+                )
+                # Crear también el ProgresoCurso para cada usuario del grupo
+                ProgresoCurso.objects.get_or_create(
+                    curso=instance,
+                    usuario=usuario
+                )
