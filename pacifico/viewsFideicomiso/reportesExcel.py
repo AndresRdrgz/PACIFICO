@@ -1034,6 +1034,9 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['d29'] = tapeSalarioBrutoMensual
         sheet['d31'] = tapeSalarioNetoMensual
         sheet['d33'] = tapeLetraPrestamo
+
+        if hipotecaDescuentoDir == "SI":
+            hipotecaDescuentoDir = 'SÍ'
         sheet['d37'] = hipotecaDescuentoDir
         sheet['d39'] = tieneEmbargo
         sheet['d41'] = letraDepende
