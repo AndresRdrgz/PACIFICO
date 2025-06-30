@@ -388,7 +388,7 @@ class Cotizacion(models.Model):
     wrkMontoLetra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     wrkLetraSeguro = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     wrkLetraSinSeguros = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    calcComiCierreFinal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    calcComiCierreFinal = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
     calcMontoNotaria = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     calcMontoTimbres = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     tablaTotalPagos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
