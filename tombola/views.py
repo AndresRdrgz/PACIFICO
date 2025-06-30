@@ -169,7 +169,7 @@ def generate_boleto_pdf(template_path, output_path, boleto_id):
     c.setFillColorRGB(1, 0, 0)  # Set the font color to red (RGB: 1, 0, 0)
     boleto_text = f"Boleto No. {boleto_id:06d}"  # Format the ID as a 6-digit number with leading zeros
     boleto_text_width = c.stringWidth(boleto_text, "Helvetica-Bold", 30)
-    c.drawString((page_width - boleto_text_width) / 2+43, page_height * 0.605, boleto_text)
+    c.drawString((page_width - boleto_text_width) / 2+43, page_height * 0.62, boleto_text)
 
     # Finalize the overlay
     c.save()
