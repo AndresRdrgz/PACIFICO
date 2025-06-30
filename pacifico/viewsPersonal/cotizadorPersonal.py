@@ -297,7 +297,9 @@ def cotizacionPrestamoPersonal(request, pk=None):
                 resultado['wrkLetraSinSeguros'] = round(resultado['wrkLetraSinSeguros'], 2)
                 resultado['wrkLetraConSeguros'] = resultado['wrkMontoLetra'] + resultado['montoMensualSeguro']
                 resultado['wrkLetraConSeguros'] = round(resultado['wrkLetraConSeguros'], 2)
-                resultado['calcComiCierreFinal'] = round(resultado['calcComiCierreFinal'], 2)
+                print("calcComiCierreFinal:", resultado['calcComiCierreFinal'])
+                resultado['calcComiCierreFinal'] = round(resultado['calcComiCierreFinal'], 3) * 100
+                print("resultado['calcComiCierreFinal']:", resultado['calcComiCierreFinal'])
                 
                 resultado['cashback'] = form.cleaned_data['cashback'] if form.cleaned_data['cashback'] is not None else 0
                 resultado['cashback'] = round(resultado['cashback'], 2)
