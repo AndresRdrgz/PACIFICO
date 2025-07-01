@@ -1065,8 +1065,14 @@ def generate_report_pp(request, numero_cotizacion):
         sheet['g36'] = cotizacion.deducciones4
         sheet['g37'] = cotizacion.deducciones5
         sheet['g38'] = cotizacion.deducciones6
-        #DATOS DEL VEHICULO
        
+        #LETRA HIPOTECA
+        letraHipoteca1 = cotizacion.letraHipoteca1 if cotizacion.letraHipoteca1 is not None else 0
+        letraHipoteca2 = cotizacion.letraHipoteca2 if cotizacion.letraHipoteca2 is not None else 0
+        if letraHipoteca1 > 0:
+             sheet['G46'] = letraHipoteca1
+        if letraHipoteca2 > 0:
+             sheet['I46'] = letraHipoteca2       
 
         #motivo consulta
         
