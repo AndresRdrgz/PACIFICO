@@ -167,6 +167,7 @@ def prepResultado(cotizacion):
 
     resultado = {
         'auxMonto2': cotizacion.auxMonto2,
+        'montoPrestamo': cotizacion.montoPrestamo,       
         'numero_cotizacion': cotizacion.NumeroCotizacion,
         'r1': cotizacion.r1,
         'tasaEstimada': cotizacion.tasaEstimada,
