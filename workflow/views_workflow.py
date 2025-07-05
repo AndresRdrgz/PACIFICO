@@ -67,6 +67,104 @@ def dashboard_workflow(request):
 
 
 @login_required
+def negocios_view(request):
+    """Vista de Negocios - Ver todas las solicitudes de un pipeline"""
+    
+    # Obtener pipeline seleccionado
+    pipeline_id = request.GET.get('pipeline')
+    view_type = request.GET.get('view', 'table')  # table or kanban
+    
+    # Obtener todos los pipelines disponibles
+    pipelines = Pipeline.objects.all()
+    
+    if pipeline_id:
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        
+        # Obtener todas las solicitudes del pipeline
+        solicitudes = Solicitud.objects.filter(
+            pipeline=pipeline
+        ).select_related(
+            'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_creacion')
+        
+        # Filtros adicionales
+        filtro_estado = request.GET.get('estado', '')
+        filtro_asignado = request.GET.get('asignado', '')
+        filtro_fecha = request.GET.get('fecha', '')
+        
+        if filtro_estado == 'activas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=False)
+        elif filtro_estado == 'completadas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=True)
+        elif filtro_estado == 'vencidas':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+            )
+        
+        if filtro_asignado == 'asignadas':
+            solicitudes = solicitudes.filter(asignada_a__isnull=False)
+        elif filtro_asignado == 'sin_asignar':
+            solicitudes = solicitudes.filter(asignada_a__isnull=True)
+        
+        if filtro_fecha == 'hoy':
+            solicitudes = solicitudes.filter(fecha_creacion__date=timezone.now().date())
+        elif filtro_fecha == 'semana':
+            solicitudes = solicitudes.filter(
+                fecha_creacion__gte=timezone.now() - timedelta(days=7)
+            )
+        elif filtro_fecha == 'mes':
+            solicitudes = solicitudes.filter(
+                fecha_creacion__gte=timezone.now() - timedelta(days=30)
+            )
+        
+        # Paginación
+        paginator = Paginator(solicitudes, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Para vista kanban, agrupar por etapas
+        if view_type == 'kanban':
+            etapas_kanban = pipeline.etapas.all().order_by('orden')
+            solicitudes_por_etapa = {}
+            
+            for etapa in etapas_kanban:
+                solicitudes_por_etapa[etapa] = solicitudes.filter(etapa_actual=etapa)
+            
+            # Agregar solicitudes completadas
+            solicitudes_completadas = solicitudes.filter(etapa_actual__isnull=True)
+            if solicitudes_completadas.exists():
+                solicitudes_por_etapa['completadas'] = solicitudes_completadas
+        else:
+            solicitudes_por_etapa = None
+            etapas_kanban = None
+        
+        context = {
+            'pipeline': pipeline,
+            'pipelines': pipelines,
+            'solicitudes': solicitudes,
+            'page_obj': page_obj,
+            'view_type': view_type,
+            'solicitudes_por_etapa': solicitudes_por_etapa,
+            'etapas_kanban': etapas_kanban,
+            'filtros': {
+                'estado': filtro_estado,
+                'asignado': filtro_asignado,
+                'fecha': filtro_fecha,
+            }
+        }
+    else:
+        # Si no hay pipeline seleccionado, mostrar lista de pipelines
+        context = {
+            'pipelines': pipelines,
+            'view_type': view_type,
+        }
+    
+    return render(request, 'workflow/negocios.html', context)
+
+
+@login_required
 def bandeja_trabajo(request):
     """Bandeja de trabajo del usuario"""
     
@@ -1064,4 +1162,9 @@ def api_estadisticas(request):
         'solicitudes_completadas': solicitudes_completadas,
         'solicitudes_vencidas': solicitudes_vencidas,
         'solicitudes_por_pipeline': list(solicitudes_por_pipeline),
-    }) 
+    })
+
+
+def sitio_construccion(request):
+    """Vista para página de sitio en construcción"""
+    return render(request, 'workflow/sitio_construccion.html') 

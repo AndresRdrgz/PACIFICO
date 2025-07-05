@@ -7,6 +7,7 @@ urlpatterns = [
     # Vistas principales
     path('', views_workflow.dashboard_workflow, name='dashboard'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
+    path('negocios/', views_workflow.negocios_view, name='negocios'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
     path('solicitud/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
@@ -25,6 +26,9 @@ urlpatterns = [
     # APIs
     path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
     path('api/estadisticas/', views_workflow.api_estadisticas, name='api_estadisticas'),
+    
+    # Páginas especiales
+    path('construccion/', views_workflow.sitio_construccion, name='sitio_construccion'),
     
     # APIs para pipelines
     path('api/pipelines/crear/', views_workflow.api_crear_pipeline, name='api_crear_pipeline'),
