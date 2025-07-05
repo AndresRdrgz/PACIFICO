@@ -31,7 +31,7 @@ class Etapa(models.Model):
 
 class SubEstado(models.Model):
     etapa = models.ForeignKey(Etapa, on_delete=models.CASCADE, related_name='subestados')
-    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='subestados', null=True, blank=True)  # Added ForeignKey to Pipeline with null=True
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='subestados', null=True, blank=True)
     nombre = models.CharField(max_length=100)
     orden = models.PositiveIntegerField(default=0)
 
@@ -70,19 +70,11 @@ class PermisoEtapa(models.Model):
         return f"{self.grupo.name} - {self.etapa.nombre}"
 
 # --------------------------------------
-# TIPO DE SOLICITUD Y SOLICITUD
+# SOLICITUD
 # --------------------------------------
-
-class TipoSolicitud(models.Model):
-    nombre = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return self.nombre
-
 
 class Solicitud(models.Model):
     codigo = models.CharField(max_length=50, unique=True)
-    tipo_solicitud = models.ForeignKey(TipoSolicitud, on_delete=models.PROTECT)
     pipeline = models.ForeignKey(Pipeline, on_delete=models.PROTECT)
     etapa_actual = models.ForeignKey(Etapa, on_delete=models.SET_NULL, null=True, blank=True)
     subestado_actual = models.ForeignKey(SubEstado, on_delete=models.SET_NULL, null=True, blank=True)
@@ -92,7 +84,7 @@ class Solicitud(models.Model):
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.codigo} ({self.tipo_solicitud.nombre})"
+        return f"{self.codigo} ({self.pipeline.nombre})"
 
 
 class HistorialSolicitud(models.Model):
@@ -120,17 +112,16 @@ class Requisito(models.Model):
         return self.nombre
 
 
-class RequisitoPipelineTipo(models.Model):
-    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE)
-    tipo_solicitud = models.ForeignKey(TipoSolicitud, on_delete=models.CASCADE)
+class RequisitoPipeline(models.Model):
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='requisitos_pipeline')
     requisito = models.ForeignKey(Requisito, on_delete=models.CASCADE)
     obligatorio = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ('pipeline', 'tipo_solicitud', 'requisito')
+        unique_together = ('pipeline', 'requisito')
 
     def __str__(self):
-        return f"{self.tipo_solicitud.nombre} - {self.requisito.nombre}"
+        return f"{self.pipeline.nombre} - {self.requisito.nombre}"
 
 
 class RequisitoSolicitud(models.Model):

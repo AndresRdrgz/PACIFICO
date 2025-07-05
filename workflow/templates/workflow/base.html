@@ -1,0 +1,703 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Workflow - Pacífico{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --verde-pacifico: #009c3c;
+            --verde-hover: #007529;
+            --verde-oscuro: #00692b;
+            --verde-claro: #22a650;
+            --verde-muy-oscuro: #004d33;
+            --gris-texto: #4a4a4a;
+            --gris-fondo: #f9f9f9;
+            --gris-borde: #ddd;
+            --blanco: #ffffff;
+            --gris-claro: #f8f9fa;
+            --gris-medio: #6c757d;
+            --rojo: #dc3545;
+            --amarillo: #ffc107;
+            --azul: #0d6efd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--gris-fondo);
+            color: var(--gris-texto);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Sidebar principal */
+        .sidebar {
+            background: linear-gradient(180deg, #232323 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            width: 280px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease;
+        }
+
+        /* Logo Section */
+        .sidebar-logo {
+            padding: 1.5rem;
+            border-bottom: 1px solid #333;
+            text-align: center;
+        }
+
+        .sidebar-logo img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* User Profile Section */
+        .user-profile {
+            padding: 1.5rem;
+            border-bottom: 1px solid #333;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .user-info {
+            text-align: center;
+            color: white;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: #ccc;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #22a650;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #22a650;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Navigation Items */
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            color: #999;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 1.5rem 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            color: #ccc;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--verde-pacifico);
+            text-decoration: none;
+        }
+
+        .nav-link.active {
+            color: white;
+            background-color: rgba(0, 156, 60, 0.2);
+            border-left-color: var(--verde-pacifico);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            background-color: var(--gris-fondo);
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--verde-pacifico);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+        }
+
+        /* Cards */
+        .card-custom {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            background: var(--blanco);
+        }
+
+        .card-custom:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            border-radius: 16px 16px 0 0 !important;
+            border: none;
+            padding: 1.25rem;
+        }
+
+        /* Botones */
+        .btn-pacifico {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            border: none;
+            color: var(--blanco);
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 24px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+        }
+
+        .btn-pacifico:hover {
+            background: linear-gradient(135deg, var(--verde-hover) 0%, var(--verde-pacifico) 100%);
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 156, 60, 0.4);
+        }
+
+        .btn-outline-pacifico {
+            border: 2px solid var(--verde-pacifico);
+            color: var(--verde-pacifico);
+            background: transparent;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 24px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-pacifico:hover {
+            background: var(--verde-pacifico);
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 156, 60, 0.3);
+        }
+
+        /* Badges */
+        .badge-pacifico {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        .badge-warning-custom {
+            background: linear-gradient(135deg, var(--amarillo) 0%, #ffb84d 100%);
+            color: #000;
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        .badge-danger-custom {
+            background: linear-gradient(135deg, var(--rojo) 0%, #e74c3c 100%);
+            color: var(--blanco);
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        /* Formularios */
+        .form-control-custom {
+            border: 2px solid var(--gris-borde);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--blanco);
+        }
+
+        .form-control-custom:focus {
+            border-color: var(--verde-pacifico);
+            box-shadow: 0 0 0 0.2rem rgba(0, 156, 60, 0.25);
+            outline: none;
+        }
+
+        /* Tablas */
+        .table-custom {
+            background: var(--blanco);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .table-custom thead th {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            border: none;
+            padding: 16px;
+            font-weight: 600;
+        }
+
+        .table-custom tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: rgba(0, 156, 60, 0.05);
+            transform: scale(1.01);
+        }
+
+        /* Alertas */
+        .alert-custom {
+            border: none;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-weight: 500;
+        }
+
+        .alert-success-custom {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-left: 4px solid var(--verde-pacifico);
+        }
+
+        .alert-warning-custom {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border-left: 4px solid var(--amarillo);
+        }
+
+        .alert-danger-custom {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border-left: 4px solid var(--rojo);
+        }
+
+        /* Progress bars */
+        .progress-custom {
+            height: 12px;
+            border-radius: 6px;
+            background-color: var(--gris-claro);
+            overflow: hidden;
+        }
+
+        .progress-bar-custom {
+            background: linear-gradient(90deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Loading spinner */
+        .spinner-custom {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gris-claro);
+            border-top: 4px solid var(--verde-pacifico);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos específicos para el workflow */
+        .workflow-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .status-in-progress {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+            border: 1px solid rgba(13, 110, 253, 0.3);
+        }
+
+        .status-completed {
+            background-color: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            border: 1px solid rgba(25, 135, 84, 0.3);
+        }
+
+        .status-overdue {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        /* Timeline para historial */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--verde-pacifico);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--blanco);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--verde-pacifico);
+            border: 3px solid var(--blanco);
+            box-shadow: 0 0 0 2px var(--verde-pacifico);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Toggle Button (Mobile) -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <!-- Logo Section -->
+        <div class="sidebar-logo">
+            <a href="{% url 'workflow:dashboard' %}">
+                <img src="{% static 'logoBlanco.png' %}" alt="Logo Pacífico" class="w-full h-auto object-cover">
+            </a>
+        </div>
+
+        <!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-avatar">
+                {% if user.first_name and user.last_name %}
+                    {{ user.first_name|first }}{{ user.last_name|first }}
+                {% else %}
+                    {{ user.username|first|upper }}
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <div class="user-name">
+                    {% if user.first_name and user.last_name %}
+                        {{ user.first_name }} {{ user.last_name }}
+                    {% else %}
+                        {{ user.username }}
+                    {% endif %}
+                </div>
+                <div class="user-role">
+                    {% if user.is_superuser %}
+                        Administrador
+                    {% elif user.groups.all %}
+                        {{ user.groups.first.name }}
+                    {% else %}
+                        Usuario
+                    {% endif %}
+                </div>
+                <div class="user-status">
+                    <div class="status-dot"></div>
+                    <span>En línea</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="sidebar-nav">
+            <!-- Main Navigation -->
+            <div class="nav-section">
+                <div class="nav-section-title">Navegación Principal</div>
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                   href="{% url 'workflow:dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'bandeja_trabajo' %}active{% endif %}" 
+                   href="{% url 'workflow:bandeja_trabajo' %}">
+                    <i class="fas fa-inbox"></i>
+                    <span>Bandeja de Trabajo</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'nueva_solicitud' %}active{% endif %}" 
+                   href="{% url 'workflow:nueva_solicitud' %}">
+                    <i class="fas fa-plus"></i>
+                    <span>Nueva Solicitud</span>
+                </a>
+            </div>
+
+            <!-- Administration -->
+            {% if user.is_superuser or user.groups.all %}
+            <div class="nav-section">
+                <div class="nav-section-title">Administración</div>
+                <a class="nav-link" href="{% url 'workflow:admin_pipelines' %}">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Pipelines</span>
+                </a>
+                <a class="nav-link" href="{% url 'workflow:admin_requisitos' %}">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Requisitos</span>
+                </a>
+                <a class="nav-link" href="{% url 'workflow:admin_campos_personalizados' %}">
+                    <i class="fas fa-edit"></i>
+                    <span>Campos Personalizados</span>
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Reports -->
+            <div class="nav-section">
+                <div class="nav-section-title">Reportes</div>
+                <a class="nav-link" href="{% url 'workflow:reportes' %}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reportes</span>
+                </a>
+            </div>
+
+            <!-- User Actions -->
+            <div class="nav-section">
+                <div class="nav-section-title">Usuario</div>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Mi Perfil</span>
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="p-4">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}-custom alert-custom fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'error' %}times-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Scripts personalizados -->
+    <script>
+        // Sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mainContent = document.getElementById('mainContent');
+
+            // Mobile sidebar toggle
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 768) {
+                    if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+                        sidebar.classList.remove('show');
+                    }
+                }
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        });
+
+        // Función para mostrar loading
+        function showLoading(element) {
+            element.innerHTML = '<div class="spinner-custom mx-auto"></div>';
+        }
+
+        // Función para actualizar badges de estado
+        function updateStatusBadge(element, status) {
+            const statusClasses = {
+                'pending': 'status-pending',
+                'in-progress': 'status-in-progress',
+                'completed': 'status-completed',
+                'overdue': 'status-overdue'
+            };
+            
+            element.className = `workflow-status ${statusClasses[status] || statusClasses['pending']}`;
+        }
+
+        // Función para formatear fechas
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Función para calcular tiempo transcurrido
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'Hace un momento';
+            if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)} minutos`;
+            if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)} horas`;
+            return `Hace ${Math.floor(diffInSeconds / 86400)} días`;
+        }
+
+        // Inicializar tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 
