@@ -19,5 +19,6 @@ urlpatterns = [
     path('', include('tombola.urls')),  # Include the tombola app's URLs
     path('', include('capacitaciones_app.urls')),  # Include the capacitaciones_app app's URLs
     path('', include('workflow.urls')),  # Include the workflow app's URLs
+    path('', include('workflow.urls_workflow')),  # Include the custom admin URLs for workflow
     path('mantenimiento/', include('mantenimiento.urls')),  # Include the mantenimiento app's URLs
 ]

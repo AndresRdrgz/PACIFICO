@@ -1,0 +1,560 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Solicitud {{ solicitud.codigo }} - Sistema de Workflow{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 text-dark fw-bold">
+                <i class="fas fa-file-alt me-2 text-success"></i>
+                Solicitud {{ solicitud.codigo }}
+            </h1>
+            <p class="text-muted mb-0">
+                {{ solicitud.tipo_solicitud.nombre }} - {{ solicitud.pipeline.nombre }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico">
+                <i class="fas fa-inbox me-2"></i>Bandeja
+            </a>
+            <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-pacifico">
+                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-lg-8">
+            <!-- Estado y Transiciones -->
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            Estado Actual
+                        </h5>
+                        <div class="d-flex gap-2">
+                            {% if solicitud.etapa_actual %}
+                                <span class="badge-pacifico">{{ solicitud.etapa_actual.nombre }}</span>
+                                {% if solicitud.subestado_actual %}
+                                    <span class="badge bg-secondary">{{ solicitud.subestado_actual.nombre }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-success">Completada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if solicitud.etapa_actual %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Etapa:</strong> {{ solicitud.etapa_actual.nombre }}</p>
+                                <p class="mb-1"><strong>Orden:</strong> {{ solicitud.etapa_actual.orden }}</p>
+                                <p class="mb-0"><strong>SLA:</strong> {{ solicitud.etapa_actual.sla }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Tipo:</strong> 
+                                    {% if solicitud.etapa_actual.es_bandeja_grupal %}
+                                        <span class="badge bg-warning">Bandeja Grupal</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Bandeja Personal</span>
+                                    {% endif %}
+                                </p>
+                                <p class="mb-1"><strong>Asignada a:</strong> 
+                                    {{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username|default:"Sin asignar" }}
+                                </p>
+                                <p class="mb-0"><strong>Última actualización:</strong> 
+                                    {{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Transiciones Disponibles -->
+                        {% if transiciones_disponibles %}
+                            <div class="mt-3">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="fas fa-arrow-right me-2"></i>
+                                    Transiciones Disponibles
+                                </h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for transicion in transiciones_disponibles %}
+                                    <button type="button" class="btn btn-outline-pacifico" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#transicionModal" 
+                                            data-transicion-id="{{ transicion.id }}"
+                                            data-transicion-nombre="{{ transicion.nombre }}"
+                                            data-etapa-destino="{{ transicion.etapa_destino.nombre }}">
+                                        <i class="fas fa-arrow-right me-1"></i>
+                                        {{ transicion.nombre }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning-custom alert-custom">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                No hay transiciones disponibles para esta etapa.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-success-custom alert-custom">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Esta solicitud ha sido completada exitosamente.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Requisitos -->
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Requisitos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if requisitos %}
+                        <div class="row">
+                            {% for requisito_solicitud in requisitos %}
+                            <div class="col-md-6 mb-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0">{{ requisito_solicitud.requisito.nombre }}</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input requisito-checkbox" 
+                                                   type="checkbox" 
+                                                   id="requisito_{{ requisito_solicitud.id }}"
+                                                   data-requisito-id="{{ requisito_solicitud.id }}"
+                                                   {% if requisito_solicitud.cumplido %}checked{% endif %}>
+                                            <label class="form-check-label" for="requisito_{{ requisito_solicitud.id }}">
+                                                Cumplido
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if requisito_solicitud.requisito.descripcion %}
+                                        <p class="text-muted small mb-2">{{ requisito_solicitud.requisito.descripcion }}</p>
+                                    {% endif %}
+                                    
+                                    <!-- Archivo -->
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-semibold">Archivo:</label>
+                                        {% if requisito_solicitud.archivo %}
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-file me-2 text-success"></i>
+                                                <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="text-decoration-none">
+                                                    {{ requisito_solicitud.archivo.name|split:"/"|last }}
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                                                        onclick="eliminarArchivo({{ requisito_solicitud.id }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            <input type="file" class="form-control form-control-sm" 
+                                                   id="archivo_{{ requisito_solicitud.id }}"
+                                                   data-requisito-id="{{ requisito_solicitud.id }}">
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Observaciones -->
+                                    <div>
+                                        <label class="form-label small fw-semibold">Observaciones:</label>
+                                        <textarea class="form-control form-control-sm" 
+                                                  id="observaciones_{{ requisito_solicitud.id }}"
+                                                  data-requisito-id="{{ requisito_solicitud.id }}"
+                                                  rows="2">{{ requisito_solicitud.observaciones|default:'' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No hay requisitos configurados para esta solicitud.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Campos Personalizados -->
+            {% if campos_personalizados %}
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Campos Personalizados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="camposPersonalizadosForm">
+                        <div class="row">
+                            {% for campo in campos_personalizados %}
+                            <div class="col-md-6 mb-3">
+                                {% with valor_campo=solicitud.valores_personalizados|filter:campo|first %}
+                                <label class="form-label fw-semibold">
+                                    {{ campo.nombre }}
+                                    {% if campo.requerido %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {% if campo.tipo == 'texto' %}
+                                    <input type="text" class="form-control form-control-custom" 
+                                           name="campo_{{ campo.id }}" 
+                                           value="{{ valor_campo.valor_texto|default:'' }}"
+                                           {% if campo.requerido %}required{% endif %}>
+                                
+                                {% elif campo.tipo == 'numero' %}
+                                    <input type="number" step="0.01" class="form-control form-control-custom" 
+                                           name="campo_{{ campo.id }}" 
+                                           value="{{ valor_campo.valor_numero|default:'' }}"
+                                           {% if campo.requerido %}required{% endif %}>
+                                
+                                {% elif campo.tipo == 'entero' %}
+                                    <input type="number" class="form-control form-control-custom" 
+                                           name="campo_{{ campo.id }}" 
+                                           value="{{ valor_campo.valor_entero|default:'' }}"
+                                           {% if campo.requerido %}required{% endif %}>
+                                
+                                {% elif campo.tipo == 'fecha' %}
+                                    <input type="date" class="form-control form-control-custom" 
+                                           name="campo_{{ campo.id }}" 
+                                           value="{{ valor_campo.valor_fecha|date:'Y-m-d'|default:'' }}"
+                                           {% if campo.requerido %}required{% endif %}>
+                                
+                                {% elif campo.tipo == 'booleano' %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="campo_{{ campo.id }}" 
+                                               id="campo_{{ campo.id }}"
+                                               {% if valor_campo.valor_booleano %}checked{% endif %}>
+                                        <label class="form-check-label" for="campo_{{ campo.id }}">
+                                            Sí
+                                        </label>
+                                    </div>
+                                {% endif %}
+                                {% endwith %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-pacifico">
+                                <i class="fas fa-save me-2"></i>Guardar Campos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Información General -->
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información General
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p class="mb-1"><strong>Código:</strong> {{ solicitud.codigo }}</p>
+                        <p class="mb-1"><strong>Tipo:</strong> {{ solicitud.tipo_solicitud.nombre }}</p>
+                        <p class="mb-1"><strong>Pipeline:</strong> {{ solicitud.pipeline.nombre }}</p>
+                        <p class="mb-1"><strong>Creada por:</strong> {{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</p>
+                        <p class="mb-1"><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                        <p class="mb-0"><strong>Última actualización:</strong> {{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    
+                    {% if solicitud.asignada_a %}
+                    <div class="mb-3">
+                        <h6 class="fw-bold">Asignada a:</h6>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="fas fa-user text-primary"></i>
+                            </div>
+                            <div>
+                                <p class="mb-0 fw-semibold">{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}</p>
+                                <small class="text-muted">{{ solicitud.asignada_a.email }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historial -->
+            <div class="card card-custom mb-4">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Historial
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if historial %}
+                        <div class="timeline">
+                            {% for entrada in historial %}
+                            <div class="timeline-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold mb-0">{{ entrada.etapa.nombre }}</h6>
+                                    <small class="text-muted">{{ entrada.fecha_inicio|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                {% if entrada.subestado %}
+                                    <p class="text-muted mb-1 small">{{ entrada.subestado.nombre }}</p>
+                                {% endif %}
+                                {% if entrada.usuario_responsable %}
+                                    <p class="text-muted mb-0 small">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ entrada.usuario_responsable.get_full_name|default:entrada.usuario_responsable.username }}
+                                    </p>
+                                {% endif %}
+                                {% if entrada.fecha_fin %}
+                                    <small class="text-muted">
+                                        Duración: {{ entrada.fecha_inicio|timesince:entrada.fecha_fin }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No hay historial disponible</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Acciones Rápidas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if not solicitud.asignada_a and solicitud.etapa_actual.es_bandeja_grupal %}
+                        <a href="{% url 'workflow:auto_asignar_solicitud' solicitud.id %}" 
+                           class="btn btn-pacifico">
+                            <i class="fas fa-hand-paper me-2"></i>Tomar Solicitud
+                        </a>
+                        {% endif %}
+                        
+                        <button type="button" class="btn btn-outline-pacifico" onclick="exportarSolicitud()">
+                            <i class="fas fa-download me-2"></i>Exportar
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-pacifico" onclick="imprimirSolicitud()">
+                            <i class="fas fa-print me-2"></i>Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Transición -->
+<div class="modal fade" id="transicionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Transición</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas realizar la transición <strong id="transicionNombre"></strong>?</p>
+                <p>La solicitud pasará a la etapa: <strong id="etapaDestino"></strong></p>
+                
+                <form id="transicionForm" method="POST" action="{% url 'workflow:transicion_solicitud' solicitud.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="transicion_id" id="transicionId">
+                    
+                    <div class="mb-3">
+                        <label for="comentario" class="form-label">Comentario (opcional):</label>
+                        <textarea class="form-control" name="comentario" id="comentario" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="transicionForm" class="btn btn-pacifico">Confirmar Transición</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+const solicitudId = {{ solicitud.id }};
+
+// Función para actualizar requisito
+function actualizarRequisito(requisitoId, cumplido, observaciones, archivo = null) {
+    const formData = new FormData();
+    formData.append('cumplido', cumplido);
+    formData.append('observaciones', observaciones);
+    if (archivo) {
+        formData.append('archivo', archivo);
+    }
+
+    fetch(`/workflow/solicitud/${solicitudId}/requisito/${requisitoId}/actualizar/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Requisito actualizado exitosamente', 'success');
+        } else {
+            mostrarNotificacion('Error al actualizar requisito', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar requisito', 'error');
+    });
+}
+
+// Event listeners para checkboxes de requisitos
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkboxes de requisitos
+    document.querySelectorAll('.requisito-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const requisitoId = this.dataset.requisitoId;
+            const cumplido = this.checked;
+            const observaciones = document.getElementById(`observaciones_${requisitoId}`).value;
+            
+            actualizarRequisito(requisitoId, cumplido, observaciones);
+        });
+    });
+
+    // Campos de observaciones
+    document.querySelectorAll('[id^="observaciones_"]').forEach(textarea => {
+        textarea.addEventListener('blur', function() {
+            const requisitoId = this.dataset.requisitoId;
+            const cumplido = document.getElementById(`requisito_${requisitoId}`).checked;
+            const observaciones = this.value;
+            
+            actualizarRequisito(requisitoId, cumplido, observaciones);
+        });
+    });
+
+    // Campos de archivo
+    document.querySelectorAll('[id^="archivo_"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const requisitoId = this.dataset.requisitoId;
+            const cumplido = document.getElementById(`requisito_${requisitoId}`).checked;
+            const observaciones = document.getElementById(`observaciones_${requisitoId}`).value;
+            const archivo = this.files[0];
+            
+            actualizarRequisito(requisitoId, cumplido, observaciones, archivo);
+        });
+    });
+
+    // Formulario de campos personalizados
+    const camposForm = document.getElementById('camposPersonalizadosForm');
+    if (camposForm) {
+        camposForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(`/workflow/solicitud/${solicitudId}/campos-personalizados/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarNotificacion('Campos personalizados actualizados exitosamente', 'success');
+                } else {
+                    mostrarNotificacion('Error al actualizar campos personalizados', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarNotificacion('Error al actualizar campos personalizados', 'error');
+            });
+        });
+    }
+
+    // Modal de transición
+    const transicionModal = document.getElementById('transicionModal');
+    if (transicionModal) {
+        transicionModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const transicionId = button.dataset.transicionId;
+            const transicionNombre = button.dataset.transicionNombre;
+            const etapaDestino = button.dataset.etapaDestino;
+            
+            document.getElementById('transicionId').value = transicionId;
+            document.getElementById('transicionNombre').textContent = transicionNombre;
+            document.getElementById('etapaDestino').textContent = etapaDestino;
+        });
+    }
+});
+
+// Función para eliminar archivo
+function eliminarArchivo(requisitoId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este archivo?')) {
+        actualizarRequisito(requisitoId, false, '', null);
+        // Recargar la página para actualizar la vista
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo) {
+    const alertClass = tipo === 'success' ? 'alert-success-custom' : 'alert-danger-custom';
+    const icon = tipo === 'success' ? 'check-circle' : 'exclamation-triangle';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-custom alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
+// Funciones de exportación e impresión
+function exportarSolicitud() {
+    // Implementar exportación
+    alert('Función de exportación en desarrollo');
+}
+
+function imprimirSolicitud() {
+    window.print();
+}
+</script>
+{% endblock %} 

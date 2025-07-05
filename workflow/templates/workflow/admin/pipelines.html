@@ -1,0 +1,932 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Administración de Pipelines - Sistema de Workflow{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 text-dark fw-bold">
+                <i class="fas fa-project-diagram me-2 text-success"></i>
+                Administración de Pipelines
+            </h1>
+            <p class="text-muted mb-0">Gestiona los flujos de trabajo del sistema</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-pacifico" data-bs-toggle="modal" data-bs-target="#nuevoPipelineModal">
+                <i class="fas fa-plus me-2"></i>Nuevo Pipeline
+            </button>
+            <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-pacifico">
+                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Lista de Pipelines -->
+    <div class="row">
+        {% for pipeline in pipelines %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card card-custom h-100">
+                <div class="card-header-custom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ pipeline.nombre }}</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="editarPipeline({{ pipeline.id }})">
+                                    <i class="fas fa-edit me-2"></i>Editar
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="configurarPipeline({{ pipeline.id }})">
+                                    <i class="fas fa-cog me-2"></i>Configurar
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="eliminarPipeline({{ pipeline.id }})">
+                                    <i class="fas fa-trash me-2"></i>Eliminar
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">{{ pipeline.descripcion|default:"Sin descripción" }}</p>
+                    
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="bg-success bg-opacity-10 rounded p-2">
+                                <h6 class="mb-0 text-success">{{ pipeline.etapas.count }}</h6>
+                                <small class="text-muted">Etapas</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-info bg-opacity-10 rounded p-2">
+                                <h6 class="mb-0 text-info">{{ pipeline.transiciones.count }}</h6>
+                                <small class="text-muted">Transiciones</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-warning bg-opacity-10 rounded p-2">
+                                <h6 class="mb-0 text-warning">{{ pipeline.requisitos_pipeline.count }}</h6>
+                                <small class="text-muted">Requisitos</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-primary bg-opacity-10 rounded p-2">
+                                <h6 class="mb-0 text-primary">{{ pipeline.campos_personalizados.count }}</h6>
+                                <small class="text-muted">Campos</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6 class="fw-bold mb-2">Etapas:</h6>
+                        <div class="timeline-simple">
+                            {% for etapa in pipeline.etapas.all|slice:":3" %}
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="bg-success rounded-circle me-2" style="width: 8px; height: 8px;"></div>
+                                <span class="small">{{ etapa.nombre }}</span>
+                                <span class="badge badge-pacifico ms-auto">{{ etapa.sla }}</span>
+                            </div>
+                            {% endfor %}
+                            {% if pipeline.etapas.count > 3 %}
+                            <div class="text-muted small">
+                                +{{ pipeline.etapas.count|add:"-3" }} etapas más
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <button type="button" class="btn btn-pacifico w-100" onclick="configurarPipeline({{ pipeline.id }})">
+                        <i class="fas fa-cog me-2"></i>Configurar Pipeline Completo
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-project-diagram fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted mb-3">No hay pipelines configurados</h4>
+                <p class="text-muted mb-4">Comienza creando tu primer pipeline para definir un flujo de trabajo.</p>
+                <button type="button" class="btn btn-pacifico" data-bs-toggle="modal" data-bs-target="#nuevoPipelineModal">
+                    <i class="fas fa-plus me-2"></i>Crear Primer Pipeline
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Nuevo Pipeline -->
+<div class="modal fade" id="nuevoPipelineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Pipeline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoPipelineForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="nombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="descripcion" class="form-label fw-semibold">Descripción</label>
+                            <textarea class="form-control form-control-custom" id="descripcion" name="descripcion" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Pipeline</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Pipeline -->
+<div class="modal fade" id="editarPipelineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Pipeline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editarPipelineForm" method="POST">
+                {% csrf_token %}
+                <input type="hidden" id="editPipelineId" name="pipeline_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="editNombre" name="nombre" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="editDescripcion" class="form-label fw-semibold">Descripción</label>
+                            <textarea class="form-control form-control-custom" id="editDescripcion" name="descripcion" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configuración Completa de Pipeline -->
+<div class="modal fade" id="configuracionPipelineModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configuración Completa del Pipeline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="configPipelineId">
+                
+                <!-- Tabs de configuración -->
+                <ul class="nav nav-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="etapas-tab" data-bs-toggle="tab" data-bs-target="#etapas" type="button" role="tab">
+                            <i class="fas fa-list me-2"></i>Etapas
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="transiciones-tab" data-bs-toggle="tab" data-bs-target="#transiciones" type="button" role="tab">
+                            <i class="fas fa-arrow-right me-2"></i>Transiciones
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="requisitos-tab" data-bs-toggle="tab" data-bs-target="#requisitos" type="button" role="tab">
+                            <i class="fas fa-clipboard-check me-2"></i>Requisitos
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="campos-tab" data-bs-toggle="tab" data-bs-target="#campos" type="button" role="tab">
+                            <i class="fas fa-edit me-2"></i>Campos Personalizados
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3" id="configTabsContent">
+                    <!-- Tab Etapas -->
+                    <div class="tab-pane fade show active" id="etapas" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 id="etapasPipelineNombre"></h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevaEtapa()">
+                                <i class="fas fa-plus me-1"></i>Nueva Etapa
+                            </button>
+                        </div>
+                        <div id="etapasList" class="row"></div>
+                    </div>
+                    
+                    <!-- Tab Transiciones -->
+                    <div class="tab-pane fade" id="transiciones" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Transiciones del Pipeline</h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevaTransicion()">
+                                <i class="fas fa-plus me-1"></i>Nueva Transición
+                            </button>
+                        </div>
+                        <div id="transicionesList"></div>
+                    </div>
+                    
+                    <!-- Tab Requisitos -->
+                    <div class="tab-pane fade" id="requisitos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Requisitos del Pipeline</h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevoRequisito()">
+                                <i class="fas fa-plus me-1"></i>Nuevo Requisito
+                            </button>
+                        </div>
+                        <div id="requisitosList"></div>
+                    </div>
+                    
+                    <!-- Tab Campos Personalizados -->
+                    <div class="tab-pane fade" id="campos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Campos Personalizados</h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevoCampo()">
+                                <i class="fas fa-plus me-1"></i>Nuevo Campo
+                            </button>
+                        </div>
+                        <div id="camposList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Etapa -->
+<div class="modal fade" id="nuevaEtapaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Etapa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevaEtapaForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="etapaNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="etapaNombre" name="nombre" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="etapaOrden" class="form-label fw-semibold">Orden *</label>
+                            <input type="number" class="form-control form-control-custom" id="etapaOrden" name="orden" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="etapaSLA" class="form-label fw-semibold">SLA (horas) *</label>
+                            <input type="number" class="form-control form-control-custom" id="etapaSLA" name="sla_horas" min="1" value="24" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="etapaBandejaGrupal" name="es_bandeja_grupal">
+                                <label class="form-check-label" for="etapaBandejaGrupal">
+                                    Es bandeja grupal
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Etapa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Transición -->
+<div class="modal fade" id="nuevaTransicionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Transición</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevaTransicionForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="transicionNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="transicionNombre" name="nombre" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="transicionOrigen" class="form-label fw-semibold">Etapa Origen *</label>
+                            <select class="form-control form-control-custom" id="transicionOrigen" name="etapa_origen" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="transicionDestino" class="form-label fw-semibold">Etapa Destino *</label>
+                            <select class="form-control form-control-custom" id="transicionDestino" name="etapa_destino" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="transicionRequierePermiso" name="requiere_permiso">
+                                <label class="form-check-label" for="transicionRequierePermiso">
+                                    Requiere permisos específicos
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Transición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Requisito -->
+<div class="modal fade" id="nuevoRequisitoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Requisito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoRequisitoForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="requisitoNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="requisitoNombre" name="nombre" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="requisitoDescripcion" class="form-label fw-semibold">Descripción</label>
+                            <textarea class="form-control form-control-custom" id="requisitoDescripcion" name="descripcion" rows="3"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="requisitoObligatorio" name="obligatorio" checked>
+                                <label class="form-check-label" for="requisitoObligatorio">
+                                    Requisito obligatorio
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Requisito</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Campo Personalizado -->
+<div class="modal fade" id="nuevoCampoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Campo Personalizado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoCampoForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="campoNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="campoNombre" name="nombre" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="campoTipo" class="form-label fw-semibold">Tipo *</label>
+                            <select class="form-control form-control-custom" id="campoTipo" name="tipo" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="texto">Texto</option>
+                                <option value="numero">Número</option>
+                                <option value="entero">Entero</option>
+                                <option value="fecha">Fecha</option>
+                                <option value="booleano">Sí/No</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="campoRequerido" name="requerido">
+                                <label class="form-check-label" for="campoRequerido">
+                                    Campo requerido
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Campo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+let pipelineActual = null;
+let etapasPipeline = [];
+
+// Función para crear nuevo pipeline
+document.getElementById('nuevoPipelineForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{% url "workflow:api_crear_pipeline" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Pipeline creado exitosamente', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            mostrarNotificacion('Error al crear pipeline: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear pipeline', 'error');
+    });
+});
+
+// Función para editar pipeline
+function editarPipeline(pipelineId) {
+    fetch(`{% url "workflow:api_obtener_datos_pipeline" 0 %}`.replace('0', pipelineId))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('editPipelineId').value = pipelineId;
+            document.getElementById('editNombre').value = data.pipeline.nombre;
+            document.getElementById('editDescripcion').value = data.pipeline.descripcion;
+            
+            const modal = new bootstrap.Modal(document.getElementById('editarPipelineModal'));
+            modal.show();
+        } else {
+            mostrarNotificacion('Error al cargar pipeline', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al cargar pipeline', 'error');
+    });
+}
+
+// Función para configurar pipeline completo
+function configurarPipeline(pipelineId) {
+    pipelineActual = pipelineId;
+    
+    fetch(`{% url "workflow:api_obtener_datos_pipeline" 0 %}`.replace('0', pipelineId))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('configPipelineId').value = pipelineId;
+            document.getElementById('etapasPipelineNombre').textContent = data.pipeline.nombre;
+            
+            // Cargar etapas
+            cargarEtapas(data.etapas);
+            
+            // Cargar transiciones
+            cargarTransiciones(data.transiciones);
+            
+            // Cargar requisitos
+            cargarRequisitos(data.requisitos);
+            
+            // Cargar campos personalizados
+            cargarCampos(data.campos_personalizados);
+            
+            const modal = new bootstrap.Modal(document.getElementById('configuracionPipelineModal'));
+            modal.show();
+        } else {
+            mostrarNotificacion('Error al cargar configuración', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al cargar configuración', 'error');
+    });
+}
+
+// Función para cargar etapas
+function cargarEtapas(etapas) {
+    etapasPipeline = etapas;
+    const etapasList = document.getElementById('etapasList');
+    etapasList.innerHTML = '';
+    
+    etapas.forEach(etapa => {
+        const etapaHtml = `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">${etapa.nombre}</h6>
+                                <small class="text-muted">
+                                    Orden: ${etapa.orden} | SLA: ${etapa.sla} | 
+                                    ${etapa.es_bandeja_grupal ? 'Bandeja Grupal' : 'Bandeja Personal'}
+                                </small>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="editarEtapa(${etapa.id})">
+                                        <i class="fas fa-edit me-2"></i>Editar
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="agregarSubestado(${etapa.id})">
+                                        <i class="fas fa-plus me-2"></i>Agregar Subestado
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="eliminarEtapa(${etapa.id})">
+                                        <i class="fas fa-trash me-2"></i>Eliminar
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        ${etapa.subestados.length > 0 ? `
+                            <div class="mt-2">
+                                <small class="text-muted">Subestados:</small>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    ${etapa.subestados.map(sub => `<span class="badge badge-pacifico">${sub.nombre}</span>`).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        etapasList.innerHTML += etapaHtml;
+    });
+}
+
+// Función para cargar transiciones
+function cargarTransiciones(transiciones) {
+    const transicionesList = document.getElementById('transicionesList');
+    transicionesList.innerHTML = '';
+    
+    transiciones.forEach(transicion => {
+        const transicionHtml = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${transicion.nombre}</h6>
+                            <small class="text-muted">
+                                ${transicion.etapa_origen} → ${transicion.etapa_destino}
+                                ${transicion.requiere_permiso ? ' (Requiere permisos)' : ''}
+                            </small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarTransicion(${transicion.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        transicionesList.innerHTML += transicionHtml;
+    });
+}
+
+// Función para cargar requisitos
+function cargarRequisitos(requisitos) {
+    const requisitosList = document.getElementById('requisitosList');
+    requisitosList.innerHTML = '';
+    
+    requisitos.forEach(requisito => {
+        const requisitoHtml = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${requisito.requisito_nombre}</h6>
+                            <small class="text-muted">
+                                ${requisito.obligatorio ? 'Obligatorio' : 'Opcional'}
+                            </small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarRequisitoPipeline(${requisito.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        requisitosList.innerHTML += requisitoHtml;
+    });
+}
+
+// Función para cargar campos personalizados
+function cargarCampos(campos) {
+    const camposList = document.getElementById('camposList');
+    camposList.innerHTML = '';
+    
+    campos.forEach(campo => {
+        const campoHtml = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${campo.nombre}</h6>
+                            <small class="text-muted">
+                                Tipo: ${campo.tipo} | 
+                                ${campo.requerido ? 'Requerido' : 'Opcional'}
+                            </small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarCampo(${campo.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        camposList.innerHTML += campoHtml;
+    });
+}
+
+// Función para nueva etapa
+function nuevaEtapa() {
+    const modal = new bootstrap.Modal(document.getElementById('nuevaEtapaModal'));
+    modal.show();
+}
+
+// Función para nueva transición
+function nuevaTransicion() {
+    // Cargar etapas en los selects
+    const origenSelect = document.getElementById('transicionOrigen');
+    const destinoSelect = document.getElementById('transicionDestino');
+    
+    origenSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    destinoSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    
+    etapasPipeline.forEach(etapa => {
+        origenSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+        destinoSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('nuevaTransicionModal'));
+    modal.show();
+}
+
+// Función para nuevo requisito
+function nuevoRequisito() {
+    const modal = new bootstrap.Modal(document.getElementById('nuevoRequisitoModal'));
+    modal.show();
+}
+
+// Función para nuevo campo
+function nuevoCampo() {
+    const modal = new bootstrap.Modal(document.getElementById('nuevoCampoModal'));
+    modal.show();
+}
+
+// Event listeners para formularios
+document.getElementById('nuevaEtapaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('pipeline_id', pipelineActual);
+    
+    fetch(`{% url "workflow:api_crear_etapa" 0 %}`.replace('0', pipelineActual), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Etapa creada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevaEtapaModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al crear etapa: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear etapa', 'error');
+    });
+});
+
+document.getElementById('nuevaTransicionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('pipeline_id', pipelineActual);
+    
+    fetch(`{% url "workflow:api_crear_transicion" 0 %}`.replace('0', pipelineActual), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Transición creada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevaTransicionModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al crear transición: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear transición', 'error');
+    });
+});
+
+document.getElementById('nuevoRequisitoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('pipeline_id', pipelineActual);
+    
+    // Primero crear el requisito
+    fetch('{% url "workflow:api_crear_requisito" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Luego asignarlo al pipeline
+            const asignarData = new FormData();
+            asignarData.append('requisito_id', data.requisito.id);
+            asignarData.append('obligatorio', formData.get('obligatorio') || 'false');
+            
+            return fetch(`{% url "workflow:api_asignar_requisito_pipeline" 0 %}`.replace('0', pipelineActual), {
+                method: 'POST',
+                body: asignarData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+        } else {
+            throw new Error(data.error);
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Requisito creado y asignado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevoRequisitoModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al asignar requisito: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear requisito: ' + error.message, 'error');
+    });
+});
+
+document.getElementById('nuevoCampoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('pipeline_id', pipelineActual);
+    
+    fetch(`{% url "workflow:api_crear_campo_personalizado" 0 %}`.replace('0', pipelineActual), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Campo personalizado creado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevoCampoModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al crear campo: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear campo', 'error');
+    });
+});
+
+// Función para eliminar pipeline
+function eliminarPipeline(pipelineId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este pipeline? Esta acción no se puede deshacer.')) {
+        fetch(`{% url "workflow:api_eliminar_pipeline" 0 %}`.replace('0', pipelineId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Pipeline eliminado exitosamente', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                mostrarNotificacion('Error al eliminar pipeline: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al eliminar pipeline', 'error');
+        });
+    }
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo) {
+    const alertClass = tipo === 'success' ? 'alert-success-custom' : 'alert-danger-custom';
+    const icon = tipo === 'success' ? 'check-circle' : 'exclamation-triangle';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-custom alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+.timeline-simple {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline-simple::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--verde-pacifico);
+}
+
+.nav-tabs .nav-link {
+    color: var(--gris-texto);
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--verde-pacifico);
+    border-bottom-color: var(--verde-pacifico);
+    background: none;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--verde-pacifico);
+    border-bottom-color: var(--verde-pacifico);
+}
+</style>
+{% endblock %} 
