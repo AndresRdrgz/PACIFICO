@@ -1,4 +1,5 @@
 from django.db import models
+from .modelsWorkflow import *
 
 # --- CHOICES GLOBALS ---
 SEXO_CHOICES = [

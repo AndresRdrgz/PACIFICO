@@ -1,5 +1,27 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, TipoSolicitud, Solicitud, HistorialSolicitud, Requisito, RequisitoPipelineTipo, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud
+
+class EtapaInline(admin.TabularInline):
+    model = Etapa
+    extra = 1
+
+class SubEstadoInline(admin.TabularInline):
+    model = SubEstado
+    extra = 1
+    fk_name = 'pipeline'  # Specify which ForeignKey to use since SubEstado has two FKs
+
+class TransicionEtapaInline(admin.TabularInline):
+    model = TransicionEtapa
+    extra = 1
+
+class RequisitoPipelineTipoInline(admin.TabularInline):
+    model = RequisitoPipelineTipo
+    extra = 1
+
+class CampoPersonalizadoInline(admin.TabularInline):
+    model = CampoPersonalizado
+    extra = 1
 
 @admin.register(ClienteEntrevista)
 class ClienteEntrevistaAdmin(admin.ModelAdmin):
@@ -53,3 +75,92 @@ class OtroIngresoAdmin(admin.ModelAdmin):
     list_display_links = ('fuente',)
     search_fields = ('fuente',)
     list_per_page = 25
+
+
+@admin.register(Pipeline)
+class PipelineAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'descripcion')
+    search_fields = ('nombre',)
+    inlines = [EtapaInline, SubEstadoInline, TransicionEtapaInline, RequisitoPipelineTipoInline, CampoPersonalizadoInline]
+
+
+@admin.register(Etapa)
+class EtapaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'pipeline', 'nombre', 'orden', 'sla', 'es_bandeja_grupal')
+    search_fields = ('nombre', 'pipeline__nombre')
+    list_filter = ('pipeline',)
+
+
+@admin.register(SubEstado)
+class SubEstadoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'etapa', 'nombre', 'orden')
+    search_fields = ('nombre', 'etapa__nombre')
+    list_filter = ('etapa',)
+
+
+@admin.register(TransicionEtapa)
+class TransicionEtapaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'pipeline', 'etapa_origen', 'etapa_destino', 'nombre', 'requiere_permiso')
+    search_fields = ('nombre', 'pipeline__nombre', 'etapa_origen__nombre', 'etapa_destino__nombre')
+    list_filter = ('pipeline',)
+
+
+@admin.register(PermisoEtapa)
+class PermisoEtapaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'etapa', 'grupo', 'puede_ver', 'puede_autoasignar')
+    search_fields = ('etapa__nombre', 'grupo__name')
+    list_filter = ('etapa', 'grupo')
+
+
+@admin.register(TipoSolicitud)
+class TipoSolicitudAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre')
+    search_fields = ('nombre',)
+
+
+@admin.register(Solicitud)
+class SolicitudAdmin(admin.ModelAdmin):
+    list_display = ('id', 'codigo', 'tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'fecha_creacion', 'fecha_ultima_actualizacion')
+    search_fields = ('codigo', 'tipo_solicitud__nombre', 'pipeline__nombre')
+    list_filter = ('tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual')
+
+
+@admin.register(HistorialSolicitud)
+class HistorialSolicitudAdmin(admin.ModelAdmin):
+    list_display = ('id', 'solicitud', 'etapa', 'subestado', 'usuario_responsable', 'fecha_inicio', 'fecha_fin')
+    search_fields = ('solicitud__codigo', 'etapa__nombre', 'subestado__nombre')
+    list_filter = ('etapa', 'subestado')
+
+
+@admin.register(Requisito)
+class RequisitoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'descripcion')
+    search_fields = ('nombre',)
+
+
+@admin.register(RequisitoPipelineTipo)
+class RequisitoPipelineTipoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'pipeline', 'tipo_solicitud', 'requisito', 'obligatorio')
+    search_fields = ('pipeline__nombre', 'tipo_solicitud__nombre', 'requisito__nombre')
+    list_filter = ('pipeline', 'tipo_solicitud')
+
+
+@admin.register(RequisitoSolicitud)
+class RequisitoSolicitudAdmin(admin.ModelAdmin):
+    list_display = ('id', 'solicitud', 'requisito', 'archivo', 'cumplido', 'observaciones')
+    search_fields = ('solicitud__codigo', 'requisito__nombre')
+    list_filter = ('solicitud', 'requisito')
+
+
+@admin.register(CampoPersonalizado)
+class CampoPersonalizadoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'pipeline', 'nombre', 'tipo', 'requerido')
+    search_fields = ('nombre', 'pipeline__nombre')
+    list_filter = ('pipeline', 'tipo')
+
+
+@admin.register(ValorCampoSolicitud)
+class ValorCampoSolicitudAdmin(admin.ModelAdmin):
+    list_display = ('id', 'solicitud', 'campo', 'valor')
+    search_fields = ('solicitud__codigo', 'campo__nombre')
+    list_filter = ('solicitud', 'campo')
