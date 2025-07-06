@@ -86,13 +86,19 @@ def negocios_view(request):
         ).select_related(
             'pipeline', 'etapa_actual', 'subestado_actual', 
             'creada_por', 'asignada_a'
-        ).order_by('-fecha_creacion')
+        )
         
-        # Filtros adicionales
+        # Filtros básicos
         filtro_estado = request.GET.get('estado', '')
         filtro_asignado = request.GET.get('asignado', '')
         filtro_fecha = request.GET.get('fecha', '')
         
+        # Nuevos filtros avanzados
+        busqueda = request.GET.get('busqueda', '')
+        filtro_sla = request.GET.get('sla', '')
+        ordenar_por = request.GET.get('ordenar', 'fecha_creacion')
+        
+        # Aplicar filtros
         if filtro_estado == 'activas':
             solicitudes = solicitudes.filter(etapa_actual__isnull=False)
         elif filtro_estado == 'completadas':
@@ -119,20 +125,173 @@ def negocios_view(request):
                 fecha_creacion__gte=timezone.now() - timedelta(days=30)
             )
         
+        # Filtro de búsqueda
+        if busqueda:
+            solicitudes = solicitudes.filter(
+                Q(codigo__icontains=busqueda) |
+                Q(creada_por__first_name__icontains=busqueda) |
+                Q(creada_por__last_name__icontains=busqueda) |
+                Q(creada_por__username__icontains=busqueda) |
+                Q(asignada_a__first_name__icontains=busqueda) |
+                Q(asignada_a__last_name__icontains=busqueda) |
+                Q(asignada_a__username__icontains=busqueda)
+            )
+        
+        # Filtro de SLA
+        if filtro_sla == 'vencido':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+            )
+        elif filtro_sla == 'proximo':
+            # Solicitudes próximas a vencer (80% del SLA)
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla') * 0.8,
+                fecha_ultima_actualizacion__gte=timezone.now() - F('etapa_actual__sla')
+            )
+        elif filtro_sla == 'ok':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__gte=timezone.now() - F('etapa_actual__sla') * 0.8
+            )
+        
+        # Ordenamiento
+        if ordenar_por == 'fecha_creacion':
+            solicitudes = solicitudes.order_by('-fecha_creacion')
+        elif ordenar_por == 'fecha_ultima_actualizacion':
+            solicitudes = solicitudes.order_by('-fecha_ultima_actualizacion')
+        elif ordenar_por == 'codigo':
+            solicitudes = solicitudes.order_by('codigo')
+        elif ordenar_por == 'etapa':
+            solicitudes = solicitudes.order_by('etapa_actual__orden')
+        else:
+            solicitudes = solicitudes.order_by('-fecha_creacion')
+        
         # Paginación
         paginator = Paginator(solicitudes, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
+        # --- ENRIQUECER DATOS PARA LA TABLA ---
+        solicitudes_tabla = []
+        now = timezone.now()
+        ETAPA_COLORS = [
+            'bg-primary', 'bg-info', 'bg-warning', 'bg-success', 'bg-danger', 'bg-secondary', 'bg-dark'
+        ]
+        etapas_pipeline = list(pipeline.etapas.order_by('orden').values_list('nombre', flat=True))
+        etapa_color_map = {nombre: ETAPA_COLORS[i % len(ETAPA_COLORS)] for i, nombre in enumerate(etapas_pipeline)}
+
+        for solicitud in page_obj:
+            # Campos personalizados
+            valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
+            get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
+
+            # Cliente y cédula
+            cliente = get_valor('cliente') or (solicitud.creada_por.get_full_name() or solicitud.creada_por.username)
+            cedula = get_valor('cédula') or get_valor('cedula') or ''
+            producto = get_valor('producto') or ''
+            monto = get_valor('monto solicitado') or get_valor('monto') or 0
+            try:
+                monto_float = float(monto)
+            except:
+                monto_float = 0
+            monto_formateado = "$ {:,.0f}".format(monto_float)
+
+            # Fechas
+            fecha_inicio = solicitud.fecha_creacion
+            sla = solicitud.etapa_actual.sla if solicitud.etapa_actual else None
+            vencimiento_sla = fecha_inicio + sla if sla else None
+            fecha_vencimiento_str = vencimiento_sla.strftime('%d/%m/%Y') if vencimiento_sla else 'N/A'
+
+            # SLA restante mejorado con semáforo visual
+            if sla and solicitud.etapa_actual:
+                tiempo_total = sla.total_seconds()
+                tiempo_restante = (fecha_inicio + sla) - now
+                segundos_restantes = tiempo_restante.total_seconds()
+                porcentaje_restante = (segundos_restantes / tiempo_total) * 100 if tiempo_total > 0 else 0
+                abs_segundos = abs(int(segundos_restantes))
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                if segundos_restantes < 0:
+                    if horas > 0:
+                        sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"-{minutos}m"
+                    sla_color = 'text-danger'
+                elif porcentaje_restante > 40:
+                    if horas > 0:
+                        sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"{minutos}m"
+                    sla_color = 'text-success'
+                elif porcentaje_restante > 0:
+                    if horas > 0:
+                        sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"{minutos}m"
+                    sla_color = 'text-warning'
+                else:
+                    if horas > 0:
+                        sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"-{minutos}m"
+                    sla_color = 'text-danger'
+            else:
+                sla_restante = 'N/A'
+                sla_color = 'text-secondary'
+
+            # Alertas automáticas
+            alertas = []
+            if sla_color == 'text-danger':
+                alertas.append({'icon': 'fa-exclamation-triangle', 'color': 'danger', 'tooltip': 'SLA vencido'})
+            elif sla_color == 'text-warning':
+                alertas.append({'icon': 'fa-exclamation-circle', 'color': 'warning', 'tooltip': 'SLA por vencer'})
+            else:
+                alertas.append({'icon': 'fa-check-circle', 'color': 'success', 'tooltip': 'SLA en tiempo'})
+
+            # Estado actual
+            estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            estado_color = 'primary' if estado_actual == 'En Proceso' else 'success' if estado_actual == 'Completado' else 'secondary'
+
+            # Acciones (estructura lista para condicionar por etapa)
+            acciones = {
+                'ver': True,
+                'cambiar_etapa': True,
+                'exportar': True,
+                'eliminar': True,
+            }
+
+            etapa_nombre = solicitud.etapa_actual.nombre if solicitud.etapa_actual else ''
+            etapa_color = etapa_color_map.get(etapa_nombre, 'bg-secondary')
+
+            solicitudes_tabla.append({
+                'codigo': solicitud.codigo,
+                'cliente': cliente,
+                'cedula': cedula,
+                'producto': producto,
+                'monto': monto_formateado,
+                'propietario': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+                'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
+                'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
+                'estado_actual': estado_actual,
+                'estado_color': estado_color,
+                'fecha_inicio': fecha_inicio.strftime('%d/%m/%Y'),
+                'vencimiento_sla': fecha_vencimiento_str,
+                'sla_restante': sla_restante,
+                'sla_color': sla_color,
+                'alertas': alertas,
+                'acciones': acciones,
+                'id': solicitud.id,
+                'etapa_color': etapa_color,
+            })
+
         # Para vista kanban, agrupar por etapas
         if view_type == 'kanban':
             etapas_kanban = pipeline.etapas.all().order_by('orden')
             solicitudes_por_etapa = {}
-            
             for etapa in etapas_kanban:
                 solicitudes_por_etapa[etapa] = solicitudes.filter(etapa_actual=etapa)
-            
-            # Agregar solicitudes completadas
             solicitudes_completadas = solicitudes.filter(etapa_actual__isnull=True)
             if solicitudes_completadas.exists():
                 solicitudes_por_etapa['completadas'] = solicitudes_completadas
@@ -145,6 +304,7 @@ def negocios_view(request):
             'pipelines': pipelines,
             'solicitudes': solicitudes,
             'page_obj': page_obj,
+            'solicitudes_tabla': solicitudes_tabla,
             'view_type': view_type,
             'solicitudes_por_etapa': solicitudes_por_etapa,
             'etapas_kanban': etapas_kanban,
@@ -152,6 +312,9 @@ def negocios_view(request):
                 'estado': filtro_estado,
                 'asignado': filtro_asignado,
                 'fecha': filtro_fecha,
+                'busqueda': busqueda,
+                'sla': filtro_sla,
+                'ordenar': ordenar_por,
             }
         }
     else:

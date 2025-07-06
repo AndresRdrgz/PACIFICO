@@ -6,226 +6,277 @@
 
 {% block content %}
 <div class="fade-in-up">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h2 mb-1 text-dark fw-bold">
-                <i class="fas fa-briefcase me-2 text-success"></i>
-                Negocios
-            </h1>
-            <p class="text-muted mb-0">Gestiona todas las solicitudes de tus pipelines</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-pacifico">
-                <i class="fas fa-plus me-2"></i>Nueva Solicitud
-            </a>
-            <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-pacifico">
-                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-            </a>
+    <!-- Header con Cinta -->
+    <div class="ribbon-container mb-4">
+        <div class="ribbon d-flex justify-content-between align-items-center" style="background: var(--verde-pacifico);">
+            <div class="ribbon-content">
+                <h1 class="h2 mb-1 text-white fw-bold">
+                    <i class="fas fa-briefcase me-2"></i>
+                    Negocios
+                </h1>
+                <p class="text-white-50 mb-0">Gestiona todas las solicitudes de tus pipelines</p>
+            </div>
+            <div class="ribbon-actions ms-auto d-flex gap-2">
+                <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                </a>
+                <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- Selector de Pipeline -->
+
+
+    {% if pipeline %}
+    <!-- Información del Pipeline -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h5 class="mb-3">
+                <i class="fas fa-project-diagram me-2"></i>
+                {{ pipeline.nombre }}
+            </h5>
+            <p class="text-muted mb-3">{{ pipeline.descripcion|default:"Sin descripción" }}</p>
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="bg-success bg-opacity-10 rounded p-2">
+                        <h6 class="mb-0 text-success">{{ page_obj.paginator.count }}</h6>
+                        <small class="text-muted">Total Solicitudes</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bg-info bg-opacity-10 rounded p-2">
+                        <h6 class="mb-0 text-info">{{ solicitudes|filter_activas|length }}</h6>
+                        <small class="text-muted">Activas</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bg-warning bg-opacity-10 rounded p-2">
+                        <h6 class="mb-0 text-warning">{{ solicitudes|filter_completadas|length }}</h6>
+                        <small class="text-muted">Completadas</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="bg-danger bg-opacity-10 rounded p-2">
+                        <h6 class="mb-0 text-danger">{{ solicitudes|filter_vencidas|length }}</h6>
+                        <small class="text-muted">Vencidas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if view_type == 'table' %}
+    <!-- Filtros de Solicitudes -->
     <div class="card card-custom mb-4">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-filter me-2"></i>
+                Filtros de Solicitudes
+            </h5>
+            <div class="d-flex gap-2">
+                <button type="submit" form="filtrosForm" class="btn btn-light btn-sm">
+                    <i class="fas fa-search me-1"></i>Aplicar Filtros
+                </button>
+                <a href="?pipeline={{ pipeline.id }}&view=table" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-times me-1"></i>Limpiar Filtros
+                </a>
+            </div>
+        </div>
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="pipeline" class="form-label fw-semibold">Pipeline</label>
-                    <select name="pipeline" id="pipeline" class="form-select form-control-custom" onchange="this.form.submit()">
-                        <option value="">Selecciona un pipeline</option>
-                        {% for p in pipelines %}
-                        <option value="{{ p.id }}" {% if pipeline.id == p.id %}selected{% endif %}>
-                            {{ p.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="view" class="form-label fw-semibold">Vista</label>
-                    <select name="view" id="view" class="form-select form-control-custom" onchange="this.form.submit()">
-                        <option value="table" {% if view_type == 'table' %}selected{% endif %}>Tabla</option>
-                        <option value="kanban" {% if view_type == 'kanban' %}selected{% endif %}>Kanban</option>
-                    </select>
-                </div>
+            <form method="GET" id="filtrosForm" class="row g-3 align-items-end">
+                <input type="hidden" name="pipeline" value="{{ pipeline.id }}">
+                <input type="hidden" name="view" value="table">
+                
                 <div class="col-md-2">
                     <label for="estado" class="form-label fw-semibold">Estado</label>
-                    <select name="estado" id="estado" class="form-select form-control-custom" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="activas" {% if filtros.estado == 'activas' %}selected{% endif %}>Activas</option>
-                        <option value="completadas" {% if filtros.estado == 'completadas' %}selected{% endif %}>Completadas</option>
-                        <option value="vencidas" {% if filtros.estado == 'vencidas' %}selected{% endif %}>Vencidas</option>
+                    <select name="estado" id="estado" class="form-select form-control-custom {% if request.GET.estado %}filtro-activo{% endif %}">
+                        <option value="">Todos los estados</option>
+                        <option value="activas" {% if request.GET.estado == 'activas' %}selected{% endif %}>Activas</option>
+                        <option value="completadas" {% if request.GET.estado == 'completadas' %}selected{% endif %}>Completadas</option>
+                        <option value="vencidas" {% if request.GET.estado == 'vencidas' %}selected{% endif %}>Vencidas</option>
                     </select>
                 </div>
+                
                 <div class="col-md-2">
                     <label for="asignado" class="form-label fw-semibold">Asignación</label>
-                    <select name="asignado" id="asignado" class="form-select form-control-custom" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="asignadas" {% if filtros.asignado == 'asignadas' %}selected{% endif %}>Asignadas</option>
-                        <option value="sin_asignar" {% if filtros.asignado == 'sin_asignar' %}selected{% endif %}>Sin Asignar</option>
+                    <select name="asignado" id="asignado" class="form-select form-control-custom {% if request.GET.asignado %}filtro-activo{% endif %}">
+                        <option value="">Todas las asignaciones</option>
+                        <option value="asignadas" {% if request.GET.asignado == 'asignadas' %}selected{% endif %}>Asignadas</option>
+                        <option value="sin_asignar" {% if request.GET.asignado == 'sin_asignar' %}selected{% endif %}>Sin Asignar</option>
                     </select>
                 </div>
+                
                 <div class="col-md-2">
                     <label for="fecha" class="form-label fw-semibold">Fecha</label>
-                    <select name="fecha" id="fecha" class="form-select form-control-custom" onchange="this.form.submit()">
-                        <option value="">Todas</option>
-                        <option value="hoy" {% if filtros.fecha == 'hoy' %}selected{% endif %}>Hoy</option>
-                        <option value="semana" {% if filtros.fecha == 'semana' %}selected{% endif %}>Esta Semana</option>
-                        <option value="mes" {% if filtros.fecha == 'mes' %}selected{% endif %}>Este Mes</option>
+                    <select name="fecha" id="fecha" class="form-select form-control-custom {% if request.GET.fecha %}filtro-activo{% endif %}">
+                        <option value="">Todas las fechas</option>
+                        <option value="hoy" {% if request.GET.fecha == 'hoy' %}selected{% endif %}>Hoy</option>
+                        <option value="semana" {% if request.GET.fecha == 'semana' %}selected{% endif %}>Esta Semana</option>
+                        <option value="mes" {% if request.GET.fecha == 'mes' %}selected{% endif %}>Este Mes</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="sla" class="form-label fw-semibold">SLA</label>
+                    <select name="sla" id="sla" class="form-select form-control-custom {% if request.GET.sla %}filtro-activo{% endif %}">
+                        <option value="">Todos los SLAs</option>
+                        <option value="vencido" {% if request.GET.sla == 'vencido' %}selected{% endif %}>Vencido</option>
+                        <option value="proximo" {% if request.GET.sla == 'proximo' %}selected{% endif %}>Próximo a vencer</option>
+                        <option value="ok" {% if request.GET.sla == 'ok' %}selected{% endif %}>En tiempo</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="prioridad" class="form-label fw-semibold">Prioridad</label>
+                    <select name="prioridad" id="prioridad" class="form-select form-control-custom {% if request.GET.prioridad %}filtro-activo{% endif %}">
+                        <option value="">Todas las prioridades</option>
+                        <option value="alta" {% if request.GET.prioridad == 'alta' %}selected{% endif %}>Alta</option>
+                        <option value="media" {% if request.GET.prioridad == 'media' %}selected{% endif %}>Media</option>
+                        <option value="baja" {% if request.GET.prioridad == 'baja' %}selected{% endif %}>Baja</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="ordenar" class="form-label fw-semibold">Ordenar por</label>
+                    <select name="ordenar" id="ordenar" class="form-select form-control-custom {% if request.GET.ordenar %}filtro-activo{% endif %}">
+                        <option value="fecha_creacion" {% if request.GET.ordenar == 'fecha_creacion' %}selected{% endif %}>Fecha Creación</option>
+                        <option value="fecha_ultima_actualizacion" {% if request.GET.ordenar == 'fecha_ultima_actualizacion' %}selected{% endif %}>Última Actualización</option>
+                        <option value="codigo" {% if request.GET.ordenar == 'codigo' %}selected{% endif %}>Código</option>
+                        <option value="etapa" {% if request.GET.ordenar == 'etapa' %}selected{% endif %}>Etapa</option>
                     </select>
                 </div>
             </form>
         </div>
     </div>
 
-    {% if pipeline %}
-    <!-- Información del Pipeline -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-project-diagram me-2"></i>
-                        {{ pipeline.nombre }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">{{ pipeline.descripcion|default:"Sin descripción" }}</p>
-                    <div class="row text-center">
-                        <div class="col-3">
-                            <div class="bg-success bg-opacity-10 rounded p-2">
-                                <h6 class="mb-0 text-success">{{ page_obj.paginator.count }}</h6>
-                                <small class="text-muted">Total Solicitudes</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="bg-info bg-opacity-10 rounded p-2">
-                                <h6 class="mb-0 text-info">{{ solicitudes|filter_activas|length }}</h6>
-                                <small class="text-muted">Activas</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="bg-warning bg-opacity-10 rounded p-2">
-                                <h6 class="mb-0 text-warning">{{ solicitudes|filter_completadas|length }}</h6>
-                                <small class="text-muted">Completadas</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="bg-danger bg-opacity-10 rounded p-2">
-                                <h6 class="mb-0 text-danger">{{ solicitudes|filter_vencidas|length }}</h6>
-                                <small class="text-muted">Vencidas</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        Resumen
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">Solicitudes por Etapa</small>
-                        {% for etapa in etapas_kanban %}
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <span class="small">{{ etapa.nombre }}</span>
-                            <span class="badge badge-pacifico">{{ solicitudes_por_etapa|get_etapa_count:etapa }}</span>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Leyenda de colores de SLA -->
+    <div class="mb-2 small">
+        <span class="me-3"><i class="fas fa-circle text-success me-1"></i> SLA en tiempo</span>
+        <span class="me-3"><i class="fas fa-circle text-warning me-1"></i> SLA por vencer</span>
+        <span class="me-3"><i class="fas fa-circle text-danger me-1"></i> SLA vencido</span>
     </div>
 
-    {% if view_type == 'table' %}
-    <!-- Vista Tabla -->
+    <!-- Vista Tabla Mejorada -->
     <div class="card card-custom">
-        <div class="card-header-custom">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="fas fa-table me-2"></i>
                 Solicitudes en Tabla
             </h5>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="d-flex align-items-center">
+                    <label for="busquedaTabla" class="form-label mb-0 me-2 small fw-semibold text-white">Buscar:</label>
+                    <input type="text" id="busquedaTabla" class="form-control form-control-sm" 
+                           placeholder="Código, cliente, usuario..." 
+                           style="width: 250px;"
+                           value="{{ filtros.busqueda }}">
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success" id="exportarExcel" title="Exportar a Excel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover workflow-table" id="tablaSolicitudes">
                     <thead class="table-light">
                         <tr>
-                            <th>Código</th>
-                            <th>Pipeline</th>
-                            <th>Etapa Actual</th>
-                            <th>Asignado a</th>
-                            <th>Creado por</th>
-                            <th>Fecha Creación</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
+                            <th class="fw-bold">Nº</th>
+                            <th class="fw-bold">Cliente</th>
+                            <th class="fw-bold">Cédula</th>
+                            <th class="fw-bold">Producto</th>
+                            <th class="fw-bold">Monto Solicitado</th>
+                            <th class="fw-bold">Propietario</th>
+                            <th class="fw-bold">Asignado a</th>
+                            <th class="fw-bold">Etapa</th>
+                            <th class="fw-bold">Estado Actual</th>
+                            <th class="fw-bold">Fecha Inicio</th>
+                            <th class="fw-bold">Vencimiento de SLA</th>
+                            <th class="fw-bold">SLA Restante</th>
+                            <th class="fw-bold">Alertas</th>
+                            <th class="fw-bold">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for solicitud in page_obj %}
-                        <tr>
+                        {% for s in solicitudes_tabla %}
+                        <tr class="align-middle table-row-hover {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}">
+                            <td class="text-dark">{{ s.codigo }}</td>
+                            <td class="text-dark">{{ s.cliente }}</td>
+                            <td class="text-dark">{{ s.cedula }}</td>
+                            <td class="text-dark">{{ s.producto }}</td>
+                            <td><span class="fw-bold text-success">{{ s.monto }}</span></td>
+                            <td class="text-dark"><i class="fas fa-user me-1 text-muted"></i> {{ s.propietario }}</td>
                             <td>
-                                <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" class="fw-bold text-decoration-none">
-                                    {{ solicitud.codigo }}
-                                </a>
-                            </td>
-                            <td>{{ solicitud.pipeline.nombre }}</td>
-                            <td>
-                                {% if solicitud.etapa_actual %}
-                                <span class="badge badge-pacifico">{{ solicitud.etapa_actual.nombre }}</span>
+                                {% if s.asignado_a != 'Sin asignar' %}
+                                    <i class="fas fa-user me-1 text-success"></i> <span class="text-dark">{{ s.asignado_a }}</span>
                                 {% else %}
-                                <span class="badge bg-success">Completada</span>
+                                    <i class="fas fa-user-slash me-1 text-muted"></i> <span class="text-muted">{{ s.asignado_a }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if solicitud.asignada_a %}
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-2">
-                                        <img src="{{ solicitud.asignada_a.profile.avatar.url|default:'/static/images/default-avatar.png' }}" 
-                                             class="rounded-circle" width="24" height="24" alt="Avatar">
+                                {% if s.etapa %}
+                                <span class="badge {{ s.etapa_color }} bg-opacity-25 text-dark">{{ s.etapa }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ s.estado_color }}">{{ s.estado_actual }}</span>
+                            </td>
+                            <td class="text-dark">{{ s.fecha_inicio }}</td>
+                            <td class="text-dark">{{ s.vencimiento_sla }}</td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="{{ s.sla_color }} fw-bold" title="Tiempo restante para cumplir el SLA">
+                                        {{ s.sla_restante }}
                                     </div>
-                                    {{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}
+                                    <div class="mt-1">
+                                        {% if s.sla_color == 'text-success' %}
+                                            <span class="text-success fw-semibold" style="font-size: 0.9rem;">En tiempo</span>
+                                        {% elif s.sla_color == 'text-warning' %}
+                                            <span class="text-warning fw-semibold" style="font-size: 0.9rem;">Por vencer</span>
+                                        {% elif s.sla_color == 'text-danger' %}
+                                            <span class="text-danger fw-semibold" style="font-size: 0.9rem;">Vencido</span>
+                                        {% else %}
+                                            <span class="text-secondary fw-semibold" style="font-size: 0.9rem;">N/A</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                {% else %}
-                                <span class="text-muted">Sin asignar</span>
-                                {% endif %}
                             </td>
-                            <td>{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</td>
-                            <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
                             <td>
-                                {% if solicitud.etapa_actual %}
-                                    {% if solicitud.etapa_actual.sla_vencido %}
-                                    <span class="badge bg-danger">Vencida</span>
-                                    {% else %}
-                                    <span class="badge bg-success">En Proceso</span>
-                                    {% endif %}
-                                {% else %}
-                                <span class="badge bg-success">Completada</span>
-                                {% endif %}
+                                {% for alerta in s.alertas %}
+                                <i class="fas {{ alerta.icon }} text-{{ alerta.color }}" title="{{ alerta.tooltip }}"></i>
+                                {% endfor %}
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" 
-                                       class="btn btn-outline-pacifico" title="Ver Detalle">
+                                    {% if s.acciones.ver %}
+                                    <a href="{% url 'workflow:detalle_solicitud' s.id %}" class="btn btn-outline-pacifico" title="Ver Detalle">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    {% if solicitud.etapa_actual and not solicitud.asignada_a %}
-                                    <a href="{% url 'workflow:auto_asignar_solicitud' solicitud.id %}" 
-                                       class="btn btn-outline-success" title="Auto Asignar">
-                                        <i class="fas fa-user-plus"></i>
+                                    {% endif %}
+                                    {% if s.acciones.cambiar_etapa %}
+                                    <a href="{% url 'workflow:transicion_solicitud' s.id %}" class="btn btn-outline-secondary" title="Cambiar Etapa">
+                                        <i class="fas fa-arrow-right"></i>
                                     </a>
+                                    {% endif %}
+                                    {% if s.acciones.exportar %}
+                                    <a href="#" class="btn btn-outline-success" title="Exportar">
+                                        <i class="fas fa-upload"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if s.acciones.eliminar %}
+                                    <button type="button" class="btn btn-outline-danger" title="Eliminar" onclick="eliminarSolicitud({{ s.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                     {% endif %}
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="14" class="text-center py-4">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                 <p class="text-muted">No hay solicitudes para mostrar</p>
                             </td>
@@ -234,17 +285,15 @@
                     </tbody>
                 </table>
             </div>
-
             <!-- Paginación -->
             {% if page_obj.has_other_pages %}
-            <nav aria-label="Paginación de solicitudes">
+            <nav aria-label="Paginación de solicitudes" class="mt-4">
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Anterior</a>
                     </li>
                     {% endif %}
-
                     {% for num in page_obj.paginator.page_range %}
                         {% if page_obj.number == num %}
                         <li class="page-item active">
@@ -256,7 +305,6 @@
                         </li>
                         {% endif %}
                     {% endfor %}
-
                     {% if page_obj.has_next %}
                     <li class="page-item">
                         <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Siguiente</a>
@@ -455,74 +503,526 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- DataTables CSS y JS desde CDN -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.min.js"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
+
 <script>
-// Funcionalidad para drag and drop en kanban (futura implementación)
-document.addEventListener('DOMContentLoaded', function() {
-    const kanbanCards = document.querySelectorAll('.kanban-card');
-    const kanbanColumns = document.querySelectorAll('.kanban-column');
+$(document).ready(function() {
+    // Inicializar DataTable con configuración optimizada
+    var table = $('#tablaSolicitudes').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        colResize: true,
+        scrollX: true,
+        scrollCollapse: true,
+        fixedColumns: {
+            left: 1,
+            heightMatch: 'auto'
+        },
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+            search: 'Buscar:',
+            lengthMenu: 'Mostrar _MENU_ registros',
+            info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+            paginate: {
+                previous: 'Anterior',
+                next: 'Siguiente'
+            }
+        },
+        columnDefs: [
+            { orderable: false, targets: -1 },
+            { orderable: false, targets: -2 },
+            { width: '80px', targets: 0 }, // Columna Nº
+            { width: '120px', targets: 1 }, // Cliente
+            { width: '100px', targets: 2 }, // Cédula
+            { width: '120px', targets: 3 }, // Producto
+            { width: '130px', targets: 4 }, // Monto
+            { width: '120px', targets: 5 }, // Propietario
+            { width: '180px', targets: 6 }, // Asignado a
+            { width: '100px', targets: 7 }, // Etapa
+            { width: '100px', targets: 8 }, // Estado
+            { width: '100px', targets: 9 }, // Fecha Inicio
+            { width: '130px', targets: 10 }, // Vencimiento SLA
+            { width: '100px', targets: 11 }, // SLA Restante
+            { width: '80px', targets: 12 }, // Alertas
+            { width: '150px', targets: 13 }, // Acciones
+        ],
+        autoWidth: false,
+        pageLength: 25,
+        responsive: false,
+        deferRender: true,
+        processing: true
+    });
+
+    // Mover controles abajo
+    var wrapper = $('.dataTables_wrapper');
+    var length = wrapper.find('.dataTables_length');
+    var paginate = wrapper.find('.dataTables_paginate');
+    if (length.length && paginate.length && wrapper.find('.dt-bottom-controls').length === 0) {
+        var bottomControls = $('<div class="dt-bottom-controls"></div>');
+        length.appendTo(bottomControls);
+        paginate.appendTo(bottomControls);
+        wrapper.append(bottomControls);
+    }
+
+    // Ajustar altura de la columna fija después de la inicialización
+    table.fixedColumns().relayout();
     
-    kanbanCards.forEach(card => {
-        card.addEventListener('dragstart', function(e) {
-            e.dataTransfer.setData('text/plain', this.dataset.solicitudId);
-        });
+    // Debug ColResize
+    console.log('ColResize:', typeof $.fn.dataTable.ColResize);
+    console.log('FixedColumns:', typeof $.fn.dataTable.FixedColumns);
+    
+    // Debug: Verificar datos de asignación
+    console.log('Datos de la tabla:', {{ solicitudes_tabla|safe }});
+    
+    // Verificar cada fila para asignación
+    $('#tablaSolicitudes tbody tr').each(function(index) {
+        var asignado = $(this).find('td:eq(6)').text().trim();
+        console.log('Fila', index + 1, 'Asignado a:', asignado);
     });
     
-    kanbanColumns.forEach(column => {
-        column.addEventListener('dragover', function(e) {
-            e.preventDefault();
-        });
+    // Función para aplicar búsqueda avanzada
+    window.aplicarBusqueda = function() {
+        var busqueda = $('#busqueda').val();
+        var prioridad = $('#prioridad').val();
         
-        column.addEventListener('drop', function(e) {
-            e.preventDefault();
-            const solicitudId = e.dataTransfer.getData('text/plain');
-            // Aquí se implementaría la lógica para mover la solicitud
-            console.log('Mover solicitud', solicitudId, 'a columna', this);
-        });
+        // Construir URL con parámetros
+        var url = new URL(window.location);
+        if (busqueda) url.searchParams.set('busqueda', busqueda);
+        if (prioridad) url.searchParams.set('prioridad', prioridad);
+        
+        // Mantener otros filtros existentes
+        url.searchParams.set('pipeline', '{{ pipeline.id }}');
+        url.searchParams.set('view', 'table');
+        
+        window.location.href = url.toString();
+    };
+    
+    // Aplicar búsqueda al presionar Enter
+    $('#busqueda').on('keypress', function(e) {
+        if (e.which === 13) {
+            aplicarBusqueda();
+        }
     });
+    
+    // Búsqueda personalizada en DataTable
+    $('#busquedaTabla').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+    
+    // Limpiar búsqueda de DataTable
+    $('#busquedaTabla').on('input', function() {
+        if (this.value === '') {
+            table.search('').draw();
+        }
+    });
+    
+    // Ocultar el buscador nativo de DataTables
+    $('.dataTables_filter').hide();
+    
+    // Los filtros ahora funcionan con formularios HTML tradicionales
+    // No se necesita JavaScript adicional para los filtros
+    
+    // Función para mostrar contador de resultados filtrados
+    function mostrarContadorFiltrado(visibles, total) {
+        // Crear o actualizar contador
+        if ($('#contadorFiltrado').length) {
+            $('#contadorFiltrado').remove();
+        }
+        
+        if (visibles < total) {
+            $('.card-header-custom h5').after('<small id="contadorFiltrado" class="text-white ms-2">(' + visibles + ' de ' + total + ' resultados)</small>');
+        }
+    }
+    
+    // Los filtros ahora funcionan con formularios HTML tradicionales
+    // El botón "Limpiar Filtros" es un enlace que recarga la página sin filtros
 });
 </script>
 
+<!-- Mantener estilos PACIFICO para badges y botones -->
 <style>
-.kanban-container {
-    overflow-x: auto;
+/* Ocultar buscador nativo de DataTables */
+.dataTables_filter {
+    display: none !important;
 }
 
-.kanban-column {
-    min-height: 400px;
-    max-height: 600px;
-    overflow-y: auto;
+/* Estilos para el buscador personalizado en el header */
+#busquedaTabla {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.kanban-card {
-    cursor: grab;
+#busquedaTabla:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
-
-.kanban-card:active {
-    cursor: grabbing;
+.dataTables_info {
+    display: none !important;
 }
-
-.avatar-sm img {
-    object-fit: cover;
+/* Oculta solo el selector de cantidad de registros de la parte superior, pero no el de abajo */
+.dataTables_wrapper > .dataTables_length:first-child {
+    display: none !important;
 }
-
-.table th {
-    border-top: none;
-    font-weight: 600;
-    color: var(--gris-texto);
-}
-
-.table td {
+.dataTables_length {
+    float: none !important;
+    display: inline-block !important;
+    margin: 0 1rem 0 0 !important;
     vertical-align: middle;
 }
-
-.pagination .page-link {
-    color: var(--verde-pacifico);
-    border-color: var(--verde-pacifico);
+.dataTables_wrapper .dt-bottom-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-.pagination .page-item.active .page-link {
-    background-color: var(--verde-pacifico);
-    border-color: var(--verde-pacifico);
+/* Estilos para columna fija */
+.DTFC_LeftWrapper {
+    background: #f8f9fa;
+    border-right: 2px solid #dee2e6;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.DTFC_LeftWrapper table {
+    background: white;
+}
+
+.DTFC_LeftWrapper th,
+.DTFC_LeftWrapper td {
+    background: white !important;
+    border-right: 1px solid #dee2e6;
+}
+
+/* Mejorar la separación visual */
+.DTFC_LeftWrapper th:last-child,
+.DTFC_LeftWrapper td:last-child {
+    border-right: 2px solid #007bff;
+}
+
+/* Centrar encabezados de columnas */
+#tablaSolicitudes thead th {
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-weight: 600 !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Centrar también los encabezados en la columna fija */
+.DTFC_LeftWrapper thead th {
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-weight: 600 !important;
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Mejorar la apariencia general de la tabla */
+#tablaSolicitudes {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+#tablaSolicitudes tbody tr:hover {
+    background-color: #f8f9fa !important;
+    transition: background-color 0.2s ease;
+}
+
+#tablaSolicitudes tbody td {
+    vertical-align: middle !important;
+    padding: 0.75rem 0.5rem !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+/* Estilos para la columna fija mejorados */
+.DTFC_LeftWrapper {
+    background: #f8f9fa !important;
+    border-right: 3px solid #007bff !important;
+    box-shadow: 3px 0 8px rgba(0,0,0,0.15) !important;
+    z-index: 1000 !important;
+}
+
+.DTFC_LeftWrapper table {
+    background: white !important;
+    border-collapse: collapse !important;
+}
+
+.DTFC_LeftWrapper th,
+.DTFC_LeftWrapper td {
+    background: white !important;
+    border-right: 1px solid #dee2e6 !important;
+    padding: 0.75rem 0.5rem !important;
+}
+
+.DTFC_LeftWrapper tbody tr:hover {
+    background-color: #e3f2fd !important;
+}
+
+/* Mejorar la separación visual de la columna fija */
+.DTFC_LeftWrapper th:last-child,
+.DTFC_LeftWrapper td:last-child {
+    border-right: 3px solid #007bff !important;
+    position: relative;
+}
+
+.DTFC_LeftWrapper th:last-child::after,
+.DTFC_LeftWrapper td:last-child::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(90deg, #007bff, #0056b3);
+}
+
+/* Estilos para el scroll horizontal */
+.dataTables_scrollBody {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+}
+
+.dataTables_scrollHead {
+    border: 1px solid #dee2e6 !important;
+    border-bottom: none !important;
+    border-radius: 0.375rem 0.375rem 0 0 !important;
+}
+
+/* Estilos para los filtros mejorados */
+.form-control-custom {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Estilos para filtros compactos en una fila */
+.form-select-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.form-control-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.small {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Espaciado compacto para filtros */
+.row.g-2 {
+    --bs-gutter-x: 0.5rem;
+    --bs-gutter-y: 0.5rem;
+}
+
+/* Alineación de elementos en filtros */
+.align-items-end {
+    align-items: end !important;
+}
+
+.form-control-custom:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-label.fw-semibold {
+    color: #495057;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Estilos para botones de filtros */
+.btn-pacifico {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.btn-pacifico:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    color: white;
+}
+
+.btn-outline-pacifico {
+    color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-outline-pacifico:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+/* Estilos para botones en el header de filtros */
+.card-header-custom .btn-light {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #495057;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.card-header-custom .btn-light:hover {
+    background-color: rgba(255, 255, 255, 1);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #212529;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header-custom .btn-outline-light {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.card-header-custom .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Animación para los filtros */
+.card-custom {
+    transition: all 0.3s ease;
+}
+
+.card-custom:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Estilos para filtros activos */
+.filtro-activo {
+    background-color: #e3f2fd !important;
+    border-color: #2196f3 !important;
+    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25) !important;
+}
+
+.filtro-activo:focus {
+    background-color: #e3f2fd !important;
+    border-color: #1976d2 !important;
+    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25) !important;
+}
+
+/* Indicador visual para filtros activos */
+.filtro-activo::before {
+    content: '✓';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #2196f3;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+/* Contenedor relativo para el indicador */
+.col-md-2 {
+    position: relative;
+}
+
+/* Estilos para la cinta (ribbon) */
+.ribbon-container {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.ribbon {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.ribbon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ffc107, #fd7e14, #e83e8c, #6f42c1);
+    border-radius: 8px 8px 0 0;
+}
+
+.ribbon-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.ribbon-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.ribbon h1 {
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ribbon p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Responsive para la cinta */
+@media (max-width: 768px) {
+    .ribbon-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .ribbon-actions {
+        margin-top: 1rem;
+    }
+}
+
+.table-row-hover:hover {
+    background-color: #f5f9f6 !important;
+    transition: background 0.2s;
 }
 </style>
 {% endblock %} 
