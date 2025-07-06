@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.utils.timezone import localtime
+from django.db import models
 import json
 import pandas as pd
 
@@ -195,9 +196,27 @@ def miembros_grupo_ajax(request, grupo_id):
         })
 
 
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def exportar_asignaciones_excel(request):
-    asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+    # Verificar que el usuario tenga permisos para exportar
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.rol not in ['Administrador', 'Supervisor']:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("No tienes permisos para exportar esta información.")
+    
+    # Filtrar asignaciones según el rol del usuario
+    if request.user.userprofile.rol == 'Supervisor':
+        # Los supervisores solo exportan asignaciones de usuarios en sus grupos supervisados
+        grupos_supervisados = GrupoAsignacion.objects.filter(
+            models.Q(supervisor_principal=request.user) | 
+            models.Q(supervisores_adicionales=request.user)
+        ).distinct()
+        usuarios_supervisados = User.objects.filter(grupos_asignados__in=grupos_supervisados).distinct()
+        asignaciones = Asignacion.objects.filter(
+            usuario__in=usuarios_supervisados
+        ).select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+    else:
+        # Los administradores exportan todas las asignaciones
+        asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
 
     data = []
     for a in asignaciones:
@@ -205,10 +224,15 @@ def exportar_asignaciones_excel(request):
         if not a.usuario or not a.curso.usuarios_asignados.filter(id=a.usuario.id).exists():
             continue
 
+        # Obtener el nombre completo del usuario
+        nombre_completo = f"{a.usuario.first_name} {a.usuario.last_name}".strip()
+        if not nombre_completo:
+            nombre_completo = a.usuario.username
+
         data.append({
             'Fecha': a.fecha.strftime('%Y-%m-%d %H:%M'),
             'Curso': a.curso.titulo,
-            'Usuario': a.usuario.username if a.usuario else '',
+            'Usuario': nombre_completo,
             'Grupo': a.grupo.nombre if a.grupo else '',
             'Método': a.metodo,
         })
@@ -221,14 +245,32 @@ def exportar_asignaciones_excel(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def historial_asignaciones_ajax(request):
+    # Verificar que el usuario tenga permisos para ver el historial
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.rol not in ['Administrador', 'Supervisor']:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("No tienes permisos para acceder a esta información.")
+    
     historial = []
 
     # 🔎 Agrupamos por usuario + curso (evitamos duplicados)
     registros_vistos = set()
 
-    asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+    # Filtrar asignaciones según el rol del usuario
+    if request.user.userprofile.rol == 'Supervisor':
+        # Los supervisores solo ven asignaciones de usuarios en sus grupos supervisados
+        # Buscar grupos donde el usuario es supervisor principal o adicional
+        grupos_supervisados = GrupoAsignacion.objects.filter(
+            models.Q(supervisor_principal=request.user) | 
+            models.Q(supervisores_adicionales=request.user)
+        ).distinct()
+        usuarios_supervisados = User.objects.filter(grupos_asignados__in=grupos_supervisados).distinct()
+        asignaciones = Asignacion.objects.filter(
+            usuario__in=usuarios_supervisados
+        ).select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+    else:
+        # Los administradores ven todas las asignaciones
+        asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
 
     for a in asignaciones:
         usuario = a.usuario
@@ -243,26 +285,100 @@ def historial_asignaciones_ajax(request):
             continue
         registros_vistos.add(key)
 
-        # ✅ Solo incluir si el curso sigue asignado al usuario
+        # ✅ Solo incluir si el curso sigue asignado al usuario (lógica original)
         if not curso.usuarios_asignados.filter(id=usuario.id).exists():
             continue
 
         progreso_obj = ProgresoCurso.objects.filter(usuario=usuario, curso=curso).first()
         progreso, modulos_texto = calcular_progreso_real(usuario, curso)
 
+        # Obtener el nombre completo del usuario
+        nombre_completo = f"{usuario.first_name} {usuario.last_name}".strip()
+        if not nombre_completo:
+            nombre_completo = usuario.username
+        
+        # Obtener el grupo al que pertenece el usuario
+        grupo_usuario = None
+        grupos_usuario = usuario.grupos_asignados.all()
+        if grupos_usuario.exists():
+            grupo_usuario = grupos_usuario.first().nombre
+        
         historial.append({
             'fecha': localtime(a.fecha).strftime('%d/%m/%Y %H:%M'),
             'curso': curso.titulo,
-            'usuario': usuario.username,
-            'grupo': a.grupo.nombre if a.grupo else '—',
+            'usuario': nombre_completo,
+            'grupo': grupo_usuario if grupo_usuario else '—',
             'progreso': f"{progreso}%",
             'modulos': modulos_texto,
             'finalizado': localtime(progreso_obj.fecha_completado).strftime('%d/%m/%Y') if progreso_obj and progreso_obj.completado else '—',
             'ultimo_ingreso': localtime(usuario.last_login).strftime('%d/%m/%Y %H:%M') if usuario.last_login else '—',
-            
         })
 
     return JsonResponse({'historial': historial})
+
+
+@login_required
+def historial_asignaciones_view(request):
+    # Verificar que el usuario tenga permisos para ver el historial
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.rol not in ['Administrador', 'Supervisor']:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("No tienes permisos para acceder a esta página.")
+    """Vista independiente para mostrar el historial de asignaciones"""
+    
+    # Obtener datos para filtros según el rol del usuario
+    if request.user.userprofile.rol == 'Supervisor':
+        # Los supervisores solo ven cursos y usuarios de sus grupos supervisados
+        # Buscar grupos donde el usuario es supervisor principal o adicional
+        grupos_supervisados = GrupoAsignacion.objects.filter(
+            models.Q(supervisor_principal=request.user) | 
+            models.Q(supervisores_adicionales=request.user)
+        ).distinct()
+        usuarios_supervisados = User.objects.filter(grupos_asignados__in=grupos_supervisados).distinct()
+        cursos = Curso.objects.filter(usuarios_asignados__in=usuarios_supervisados).distinct()
+        usuarios = usuarios_supervisados
+        grupos = grupos_supervisados
+        asignaciones = Asignacion.objects.filter(
+            usuario__in=usuarios_supervisados
+        ).select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+    else:
+        # Los administradores ven todos los datos
+        cursos = Curso.objects.all()
+        usuarios = User.objects.filter(is_active=True)
+        grupos = GrupoAsignacion.objects.all()
+        asignaciones = Asignacion.objects.select_related('curso', 'usuario', 'grupo').order_by('-fecha')
+
+    historial = []
+
+    for a in asignaciones:
+        # ✅ Mostrar solo si aún está asignado (mantener la lógica original)
+        if not a.usuario or not a.curso.usuarios_asignados.filter(id=a.usuario.id).exists():
+            continue
+
+        progreso = None
+        completados = 0
+        total_modulos = a.curso.modulos.count()
+        fecha_final = None
+
+        progreso_obj = ProgresoCurso.objects.filter(usuario=a.usuario, curso=a.curso).first()
+        if progreso_obj:
+            completados = progreso_obj.modulos_completados.count()
+            progreso = round((completados / total_modulos) * 100) if total_modulos > 0 else 0
+            fecha_final = progreso_obj.fecha_completado
+
+        historial.append({
+            'asignacion': a,
+            'progreso': progreso,
+            'completados': completados,
+            'total': total_modulos,
+            'completado_en': fecha_final,
+        })
+
+    return render(request, 'capacitaciones_app/historial_asignaciones.html', {
+        'cursos': cursos,
+        'usuarios': usuarios,
+        'grupos': grupos,
+        'historial': historial,
+    })
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render

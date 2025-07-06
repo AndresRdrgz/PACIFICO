@@ -81,9 +81,18 @@ class CursoAdmin(nested_admin.NestedModelAdmin):
 # 🔹 Grupos de asignación (corregido)
 @admin.register(GrupoAsignacion)
 class GrupoAsignacionAdmin(admin.ModelAdmin):
-    list_display = ('nombre',)
-    search_fields = ('nombre',)
-    filter_horizontal = ('usuarios_asignados',)  # ✅ CORREGIDO: sin cursos
+    list_display = ('nombre', 'supervisor_principal', 'get_supervisores_count', 'get_usuarios_count')
+    search_fields = ('nombre', 'supervisor_principal__username', 'supervisor_principal__first_name', 'supervisor_principal__last_name')
+    list_filter = ('supervisor_principal',)
+    filter_horizontal = ('usuarios_asignados', 'supervisores_adicionales')  # ✅ CORREGIDO: sin cursos
+    
+    def get_usuarios_count(self, obj):
+        return obj.usuarios_asignados.count()
+    get_usuarios_count.short_description = 'Usuarios'
+    
+    def get_supervisores_count(self, obj):
+        return len(obj.todos_supervisores)
+    get_supervisores_count.short_description = 'Total Supervisores'
 
 # 🔹 Temas individuales
 class TemaAdmin(admin.ModelAdmin):
