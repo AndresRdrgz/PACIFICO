@@ -1,6 +1,7 @@
 from django import forms
 from django.forms import modelformset_factory
 from .models import ClienteEntrevista, OtroIngreso, ReferenciaPersonal, ReferenciaComercial
+from .modelsWorkflow import Solicitud
 
 class ClienteEntrevistaForm(forms.ModelForm):
     JUBILADO_CHOICES = (
@@ -270,3 +271,39 @@ ReferenciaComercialFormSet = modelformset_factory(
     extra=1,
     can_delete=True
 )
+
+ETIQUETAS_CHOICES = [
+    ("", "-"),
+    ("📞 No responde", "📞 No responde"),
+    ("🗓️ Cita agendada", "🗓️ Cita agendada"),
+    ("✅ Documentos completos", "✅ Documentos completos"),
+    ("📎 Falta carta trabajo", "📎 Falta carta trabajo"),
+    ("🔄 Seguimiento en 48h", "🔄 Seguimiento en 48h"),
+    ("💬 WhatsApp activo", "💬 WhatsApp activo"),
+    ("⚠️ Cliente indeciso", "⚠️ Cliente indeciso"),
+    ("🚀 Cliente caliente", "🚀 Cliente caliente"),
+    ("🕐 Esperando confirmación", "🕐 Esperando confirmación"),
+    ("🧾 Enviado a crédito", "🧾 Enviado a crédito"),
+    ("🔒 En validación", "🔒 En validación"),
+    ("❌ Caso descartado", "❌ Caso descartado"),
+]
+
+class SolicitudAdminForm(forms.ModelForm):
+    etiquetas_oficial = forms.ChoiceField(
+        choices=ETIQUETAS_CHOICES,
+        required=False,
+        widget=forms.Select()
+    )
+
+    class Meta:
+        model = Solicitud
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.etiquetas_oficial:
+            self.fields['etiquetas_oficial'].initial = self.instance.etiquetas_oficial
+
+    def clean_etiquetas_oficial(self):
+        data = self.cleaned_data['etiquetas_oficial']
+        return data or ''

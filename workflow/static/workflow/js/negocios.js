@@ -410,4 +410,39 @@ function getCookie(name) {
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     window.negociosManager = new NegociosTableManager();
+
+    // Edición inline de prioridad para oficiales
+    document.querySelectorAll('.prioridad-select').forEach(function(select) {
+        select.addEventListener('change', function(e) {
+            const solicitudId = e.target.dataset.id;
+            const nuevaPrioridad = e.target.value;
+            e.target.disabled = true;
+            fetch(`/workflow/api/solicitudes/${solicitudId}/actualizar-prioridad/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ prioridad: nuevaPrioridad })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    e.target.classList.remove('border-red-500');
+                    e.target.classList.add('border-green-500');
+                    setTimeout(() => e.target.classList.remove('border-green-500'), 1000);
+                } else {
+                    e.target.classList.add('border-red-500');
+                    alert(data.error || 'Error al guardar prioridad');
+                }
+            })
+            .catch(() => {
+                e.target.classList.add('border-red-500');
+                alert('Error de conexión');
+            })
+            .finally(() => {
+                e.target.disabled = false;
+            });
+        });
+    });
 }); 

@@ -5,11 +5,13 @@ from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from .modelsWorkflow import *
 from .models import ClienteEntrevista
+from pacifico.models import UserProfile
 import json
 from datetime import datetime, timedelta
+from django.views.decorators.csrf import csrf_exempt
 
 # ==========================================
 # VISTAS PRINCIPALES DEL WORKFLOW
@@ -80,13 +82,37 @@ def negocios_view(request):
     if pipeline_id:
         pipeline = get_object_or_404(Pipeline, id=pipeline_id)
         
-        # Obtener todas las solicitudes del pipeline
-        solicitudes = Solicitud.objects.filter(
-            pipeline=pipeline
-        ).select_related(
-            'pipeline', 'etapa_actual', 'subestado_actual', 
-            'creada_por', 'asignada_a'
-        )
+        # Obtener el rol del usuario desde UserProfile
+        user_role = 'Usuario'  # Rol por defecto
+        
+        # Verificar primero si es superuser
+        if request.user.is_superuser:
+            user_role = 'Administrador'
+        else:
+            # Si no es superuser, verificar UserProfile
+            try:
+                user_profile = request.user.userprofile
+                user_role = user_profile.rol
+            except Exception:
+                # Si no tiene UserProfile, mantener rol por defecto
+                pass
+        
+        # Lógica de permisos basada en rol
+        if user_role == 'Administrador':
+            # Administrador ve TODAS las solicitudes
+            solicitudes = Solicitud.objects.filter(pipeline=pipeline)
+        elif user_role == 'Supervisor':
+            # Supervisor ve todas las solicitudes de su(s) grupo(s)
+            user_groups = request.user.groups.all()
+            if user_groups.exists():
+                group_users = User.objects.filter(groups__in=user_groups)
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users)
+            else:
+                # Si no tiene grupos asignados, solo ve las suyas
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
+        else:
+            # Oficial y Usuario solo ven sus propias solicitudes
+            solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
         
         # Filtros básicos
         filtro_estado = request.GET.get('estado', '')
@@ -284,6 +310,8 @@ def negocios_view(request):
                 'acciones': acciones,
                 'id': solicitud.id,
                 'etapa_color': etapa_color,
+                'prioridad': solicitud.prioridad or '',
+                'etiquetas_oficial': solicitud.etiquetas_oficial or '',
             })
 
         # Para vista kanban, agrupar por etapas
@@ -298,6 +326,12 @@ def negocios_view(request):
         else:
             solicitudes_por_etapa = None
             etapas_kanban = None
+        
+        etiquetas_predefinidas = [
+            "📞 No responde", "🗓️ Cita agendada", "✅ Documentos completos", "📎 Falta carta trabajo",
+            "🔄 Seguimiento en 48h", "💬 WhatsApp activo", "⚠️ Cliente indeciso", "🚀 Cliente caliente",
+            "🕐 Esperando confirmación", "🧾 Enviado a crédito", "🔒 En validación", "❌ Caso descartado"
+        ]
         
         context = {
             'pipeline': pipeline,
@@ -315,7 +349,10 @@ def negocios_view(request):
                 'busqueda': busqueda,
                 'sla': filtro_sla,
                 'ordenar': ordenar_por,
-            }
+            },
+            'prioridades_posibles': ['Alta', 'Media', 'Baja'],
+            'etiquetas_predefinidas': etiquetas_predefinidas,
+            'user_role': user_role,  # Agregar rol del usuario al contexto
         }
     else:
         # Si no hay pipeline seleccionado, mostrar lista de pipelines
@@ -1330,4 +1367,40 @@ def api_estadisticas(request):
 
 def sitio_construccion(request):
     """Vista para página de sitio en construcción"""
-    return render(request, 'workflow/sitio_construccion.html') 
+    return render(request, 'workflow/sitio_construccion.html')
+
+
+@login_required
+def api_actualizar_prioridad(request, solicitud_id):
+    """API para actualizar la prioridad de una solicitud"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            prioridad = data.get('prioridad', '').strip()
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            # Eliminar validación de permisos, permitir a cualquier usuario
+            prioridades_validas = ['Alta', 'Media', 'Baja']
+            if prioridad and prioridad not in prioridades_validas:
+                return JsonResponse({'success': False, 'error': 'Prioridad no válida'})
+            solicitud.prioridad = prioridad
+            solicitud.save()
+            return JsonResponse({'success': True, 'prioridad': prioridad})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_actualizar_etiquetas(request, solicitud_id):
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        etiquetas = data.get('etiquetas_oficial', '')
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        # Limpiar espacios de cada etiqueta
+        etiquetas_limpias = ','.join([e.strip() for e in etiquetas.split(',') if e.strip()])
+        solicitud.etiquetas_oficial = etiquetas_limpias
+        solicitud.save()
+        return JsonResponse({'success': True, 'etiquetas_oficial': etiquetas_limpias})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}) 

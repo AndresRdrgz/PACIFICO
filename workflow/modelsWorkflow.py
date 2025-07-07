@@ -74,6 +74,11 @@ class PermisoEtapa(models.Model):
 # --------------------------------------
 
 class Solicitud(models.Model):
+    PRIORIDAD_CHOICES = [
+        ('Alta', 'Alta'),
+        ('Media', 'Media'),
+        ('Baja', 'Baja'),
+    ]
     codigo = models.CharField(max_length=50, unique=True)
     pipeline = models.ForeignKey(Pipeline, on_delete=models.PROTECT)
     etapa_actual = models.ForeignKey(Etapa, on_delete=models.SET_NULL, null=True, blank=True)
@@ -82,6 +87,8 @@ class Solicitud(models.Model):
     asignada_a = models.ForeignKey(User, related_name='solicitudes_asignadas', on_delete=models.SET_NULL, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
+    etiquetas_oficial = models.CharField(max_length=255, null=True, blank=True, help_text="Etiquetas separadas por coma para la oficial")
+    prioridad = models.CharField(max_length=20, choices=PRIORIDAD_CHOICES, null=True, blank=True, help_text="Prioridad de la solicitud")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
