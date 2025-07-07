@@ -47,4 +47,8 @@ urlpatterns = [
     # APIs para edición inline de solicitudes
     path('api/solicitudes/<int:solicitud_id>/actualizar-prioridad/', views_workflow.api_actualizar_prioridad, name='api_actualizar_prioridad'),
     path('api/solicitudes/<int:solicitud_id>/actualizar-etiquetas/', views_workflow.api_actualizar_etiquetas, name='api_actualizar_etiquetas'),
+    
+    # APIs para búsqueda de clientes y cotizaciones
+    path('api/buscar-clientes/', views_workflow.api_buscar_clientes, name='api_buscar_clientes'),
+    path('api/buscar-cotizaciones/', views_workflow.api_buscar_cotizaciones, name='api_buscar_cotizaciones'),
 ] 

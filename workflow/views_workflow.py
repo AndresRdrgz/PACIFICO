@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.contrib.auth.models import Group, User
 from .modelsWorkflow import *
 from .models import ClienteEntrevista
-from pacifico.models import UserProfile
+from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -428,6 +428,8 @@ def nueva_solicitud(request):
     
     if request.method == 'POST':
         pipeline_id = request.POST.get('pipeline')
+        cliente_id = request.POST.get('cliente')
+        cotizacion_id = request.POST.get('cotizacion')
         
         if pipeline_id:
             pipeline = get_object_or_404(Pipeline, id=pipeline_id)
@@ -439,12 +441,24 @@ def nueva_solicitud(request):
             # Obtener primera etapa del pipeline
             primera_etapa = pipeline.etapas.order_by('orden').first()
             
+            # Obtener cliente y cotización si se proporcionaron
+            cliente = None
+            cotizacion = None
+            
+            if cliente_id:
+                cliente = get_object_or_404(Cliente, id=cliente_id)
+            
+            if cotizacion_id:
+                cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
+            
             # Crear solicitud
             solicitud = Solicitud.objects.create(
                 codigo=codigo,
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
-                creada_por=request.user
+                creada_por=request.user,
+                cliente=cliente,
+                cotizacion=cotizacion
             )
             
             # Crear historial inicial
@@ -470,8 +484,27 @@ def nueva_solicitud(request):
             messages.success(request, f'Solicitud {codigo} creada exitosamente.')
             return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
     
+    # Obtener clientes y cotizaciones para el formulario
+    
+    # Obtener clientes del usuario actual o todos si es superuser
+    if request.user.is_superuser:
+        clientes = Cliente.objects.all().order_by('-created_at')[:100]  # Últimos 100 clientes
+    else:
+        clientes = Cliente.objects.filter(
+            Q(added_by=request.user) | 
+            Q(propietario=request.user)
+        ).order_by('-created_at')[:100]
+    
+    # Obtener cotizaciones del usuario actual o todas si es superuser
+    if request.user.is_superuser:
+        cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
+    else:
+        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+    
     context = {
         'pipelines': Pipeline.objects.all(),
+        'clientes': clientes,
+        'cotizaciones': cotizaciones,
     }
     
     return render(request, 'workflow/nueva_solicitud.html', context)
@@ -1403,4 +1436,79 @@ def api_actualizar_etiquetas(request, solicitud_id):
         solicitud.etiquetas_oficial = etiquetas_limpias
         solicitud.save()
         return JsonResponse({'success': True, 'etiquetas_oficial': etiquetas_limpias})
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}) 
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_buscar_clientes(request):
+    """API para buscar clientes"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 20))
+        
+        if not query:
+            return JsonResponse({'clientes': []})
+        
+        # Buscar clientes por nombre o cédula
+        clientes = Cliente.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query)
+        ).order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cliente in clientes:
+            resultados.append({
+                'id': cliente.id,
+                'nombre': cliente.nombreCliente or 'Sin nombre',
+                'cedula': cliente.cedulaCliente or 'Sin cédula',
+                'fecha_creacion': cliente.created_at.strftime('%d/%m/%Y') if cliente.created_at else '',
+                'texto_completo': f"{cliente.nombreCliente or 'Sin nombre'} - {cliente.cedulaCliente or 'Sin cédula'}"
+            })
+        
+        return JsonResponse({'clientes': resultados})
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_buscar_cotizaciones(request):
+    """API para buscar cotizaciones"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        cliente_id = request.GET.get('cliente_id', '').strip()
+        limit = int(request.GET.get('limit', 20))
+        
+        # Filtrar cotizaciones
+        cotizaciones = Cotizacion.objects.all()
+        
+        # Filtrar por cliente si se especifica
+        if cliente_id:
+            cotizaciones = cotizaciones.filter(cedulaCliente=cliente_id)
+        
+        # Buscar por número de cotización, nombre de cliente o monto
+        if query:
+            cotizaciones = cotizaciones.filter(
+                Q(NumeroCotizacion__icontains=query) |
+                Q(nombreCliente__icontains=query) |
+                Q(montoPrestamo__icontains=query)
+            )
+        
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            resultados.append({
+                'id': cotizacion.id,
+                'numero': cotizacion.NumeroCotizacion or cotizacion.id,
+                'cliente': cotizacion.nombreCliente or 'Sin cliente',
+                'monto': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
+                'tipo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'fecha_creacion': cotizacion.created_at.strftime('%d/%m/%Y') if cotizacion.created_at else '',
+                'texto_completo': f"#{cotizacion.NumeroCotizacion or cotizacion.id} - {cotizacion.nombreCliente or 'Sin cliente'} - ${cotizacion.montoPrestamo or 0}"
+            })
+        
+        return JsonResponse({'cotizaciones': resultados})
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405) 

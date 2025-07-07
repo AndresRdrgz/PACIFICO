@@ -12,7 +12,7 @@
                 <i class="fas fa-plus me-2 text-success"></i>
                 Nueva Solicitud
             </h1>
-            <p class="text-muted mb-0">Crea una nueva solicitud en el sistema de workflow</p>
+            <p class="text-muted mb-0">Crea una nueva solicitud siguiendo el proceso paso a paso</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico">
@@ -24,173 +24,460 @@
         </div>
     </div>
 
-    <!-- Formulario de Nueva Solicitud -->
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-alt me-2"></i>
-                        Información de la Solicitud
-                    </h5>
+    <!-- Stepper Progress -->
+    <div class="stepper-container mb-4">
+        <div class="stepper">
+            <div class="step active" data-step="1">
+                <div class="step-icon">
+                    <i class="fas fa-user"></i>
                 </div>
-                <div class="card-body">
-                    <form method="POST" id="nuevaSolicitudForm">
+                <div class="step-label">Cliente</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <div class="step-label">Cotización</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="step-label">Campos</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="step-label">Requisitos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card card-custom">
+                <div class="card-body p-4">
+                    <form method="POST" id="nuevaSolicitudForm" enctype="multipart/form-data">
                         {% csrf_token %}
                         
-                        <div class="row g-3">
-                            <!-- Pipeline -->
-                            <div class="col-md-12">
-                                <label for="pipeline" class="form-label fw-semibold">
-                                    <i class="fas fa-project-diagram me-1"></i>
-                                    Pipeline *
-                                </label>
-                                <select name="pipeline" id="pipeline" class="form-select form-control-custom" required>
-                                    <option value="">Selecciona un pipeline</option>
-                                    {% for pipeline in pipelines %}
-                                    <option value="{{ pipeline.id }}" 
-                                            data-descripcion="{{ pipeline.descripcion|default:'' }}">
-                                        {{ pipeline.nombre }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text" id="pipelineDescripcion"></div>
+                        <!-- Step 1: Select Cliente -->
+                        <div class="step-content active" id="step-1">
+                            <div class="text-center mb-4">
+                                <div class="step-icon-large mb-3">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark">Seleccionar Cliente</h3>
+                                <p class="text-muted">Busca y selecciona el cliente para esta solicitud</p>
+                            </div>
+
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="cliente" class="form-label fw-semibold">
+                                            <i class="fas fa-user me-1"></i>
+                                            Cliente *
+                                        </label>
+                                        <input type="text" id="clienteSearch" class="form-control search-input" placeholder="🔍 Buscar cliente por nombre o cédula...">
+                                        <select name="cliente" id="cliente" class="form-select form-control-custom" required>
+                                            <option value="">Selecciona un cliente</option>
+                                            {% for cliente in clientes %}
+                                            <option value="{{ cliente.id }}" 
+                                                    data-cedula="{{ cliente.cedulaCliente|default:'' }}"
+                                                    data-nombre="{{ cliente.nombreCliente|default:'' }}">
+                                                {{ cliente.nombreCliente|default:"Sin nombre" }} - {{ cliente.cedulaCliente|default:"Sin cédula" }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Busca y selecciona un cliente existente</div>
+                                    </div>
+
+                                    <!-- Cliente Info Card -->
+                                    <div id="clienteInfo" class="mt-3" style="display: none;">
+                                        <div class="card bg-light border-0">
+                                            <div class="card-body">
+                                                <h6 class="fw-bold mb-2">
+                                                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                                                    Información del Cliente
+                                                </h6>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <small class="text-muted">Nombre:</small>
+                                                        <div id="clienteNombre" class="fw-semibold"></div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <small class="text-muted">Cédula:</small>
+                                                        <div id="clienteCedula" class="fw-semibold"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Descripción del Pipeline -->
-                        <div class="mt-4" id="pipelineInfo" style="display: none;">
-                            <div class="alert alert-info-custom alert-custom">
-                                <h6 class="fw-bold mb-2">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Información del Pipeline
-                                </h6>
-                                <div id="pipelineDetails"></div>
+                        <!-- Step 2: Select Cotización -->
+                        <div class="step-content" id="step-2">
+                            <div class="text-center mb-4">
+                                <div class="step-icon-large mb-3">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark">Seleccionar Cotización</h3>
+                                <p class="text-muted">Selecciona la cotización asociada al cliente</p>
+                            </div>
+
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <div class="form-group">
+                                        <label for="cotizacion" class="form-label fw-semibold">
+                                            <i class="fas fa-file-invoice-dollar me-1"></i>
+                                            Cotización
+                                        </label>
+                                        <input type="text" id="cotizacionSearch" class="form-control search-input" placeholder="🔍 Buscar cotización por número, cliente o monto...">
+                                        <select name="cotizacion" id="cotizacion" class="form-select form-control-custom">
+                                            <option value="">Selecciona una cotización (opcional)</option>
+                                            {% for cotizacion in cotizaciones %}
+                                            <option value="{{ cotizacion.id }}" 
+                                                    data-cliente="{{ cotizacion.nombreCliente|default:'' }}"
+                                                    data-monto="{{ cotizacion.montoPrestamo|default:0 }}"
+                                                    data-tipo="{{ cotizacion.tipoPrestamo|default:'' }}">
+                                                #{{ cotizacion.NumeroCotizacion|default:cotizacion.id }} - {{ cotizacion.nombreCliente|default:"Sin cliente" }} - ${{ cotizacion.montoPrestamo|default:0|floatformat:0 }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Busca y selecciona una cotización existente</div>
+                                    </div>
+
+                                    <!-- Cotización Info Card -->
+                                    <div id="cotizacionInfo" class="mt-3" style="display: none;">
+                                        <div class="card bg-light border-0">
+                                            <div class="card-body">
+                                                <h6 class="fw-bold mb-2">
+                                                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                                                    Información de la Cotización
+                                                </h6>
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Número:</small>
+                                                        <div id="cotizacionNumero" class="fw-semibold"></div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Monto:</small>
+                                                        <div id="cotizacionMonto" class="fw-semibold"></div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <small class="text-muted">Tipo:</small>
+                                                        <div id="cotizacionTipo" class="fw-semibold"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Requisitos del Pipeline -->
-                        <div class="mt-4" id="requisitosInfo" style="display: none;">
-                            <h6 class="fw-bold mb-3">
-                                <i class="fas fa-clipboard-check me-2"></i>
-                                Requisitos Requeridos
-                            </h6>
-                            <div id="requisitosList" class="row g-2"></div>
+                        <!-- Step 3: Campos Personalizados -->
+                        <div class="step-content" id="step-3">
+                            <div class="text-center mb-4">
+                                <div class="step-icon-large mb-3">
+                                    <i class="fas fa-edit"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark">Campos Personalizados</h3>
+                                <p class="text-muted">Completa los campos específicos del pipeline</p>
+                            </div>
+
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <!-- Pipeline Selection -->
+                                    <div class="form-group mb-4">
+                                        <label for="pipeline" class="form-label fw-semibold">
+                                            <i class="fas fa-project-diagram me-1"></i>
+                                            Pipeline *
+                                        </label>
+                                        <select name="pipeline" id="pipeline" class="form-select form-control-custom" required>
+                                            <option value="">Selecciona un pipeline</option>
+                                            {% for pipeline in pipelines %}
+                                            <option value="{{ pipeline.id }}" 
+                                                    data-descripcion="{{ pipeline.descripcion|default:'' }}">
+                                                {{ pipeline.nombre }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text" id="pipelineDescripcion"></div>
+                                    </div>
+
+                                    <!-- Pipeline Info -->
+                                    <div id="pipelineInfo" class="mb-4" style="display: none;">
+                                        <div class="alert alert-info-custom alert-custom">
+                                            <h6 class="fw-bold mb-2">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Información del Pipeline
+                                            </h6>
+                                            <div id="pipelineDetails"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos Personalizados -->
+                                    <div id="camposPersonalizados" style="display: none;">
+                                        <h6 class="fw-bold mb-3">
+                                            <i class="fas fa-edit me-2"></i>
+                                            Campos Personalizados
+                                        </h6>
+                                        <div id="camposList" class="row g-3"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Campos Personalizados -->
-                        <div class="mt-4" id="camposPersonalizados" style="display: none;">
-                            <h6 class="fw-bold mb-3">
-                                <i class="fas fa-edit me-2"></i>
-                                Campos Personalizados
-                            </h6>
-                            <div id="camposList" class="row g-3"></div>
+                        <!-- Step 4: Requisitos -->
+                        <div class="step-content" id="step-4">
+                            <div class="text-center mb-4">
+                                <div class="step-icon-large mb-3">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </div>
+                                <h3 class="fw-bold text-dark">Requisitos y Revisión</h3>
+                                <p class="text-muted">Revisa los requisitos y completa la solicitud</p>
+                            </div>
+
+                            <div class="row justify-content-center">
+                                <div class="col-md-8">
+                                    <!-- Requisitos List -->
+                                    <div id="requisitosInfo" style="display: none;">
+                                        <h6 class="fw-bold mb-3">
+                                            <i class="fas fa-clipboard-check me-2"></i>
+                                            Requisitos Requeridos
+                                        </h6>
+                                        <div id="requisitosList" class="row g-2 mb-4"></div>
+                                    </div>
+
+                                    <!-- Summary Card -->
+                                    <div class="card bg-light border-0 mb-4">
+                                        <div class="card-body">
+                                            <h6 class="fw-bold mb-3">
+                                                <i class="fas fa-list-check me-2 text-primary"></i>
+                                                Resumen de la Solicitud
+                                            </h6>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <small class="text-muted">Cliente:</small>
+                                                    <div id="summaryCliente" class="fw-semibold">-</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small class="text-muted">Cotización:</small>
+                                                    <div id="summaryCotizacion" class="fw-semibold">-</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small class="text-muted">Pipeline:</small>
+                                                    <div id="summaryPipeline" class="fw-semibold">-</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small class="text-muted">Requisitos:</small>
+                                                    <div id="summaryRequisitos" class="fw-semibold">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Botones -->
+                        <!-- Navigation Buttons -->
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico">
-                                <i class="fas fa-times me-2"></i>Cancelar
-                            </a>
-                            <button type="submit" class="btn btn-pacifico" id="btnCrear">
-                                <i class="fas fa-save me-2"></i>Crear Solicitud
+                            <button type="button" class="btn btn-outline-pacifico" id="btnPrev" style="display: none;">
+                                <i class="fas fa-arrow-left me-2"></i>Anterior
                             </button>
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-pacifico" id="btnNext">
+                                    Siguiente<i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                                <button type="submit" class="btn btn-success" id="btnCrear" style="display: none;">
+                                    <i class="fas fa-save me-2"></i>Crear Solicitud
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-
-        <!-- Panel de Ayuda -->
-        <div class="col-lg-4">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-question-circle me-2"></i>
-                        Ayuda
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="fw-bold text-success">
-                            <i class="fas fa-lightbulb me-2"></i>
-                            ¿Qué es un Pipeline?
-                        </h6>
-                        <p class="text-muted small">
-                            Un pipeline define el flujo de trabajo que seguirá tu solicitud, 
-                            incluyendo las etapas, requisitos y campos personalizados.
-                        </p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6 class="fw-bold text-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            ¿Qué es un Pipeline?
-                        </h6>
-                        <p class="text-muted small">
-                            Define el flujo de trabajo que seguirá tu solicitud, incluyendo 
-                            las etapas, requisitos y campos personalizados.
-                        </p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6 class="fw-bold text-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Requisitos Obligatorios
-                        </h6>
-                        <p class="text-muted small">
-                            Todos los requisitos marcados como obligatorios deben cumplirse 
-                            antes de poder avanzar en el pipeline.
-                        </p>
-                    </div>
-                    
-                    <div>
-                        <h6 class="fw-bold text-primary">
-                            <i class="fas fa-code me-2"></i>
-                            Código Automático
-                        </h6>
-                        <p class="text-muted small">
-                            El sistema generará automáticamente un código único para tu solicitud 
-                            basado en el pipeline y tipo seleccionados.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pipelines Populares -->
-            <div class="card card-custom mt-3">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-star me-2"></i>
-                        Pipelines Populares
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% for pipeline in pipelines|slice:":3" %}
-                    <div class="d-flex align-items-center mb-2 p-2 rounded bg-light">
-                        <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                            <i class="fas fa-project-diagram text-success"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0 fw-bold">{{ pipeline.nombre }}</h6>
-                            <small class="text-muted">{{ pipeline.descripcion|default:"Sin descripción"|truncatechars:50 }}</small>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-pacifico" 
-                                onclick="seleccionarPipeline({{ pipeline.id }})">
-                            Seleccionar
-                        </button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+
+<style>
+/* Stepper Styles */
+.stepper-container {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.stepper::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e9ecef;
+    z-index: 1;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    background: white;
+    padding: 0 1rem;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-icon {
+    background: var(--verde-pacifico);
+    color: white;
+    transform: scale(1.1);
+}
+
+.step.completed .step-icon {
+    background: var(--verde-claro);
+    color: white;
+}
+
+.step-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-align: center;
+}
+
+.step.active .step-label {
+    color: var(--verde-pacifico);
+}
+
+.step.completed .step-label {
+    color: var(--verde-claro);
+}
+
+/* Step Content */
+.step-content {
+    display: none;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.step-content.active {
+    display: block;
+}
+
+.step-icon-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    margin: 0 auto;
+}
+
+/* Form Enhancements */
+.form-control-custom {
+    border: 2px solid var(--gris-borde);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--blanco);
+}
+
+.form-control-custom:focus {
+    border-color: var(--verde-pacifico);
+    box-shadow: 0 0 0 0.2rem rgba(0, 156, 60, 0.25);
+    outline: none;
+}
+
+/* Search Inputs */
+.search-input {
+    border: 2px solid var(--gris-borde);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--blanco);
+    margin-bottom: 1rem;
+}
+
+.search-input:focus {
+    border-color: var(--verde-pacifico);
+    box-shadow: 0 0 0 0.2rem rgba(0, 156, 60, 0.25);
+    outline: none;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stepper {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .stepper::before {
+        display: none;
+    }
+    
+    .step {
+        flex-direction: row;
+        gap: 1rem;
+    }
+    
+    .step-icon {
+        margin-bottom: 0;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Datos de los pipelines (se cargarían desde el backend)
+// Datos de los pipelines
 const pipelinesData = {
     {% for pipeline in pipelines %}
     {{ pipeline.id }}: {
@@ -228,13 +515,203 @@ const pipelinesData = {
     {% endfor %}
 };
 
-// Función para seleccionar pipeline desde el panel lateral
-function seleccionarPipeline(pipelineId) {
-    document.getElementById('pipeline').value = pipelineId;
-    actualizarInformacionPipeline();
+// Stepper functionality
+let currentStep = 1;
+const totalSteps = 4;
+
+function showStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Show current step
+    document.getElementById(`step-${step}`).classList.add('active');
+    
+    // Update stepper indicators
+    document.querySelectorAll('.step').forEach((stepEl, index) => {
+        const stepNumber = index + 1;
+        stepEl.classList.remove('active', 'completed');
+        
+        if (stepNumber === step) {
+            stepEl.classList.add('active');
+        } else if (stepNumber < step) {
+            stepEl.classList.add('completed');
+        }
+    });
+    
+    // Update navigation buttons
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnCrear = document.getElementById('btnCrear');
+    
+    btnPrev.style.display = step > 1 ? 'block' : 'none';
+    btnNext.style.display = step < totalSteps ? 'block' : 'none';
+    btnCrear.style.display = step === totalSteps ? 'block' : 'none';
+    
+    // Update button text
+    if (step === totalSteps) {
+        btnNext.style.display = 'none';
+    }
 }
 
-// Función para actualizar información del pipeline
+function nextStep() {
+    if (validateCurrentStep()) {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            showStep(currentStep);
+            updateSummary();
+        }
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+    }
+}
+
+function validateCurrentStep() {
+    switch (currentStep) {
+        case 1:
+            const cliente = document.getElementById('cliente').value;
+            if (!cliente) {
+                alert('Por favor, selecciona un cliente.');
+                return false;
+            }
+            break;
+        case 2:
+            // Cotización is optional, so no validation needed
+            break;
+        case 3:
+            const pipeline = document.getElementById('pipeline').value;
+            if (!pipeline) {
+                alert('Por favor, selecciona un pipeline.');
+                return false;
+            }
+            break;
+        case 4:
+            // Final validation will be done on form submit
+            break;
+    }
+    return true;
+}
+
+function updateSummary() {
+    // Update cliente summary
+    const clienteSelect = document.getElementById('cliente');
+    const selectedCliente = clienteSelect.options[clienteSelect.selectedIndex];
+    document.getElementById('summaryCliente').textContent = 
+        selectedCliente ? selectedCliente.text : '-';
+    
+    // Update cotización summary
+    const cotizacionSelect = document.getElementById('cotizacion');
+    const selectedCotizacion = cotizacionSelect.options[cotizacionSelect.selectedIndex];
+    document.getElementById('summaryCotizacion').textContent = 
+        selectedCotizacion ? selectedCotizacion.text : '-';
+    
+    // Update pipeline summary
+    const pipelineSelect = document.getElementById('pipeline');
+    const selectedPipeline = pipelineSelect.options[pipelineSelect.selectedIndex];
+    document.getElementById('summaryPipeline').textContent = 
+        selectedPipeline ? selectedPipeline.text : '-';
+    
+    // Update requisitos summary
+    const requisitosCount = document.querySelectorAll('#requisitosList .requisito-item').length;
+    document.getElementById('summaryRequisitos').textContent = 
+        requisitosCount > 0 ? `${requisitosCount} requisitos` : '-';
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const btnNext = document.getElementById('btnNext');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnCrear = document.getElementById('btnCrear');
+    const form = document.getElementById('nuevaSolicitudForm');
+    
+    // Navigation
+    btnNext.addEventListener('click', nextStep);
+    btnPrev.addEventListener('click', prevStep);
+    
+    // Cliente selection
+    const clienteSelect = document.getElementById('cliente');
+    clienteSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const clienteInfo = document.getElementById('clienteInfo');
+        
+        if (this.value) {
+            document.getElementById('clienteNombre').textContent = selectedOption.dataset.nombre || 'Sin nombre';
+            document.getElementById('clienteCedula').textContent = selectedOption.dataset.cedula || 'Sin cédula';
+            clienteInfo.style.display = 'block';
+        } else {
+            clienteInfo.style.display = 'none';
+        }
+    });
+    
+    // Cotización selection
+    const cotizacionSelect = document.getElementById('cotizacion');
+    cotizacionSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const cotizacionInfo = document.getElementById('cotizacionInfo');
+        
+        if (this.value) {
+            document.getElementById('cotizacionNumero').textContent = selectedOption.text.split(' - ')[0];
+            document.getElementById('cotizacionMonto').textContent = selectedOption.text.split(' - ')[2] || 'Sin monto';
+            document.getElementById('cotizacionTipo').textContent = selectedOption.dataset.tipo || 'Sin tipo';
+            cotizacionInfo.style.display = 'block';
+        } else {
+            cotizacionInfo.style.display = 'none';
+        }
+    });
+    
+    // Pipeline selection
+    const pipelineSelect = document.getElementById('pipeline');
+    pipelineSelect.addEventListener('change', function() {
+        actualizarInformacionPipeline();
+    });
+    
+    // Search functionality for clientes
+    const clienteSearch = document.getElementById('clienteSearch');
+    clienteSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        Array.from(clienteSelect.options).forEach(option => {
+            if (option.value) {
+                const text = option.text.toLowerCase();
+                option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            }
+        });
+    });
+    
+    // Search functionality for cotizaciones
+    const cotizacionSearch = document.getElementById('cotizacionSearch');
+    cotizacionSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        Array.from(cotizacionSelect.options).forEach(option => {
+            if (option.value) {
+                const text = option.text.toLowerCase();
+                option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            }
+        });
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        if (!validateCurrentStep()) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Show loading
+        btnCrear.innerHTML = '<div class="spinner-custom mx-auto"></div>';
+        btnCrear.disabled = true;
+    });
+    
+    // Initialize
+    showStep(1);
+});
+
+// Pipeline information update
 function actualizarInformacionPipeline() {
     const pipelineSelect = document.getElementById('pipeline');
     const pipelineId = pipelineSelect.value;
@@ -248,7 +725,7 @@ function actualizarInformacionPipeline() {
     if (pipelineId && pipelinesData[pipelineId]) {
         const pipeline = pipelinesData[pipelineId];
         
-        // Mostrar información del pipeline
+        // Show pipeline info
         pipelineDetails.innerHTML = `
             <p class="mb-2"><strong>Descripción:</strong> ${pipeline.descripcion || 'Sin descripción'}</p>
             <p class="mb-2"><strong>Etapas:</strong> ${pipeline.etapas.length} etapas definidas</p>
@@ -256,14 +733,14 @@ function actualizarInformacionPipeline() {
         `;
         pipelineInfo.style.display = 'block';
 
-        // Mostrar requisitos
+        // Show requisitos
         if (pipeline.requisitos.length > 0) {
             requisitosList.innerHTML = '';
             pipeline.requisitos.forEach(requisito => {
                 const requisitoHtml = `
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-center p-2 border rounded">
-                            <i class="fas fa-clipboard-check text-success me-2"></i>
+                    <div class="col-md-6 requisito-item">
+                        <div class="d-flex align-items-center p-3 border rounded bg-light">
+                            <i class="fas fa-clipboard-check text-success me-3"></i>
                             <div class="flex-grow-1">
                                 <div class="fw-semibold">${requisito.nombre}</div>
                                 <small class="text-muted">${requisito.descripcion || 'Sin descripción'}</small>
@@ -282,7 +759,7 @@ function actualizarInformacionPipeline() {
             requisitosInfo.style.display = 'none';
         }
 
-        // Mostrar campos personalizados
+        // Show campos personalizados
         if (pipeline.campos_personalizados.length > 0) {
             camposList.innerHTML = '';
             pipeline.campos_personalizados.forEach(campo => {
@@ -307,7 +784,7 @@ function actualizarInformacionPipeline() {
     }
 }
 
-// Función para generar inputs de campos personalizados
+// Generate input fields for custom fields
 function generarInputCampo(campo) {
     switch (campo.tipo) {
         case 'texto':
@@ -331,30 +808,5 @@ function generarInputCampo(campo) {
             return `<input type="text" class="form-control form-control-custom" name="campo_${campo.nombre}">`;
     }
 }
-
-// Event listeners
-document.addEventListener('DOMContentLoaded', function() {
-    const pipelineSelect = document.getElementById('pipeline');
-    const form = document.getElementById('nuevaSolicitudForm');
-    const btnCrear = document.getElementById('btnCrear');
-
-    // Actualizar información cuando cambie el pipeline
-    pipelineSelect.addEventListener('change', actualizarInformacionPipeline);
-
-    // Validación del formulario
-    form.addEventListener('submit', function(e) {
-        const pipeline = pipelineSelect.value;
-
-        if (!pipeline) {
-            e.preventDefault();
-            alert('Por favor, selecciona un pipeline.');
-            return;
-        }
-
-        // Mostrar loading
-        btnCrear.innerHTML = '<div class="spinner-custom mx-auto"></div>';
-        btnCrear.disabled = true;
-    });
-});
 </script>
 {% endblock %} 
