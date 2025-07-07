@@ -44,4 +44,7 @@ urlpatterns = [
     path('api/pipelines/<int:pipeline_id>/requisitos/asignar/', views_workflow.api_asignar_requisito_pipeline, name='api_asignar_requisito_pipeline'),
     path('api/pipelines/<int:pipeline_id>/campos-personalizados/crear/', views_workflow.api_crear_campo_personalizado, name='api_crear_campo_personalizado'),
     path('api/pipelines/<int:pipeline_id>/datos/', views_workflow.api_obtener_datos_pipeline, name='api_obtener_datos_pipeline'),
+    # APIs para edición inline de solicitudes
+    path('api/solicitudes/<int:solicitud_id>/actualizar-prioridad/', views_workflow.api_actualizar_prioridad, name='api_actualizar_prioridad'),
+    path('api/solicitudes/<int:solicitud_id>/actualizar-etiquetas/', views_workflow.api_actualizar_etiquetas, name='api_actualizar_etiquetas'),
 ] 

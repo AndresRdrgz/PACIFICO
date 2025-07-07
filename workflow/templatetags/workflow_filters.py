@@ -119,4 +119,21 @@ def get_user_role(user):
         return "Administrador"
     elif user.groups.all():
         return user.groups.first().name
-    return "Usuario" 
+    return "Usuario"
+
+@register.filter
+def break_words(value):
+    """Coloca solo un salto de línea después de la primera palabra (máximo 2 líneas)."""
+    if not value:
+        return ''
+    partes = value.split(' ', 1)
+    if len(partes) == 2:
+        return f'{partes[0]}<br>{partes[1]}'
+    return value
+
+@register.filter
+def split(value, arg):
+    """Dividir una cadena por un separador y retornar una lista"""
+    if not value:
+        return []
+    return [item.strip() for item in value.split(arg) if item.strip()] 
