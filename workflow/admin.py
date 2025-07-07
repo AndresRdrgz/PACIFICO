@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
 from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud
+from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
     model = Etapa
@@ -114,6 +115,7 @@ class PermisoEtapaAdmin(admin.ModelAdmin):
 
 @admin.register(Solicitud)
 class SolicitudAdmin(admin.ModelAdmin):
+    form = SolicitudAdminForm
     list_display = ('id', 'codigo', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'fecha_creacion', 'fecha_ultima_actualizacion')
     search_fields = ('codigo', 'pipeline__nombre')
     list_filter = ('pipeline', 'etapa_actual', 'subestado_actual')
