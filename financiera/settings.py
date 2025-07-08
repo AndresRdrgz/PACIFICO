@@ -13,11 +13,11 @@ STATIC_URL = '/static/'
 
 DEBUG = True
 if DEBUG:
-     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+      DATABASES = {
+        'default': dj_database_url.config(
+            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
+            conn_max_age=600
+        )
     }
 else:
     DATABASES = {
@@ -112,6 +112,58 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ALLOWED_HOSTS = ['cotfid.fpacifico.com', 'www.cotfid.fpacifico.com']
 
 '''
+
+# PWA Configuration
+PWA_APP_NAME = 'Pacífico Workflow'
+PWA_APP_DESCRIPTION = 'Sistema de Workflow - Financiera Pacífico'
+PWA_APP_THEME_COLOR = '#009c3c'
+PWA_APP_BACKGROUND_COLOR = '#ffffff'
+PWA_APP_DISPLAY = 'standalone'
+PWA_APP_SCOPE = '/workflow/'
+PWA_APP_START_URL = '/workflow/'
+PWA_APP_ICONS = [
+    {
+        'src': '/static/workflow/icons/icon-72x72.png',
+        'sizes': '72x72',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-96x96.png',
+        'sizes': '96x96',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-128x128.png',
+        'sizes': '128x128',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-144x144.png',
+        'sizes': '144x144',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-152x152.png',
+        'sizes': '152x152',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-192x192.png',
+        'sizes': '192x192',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-384x384.png',
+        'sizes': '384x384',
+        'type': 'image/png'
+    },
+    {
+        'src': '/static/workflow/icons/icon-512x512.png',
+        'sizes': '512x512',
+        'type': 'image/png'
+    }
+]
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -170,6 +222,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Middleware personalizado para redirección de usuarios con rol "Usuario"
     "capacitaciones_app.middleware.user_redirect.UserRoleRedirectMiddleware",
+    "workflow.middleware.PWAMiddleware",  # PWA-specific headers
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

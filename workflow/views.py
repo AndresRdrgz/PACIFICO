@@ -139,9 +139,11 @@ def service_worker_view(request):
     sw_path = os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow', 'sw.js')
     
     try:
-        with open(sw_path, 'r', encoding='utf-8') as f:
+        with open(sw_path, 'rb') as f:
             sw_content = f.read()
-        return HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
+        response = HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
+        response['Cache-Control'] = 'max-age=86400'  # 24 hours
+        return response
     except FileNotFoundError:
         raise Http404("Service worker not found")
 
@@ -261,7 +263,9 @@ def entrevista_cliente_view(request):
                     otro.delete()
             return redirect('formulario_gracias')
         else:
-            print('Errores en el formulario principal:', form.errors.as_json())
+            # Print errors for debugging
+            if form.errors:
+                print('Errores en el formulario principal:', form.errors)
             print('Errores en referencias personales:', referencias_formset.errors)
             print('Errores en referencias comerciales:', referencias_comerciales_formset.errors)
             print('Errores en otros ingresos:', otros_ingresos_formset.errors)
@@ -311,7 +315,8 @@ def descargar_entrevistas_excel(request):
     entrevistas = ClienteEntrevista.objects.all()
 
     wb = openpyxl.Workbook()
-    wb.remove(wb.active)
+    if wb.active:
+        wb.remove(wb.active)
 
     ws_entrevistas = wb.create_sheet(title="Entrevistas")
     campos_excluir = [
@@ -486,9 +491,6 @@ def cliente_entrevista_list(request):
     return render(request, 'workflow/cliente_entrevista_list.html', {'clientes': clientes})
 
 
-
-from django.http import JsonResponse
-
 def api_entrevistas(request):
     entrevistas = ClienteEntrevista.objects.all()
     campos = [field.name for field in ClienteEntrevista._meta.fields]
@@ -496,28 +498,4 @@ def api_entrevistas(request):
     for entrevista in entrevistas:
         registro = {field: getattr(entrevista, field, None) for field in campos}
         data.append(registro)
-    return JsonResponse({'entrevistas': data})
-
-
-from django.http import JsonResponse
-
-def api_entrevistas(request):
-    entrevistas = ClienteEntrevista.objects.all()
-    campos = [field.name for field in ClienteEntrevista._meta.fields]
-    data = []
-    for entrevista in entrevistas:
-        registro = {field: getattr(entrevista, field, None) for field in campos}
-        data.append(registro)
-    return JsonResponse({'entrevistas': data})
-    campos = [field.name for field in ClienteEntrevista._meta.fields]
-    data = []
-    for entrevista in entrevistas:
-        registro = {field: getattr(entrevista, field, None) for field in campos}
-        data.append(registro)
-    return JsonResponse({'entrevistas': data})
-    return JsonResponse({'entrevistas': data})
-    for entrevista in entrevistas:
-        registro = {field: getattr(entrevista, field, None) for field in campos}
-        data.append(registro)
-    return JsonResponse({'entrevistas': data})
     return JsonResponse({'entrevistas': data})
