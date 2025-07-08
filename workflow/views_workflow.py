@@ -525,7 +525,7 @@ def detalle_solicitud(request, solicitud_id):
             puede_ver=True
         ).exists()
         
-        if not tiene_permiso:
+        if not tiene_permimo:
             messages.error(request, 'No tienes permisos para ver esta solicitud.')
             return redirect('bandeja_trabajo')
     
@@ -682,7 +682,7 @@ def actualizar_requisito(request, solicitud_id, requisito_id):
                 puede_ver=True
             ).exists()
             
-            if not tiene_permiso:
+            if not tiene_permito:
                 return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         # Actualizar requisito
@@ -723,7 +723,7 @@ def actualizar_campo_personalizado(request, solicitud_id):
                 puede_ver=True
             ).exists()
             
-            if not tiene_permiso:
+            if not tiene_permito:
                 return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
@@ -1511,4 +1511,27 @@ def api_buscar_cotizaciones(request):
         
         return JsonResponse({'cotizaciones': resultados})
     
-    return JsonResponse({'error': 'Método no permitido'}, status=405) 
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+# ==========================================
+# VISTAS PWA
+# ==========================================
+
+def offline_view(request):
+    """Vista para mostrar página offline de PWA"""
+    return render(request, 'workflow/offline.html')
+
+
+def health_check(request):
+    """Health check endpoint para PWA"""
+    return JsonResponse({
+        'status': 'ok',
+        'timestamp': timezone.now().isoformat(),
+        'version': '1.0.1'
+    })
+
+
+def pwa_test_view(request):
+    """PWA testing page"""
+    return render(request, 'workflow/pwa_test.html')

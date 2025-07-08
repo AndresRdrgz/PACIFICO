@@ -1,9 +1,17 @@
 from django.urls import path
 from . import views_workflow
+from . import views
 
 app_name = 'workflow'
 
 urlpatterns = [
+    # PWA routes
+    path('manifest.json', views.manifest_view, name='manifest'),
+    path('sw.js', views.service_worker_view, name='service_worker'),
+    path('offline/', views_workflow.offline_view, name='offline'),
+    path('api/health-check/', views_workflow.health_check, name='health_check'),
+    path('pwa-test/', views_workflow.pwa_test_view, name='pwa_test'),
+    
     # Vistas principales
     path('', views_workflow.dashboard_workflow, name='dashboard'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
@@ -51,4 +59,4 @@ urlpatterns = [
     # APIs para búsqueda de clientes y cotizaciones
     path('api/buscar-clientes/', views_workflow.api_buscar_clientes, name='api_buscar_clientes'),
     path('api/buscar-cotizaciones/', views_workflow.api_buscar_cotizaciones, name='api_buscar_cotizaciones'),
-] 
+]

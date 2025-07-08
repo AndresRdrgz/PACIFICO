@@ -8,12 +8,142 @@ from .forms import (
     ReferenciaComercialFormSet,
     OtroIngresoFormSet,
 )
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
+from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_GET
 import openpyxl
 from openpyxl.utils import get_column_letter
 import datetime
 import csv
+import json
+
+# PWA Views
+@require_GET
+@cache_control(max_age=86400)  # Cache for 24 hours
+def manifest_view(request):
+    """Serve the PWA manifest with proper content type"""
+    manifest_data = {
+        "name": "Pacífico Workflow",
+        "short_name": "Workflow",
+        "description": "Sistema de Workflow - Financiera Pacífico",
+        "start_url": "/workflow/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#009c3c",
+        "orientation": "portrait-primary",
+        "scope": "/workflow/",
+        "categories": ["business", "productivity"],
+        "lang": "es",
+        "dir": "ltr",
+        "icons": [
+            {
+                "src": "/static/workflow/icons/icon-72x72.png",
+                "sizes": "72x72",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-96x96.png",
+                "sizes": "96x96",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-128x128.png",
+                "sizes": "128x128",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-144x144.png",
+                "sizes": "144x144",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-152x152.png",
+                "sizes": "152x152",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-192x192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-384x384.png",
+                "sizes": "384x384",
+                "type": "image/png",
+                "purpose": "maskable any"
+            },
+            {
+                "src": "/static/workflow/icons/icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "maskable any"
+            }
+        ],
+        "shortcuts": [
+            {
+                "name": "Dashboard",
+                "short_name": "Dashboard",
+                "description": "Ver el dashboard principal",
+                "url": "/workflow/dashboard/",
+                "icons": [
+                    {
+                        "src": "/static/workflow/icons/icon-96x96.png",
+                        "sizes": "96x96"
+                    }
+                ]
+            },
+            {
+                "name": "Bandeja de Trabajo",
+                "short_name": "Bandeja",
+                "description": "Ver bandeja de trabajo",
+                "url": "/workflow/bandeja/",
+                "icons": [
+                    {
+                        "src": "/static/workflow/icons/icon-96x96.png",
+                        "sizes": "96x96"
+                    }
+                ]
+            },
+            {
+                "name": "Nueva Solicitud",
+                "short_name": "Nueva",
+                "description": "Crear nueva solicitud",
+                "url": "/workflow/nueva-solicitud/",
+                "icons": [
+                    {
+                        "src": "/static/workflow/icons/icon-96x96.png",
+                        "sizes": "96x96"
+                    }
+                ]
+            }
+        ]
+    }
+    
+    return JsonResponse(manifest_data, content_type='application/manifest+json')
+
+@require_GET
+@cache_control(max_age=86400)  # Cache for 24 hours
+def service_worker_view(request):
+    """Serve the service worker with proper content type"""
+    import os
+    from django.conf import settings
+    from django.http import Http404
+    
+    sw_path = os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow', 'sw.js')
+    
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            sw_content = f.read()
+        return HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
+    except FileNotFoundError:
+        raise Http404("Service worker not found")
 
 
 def entrevista_cliente_view(request):
