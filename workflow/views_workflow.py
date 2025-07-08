@@ -81,6 +81,8 @@ def negocios_view(request):
     
     if pipeline_id:
         pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        # Guardar último pipeline visitado en la sesión
+        request.session['ultimo_pipeline_id'] = pipeline_id
         
         # Obtener el rol del usuario desde UserProfile
         user_role = 'Usuario'  # Rol por defecto
@@ -302,8 +304,10 @@ def negocios_view(request):
                 'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
                 'estado_actual': estado_actual,
                 'estado_color': estado_color,
-                'fecha_inicio': fecha_inicio.strftime('%d/%m/%Y'),
-                'vencimiento_sla': fecha_vencimiento_str,
+                'fecha_inicio': fecha_inicio,
+                'fecha_inicio_str': fecha_inicio.strftime('%d/%m/%Y'),
+                'vencimiento_sla': vencimiento_sla,
+                'vencimiento_sla_str': fecha_vencimiento_str,
                 'sla_restante': sla_restante,
                 'sla_color': sla_color,
                 'alertas': alertas,
@@ -314,15 +318,32 @@ def negocios_view(request):
                 'etiquetas_oficial': solicitud.etiquetas_oficial or '',
             })
 
-        # Para vista kanban, agrupar por etapas
+        # Para vista kanban, crear datos enriquecidos por etapa
         if view_type == 'kanban':
             etapas_kanban = pipeline.etapas.all().order_by('orden')
             solicitudes_por_etapa = {}
+            
+            # Crear diccionario con todas las solicitudes enriquecidas
+            solicitudes_dict = {s['id']: s for s in solicitudes_tabla}
+            
             for etapa in etapas_kanban:
-                solicitudes_por_etapa[etapa] = solicitudes.filter(etapa_actual=etapa)
-            solicitudes_completadas = solicitudes.filter(etapa_actual__isnull=True)
-            if solicitudes_completadas.exists():
-                solicitudes_por_etapa['completadas'] = solicitudes_completadas
+                solicitudes_etapa = solicitudes.filter(etapa_actual=etapa)
+                solicitudes_por_etapa[etapa.id] = [
+                    solicitudes_dict.get(sol.id, {
+                        'id': sol.id,
+                        'codigo': sol.codigo,
+                        'cliente': 'Sin cliente',
+                        'monto': '$0',
+                        'asignado_a': 'Sin asignar',
+                        'sla_restante': 'N/A',
+                        'sla_color': 'text-secondary',
+                        'estado_actual': 'En proceso',
+                        'estado_color': 'primary',
+                        'fecha_inicio': sol.fecha_creacion.strftime('%d/%m/%Y'),
+                        'prioridad': sol.prioridad or '',
+                        'etapa_actual': sol.etapa_actual
+                    }) for sol in solicitudes_etapa
+                ]
         else:
             solicitudes_por_etapa = None
             etapas_kanban = None
@@ -1511,4 +1532,82 @@ def api_buscar_cotizaciones(request):
         
         return JsonResponse({'cotizaciones': resultados})
     
-    return JsonResponse({'error': 'Método no permitido'}, status=405) 
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+@csrf_exempt
+def api_cambiar_etapa(request, solicitud_id):
+    """API para cambiar la etapa de una solicitud"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Obtener la solicitud
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos (el usuario debe ser el creador, asignado, o tener permisos especiales)
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para cambiar esta solicitud'}, status=403)
+        
+        # Obtener datos del request
+        data = json.loads(request.body)
+        nueva_etapa_id = data.get('etapa_id')
+        
+        if not nueva_etapa_id:
+            return JsonResponse({'error': 'ID de etapa requerido'}, status=400)
+        
+        # Obtener la nueva etapa
+        nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
+        
+        # Verificar que la etapa sea diferente a la actual
+        if solicitud.etapa_actual == nueva_etapa:
+            return JsonResponse({'error': 'La solicitud ya está en esta etapa'}, status=400)
+        
+        # Cerrar el historial actual si existe
+        if solicitud.etapa_actual:
+            historial_actual = HistorialSolicitud.objects.filter(
+                solicitud=solicitud,
+                etapa=solicitud.etapa_actual,
+                fecha_fin__isnull=True
+            ).first()
+            
+            if historial_actual:
+                historial_actual.fecha_fin = timezone.now()
+                historial_actual.save()
+        
+        # Cambiar la etapa
+        etapa_anterior = solicitud.etapa_actual
+        solicitud.etapa_actual = nueva_etapa
+        solicitud.fecha_ultima_actualizacion = timezone.now()
+        
+        # Si la nueva etapa es grupal, quitar asignación individual
+        if nueva_etapa.es_bandeja_grupal:
+            solicitud.asignada_a = None
+        
+        solicitud.save()
+        
+        # Crear nuevo historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=nueva_etapa,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Solicitud {solicitud.codigo} movida de "{etapa_anterior.nombre if etapa_anterior else "Sin etapa"}" a "{nueva_etapa.nombre}"',
+            'nueva_etapa': {
+                'id': nueva_etapa.id,
+                'nombre': nueva_etapa.nombre,
+                'orden': nueva_etapa.orden
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

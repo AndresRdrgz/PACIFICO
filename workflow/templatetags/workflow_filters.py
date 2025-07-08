@@ -136,4 +136,11 @@ def split(value, arg):
     """Dividir una cadena por un separador y retornar una lista"""
     if not value:
         return []
-    return [item.strip() for item in value.split(arg) if item.strip()] 
+    return [item.strip() for item in value.split(arg) if item.strip()]
+
+@register.filter
+def get_item(dictionary, key):
+    """Obtener un elemento de un diccionario por su clave"""
+    if dictionary and key in dictionary:
+        return dictionary[key]
+    return [] 

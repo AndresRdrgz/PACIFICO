@@ -51,4 +51,7 @@ urlpatterns = [
     # APIs para búsqueda de clientes y cotizaciones
     path('api/buscar-clientes/', views_workflow.api_buscar_clientes, name='api_buscar_clientes'),
     path('api/buscar-cotizaciones/', views_workflow.api_buscar_cotizaciones, name='api_buscar_cotizaciones'),
+    
+    # API para cambio de etapa
+    path('api/solicitudes/<int:solicitud_id>/cambiar-etapa/', views_workflow.api_cambiar_etapa, name='api_cambiar_etapa'),
 ] 
