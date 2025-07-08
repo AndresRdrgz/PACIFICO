@@ -15,6 +15,7 @@ urlpatterns = [
     # Vistas principales
     path('', views_workflow.dashboard_workflow, name='dashboard'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
+    path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('negocios/', views_workflow.negocios_view, name='negocios'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
@@ -22,6 +23,10 @@ urlpatterns = [
     path('solicitud/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitud/<int:solicitud_id>/requisito/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
     path('solicitud/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campos_personalizados'),
+    
+    # APIs para bandeja mixta
+    path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),
+    path('api/solicitudes/<int:solicitud_id>/devolver/', views_workflow.api_devolver_solicitud, name='api_devolver_solicitud'),
     
     # Vistas de administración
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),

@@ -1632,3 +1632,306 @@ def api_cambiar_etapa(request, solicitud_id):
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def vista_mixta_bandejas(request):
+    """Vista mixta que combina bandeja grupal y personal"""
+    from django.db.models import Count, Q
+    from django.utils import timezone
+    from datetime import timedelta
+    from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
+    
+    # Obtener grupos del usuario
+    grupos_usuario = request.user.groups.all()
+    
+    # === BANDEJA GRUPAL ===
+    # Obtener etapas grupales donde el usuario tiene permisos
+    etapas_grupales = Etapa.objects.filter(
+        es_bandeja_grupal=True,
+        permisos__grupo__in=grupos_usuario,
+        permisos__puede_autoasignar=True
+    ).distinct()
+    
+    # Solicitudes grupales (sin asignar)
+    solicitudes_grupales = Solicitud.objects.filter(
+        etapa_actual__in=etapas_grupales,
+        asignada_a__isnull=True
+    ).select_related(
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
+    ).order_by('-fecha_creacion')
+    
+    # === BANDEJA PERSONAL ===
+    # Solicitudes asignadas al usuario
+    solicitudes_personales = Solicitud.objects.filter(
+        asignada_a=request.user
+    ).select_related(
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
+    ).order_by('-fecha_ultima_actualizacion')
+    
+    # === MÉTRICAS ===
+    # Total en bandeja grupal
+    total_grupo = solicitudes_grupales.count()
+    
+    # Mis tareas
+    mis_tareas = solicitudes_personales.count()
+    
+    # Calcular vencimientos
+    ahora = timezone.now()
+    
+    # Solicitudes por vencer (próximas 24 horas)
+    por_vencer = 0
+    en_tiempo = 0
+    
+    todas_solicitudes = list(solicitudes_grupales) + list(solicitudes_personales)
+    
+    for solicitud in todas_solicitudes:
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            
+            if fecha_vencimiento < ahora:
+                # Ya vencida
+                continue
+            elif fecha_vencimiento <= ahora + timedelta(hours=24):
+                # Por vencer en 24 horas
+                por_vencer += 1
+            else:
+                # En tiempo
+                en_tiempo += 1
+    
+    # Filtros
+    filtro_pipeline = request.GET.get('pipeline', '')
+    filtro_estado = request.GET.get('estado', '')
+    
+    if filtro_pipeline:
+        solicitudes_grupales = solicitudes_grupales.filter(pipeline_id=filtro_pipeline)
+        solicitudes_personales = solicitudes_personales.filter(pipeline_id=filtro_pipeline)
+    
+    if filtro_estado == 'vencidas':
+        # Filtrar solo las vencidas
+        solicitudes_vencidas_ids = []
+        for solicitud in todas_solicitudes:
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+                fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+                if fecha_vencimiento < ahora:
+                    solicitudes_vencidas_ids.append(solicitud.id)
+        
+        solicitudes_grupales = solicitudes_grupales.filter(id__in=solicitudes_vencidas_ids)
+        solicitudes_personales = solicitudes_personales.filter(id__in=solicitudes_vencidas_ids)
+    
+    # Agregar información de vencimiento y enriquecimiento a cada solicitud
+    def agregar_info_vencimiento(solicitudes):
+        for solicitud in solicitudes:
+            # Información de SLA
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+                fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+                solicitud.fecha_vencimiento = fecha_vencimiento
+                solicitud.esta_vencida = fecha_vencimiento < ahora
+                solicitud.por_vencer = fecha_vencimiento <= ahora + timedelta(hours=24)
+                
+                # Calcular SLA restante y color
+                tiempo_total = solicitud.etapa_actual.sla.total_seconds()
+                tiempo_transcurrido = (ahora - solicitud.fecha_ultima_actualizacion).total_seconds()
+                segundos_restantes = tiempo_total - tiempo_transcurrido
+                porcentaje_restante = (segundos_restantes / tiempo_total) * 100 if tiempo_total > 0 else 0
+                
+                abs_segundos = abs(int(segundos_restantes))
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                
+                if segundos_restantes < 0:
+                    if horas > 0:
+                        solicitud.sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"-{minutos}m"
+                    solicitud.sla_color = 'text-danger'
+                elif porcentaje_restante > 40:
+                    if horas > 0:
+                        solicitud.sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"{minutos}m"
+                    solicitud.sla_color = 'text-success'
+                elif porcentaje_restante > 0:
+                    if horas > 0:
+                        solicitud.sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"{minutos}m"
+                    solicitud.sla_color = 'text-warning'
+                else:
+                    if horas > 0:
+                        solicitud.sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"-{minutos}m"
+                    solicitud.sla_color = 'text-danger'
+            else:
+                solicitud.fecha_vencimiento = None
+                solicitud.esta_vencida = False
+                solicitud.por_vencer = False
+                solicitud.sla_restante = 'N/A'
+                solicitud.sla_color = 'text-secondary'
+            
+            # Información de cliente (buscar en cotizaciones relacionadas)
+            solicitud.cliente_nombre = 'Sin cliente'
+            solicitud.cliente_cedula = 'Sin cédula'
+            
+            # Intentar obtener información de cliente desde cotizaciones
+            try:
+                from pacifico.models import Cotizacion
+                cotizacion = Cotizacion.objects.filter(
+                    solicitud_workflow=solicitud
+                ).first()
+                
+                if cotizacion:
+                    solicitud.cliente_nombre = cotizacion.cliente or 'Sin cliente'
+                    solicitud.cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
+            except:
+                # Si no se puede obtener información de cotización, usar valores por defecto
+                pass
+            
+            # Estado actual
+            solicitud.estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            
+        return solicitudes
+    
+    solicitudes_grupales = agregar_info_vencimiento(solicitudes_grupales)
+    solicitudes_personales = agregar_info_vencimiento(solicitudes_personales)
+    
+    # Obtener datos únicos para los filtros
+    todas_solicitudes_para_filtros = list(solicitudes_grupales) + list(solicitudes_personales)
+    
+    clientes_unicos = set()
+    estados_unicos = set()
+    etapas_unicas = set()
+    
+    for solicitud in todas_solicitudes_para_filtros:
+        if hasattr(solicitud, 'cliente_nombre') and solicitud.cliente_nombre:
+            clientes_unicos.add(solicitud.cliente_nombre)
+        if hasattr(solicitud, 'estado_actual') and solicitud.estado_actual:
+            estados_unicos.add(solicitud.estado_actual)
+        if solicitud.etapa_actual:
+            etapas_unicas.add(solicitud.etapa_actual.nombre)
+    
+    # Convertir a listas ordenadas
+    clientes_unicos = sorted(list(clientes_unicos))
+    estados_unicos = sorted(list(estados_unicos))
+    etapas_unicas = sorted(list(etapas_unicas))
+    
+    context = {
+        'solicitudes_grupales': solicitudes_grupales,
+        'solicitudes_personales': solicitudes_personales,
+        'total_grupo': total_grupo,
+        'mis_tareas': mis_tareas,
+        'por_vencer': por_vencer,
+        'en_tiempo': en_tiempo,
+        'pipelines': Pipeline.objects.all(),
+        'clientes_unicos': clientes_unicos,
+        'estados_unicos': estados_unicos,
+        'etapas_unicas': etapas_unicas,
+        'filtros': {
+            'pipeline': filtro_pipeline,
+            'estado': filtro_estado,
+        }
+    }
+    
+    return render(request, 'workflow/vista_mixta_bandejas.html', context)
+
+
+@login_required
+def api_tomar_solicitud(request, solicitud_id):
+    """API para tomar una solicitud de bandeja grupal"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que la solicitud está en bandeja grupal
+        if not solicitud.etapa_actual.es_bandeja_grupal or solicitud.asignada_a:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Esta solicitud no está disponible para tomar.'
+            })
+        
+        # Verificar permisos
+        grupos_usuario = request.user.groups.all()
+        tiene_permiso = PermisoEtapa.objects.filter(
+            etapa=solicitud.etapa_actual,
+            grupo__in=grupos_usuario,
+            puede_autoasignar=True
+        ).exists()
+        
+        if not tiene_permiso:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para tomar solicitudes en esta etapa.'
+            })
+        
+        # Asignar solicitud
+        solicitud.asignada_a = request.user
+        solicitud.fecha_ultima_actualizacion = timezone.now()
+        solicitud.save()
+        
+        # Actualizar historial
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.usuario_responsable = request.user
+            historial_actual.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Solicitud {solicitud.codigo} asignada exitosamente.',
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'asignada_a': request.user.get_full_name() or request.user.username
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_devolver_solicitud(request, solicitud_id):
+    """API para devolver una solicitud a bandeja grupal"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que el usuario puede devolver la solicitud
+        if solicitud.asignada_a != request.user and not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No puedes devolver esta solicitud.'
+            })
+        
+        # Verificar que la etapa actual permite bandeja grupal
+        if not solicitud.etapa_actual.es_bandeja_grupal:
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta etapa no permite bandeja grupal.'
+            })
+        
+        # Devolver a bandeja grupal
+        solicitud.asignada_a = None
+        solicitud.fecha_ultima_actualizacion = timezone.now()
+        solicitud.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Solicitud {solicitud.codigo} devuelta a bandeja grupal.',
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
