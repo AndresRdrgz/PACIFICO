@@ -1,8 +1,6 @@
-from django.urls import path, include
+from django.urls import path
 from . import views
 from . import api
-from .urls_workflow import urlpatterns as workflow_urlpatterns
-
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
@@ -12,6 +10,4 @@ urlpatterns = [
     path('descargar-entrevistas-excel/', views.descargar_entrevistas_excel, name='descargar_entrevistas_excel'),
     path('entrevistas/descargar/<int:entrevista_id>/', views.descargar_entrevista_excel, name='descargar_entrevista_excel'),
     path('entrevistas/json/', api.entrevistas_json, name='entrevistas_json'),
-    
-    # URLs del sistema de workflow (importadas directamente)
-] + [path(f'workflow/{url.pattern}', url.callback, name=f'workflow:{url.name}') for url in workflow_urlpatterns]
+]
