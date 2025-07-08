@@ -5,100 +5,104 @@
 {% block title %}Negocios - Sistema de Workflow{% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-        <!-- Header con Cinta -->
-    <div class="card card-custom mb-4">
-        <div class="card-header-custom" style="background: var(--verde-pacifico); padding: 20px; border-radius: 12px;">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div class="ribbon-content mb-2 mb-md-0">
-                    <h1 class="h2 mb-1 text-white fw-bold">
+<div class="fade-in-up mt-0 pt-0">
+        <!-- Header Compacto Optimizado -->
+    <div class="card card-custom mb-1">
+        <div class="card-header-custom" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 8px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="ribbon-content">
+                    <h1 class="h3 mb-0 text-white fw-bold">
                         <i class="fas fa-briefcase me-2"></i>
-                        Negocios
+                        {% if pipeline %}{{ pipeline.nombre }}{% else %}Pipeline de Negocio{% endif %}
                     </h1>
-                    <p class="text-white-50 mb-0">Gestiona todas las solicitudes de tus pipelines</p>
                 </div>
-                <div class="ribbon-actions d-flex gap-2 align-items-center flex-shrink-0">
-                    <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-plus me-2"></i>Nueva Solicitud
-                    </a>
-                    <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-
-    {% if pipeline %}
-        <!-- Información del Pipeline Mejorada -->
-    <div class="card card-custom mb-4" id="kpis-section">
-        <div class="card-body">
-            <div class="row align-items-start mb-4">
-                <div class="col-md-8">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h4 class="mb-2 fw-bold" style="color: var(--verde-pacifico);">
-                                <i class="fas fa-project-diagram me-2"></i>
-                                {{ pipeline.nombre }}
-                            </h4>
-                        </div>
-                        <!-- Toggle KPIs para todas las pantallas -->
-                        <button class="btn btn-sm btn-outline-success toggle-btn ms-3" onclick="toggleSection('kpis-section')" id="toggle-kpis">
-                            <i class="fas fa-chart-bar me-1"></i>
-                            <span class="toggle-text">Ocultar KPIs</span>
+                <div class="ribbon-actions d-flex gap-2 align-items-center">
+                    <!-- Selector de Pipeline -->
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownPipeline" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-project-diagram me-1"></i>
+                            {% if pipeline %}{{ pipeline.nombre }}{% else %}Seleccionar Pipeline{% endif %}
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownPipeline">
+                            {% for p in pipelines %}
+                            <li>
+                                <a class="dropdown-item {% if pipeline and p.id == pipeline.id %}active{% endif %}" 
+                                   href="?pipeline={{ p.id }}&view={{ request.GET.view|default:'table' }}">
+                                    {{ p.nombre }}
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li><span class="dropdown-item-text text-muted">No hay pipelines disponibles</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Botones de cambio de vista -->
+                    <div class="btn-group" role="group" aria-label="Cambiar vista">
+                        <button type="button" class="btn btn-light btn-sm active" id="btnVistaTabla" onclick="cambiarVista('table')">
+                            <i class="fas fa-table me-1"></i>
+                            Tabla
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaKanban" onclick="cambiarVista('kanban')">
+                            <i class="fas fa-columns me-1"></i>
+                            Kanban
                         </button>
                     </div>
-                    <p class="text-muted mb-0 fs-6">{{ pipeline.descripcion|default:"Sin descripción" }}</p>
+                    
+                    <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i>Nueva Solicitud
+                    </a>
                 </div>
             </div>
-            
-            <!-- KPIs Mejorados - Contenido colapsable -->
-            <div class="kpis-content">
-                <div class="row g-3">
-                    <div class="col-6 col-md-3">
-                        <div class="kpi-card kpi-total">
-                            <div class="kpi-icon">
-                                <i class="fas fa-clipboard-list"></i>
-                            </div>
-                            <div class="kpi-content">
-                                <p class="kpi-label">Total Solicitudes</p>
-                                <h3 class="kpi-number">{{ page_obj.paginator.count }}</h3>
-                            </div>
+        </div>
+    </div>
+
+    {% if pipeline %}
+        <!-- KPIs Compactos en Fila Horizontal -->
+    <div class="card card-custom mb-1" id="kpis-section">
+        <div class="card-body py-2">
+            <div class="row g-2">
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-total">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Total</p>
+                            <h4 class="kpi-number-compact">{{ page_obj.paginator.count }}</h4>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="kpi-card kpi-activas">
-                            <div class="kpi-icon">
-                                <i class="fas fa-play-circle"></i>
-                            </div>
-                            <div class="kpi-content">
-                                <p class="kpi-label">Activas</p>
-                                <h3 class="kpi-number">{{ solicitudes|filter_activas|length }}</h3>
-                            </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-activas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Activas</p>
+                            <h4 class="kpi-number-compact">{{ solicitudes|filter_activas|length }}</h4>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="kpi-card kpi-completadas">
-                            <div class="kpi-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="kpi-content">
-                                <p class="kpi-label">Completadas</p>
-                                <h3 class="kpi-number">{{ solicitudes|filter_completadas|length }}</h3>
-                            </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-completadas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Completadas</p>
+                            <h4 class="kpi-number-compact">{{ solicitudes|filter_completadas|length }}</h4>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="kpi-card kpi-vencidas">
-                            <div class="kpi-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <div class="kpi-content">
-                                <p class="kpi-label">Vencidas</p>
-                                <h3 class="kpi-number">{{ solicitudes|filter_vencidas|length }}</h3>
-                            </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-vencidas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Vencidas</p>
+                            <h4 class="kpi-number-compact">{{ solicitudes|filter_vencidas|length }}</h4>
                         </div>
                     </div>
                 </div>
@@ -106,119 +110,16 @@
         </div>
     </div>
 
+    {% if pipeline %}
     {% if view_type == 'table' %}
-    <!-- Filtros de Solicitudes -->
-    <div class="card card-custom mb-4" id="filters-section">
-        <div class="card-header-custom d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-filter me-2"></i>
-                Filtros de Solicitudes
-            </h5>
-            <div class="d-flex gap-2 align-items-center">
-                <!-- Toggle Filtros para todas las pantallas -->
-                <button class="btn btn-sm btn-outline-success toggle-btn" onclick="toggleSection('filters-section')" id="toggle-filters">
-                    <i class="fas fa-filter me-1"></i>
-                    <span class="toggle-text">Ocultar Filtros</span>
-                </button>
-                <button type="submit" form="filtrosForm" class="btn btn-light btn-sm">
-                    <i class="fas fa-search me-1"></i>Aplicar Filtros
-                </button>
-                <a href="?pipeline={{ pipeline.id }}&view=table" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-times me-1"></i>Limpiar Filtros
-                </a>
-            </div>
-        </div>
-        <div class="card-body">
-            <!-- Contenido de filtros colapsable -->
-            <div class="filters-content">
-                <form method="GET" id="filtrosForm" class="row g-3 align-items-end">
-                    <input type="hidden" name="pipeline" value="{{ pipeline.id }}">
-                    <input type="hidden" name="view" value="table">
-                    
-                    <div class="col-md-2">
-                        <label for="estado" class="form-label fw-semibold">Estado</label>
-                        <select name="estado" id="estado" class="form-select form-control-custom {% if request.GET.estado %}filtro-activo{% endif %}">
-                            <option value="">Todos los estados</option>
-                            <option value="activas" {% if request.GET.estado == 'activas' %}selected{% endif %}>Activas</option>
-                            <option value="completadas" {% if request.GET.estado == 'completadas' %}selected{% endif %}>Completadas</option>
-                            <option value="vencidas" {% if request.GET.estado == 'vencidas' %}selected{% endif %}>Vencidas</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label for="asignado" class="form-label fw-semibold">Asignación</label>
-                        <select name="asignado" id="asignado" class="form-select form-control-custom {% if request.GET.asignado %}filtro-activo{% endif %}">
-                            <option value="">Todas las asignaciones</option>
-                            <option value="asignadas" {% if request.GET.asignado == 'asignadas' %}selected{% endif %}>Asignadas</option>
-                            <option value="sin_asignar" {% if request.GET.asignado == 'sin_asignar' %}selected{% endif %}>Sin Asignar</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label for="fecha" class="form-label fw-semibold">Fecha</label>
-                        <select name="fecha" id="fecha" class="form-select form-control-custom {% if request.GET.fecha %}filtro-activo{% endif %}">
-                            <option value="">Todas las fechas</option>
-                            <option value="hoy" {% if request.GET.fecha == 'hoy' %}selected{% endif %}>Hoy</option>
-                            <option value="semana" {% if request.GET.fecha == 'semana' %}selected{% endif %}>Esta Semana</option>
-                            <option value="mes" {% if request.GET.fecha == 'mes' %}selected{% endif %}>Este Mes</option>
-                        </select>
-                            </div>
-                    
-                    <div class="col-md-2">
-                        <label for="sla" class="form-label fw-semibold">SLA</label>
-                        <select name="sla" id="sla" class="form-select form-control-custom {% if request.GET.sla %}filtro-activo{% endif %}">
-                            <option value="">Todos los SLAs</option>
-                            <option value="vencido" {% if request.GET.sla == 'vencido' %}selected{% endif %}>Vencido</option>
-                            <option value="proximo" {% if request.GET.sla == 'proximo' %}selected{% endif %}>Próximo a vencer</option>
-                            <option value="ok" {% if request.GET.sla == 'ok' %}selected{% endif %}>En tiempo</option>
-                        </select>
-                        </div>
-                    
-                    <div class="col-md-2">
-                        <label for="prioridad" class="form-label fw-semibold">Prioridad</label>
-                        <select name="prioridad" id="prioridad" class="form-select form-control-custom {% if request.GET.prioridad %}filtro-activo{% endif %}">
-                            <option value="">Todas las prioridades</option>
-                            <option value="alta" {% if request.GET.prioridad == 'alta' %}selected{% endif %}>Alta</option>
-                            <option value="media" {% if request.GET.prioridad == 'media' %}selected{% endif %}>Media</option>
-                            <option value="baja" {% if request.GET.prioridad == 'baja' %}selected{% endif %}>Baja</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2">
-                        <label for="ordenar" class="form-label fw-semibold">Ordenar por</label>
-                        <select name="ordenar" id="ordenar" class="form-select form-control-custom {% if request.GET.ordenar %}filtro-activo{% endif %}">
-                            <option value="fecha_creacion" {% if request.GET.ordenar == 'fecha_creacion' %}selected{% endif %}>Fecha Creación</option>
-                            <option value="fecha_ultima_actualizacion" {% if request.GET.ordenar == 'fecha_ultima_actualizacion' %}selected{% endif %}>Última Actualización</option>
-                            <option value="codigo" {% if request.GET.ordenar == 'codigo' %}selected{% endif %}>Código</option>
-                            <option value="etapa" {% if request.GET.ordenar == 'etapa' %}selected{% endif %}>Etapa</option>
-                        </select>
-                </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- Leyenda de colores de SLA Mejorada -->
-    <div class="sla-legend-card mb-4">
-        <div class="sla-legend-header">
-            <i class="fas fa-info-circle me-2"></i>
-            <span>Leyenda de Estados SLA</span>
-        </div>
-        <div class="sla-legend-items">
-            <div class="sla-legend-item sla-success">
-                <div class="sla-dot"></div>
-                <span>En tiempo</span>
-            </div>
-            <div class="sla-legend-item sla-warning">
-                <div class="sla-dot"></div>
-                <span>Por vencer</span>
-            </div>
-            <div class="sla-legend-item sla-danger">
-                <div class="sla-dot"></div>
-                <span>Vencido</span>
-            </div>
-        </div>
-    </div>
+    <!-- Leyenda SLA Compacta -->
+    <small class="text-muted mb-2 d-block" style="font-size: 0.7rem;">
+        <i class="fas fa-info-circle me-1"></i>Leyenda SLA:
+        <i class="fas fa-circle text-success me-1 ms-2" style="font-size: 0.5rem;"></i>En tiempo
+        <i class="fas fa-circle text-warning me-1 ms-2" style="font-size: 0.5rem;"></i>Por vencer
+        <i class="fas fa-circle text-danger me-1 ms-2" style="font-size: 0.5rem;"></i>Vencido
+    </small>
 
     <!-- Vista Móvil Mejorada: Solo visible en pantallas pequeñas -->
     <div class="vista-movil d-block d-sm-none">
@@ -439,185 +340,232 @@
         {% endif %}
     </div>
 
-    <!-- Tabla Desktop: Solo visible en pantallas medianas y grandes -->
+    <!-- Tabla Desktop Mejorada con DataTable -->
     <div class="vista-desktop d-none d-sm-block">
-        <!-- Vista Tabla Mejorada -->
         <div class="card card-custom">
-            <div class="card-header-custom d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-table me-2"></i>
-                    Solicitudes en Tabla
-                </h5>
-                <div class="d-flex gap-2 align-items-center">
-                    <div class="d-flex align-items-center">
-                        <label for="busquedaTabla" class="form-label mb-0 me-2 small fw-semibold text-white">Buscar:</label>
-                        <input type="text" id="busquedaTabla" class="form-control form-control-sm" 
-                               placeholder="Código, cliente, usuario..." 
-                               style="width: 250px;"
-                               value="{{ filtros.busqueda }}">
+            <!-- Filtros Responsivos Mejorados -->
+            <div class="card-header-custom bg-light" style="border-bottom: 1px solid #dee2e6;">
+                <div class="row g-2 align-items-center">
+                    <!-- Primera fila: Filtros principales -->
+                    <div class="col-12 col-lg-8">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroCliente" class="form-select form-select-sm">
+                                    <option value="">Todos los clientes</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroProducto" class="form-select form-select-sm">
+                                    <option value="">Todos los productos</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroEstado" class="form-select form-select-sm">
+                                    <option value="">Todos los estados</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroAsignado" class="form-select form-select-sm">
+                                    <option value="">Todas las asignaciones</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroSLA" class="form-select form-select-sm">
+                                    <option value="">Todos los SLA</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-4 col-lg-2">
+                                <select id="filtroPrioridad" class="form-select form-select-sm">
+                                    <option value="">Todas las prioridades</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-success" id="exportarExcel" title="Exportar a Excel">
-                        <i class="fas fa-file-excel"></i>
-                    </button>
+                    
+                    <!-- Segunda fila: Búsqueda y controles -->
+                    <div class="col-12 col-lg-4">
+                        <div class="d-flex gap-2 align-items-center justify-content-lg-end">
+                            <input type="text" id="busquedaGlobal" class="form-control form-control-sm flex-grow-1" 
+                                   placeholder="Buscar..." 
+                                   style="max-width: 200px;">
+                            <button type="button" class="btn btn-sm btn-outline-success" id="exportarExcel" title="Exportar a Excel">
+                                <i class="fas fa-file-excel"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" id="limpiarFiltros" title="Limpiar filtros">
+                                <i class="fas fa-filter-circle-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover workflow-table" id="tablaSolicitudes">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="fw-bold">Nº</th>
-                                <th class="fw-bold">Cliente</th>
-                                <th class="fw-bold">Cédula</th>
-                                <th class="fw-bold">Producto</th>
-                                <th class="fw-bold">Monto Solicitado</th>
-                                <th class="fw-bold">Propietario</th>
-                                <th class="fw-bold">Asignado a</th>
-                                <th class="fw-bold">Etapa</th>
-                                <th class="fw-bold">Estado Actual</th>
-                                <th class="fw-bold">Fecha Inicio</th>
-                                <th class="fw-bold">Vencimiento de SLA</th>
-                                <th class="fw-bold">SLA Restante</th>
-                                <th class="fw-bold">Alertas</th>
-                                <th class="fw-bold">Etiquetas Oficial</th>
-                                <th class="fw-bold">Prioridad</th>
-                                <th class="fw-bold">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for s in solicitudes_tabla %}
-                            <tr class="align-middle table-row-hover {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}">
-                                <td class="text-dark">
-                                    {% if s.sla_color == 'text-danger' %}
-                                        <span class="me-1" title="Vencido"><i class="fas fa-circle text-danger"></i></span>
-                                    {% elif s.sla_color == 'text-warning' %}
-                                        <span class="me-1" title="Por vencer"><i class="fas fa-circle text-warning"></i></span>
-                                    {% elif s.sla_color == 'text-success' %}
-                                        <span class="me-1" title="En tiempo"><i class="fas fa-circle text-success"></i></span>
-                                    {% endif %}
-                                    {{ s.codigo }}
-                                </td>
-                                <td class="text-dark">{{ s.cliente }}</td>
-                                <td class="text-dark">{{ s.cedula }}</td>
-                                <td class="text-dark">{{ s.producto }}</td>
-                                <td><span class="fw-bold text-success">{{ s.monto }}</span></td>
-                                <td class="text-dark"><i class="fas fa-user me-1 text-muted"></i> {{ s.propietario }}</td>
-                                <td>
-                                    {% if s.asignado_a != 'Sin asignar' %}
-                                        <i class="fas fa-user me-1 text-success"></i> <span class="text-dark">{{ s.asignado_a }}</span>
-                                    {% else %}
-                                        <i class="fas fa-user-slash me-1 text-muted"></i> <span class="text-muted">{{ s.asignado_a }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if s.etapa %}
-                                    <span class="badge {{ s.etapa_color }} bg-opacity-25 text-dark text-start" style="text-align: left;">
-                                        {{ s.etapa|break_words|safe }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ s.estado_color }}">{{ s.estado_actual }}</span>
-                                </td>
-                                <td class="text-dark">{{ s.fecha_inicio }}</td>
-                                <td class="text-dark">{{ s.vencimiento_sla }}</td>
-                                <td>
-                                    <div class="text-center">
-                                        <div class="{{ s.sla_color }} fw-bold" title="Tiempo restante para cumplir el SLA">
-                                            {{ s.sla_restante }}
-                                        </div>
-                                        <div class="mt-1">
-                                            {% if s.sla_color == 'text-success' %}
-                                                <span class="text-success fw-semibold" style="font-size: 0.9rem;">En tiempo</span>
+            <div class="card-body p-0" style="border: none;">
+                <div class="table-container" style="height: 80vh; overflow: hidden; border: none;">
+                    <div class="table-responsive" style="height: 100%; border: none;">
+                        <table class="table table-hover workflow-table mb-0" id="tablaSolicitudes" style="border: none;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="fw-bold" style="width: 80px;">Nº</th>
+                                    <th class="fw-bold" style="width: 200px;">Cliente</th>
+                                    <th class="fw-bold" style="width: 150px;">Producto</th>
+                                    <th class="fw-bold" style="width: 120px;">Monto</th>
+                                    <th class="fw-bold" style="width: 150px;">Propietario</th>
+                                    <th class="fw-bold" style="width: 200px;">Asignado a</th>
+                                    <th class="fw-bold" style="width: 120px;">Etapa</th>
+                                    <th class="fw-bold" style="width: 100px;">Estado</th>
+                                    <th class="fw-bold" style="width: 200px;">Fecha<br>SLA</th>
+                                    <th class="fw-bold" style="width: 120px;">SLA</th>
+                                    <th class="fw-bold" style="width: 120px;">Etiquetas</th>
+                                    <th class="fw-bold" style="width: 100px;">Prioridad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in solicitudes_tabla %}
+                                <tr class="align-middle table-row-hover {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
+                                    data-solicitud-id="{{ s.id }}"
+                                    data-cliente="{{ s.cliente|default:'Sin cliente' }}"
+                                    data-producto="{{ s.producto|default:'Sin producto' }}"
+                                    data-estado="{{ s.estado_actual|default:'Sin estado' }}"
+                                    data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
+                                    data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
+                                    data-prioridad="{{ s.prioridad|default:'Sin prioridad' }}">
+                                    <td class="text-dark">
+                                        <div class="d-flex align-items-center">
+                                            <!-- Iconos de alerta -->
+                                            {% for alerta in s.alertas %}
+                                            <i class="fas {{ alerta.icon }} text-{{ alerta.color }} me-1" title="{{ alerta.tooltip }}" style="font-size: 0.8rem;"></i>
+                                            {% endfor %}
+                                            <!-- Indicador SLA -->
+                                            {% if s.sla_color == 'text-danger' %}
+                                                <i class="fas fa-circle text-danger me-1" title="Vencido" style="font-size: 0.6rem;"></i>
                                             {% elif s.sla_color == 'text-warning' %}
-                                                <span class="text-warning fw-semibold" style="font-size: 0.9rem;">Por vencer</span>
-                                            {% elif s.sla_color == 'text-danger' %}
-                                                <span class="text-danger fw-semibold" style="font-size: 0.9rem;">Vencido</span>
-                                            {% else %}
-                                                <span class="text-secondary fw-semibold" style="font-size: 0.9rem;">N/A</span>
+                                                <i class="fas fa-circle text-warning me-1" title="Por vencer" style="font-size: 0.6rem;"></i>
+                                            {% elif s.sla_color == 'text-success' %}
+                                                <i class="fas fa-circle text-success me-1" title="En tiempo" style="font-size: 0.6rem;"></i>
                                             {% endif %}
+                                            <!-- Número clickeable -->
+                                            <a href="#" class="text-decoration-none fw-bold solicitud-link" 
+                                               onclick="mostrarModalSolicitud({{ s.id }})" 
+                                               title="Ver detalles">
+                                                {{ s.codigo }}
+                                            </a>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {% for alerta in s.alertas %}
-                                    <i class="fas {{ alerta.icon }} text-{{ alerta.color }}" title="{{ alerta.tooltip }}"></i>
-                                    {% endfor %}
-                                </td>
-                                <td>
-                                    <!-- Campo desplegable de etiquetas -->
-                                    <select class="etiquetas-select form-control form-control-sm" 
-                                            data-id="{{ s.id }}" 
-                                            style="min-width: 180px;">
-                                        <option value="">Seleccionar etiqueta</option>
-                                        <option value="no_responde" {% if s.etiquetas_oficial == 'no_responde' %}selected{% endif %}>📞 No responde</option>
-                                        <option value="cita_agendada" {% if s.etiquetas_oficial == 'cita_agendada' %}selected{% endif %}>🗓️ Cita agendada</option>
-                                        <option value="doc_completo" {% if s.etiquetas_oficial == 'doc_completo' %}selected{% endif %}>✅ Documentos completos</option>
-                                        <option value="falta_carta" {% if s.etiquetas_oficial == 'falta_carta' %}selected{% endif %}>📎 Falta carta trabajo</option>
-                                        <option value="seguimiento_48h" {% if s.etiquetas_oficial == 'seguimiento_48h' %}selected{% endif %}>🔄 Seguimiento en 48h</option>
-                                        <option value="whatsapp_activo" {% if s.etiquetas_oficial == 'whatsapp_activo' %}selected{% endif %}>💬 WhatsApp activo</option>
-                                        <option value="cliente_indeciso" {% if s.etiquetas_oficial == 'cliente_indeciso' %}selected{% endif %}>⚠️ Cliente indeciso</option>
-                                        <option value="cliente_caliente" {% if s.etiquetas_oficial == 'cliente_caliente' %}selected{% endif %}>🚀 Cliente caliente</option>
-                                        <option value="esperando_confirm" {% if s.etiquetas_oficial == 'esperando_confirm' %}selected{% endif %}>🕐 Esperando confirmación</option>
-                                        <option value="enviado_credito" {% if s.etiquetas_oficial == 'enviado_credito' %}selected{% endif %}>🧾 Enviado a crédito</option>
-                                        <option value="en_validacion" {% if s.etiquetas_oficial == 'en_validacion' %}selected{% endif %}>🔒 En validación</option>
-                                        <option value="caso_descartado" {% if s.etiquetas_oficial == 'caso_descartado' %}selected{% endif %}>❌ Caso descartado</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <select class="prioridad-select border rounded px-2 py-1 text-xs w-full"
-                                            data-id="{{ s.id }}"
-                                            style="background-color:
-                                              {% if s.prioridad == 'Alta' %}#fee2e2
-                                              {% elif s.prioridad == 'Media' %}#fef9c3
-                                              {% elif s.prioridad == 'Baja' %}#dcfce7
-                                              {% else %}white{% endif %};
-                                              color:
-                                              {% if s.prioridad == 'Alta' %}#b91c1c
-                                              {% elif s.prioridad == 'Media' %}#b45309
-                                              {% elif s.prioridad == 'Baja' %}#166534
-                                              {% else %}#333{% endif %};">
-                                      <option value="">-</option>
-                                      {% for prioridad in prioridades_posibles %}
-                                        <option value="{{ prioridad }}" {% if s.prioridad == prioridad %}selected{% endif %}>{{ prioridad }}</option>
-                                      {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        {% if s.acciones.ver %}
-                                        <a href="{% url 'workflow:detalle_solicitud' s.id %}" class="btn btn-outline-pacifico" title="Ver Detalle">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
+                                    </td>
+                                    <td class="text-dark">
+                                        <div>
+                                            <div class="fw-semibold">{{ s.cliente }}</div>
+                                            <small class="text-muted">{{ s.cedula }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-dark">{{ s.producto }}</td>
+                                    <td><span class="fw-bold text-success">{{ s.monto }}</span></td>
+                                    <td class="text-dark"><i class="fas fa-user me-1 text-muted"></i> {{ s.propietario }}</td>
+                                    <td style="max-width: 200px;">
+                                        {% if s.asignado_a != 'Sin asignar' %}
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user me-1 text-success" style="min-width: 12px;"></i> 
+                                                <span class="text-dark" style="word-wrap: break-word; line-height: 1.2;">{{ s.asignado_a }}</span>
+                                            </div>
+                                        {% else %}
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user-slash me-1 text-muted" style="min-width: 12px;"></i> 
+                                                <span class="text-muted" style="word-wrap: break-word; line-height: 1.2;">{{ s.asignado_a }}</span>
+                                            </div>
                                         {% endif %}
-                                        {% if s.acciones.cambiar_etapa %}
-                                        <a href="{% url 'workflow:transicion_solicitud' s.id %}" class="btn btn-outline-secondary" title="Cambiar Etapa">
-                                            <i class="fas fa-arrow-right"></i>
-                                        </a>
-                                        {% endif %}
-                                        {% if s.acciones.exportar %}
-                                        <a href="#" class="btn btn-outline-success" title="Exportar">
-                                            <i class="fas fa-upload"></i>
-                                        </a>
-                                        {% endif %}
-                                        {% if s.acciones.eliminar %}
-                                        <button type="button" class="btn btn-outline-danger" title="Eliminar" onclick="eliminarSolicitud({{ s.id }})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="14" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">No hay solicitudes para mostrar</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm etapa-select" 
+                                                data-solicitud-id="{{ s.id }}" 
+                                                data-etapa-actual="{{ s.etapa_actual.id|default:'' }}"
+                                                style="min-width: 120px;">
+                                            {% if not s.etapa %}
+                                                <option value="" selected>Sin etapa</option>
+                                            {% endif %}
+                                            {% for etapa in pipeline.etapas.all %}
+                                                <option value="{{ etapa.id }}" 
+                                                        {% if s.etapa == etapa.nombre %}selected{% endif %}>
+                                                    {{ etapa.nombre }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ s.estado_color }}">{{ s.estado_actual }}</span>
+                                    </td>
+                                    <td class="text-dark" style="max-width: 200px;">
+                                        <div style="line-height: 1.3;">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <small class="text-muted me-1" style="min-width: 25px;">Ini:</small> 
+                                                <span style="font-size: 0.85rem;">{{ s.fecha_inicio|date:"d/m" }}</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <small class="text-muted me-1" style="min-width: 25px;">Ven:</small> 
+                                                <span style="font-size: 0.85rem;">{% if s.vencimiento_sla %}{{ s.vencimiento_sla|date:"d/m" }}{% else %}N/A{% endif %}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-center">
+                                            <div class="{{ s.sla_color }} fw-bold" title="Tiempo restante">
+                                                {{ s.sla_restante }}
+                                            </div>
+                                            <small class="text-muted">
+                                                {% if s.sla_color == 'text-success' %}En tiempo
+                                                {% elif s.sla_color == 'text-warning' %}Por vencer
+                                                {% elif s.sla_color == 'text-danger' %}Vencido
+                                                {% else %}N/A{% endif %}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <select class="etiquetas-select form-control form-control-sm" 
+                                                data-id="{{ s.id }}" 
+                                                style="min-width: 115px; width: 115px;">
+                                            <option value="">Seleccionar etiqueta</option>
+                                            <option value="no_responde" {% if s.etiquetas_oficial == 'no_responde' %}selected{% endif %}>📞 No responde</option>
+                                            <option value="cita_agendada" {% if s.etiquetas_oficial == 'cita_agendada' %}selected{% endif %}>🗓️ Cita agendada</option>
+                                            <option value="doc_completo" {% if s.etiquetas_oficial == 'doc_completo' %}selected{% endif %}>✅ Documentos completos</option>
+                                            <option value="falta_carta" {% if s.etiquetas_oficial == 'falta_carta' %}selected{% endif %}>📎 Falta carta trabajo</option>
+                                            <option value="seguimiento_48h" {% if s.etiquetas_oficial == 'seguimiento_48h' %}selected{% endif %}>🔄 Seguimiento en 48h</option>
+                                            <option value="whatsapp_activo" {% if s.etiquetas_oficial == 'whatsapp_activo' %}selected{% endif %}>💬 WhatsApp activo</option>
+                                            <option value="cliente_indeciso" {% if s.etiquetas_oficial == 'cliente_indeciso' %}selected{% endif %}>⚠️ Cliente indeciso</option>
+                                            <option value="cliente_caliente" {% if s.etiquetas_oficial == 'cliente_caliente' %}selected{% endif %}>🚀 Cliente caliente</option>
+                                            <option value="esperando_confirm" {% if s.etiquetas_oficial == 'esperando_confirm' %}selected{% endif %}>🕐 Esperando confirmación</option>
+                                            <option value="enviado_credito" {% if s.etiquetas_oficial == 'enviado_credito' %}selected{% endif %}>🧾 Enviado a crédito</option>
+                                            <option value="en_validacion" {% if s.etiquetas_oficial == 'en_validacion' %}selected{% endif %}>🔒 En validación</option>
+                                            <option value="caso_descartado" {% if s.etiquetas_oficial == 'caso_descartado' %}selected{% endif %}>❌ Caso descartado</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="prioridad-select border rounded px-2 py-1 text-xs w-full"
+                                                data-id="{{ s.id }}"
+                                                style="background-color:
+                                                  {% if s.prioridad == 'Alta' %}#fee2e2
+                                                  {% elif s.prioridad == 'Media' %}#fef9c3
+                                                  {% elif s.prioridad == 'Baja' %}#dcfce7
+                                                  {% else %}white{% endif %};
+                                                  color:
+                                                  {% if s.prioridad == 'Alta' %}#b91c1c
+                                                  {% elif s.prioridad == 'Media' %}#b45309
+                                                  {% elif s.prioridad == 'Baja' %}#166534
+                                                  {% else %}#333{% endif %};">
+                                          <option value="">-</option>
+                                          {% for prioridad in prioridades_posibles %}
+                                            <option value="{{ prioridad }}" {% if s.prioridad == prioridad %}selected{% endif %}>{{ prioridad }}</option>
+                                          {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="12" class="text-center py-4">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No hay solicitudes para mostrar</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <!-- Paginación -->
                 {% if page_obj.has_other_pages %}
@@ -652,72 +600,183 @@
     </div>
 
     {% else %}
-    <!-- Vista Kanban -->
-    <div class="kanban-container">
-        <div class="row">
-            {% for etapa in etapas_kanban %}
-            <div class="col-md-3 mb-4">
-                <div class="card card-custom h-100">
-                    <div class="card-header-custom">
-                        <h6 class="mb-0">
-                            <i class="fas fa-list me-2"></i>
-                            {{ etapa.nombre }}
-                            <span class="badge badge-pacifico float-end">{{ solicitudes_por_etapa|get_etapa_count:etapa }}</span>
-                        </h6>
+    <!-- Vista Kanban Mejorada -->
+    
+    <!-- Filtros Compactos para Kanban -->
+    <div class="card card-custom mb-2">
+        <div class="card-body py-2">
+            <div class="row g-1 align-items-center">
+                <div class="col-6 col-md-2">
+                    <select id="kanbanFiltroCliente" class="form-select form-select-sm">
+                        <option value="">Todos los clientes</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="kanbanFiltroEstado" class="form-select form-select-sm">
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="kanbanFiltroAsignado" class="form-select form-select-sm">
+                        <option value="">Todas las asignaciones</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="kanbanFiltroSLA" class="form-select form-select-sm">
+                        <option value="">Todos los SLA</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <input type="text" id="kanbanBusquedaGlobal" class="form-control form-control-sm" 
+                           placeholder="Buscar...">
+                </div>
+                <div class="col-12 col-md-1">
+                    <button type="button" class="btn btn-sm btn-outline-info w-100" id="kanbanLimpiarFiltros">
+                        <i class="fas fa-filter-circle-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenedor Kanban con scroll horizontal -->
+    <div class="kanban-container" style="height: calc(100vh - 280px); overflow-y: hidden; min-height: 700px;">
+        <div class="kanban-board d-flex" style="overflow-x: auto; gap: 0.75rem; padding-bottom: 1rem;">
+            {% for etapa in pipeline.etapas.all %}
+            <div class="kanban-column" style="min-width: 320px; width: 320px; flex-shrink: 0;">
+                <div class="card shadow h-100" style="border: 2px solid #e9ecef; border-radius: 12px; background: #ffffff;">
+                    <!-- Header de etapa con búsqueda -->
+                    <div class="card-header text-white" style="background: #28a745; border-radius: 12px 12px 0 0; border: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 fw-bold text-white">
+                                <i class="fas fa-list-ul me-2 text-white"></i>
+                                {{ etapa.nombre }}
+                            </h6>
+                            <span class="badge bg-white text-success fw-bold" id="count-etapa-{{ etapa.id }}">
+                                {{ solicitudes_por_etapa|get_item:etapa.id|length }}
+                            </span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm etapa-search" 
+                               placeholder="Buscar en {{ etapa.nombre }}..." 
+                               data-etapa-id="{{ etapa.id }}"
+                               style="background: rgba(255,255,255,0.9); border: none;">
                     </div>
-                    <div class="card-body kanban-column">
-                        {% for solicitud in solicitudes_por_etapa|get_etapa_solicitudes:etapa %}
-                        <div class="kanban-card mb-3" draggable="true" data-solicitud-id="{{ solicitud.id }}">
-                            <div class="card">
-                                <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="mb-0">
-                                            <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" class="text-decoration-none">
-                                                {{ solicitud.codigo }}
-                                            </a>
+                    
+                    <!-- Cuerpo de etapa con scroll -->
+                    <div class="card-body p-3 kanban-column-body" 
+                         style="height: calc(100vh - 380px); overflow-y: auto; background: #f8f9fa;"
+                         data-etapa-id="{{ etapa.id }}">
+                        
+                        {% for s in solicitudes_por_etapa|get_item:etapa.id %}
+                        <div class="kanban-card mb-3" 
+                             draggable="true" 
+                             data-solicitud-id="{{ s.id }}"
+                             data-etapa-id="{{ etapa.id }}"
+                             data-cliente="{{ s.cliente|default:'Sin cliente' }}"
+                             data-estado="{{ s.estado_actual|default:'Sin estado' }}"
+                             data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
+                             data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
+                             data-search="{{ s.codigo|lower }} {{ s.cliente|lower }}"
+                             data-codigo="{{ s.codigo }}"
+                             data-monto="{{ s.monto }}"
+                             data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
+                             data-sla-texto="{{ s.sla_restante }}"
+                             style="cursor: grab;">
+                             
+                            <div class="card shadow-sm border-0" 
+                                 style="border-left: 4px solid {% if s.sla_color == 'text-danger' %}#dc3545{% elif s.sla_color == 'text-warning' %}#ffc107{% elif s.sla_color == 'text-success' %}#198754{% else %}#6c757d{% endif %} !important; 
+                                        height: 110px; 
+                                        border-radius: 6px;
+                                        transition: all 0.3s ease;
+                                        background: white;
+                                        cursor: pointer;"
+                                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
+                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
+                                 onclick="mostrarModalSolicitud({{ s.id }})">
+                                <div class="card-body p-2" style="height: 100%;">
+                                    <!-- Header compacto -->
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0" style="font-size: 0.9rem;">
+                                            <span class="text-decoration-none fw-bold text-primary solicitud-link-kanban" 
+                                               title="Ver detalles">
+                                                {{ s.codigo }}
+                                            </span>
                                         </h6>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-                                                <i class="fas fa-ellipsis-v"></i>
+                                        
+                                        <!-- Dropdown compacto mejorado -->
+                                        <div class="dropdown" onclick="event.stopPropagation()">
+                                            <button class="btn btn-sm btn-outline-secondary p-1" type="button" data-bs-toggle="dropdown"
+                                                    style="border-radius: 3px; font-size: 0.6rem; padding: 2px 4px !important; z-index: 1051;">
+                                                <i class="fas fa-exchange-alt"></i>
                                             </button>
-                                            <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="{% url 'workflow:detalle_solicitud' solicitud.id %}">
-                                                    <i class="fas fa-eye me-2"></i>Ver Detalle
-                                                </a></li>
-                                                {% if not solicitud.asignada_a %}
-                                                <li><a class="dropdown-item" href="{% url 'workflow:auto_asignar_solicitud' solicitud.id %}">
-                                                    <i class="fas fa-user-plus me-2"></i>Auto Asignar
-                                                </a></li>
-                                                {% endif %}
+                                            <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1052; position: fixed;">
+                                                {% for etapa_dest in pipeline.etapas.all %}
+                                                <li>
+                                                    <a class="dropdown-item cambiar-etapa-kanban" 
+                                                       href="#"
+                                                       data-solicitud-id="{{ s.id }}"
+                                                       data-etapa-id="{{ etapa_dest.id }}"
+                                                       data-etapa-nombre="{{ etapa_dest.nombre }}">
+                                                        {{ etapa_dest.nombre }}
+                                                        {% if s.etapa == etapa_dest.nombre %}
+                                                        <i class="fas fa-check text-success ms-1"></i>
+                                                        {% endif %}
+                                                    </a>
+                                                </li>
+                                                {% endfor %}
                                             </ul>
                                         </div>
                                     </div>
                                     
-                                    <div class="mb-2">
-                                        <small class="text-muted">Creado por:</small><br>
-                                        <span class="small">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</span>
-                                    </div>
-                                    
-                                    {% if solicitud.asignada_a %}
-                                    <div class="mb-2">
-                                        <small class="text-muted">Asignado a:</small><br>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm me-1">
-                                                <img src="{{ solicitud.asignada_a.profile.avatar.url|default:'/static/images/default-avatar.png' }}" 
-                                                     class="rounded-circle" width="16" height="16" alt="Avatar">
+                                    <!-- Contenido en 2 columnas -->
+                                    <div class="row g-1" style="height: calc(100% - 35px);">
+                                        <!-- Columna izquierda -->
+                                        <div class="col-7">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <i class="fas fa-user text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                                <span style="font-size: 0.75rem; color: #495057;">{{ s.cliente|truncatechars:12 }}</span>
                                             </div>
-                                            <span class="small">{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}</span>
+                                            
+                                            <div class="d-flex align-items-center mb-1">
+                                                <i class="fas fa-dollar-sign text-success me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto }}</span>
+                                            </div>
+                                            
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user-check text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                                <span style="font-size: 0.7rem; color: #6c757d;">
+                                                    {% if s.asignado_a != 'Sin asignar' %}
+                                                        {{ s.asignado_a|truncatechars:10 }}
+                                                    {% else %}
+                                                        <em>Sin asignar</em>
+                                                    {% endif %}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
-                                        {% if solicitud|is_vencida %}
-                                        <span class="badge bg-danger">Vencida</span>
-                                        {% else %}
-                                        <span class="badge bg-success">En Proceso</span>
-                                        {% endif %}
+                                        
+                                        <!-- Columna derecha -->
+                                        <div class="col-5">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <i class="fas fa-clock text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                                <span class="{{ s.sla_color }} fw-bold" style="font-size: 0.7rem;">{{ s.sla_restante }}</span>
+                                            </div>
+                                            
+                                            <div class="mb-1">
+                                                <span class="badge bg-{{ s.estado_color }}" style="font-size: 0.6rem; padding: 2px 5px;">{{ s.estado_actual }}</span>
+                                            </div>
+                                            
+                                            <div class="d-flex align-items-center">
+                                                {% if s.prioridad %}
+                                                <span class="badge" 
+                                                      style="font-size: 0.55rem; padding: 1px 4px;
+                                                             background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %};
+                                                             color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
+                                                    {{ s.prioridad }}
+                                                </span>
+                                                {% endif %}
+                                                <small class="text-muted ms-auto" style="font-size: 0.65rem;">{{ s.fecha_inicio }}</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -728,50 +787,16 @@
                             <p class="text-muted small">Sin solicitudes</p>
                         </div>
                         {% endfor %}
+                        
+                        <!-- Mensaje cuando no hay solicitudes -->
+                        <div class="no-solicitudes text-center py-4" style="display: none;">
+                            <i class="fas fa-inbox text-muted mb-2"></i>
+                            <p class="text-muted small">Sin solicitudes</p>
+                        </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
-
-            <!-- Columna de Completadas -->
-            {% if solicitudes_por_etapa.completadas %}
-            <div class="col-md-3 mb-4">
-                <div class="card card-custom h-100">
-                    <div class="card-header-custom">
-                        <h6 class="mb-0">
-                            <i class="fas fa-check-circle me-2 text-success"></i>
-                            Completadas
-                            <span class="badge bg-success float-end">{{ solicitudes_por_etapa.completadas.count }}</span>
-                        </h6>
-                    </div>
-                    <div class="card-body kanban-column">
-                        {% for solicitud in solicitudes_por_etapa.completadas %}
-                        <div class="kanban-card mb-3" draggable="true" data-solicitud-id="{{ solicitud.id }}">
-                            <div class="card border-success">
-                                <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="mb-0">
-                                            <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" class="text-decoration-none">
-                                                {{ solicitud.codigo }}
-                                            </a>
-                                        </h6>
-                                        <span class="badge bg-success">Completada</span>
-                                    </div>
-                                    
-                                    <div class="mb-2">
-                                        <small class="text-muted">Creado por:</small><br>
-                                        <span class="small">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</span>
-                                    </div>
-                                    
-                                    <small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -834,6 +859,91 @@
         {% endfor %}
     </div>
     {% endif %}
+    {% endif %}
+</div>
+
+<!-- Modal Mejorado para Detalles de Solicitud -->
+<div class="modal fade" id="modalSolicitud" tabindex="-1" aria-labelledby="modalSolicitudLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="modalSolicitudLabel">
+                    <i class="fas fa-file-alt me-2"></i>
+                    <span id="modalSolicitudCodigo">Detalles de Solicitud</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalSolicitudBody">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Cliente</label>
+                            <p class="mb-0" id="modalCliente">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Cédula</label>
+                            <p class="mb-0" id="modalCedula">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Producto</label>
+                            <p class="mb-0" id="modalProducto">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Monto</label>
+                            <p class="mb-0 fw-bold text-success" id="modalMonto">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Estado</label>
+                            <p class="mb-0" id="modalEstado">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Etapa</label>
+                            <p class="mb-0" id="modalEtapa">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Asignado a</label>
+                            <p class="mb-0" id="modalAsignado">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">SLA</label>
+                            <p class="mb-0" id="modalSLA">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Fecha de Inicio</label>
+                            <p class="mb-0" id="modalFechaInicio">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted">Vencimiento SLA</label>
+                            <p class="mb-0" id="modalVencimiento">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cerrar
+                </button>
+                <a href="#" class="btn btn-primary" id="btnVerDetalle">
+                    <i class="fas fa-eye me-1"></i>Ver Detalle Completo
+                </a>
+                <a href="#" class="btn btn-success" id="btnCambiarEtapa">
+                    <i class="fas fa-arrow-right me-1"></i>Cambiar Etapa
+                </a>
+                <a href="#" class="btn btn-warning" id="btnEditar">
+                    <i class="fas fa-edit me-1"></i>Editar
+                </a>
+                <button type="button" class="btn btn-danger" id="btnEliminar" style="display: none;">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -849,13 +959,13 @@
 
 <script>
 $(document).ready(function() {
-    // Inicializar DataTable con configuración optimizada
+    // Inicializar DataTable con configuración mejorada
     var table = $('#tablaSolicitudes').DataTable({
         paging: true,
         searching: true,
         ordering: true,
-        colResize: true,
         scrollX: true,
+        scrollY: '70vh',
         scrollCollapse: true,
         fixedColumns: {
             left: 1,
@@ -872,118 +982,677 @@ $(document).ready(function() {
             }
         },
         columnDefs: [
-            { orderable: false, targets: -1 },
-            { orderable: false, targets: -2 },
-            { width: '80px', targets: 0 }, // Columna Nº
-            { width: '120px', targets: 1 }, // Cliente
-            { width: '100px', targets: 2 }, // Cédula
-            { width: '120px', targets: 3 }, // Producto
-            { width: '130px', targets: 4 }, // Monto
-            { width: '120px', targets: 5 }, // Propietario
-            { width: '180px', targets: 6 }, // Asignado a
-            { width: '100px', targets: 7 }, // Etapa
-            { width: '100px', targets: 8 }, // Estado
-            { width: '100px', targets: 9 }, // Fecha Inicio
-            { width: '130px', targets: 10 }, // Vencimiento SLA
-            { width: '100px', targets: 11 }, // SLA Restante
-            { width: '80px', targets: 12 }, // Alertas
-            { width: '150px', targets: 13 }, // Acciones
+            { orderable: false, targets: [10, 11] }, // Etiquetas y Prioridad no ordenables
+            { width: '80px', targets: 0 }, // Nº
+            { width: '200px', targets: 1 }, // Cliente
+            { width: '150px', targets: 2 }, // Producto
+            { width: '120px', targets: 3 }, // Monto
+            { width: '150px', targets: 4 }, // Propietario
+            { width: '150px', targets: 5 }, // Asignado a
+            { width: '120px', targets: 6 }, // Etapa
+            { width: '100px', targets: 7 }, // Estado
+            { width: '150px', targets: 8 }, // Fecha SLA
+            { width: '120px', targets: 9 }, // SLA
+            { width: '180px', targets: 10 }, // Etiquetas
+            { width: '100px', targets: 11 }, // Prioridad
         ],
         autoWidth: false,
         pageLength: 25,
         responsive: false,
         deferRender: true,
-        processing: true
+        processing: true,
+        dom: 'rt<"bottom d-flex justify-content-between align-items-center mt-3"<"d-flex align-items-center gap-2"l<"text-muted small"i>>p><"clear">'
     });
 
-    // Mover controles abajo
-    var wrapper = $('.dataTables_wrapper');
-    var length = wrapper.find('.dataTables_length');
-    var paginate = wrapper.find('.dataTables_paginate');
-    if (length.length && paginate.length && wrapper.find('.dt-bottom-controls').length === 0) {
-        var bottomControls = $('<div class="dt-bottom-controls"></div>');
-        length.appendTo(bottomControls);
-        paginate.appendTo(bottomControls);
-        wrapper.append(bottomControls);
-    }
-
-    // Ajustar altura de la columna fija después de la inicialización
-    table.fixedColumns().relayout();
-    
-    // Debug ColResize
-    console.log('ColResize:', typeof $.fn.dataTable.ColResize);
-    console.log('FixedColumns:', typeof $.fn.dataTable.FixedColumns);
-    
-    // Debug: Verificar datos de asignación
-    console.log('Datos de la tabla:', {{ solicitudes_tabla|safe }});
-    
-    // Verificar cada fila para asignación
-    $('#tablaSolicitudes tbody tr').each(function(index) {
-        var asignado = $(this).find('td:eq(6)').text().trim();
-        console.log('Fila', index + 1, 'Asignado a:', asignado);
-    });
-    
-    // Función para aplicar búsqueda avanzada
-    window.aplicarBusqueda = function() {
-        var busqueda = $('#busqueda').val();
-        var prioridad = $('#prioridad').val();
-        
-        // Construir URL con parámetros
-        var url = new URL(window.location);
-        if (busqueda) url.searchParams.set('busqueda', busqueda);
-        if (prioridad) url.searchParams.set('prioridad', prioridad);
-        
-        // Mantener otros filtros existentes
-        url.searchParams.set('pipeline', '{{ pipeline.id }}');
-        url.searchParams.set('view', 'table');
-        
-        window.location.href = url.toString();
-    };
-    
-    // Aplicar búsqueda al presionar Enter
-    $('#busqueda').on('keypress', function(e) {
-        if (e.which === 13) {
-            aplicarBusqueda();
-        }
-    });
-    
-    // Búsqueda personalizada en DataTable
-    $('#busquedaTabla').on('keyup', function() {
-        table.search(this.value).draw();
-    });
-    
-    // Limpiar búsqueda de DataTable
-    $('#busquedaTabla').on('input', function() {
-        if (this.value === '') {
-            table.search('').draw();
-        }
-    });
-    
     // Ocultar el buscador nativo de DataTables
     $('.dataTables_filter').hide();
     
-    // Los filtros ahora funcionan con formularios HTML tradicionales
-    // No se necesita JavaScript adicional para los filtros
-    
-    // Función para mostrar contador de resultados filtrados
-    function mostrarContadorFiltrado(visibles, total) {
-        // Crear o actualizar contador
-        if ($('#contadorFiltrado').length) {
-            $('#contadorFiltrado').remove();
-        }
+    // Configurar filtros dinámicos
+    function configurarFiltros() {
+        console.log('Configurando filtros...');
         
-        if (visibles < total) {
-            $('.card-header-custom h5').after('<small id="contadorFiltrado" class="text-white ms-2">(' + visibles + ' de ' + total + ' resultados)</small>');
-        }
+        // Obtener valores únicos de cada columna
+        var clientes = new Set();
+        var productos = new Set();
+        var estados = new Set();
+        var asignados = new Set();
+        var slas = new Set();
+        var prioridades = new Set();
+        
+        // Usar selector directo para obtener todas las filas
+        $('#tablaSolicitudes tbody tr').each(function() {
+            var $row = $(this);
+            
+            // Extraer datos de los atributos data-*
+            var cliente = $row.attr('data-cliente');
+            var producto = $row.attr('data-producto');
+            var estado = $row.attr('data-estado');
+            var asignado = $row.attr('data-asignado');
+            var sla = $row.attr('data-sla');
+            var prioridad = $row.attr('data-prioridad');
+            
+            console.log('Datos de fila:', { cliente, producto, estado, asignado, sla, prioridad });
+            
+            if (cliente && cliente !== 'Sin cliente') clientes.add(cliente);
+            if (producto && producto !== 'Sin producto') productos.add(producto);
+            if (estado && estado !== 'Sin estado') estados.add(estado);
+            if (asignado && asignado !== 'Sin asignar') asignados.add(asignado);
+            if (sla && sla !== 'sin sla') slas.add(sla);
+            if (prioridad && prioridad !== 'Sin prioridad') prioridades.add(prioridad);
+        });
+        
+        // Poblar filtros
+        poblarFiltro('#filtroCliente', Array.from(clientes));
+        poblarFiltro('#filtroProducto', Array.from(productos));
+        poblarFiltro('#filtroEstado', Array.from(estados));
+        poblarFiltro('#filtroAsignado', Array.from(asignados));
+        poblarFiltro('#filtroSLA', Array.from(slas));
+        poblarFiltro('#filtroPrioridad', Array.from(prioridades));
+        
+        console.log('Filtros configurados:', {
+            clientes: Array.from(clientes),
+            productos: Array.from(productos),
+            estados: Array.from(estados),
+            asignados: Array.from(asignados),
+            slas: Array.from(slas),
+            prioridades: Array.from(prioridades)
+        });
     }
     
-    // Los filtros ahora funcionan con formularios HTML tradicionales
-    // El botón "Limpiar Filtros" es un enlace que recarga la página sin filtros
+    function poblarFiltro(selector, valores) {
+        var $select = $(selector);
+        $select.find('option:not(:first)').remove();
+        
+        valores.sort().forEach(function(valor) {
+            var texto = valor.charAt(0).toUpperCase() + valor.slice(1);
+            $select.append('<option value="' + valor + '">' + texto + '</option>');
+        });
+    }
+    
+    // Configurar filtros al inicializar (después de que la tabla esté lista)
+    setTimeout(function() {
+        configurarFiltros();
+    }, 500);
+    
+    // Aplicar filtros en tiempo real
+    $('#filtroCliente, #filtroProducto, #filtroEstado, #filtroAsignado, #filtroSLA, #filtroPrioridad').on('change', function() {
+        console.log('Filtro cambiado:', $(this).attr('id'), '=', $(this).val());
+        aplicarFiltrosAvanzados();
+    });
+    
+    // Búsqueda global
+    $('#busquedaGlobal').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+    
+    // Limpiar filtros
+    $('#limpiarFiltros').on('click', function() {
+        $('#filtroCliente, #filtroProducto, #filtroEstado, #filtroAsignado, #filtroSLA, #filtroPrioridad').val('');
+        $('#busquedaGlobal').val('');
+        table.search('').draw();
+        aplicarFiltrosAvanzados();
+    });
+    
+    // Manejar cambio de etapa
+    $(document).on('change', '.etapa-select', function() {
+        var $select = $(this);
+        var solicitudId = $select.data('solicitud-id');
+        var etapaActual = $select.data('etapa-actual');
+        var nuevaEtapaId = $select.val();
+        var nombreEtapa = $select.find('option:selected').text();
+        
+        if (nuevaEtapaId === etapaActual.toString()) {
+            return; // No hay cambio
+        }
+        
+        // Confirmar cambio
+        if (!confirm(`¿Estás seguro de cambiar la etapa a "${nombreEtapa}"?`)) {
+            $select.val(etapaActual); // Revertir selección
+            return;
+        }
+        
+        // Deshabilitar select mientras se procesa
+        $select.prop('disabled', true);
+        
+        // Realizar petición AJAX
+        $.ajax({
+            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: JSON.stringify({
+                etapa_id: nuevaEtapaId
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Actualizar data attribute
+                    $select.data('etapa-actual', nuevaEtapaId);
+                    
+                    // Mostrar mensaje de éxito
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(response.mensaje);
+                    } else {
+                        alert('Etapa cambiada exitosamente');
+                    }
+                    
+                    // Opcional: Recargar la fila o toda la tabla
+                    // table.ajax.reload(null, false);
+                } else {
+                    alert('Error: ' + response.error);
+                    $select.val(etapaActual); // Revertir selección
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'Error al cambiar etapa';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {}
+                
+                alert(errorMsg);
+                $select.val(etapaActual); // Revertir selección
+            },
+            complete: function() {
+                $select.prop('disabled', false);
+            }
+        });
+    });
+    
+    function aplicarFiltrosAvanzados() {
+        console.log('Aplicando filtros avanzados...');
+        
+        // Limpiar filtros anteriores
+        $.fn.dataTable.ext.search.splice(0, $.fn.dataTable.ext.search.length);
+        
+        var filtros = {
+            cliente: $('#filtroCliente').val(),
+            producto: $('#filtroProducto').val(),
+            estado: $('#filtroEstado').val(),
+            asignado: $('#filtroAsignado').val(),
+            sla: $('#filtroSLA').val(),
+            prioridad: $('#filtroPrioridad').val()
+        };
+        
+        console.log('Filtros activos:', filtros);
+        
+        // Solo aplicar filtros si hay valores seleccionados
+        var hayFiltros = Object.values(filtros).some(valor => valor !== '');
+        
+        if (hayFiltros) {
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                // Verificar que estamos en la tabla correcta
+                if (settings.nTable.id !== 'tablaSolicitudes') {
+                    return true;
+                }
+                
+                // Obtener la fila del DOM usando el API de DataTables
+                var row = table.row(dataIndex);
+                if (!row.node()) {
+                    return true;
+                }
+                
+                var $row = $(row.node());
+                var match = true;
+                
+                if (filtros.cliente) {
+                    var dataCliente = $row.attr('data-cliente');
+                    match = match && (dataCliente === filtros.cliente);
+                    console.log('Cliente:', dataCliente, '===', filtros.cliente, '?', match);
+                }
+                if (filtros.producto) {
+                    var dataProducto = $row.attr('data-producto');
+                    match = match && (dataProducto === filtros.producto);
+                    console.log('Producto:', dataProducto, '===', filtros.producto, '?', match);
+                }
+                if (filtros.estado) {
+                    var dataEstado = $row.attr('data-estado');
+                    match = match && (dataEstado === filtros.estado);
+                    console.log('Estado:', dataEstado, '===', filtros.estado, '?', match);
+                }
+                if (filtros.asignado) {
+                    var dataAsignado = $row.attr('data-asignado');
+                    match = match && (dataAsignado === filtros.asignado);
+                    console.log('Asignado:', dataAsignado, '===', filtros.asignado, '?', match);
+                }
+                if (filtros.sla) {
+                    var dataSla = $row.attr('data-sla');
+                    match = match && (dataSla === filtros.sla);
+                    console.log('SLA:', dataSla, '===', filtros.sla, '?', match);
+                }
+                if (filtros.prioridad) {
+                    var dataPrioridad = $row.attr('data-prioridad');
+                    match = match && (dataPrioridad === filtros.prioridad);
+                    console.log('Prioridad:', dataPrioridad, '===', filtros.prioridad, '?', match);
+                }
+                
+                console.log('Fila', dataIndex, 'match final:', match);
+                return match;
+            });
+        }
+        
+        table.draw();
+        console.log('Filtros aplicados, tabla redibujada');
+    }
+    
+    // Función mejorada para mostrar modal de solicitud
+    window.mostrarModalSolicitud = function(solicitudId) {
+        console.log('Abriendo modal para solicitud:', solicitudId);
+        
+        var codigo, cliente, cedula, producto, monto, propietario, asignado, etapa, estado, fechaInicio, vencimiento, sla;
+        
+        // Primero intentar obtener datos de la vista Kanban
+        var $kanbanCard = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        if ($kanbanCard.length > 0) {
+            console.log('Obteniendo datos de tarjeta Kanban');
+            
+            // Obtener datos de la tarjeta Kanban usando atributos data-*
+            codigo = $kanbanCard.attr('data-codigo') || 'Sin código';
+            cliente = $kanbanCard.attr('data-cliente') || 'Sin cliente';
+            cedula = '-'; // No disponible en Kanban
+            producto = '-'; // No disponible en Kanban
+            monto = $kanbanCard.attr('data-monto') || '$ 0';
+            propietario = '-'; // No disponible en Kanban
+            asignado = $kanbanCard.attr('data-asignado') || 'Sin asignar';
+            etapa = $kanbanCard.closest('.kanban-column').find('h6').text().trim();
+            estado = $kanbanCard.attr('data-estado') || 'Sin estado';
+            fechaInicio = $kanbanCard.attr('data-fecha-inicio') || 'Sin fecha';
+            vencimiento = 'N/A'; // No disponible en Kanban
+            sla = $kanbanCard.attr('data-sla-texto') || 'Sin SLA';
+            
+        } else {
+            // Si no es Kanban, obtener datos de la tabla
+            var rowNode = table.row(`[data-solicitud-id="${solicitudId}"]`).node();
+            if (!rowNode) {
+                console.error('No se encontró la fila con data-solicitud-id:', solicitudId);
+                alert('No se encontraron datos de la solicitud');
+                return;
+            }
+            
+            console.log('Obteniendo datos de tabla');
+            
+            // Obtener datos de las celdas de la tabla
+            var $row = $(rowNode);
+            codigo = $row.find('td:eq(0) .solicitud-link').text().trim();
+            cliente = $row.find('td:eq(1) .fw-semibold').text().trim();
+            cedula = $row.find('td:eq(1) small').text().trim();
+            producto = $row.find('td:eq(2)').text().trim();
+            monto = $row.find('td:eq(3) .text-success').text().trim();
+            propietario = $row.find('td:eq(4)').text().trim().replace('👤', '').trim();
+            asignado = $row.find('td:eq(5)').text().trim();
+            etapa = $row.find('td:eq(6) .etapa-select option:selected').text().trim();
+            estado = $row.find('td:eq(7) .badge').text().trim();
+            fechaInicio = $row.find('td:eq(8) div:first').text().trim().replace('Ini:', '').trim();
+            vencimiento = $row.find('td:eq(8) div:last').text().trim().replace('Ven:', '').trim();
+            sla = $row.find('td:eq(9) .fw-bold').text().trim();
+        }
+        
+        // Poblar modal con los datos obtenidos
+        $('#modalSolicitudCodigo').text(codigo);
+        $('#modalCliente').text(cliente);
+        $('#modalCedula').text(cedula);
+        $('#modalProducto').text(producto);
+        $('#modalMonto').text(monto);
+        $('#modalEstado').text(estado);
+        $('#modalEtapa').text(etapa || 'Sin etapa');
+        $('#modalAsignado').text(asignado);
+        $('#modalSLA').text(sla);
+        $('#modalFechaInicio').text(fechaInicio);
+        $('#modalVencimiento').text(vencimiento);
+        
+        // Configurar botones de acción
+        $('#btnVerDetalle').attr('href', `/workflow/solicitudes/${solicitudId}/detalle/`);
+        $('#btnCambiarEtapa').attr('href', `/workflow/solicitudes/${solicitudId}/transicion/`);
+        $('#btnEditar').attr('href', `/workflow/solicitudes/${solicitudId}/editar/`);
+        
+        // Mostrar modal
+        var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
+        modal.show();
+    };
+    
+    // Función para cambiar entre vistas
+    window.cambiarVista = function(vista) {
+        console.log('Cambiando a vista:', vista);
+        
+        // Obtener parámetros actuales de la URL
+        var urlParams = new URLSearchParams(window.location.search);
+        
+        // Actualizar el parámetro de vista
+        urlParams.set('view', vista);
+        
+        // Mantener el pipeline si existe
+        {% if pipeline %}
+        urlParams.set('pipeline', '{{ pipeline.id }}');
+        {% endif %}
+        
+        // Redirigir con los nuevos parámetros
+        var newUrl = window.location.pathname + '?' + urlParams.toString();
+        window.location.href = newUrl;
+    };
+    
+    // Actualizar estado de botones según vista actual
+    $(document).ready(function() {
+        var currentView = '{{ request.GET.view|default:"table" }}';
+        
+        if (currentView === 'kanban') {
+            $('#btnVistaTabla').removeClass('active btn-light').addClass('btn-outline-light');
+            $('#btnVistaKanban').removeClass('btn-outline-light').addClass('active btn-light');
+        } else {
+            $('#btnVistaTabla').removeClass('btn-outline-light').addClass('active btn-light');
+            $('#btnVistaKanban').removeClass('active btn-light').addClass('btn-outline-light');
+        }
+    });
 });
 </script>
 
 <!-- Mantener estilos PACIFICO para badges y botones -->
 <style>
+/* Estilos para botones de cambio de vista */
+.btn-group .btn {
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-group .btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.btn-group .btn:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-group .btn.active {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Estilos para filtros responsivos */
+@media (max-width: 991.98px) {
+    .card-header-custom .row .col-6:nth-child(odd) {
+        padding-right: 0.5rem;
+    }
+    .card-header-custom .row .col-6:nth-child(even) {
+        padding-left: 0.5rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ribbon-actions .btn-group {
+        flex-direction: column;
+    }
+    .ribbon-actions .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-bottom: 2px;
+    }
+    .ribbon-actions {
+        flex-direction: column;
+        gap: 8px !important;
+    }
+}
+
+/* Mejorar paginación de DataTables */
+.dataTables_wrapper .bottom {
+    background: #f8f9fa;
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+}
+
+.dataTables_length select {
+    min-width: 60px;
+}
+
+.dataTables_info {
+    font-size: 0.875rem;
+}
+
+/* Estilos para Kanban Drag & Drop */
+.kanban-card {
+    cursor: grab;
+    transition: all 0.3s ease;
+}
+
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg) scale(0.95);
+    cursor: grabbing;
+}
+
+.kanban-card.updating {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.drop-zone-active {
+    border: 2px dashed #007bff;
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 8px;
+}
+
+.drop-zone-hover {
+    border-color: #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.1) !important;
+}
+
+.drag-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.drag-notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Estilos para tarjetas Kanban compactas */
+.kanban-column {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.kanban-column-body {
+    background: #f8f9fa;
+}
+
+.kanban-card .card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.kanban-card .card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Responsividad para filtros Kanban */
+@media (max-width: 768px) {
+    .kanban-board {
+        padding-bottom: 20px !important;
+    }
+    
+    .kanban-column {
+        min-width: 280px !important;
+        width: 280px !important;
+    }
+    
+    .card-body.py-2 .row {
+        row-gap: 0.5rem;
+    }
+}
+
+/* Estilos mejorados para contenedores Kanban */
+.kanban-container {
+    min-height: 700px;
+    background: #f1f3f4;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.kanban-board {
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+}
+
+.kanban-column .card {
+    border: 2px solid #e9ecef;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.kanban-column .card-header {
+    background: #28a745;
+    border: none;
+    padding: 1rem;
+    color: white;
+}
+
+.kanban-column-body {
+    background: #fafbfc;
+    padding: 1rem;
+}
+
+/* Estilos para tarjetas individuales mejoradas */
+.kanban-card .card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    background: white;
+    height: 110px;
+}
+
+.kanban-card .card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.kanban-card .card-body {
+    padding: 0.5rem;
+    height: 100%;
+}
+
+/* Scrollbar personalizado para contenedores Kanban */
+.kanban-column-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.kanban-column-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.kanban-column-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.kanban-column-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animaciones mejoradas para drag and drop */
+.kanban-card.dragging {
+    opacity: 0.7;
+    transform: rotate(2deg) scale(1.02);
+    z-index: 1000;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.kanban-column.drag-over {
+    background: #e8f5e8;
+    border: 2px dashed #28a745;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+
+/* Estilos para badges y etiquetas */
+.badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Mejoras visuales adicionales */
+.kanban-card .dropdown-toggle {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    transition: all 0.2s ease;
+}
+
+.kanban-card .dropdown-toggle:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.kanban-card .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 0.5rem 0;
+}
+
+.kanban-card .dropdown-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.kanban-card .dropdown-item:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+/* Responsive mejoras */
+@media (max-width: 768px) {
+    .kanban-container {
+        min-height: 500px;
+        padding: 0.5rem;
+    }
+    
+    .kanban-board {
+        gap: 0.5rem;
+    }
+    
+    .kanban-column {
+        min-width: 300px !important;
+        width: 300px !important;
+    }
+    
+    .kanban-card .card {
+        min-height: 150px;
+    }
+}
+    margin: 0;
+}
+
 /* Responsividad para vistas móvil y desktop */
 .vista-movil {
     display: block !important;
@@ -1142,160 +1811,177 @@ $(document).ready(function() {
     display: none !important;
 }
 
-/* === ESTILOS PARA KPIs MEJORADOS === */
-.kpi-card {
+/* === ESTILOS PARA KPIs COMPACTOS === */
+.kpi-card-compact {
     background: #ffffff;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 156, 60, 0.1);
-    position: relative;
     transition: all 0.3s ease;
     height: 100%;
+    display: flex;
+    align-items: center;
 }
 
-.kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+.kpi-card-compact:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-color: rgba(0, 156, 60, 0.2);
 }
 
-.kpi-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+.kpi-icon-compact {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    float: left;
-    margin-right: 12px;
+    font-size: 12px;
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
-.kpi-content {
-    overflow: hidden;
+.kpi-content-compact {
+    flex: 1;
+    min-width: 0;
 }
 
-.kpi-label {
-    font-size: 0.75rem;
+.kpi-label-compact {
+    font-size: 0.65rem;
     font-weight: 600;
-    margin: 0 0 4px 0;
+    margin: 0 0 2px 0;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     opacity: 0.7;
     line-height: 1;
 }
 
-.kpi-number {
-    font-size: 1.5rem;
-    font-weight: 800;
+.kpi-number-compact {
+    font-size: 1.1rem;
+    font-weight: 700;
     margin: 0;
     line-height: 1;
 }
 
-/* Variantes de KPIs */
-.kpi-total .kpi-icon {
+/* Variantes de KPIs compactos */
+.kpi-total .kpi-icon-compact {
     background: linear-gradient(135deg, #009c3c, #22a650);
     color: white;
 }
 
-.kpi-total .kpi-number {
+.kpi-total .kpi-number-compact {
     color: #009c3c;
 }
 
-.kpi-activas .kpi-icon {
+.kpi-activas .kpi-icon-compact {
     background: linear-gradient(135deg, #0d6efd, #0b5ed7);
     color: white;
 }
 
-.kpi-activas .kpi-number {
+.kpi-activas .kpi-number-compact {
     color: #0d6efd;
 }
 
-.kpi-completadas .kpi-icon {
+.kpi-completadas .kpi-icon-compact {
     background: linear-gradient(135deg, #ffc107, #ffb84d);
     color: #000;
 }
 
-.kpi-completadas .kpi-number {
+.kpi-completadas .kpi-number-compact {
     color: #ffc107;
 }
 
-.kpi-vencidas .kpi-icon {
+.kpi-vencidas .kpi-icon-compact {
     background: linear-gradient(135deg, #dc3545, #c82333);
     color: white;
 }
 
-.kpi-vencidas .kpi-number {
+.kpi-vencidas .kpi-number-compact {
     color: #dc3545;
 }
 
-/* === ESTILOS PARA LEYENDA SLA === */
-.sla-legend-card {
+/* === ESTILOS PARA TABLA OPTIMIZADA === */
+.table-container {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+
+.table-container .table-responsive {
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.table-container .table {
+    margin-bottom: 0;
+}
+
+.table-container .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: #f8f9fa;
+}
+
+.solicitud-link {
+    color: #009c3c;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.solicitud-link:hover {
+    color: #007529;
+    text-decoration: underline !important;
+}
+
+/* Responsive para filtros integrados */
+@media (max-width: 1200px) {
+    .card-header-custom .d-flex {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .card-header-custom select {
+        width: 100px !important;
+        font-size: 0.75rem;
+    }
+    
+    .card-header-custom input {
+        width: 150px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-header-custom .d-flex {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .card-header-custom select,
+    .card-header-custom input {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* === ESTILOS PARA LEYENDA SLA COMPACTA === */
+.sla-legend-compact {
+    padding: 8px 12px;
     background: rgba(0, 156, 60, 0.02);
     border: 1px solid rgba(0, 156, 60, 0.1);
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 8px;
 }
 
-.sla-legend-header {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    color: #009c3c;
-    font-size: 0.875rem;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.sla-legend-compact small {
+    font-size: 0.75rem;
+    line-height: 1.2;
 }
 
-.sla-legend-items {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-
-.sla-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.sla-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    position: relative;
-}
-
-.sla-dot::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: white;
-    opacity: 0.8;
-}
-
-.sla-success .sla-dot {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-}
-
-.sla-warning .sla-dot {
-    background: linear-gradient(135deg, #ffc107, #f59e0b);
-    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
-}
-
-.sla-danger .sla-dot {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+.sla-legend-compact i.fa-circle {
+    display: inline-block;
+    margin-right: 4px;
 }
 
 /* Responsive para KPIs */
@@ -2630,6 +3316,578 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    
+    // ============================================
+    // FUNCIONALIDAD KANBAN
+    // ============================================
+    
+    // Configurar filtros Kanban
+    function configurarFiltrosKanban() {
+        if ($('#kanbanFiltroCliente').length === 0) return; // Solo si estamos en vista Kanban
+        
+        console.log('Configurando filtros Kanban...');
+        
+        // Obtener valores únicos de todas las tarjetas
+        var clientes = new Set();
+        var estados = new Set();
+        var asignados = new Set();
+        var slas = new Set();
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            
+            var cliente = $card.attr('data-cliente');
+            var estado = $card.attr('data-estado');
+            var asignado = $card.attr('data-asignado');
+            var sla = $card.attr('data-sla');
+            
+            if (cliente && cliente !== 'Sin cliente') clientes.add(cliente);
+            if (estado && estado !== 'Sin estado') estados.add(estado);
+            if (asignado && asignado !== 'Sin asignar') asignados.add(asignado);
+            if (sla && sla !== 'sin sla') slas.add(sla);
+        });
+        
+        // Poblar filtros
+        var $filtroCliente = $('#kanbanFiltroCliente');
+        var $filtroEstado = $('#kanbanFiltroEstado');
+        var $filtroAsignado = $('#kanbanFiltroAsignado');
+        var $filtroSLA = $('#kanbanFiltroSLA');
+        
+        // Limpiar opciones existentes (excepto la primera)
+        $filtroCliente.find('option:not(:first)').remove();
+        $filtroEstado.find('option:not(:first)').remove();
+        $filtroAsignado.find('option:not(:first)').remove();
+        $filtroSLA.find('option:not(:first)').remove();
+        
+        // Agregar nuevas opciones
+        Array.from(clientes).sort().forEach(function(cliente) {
+            $filtroCliente.append(`<option value="${cliente}">${cliente}</option>`);
+        });
+        
+        Array.from(estados).sort().forEach(function(estado) {
+            $filtroEstado.append(`<option value="${estado}">${estado}</option>`);
+        });
+        
+        Array.from(asignados).sort().forEach(function(asignado) {
+            $filtroAsignado.append(`<option value="${asignado}">${asignado}</option>`);
+        });
+        
+        Array.from(slas).sort().forEach(function(sla) {
+            var texto = sla === 'vencido' ? 'Vencido' : 
+                       sla === 'por vencer' ? 'Por vencer' : 
+                       sla === 'en tiempo' ? 'En tiempo' : sla;
+            $filtroSLA.append(`<option value="${sla}">${texto}</option>`);
+        });
+        
+        console.log('Filtros Kanban configurados:', {
+            clientes: clientes.size,
+            estados: estados.size,
+            asignados: asignados.size,
+            slas: slas.size
+        });
+        
+        // Actualizar contadores
+        actualizarContadoresKanban();
+    }
+    
+    // Aplicar filtros Kanban
+    function aplicarFiltrosKanban() {
+        if ($('.kanban-card').length === 0) return;
+        
+        var filtroCliente = $('#kanbanFiltroCliente').val();
+        var filtroEstado = $('#kanbanFiltroEstado').val();
+        var filtroAsignado = $('#kanbanFiltroAsignado').val();
+        var filtroSLA = $('#kanbanFiltroSLA').val();
+        var busquedaGlobal = $('#kanbanBusquedaGlobal').val().toLowerCase();
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            var mostrar = true;
+            
+            // Filtro cliente
+            if (filtroCliente && $card.attr('data-cliente') !== filtroCliente) {
+                mostrar = false;
+            }
+            
+            // Filtro estado
+            if (filtroEstado && $card.attr('data-estado') !== filtroEstado) {
+                mostrar = false;
+            }
+            
+            // Filtro asignado
+            if (filtroAsignado && $card.attr('data-asignado') !== filtroAsignado) {
+                mostrar = false;
+            }
+            
+            // Filtro SLA
+            if (filtroSLA && $card.attr('data-sla') !== filtroSLA) {
+                mostrar = false;
+            }
+            
+            // Búsqueda global
+            if (busquedaGlobal && !$card.attr('data-search').includes(busquedaGlobal)) {
+                mostrar = false;
+            }
+            
+            $card.toggle(mostrar);
+        });
+        
+        // Actualizar contadores y mostrar mensajes cuando no hay solicitudes
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    }
+    
+    // Actualizar contadores de etapas
+    function actualizarContadoresKanban() {
+        $('.kanban-column').each(function() {
+            var $column = $(this);
+            var etapaId = $column.find('.kanban-column-body').attr('data-etapa-id');
+            var count = $column.find('.kanban-card:visible').length;
+            $('#count-etapa-' + etapaId).text(count);
+        });
+    }
+    
+    // Mostrar mensajes cuando no hay solicitudes visibles
+    function mostrarMensajesVacios() {
+        $('.kanban-column-body').each(function() {
+            var $body = $(this);
+            var hasVisible = $body.find('.kanban-card:visible').length > 0;
+            $body.find('.no-solicitudes').toggle(!hasVisible);
+        });
+    }
+    
+    // Búsqueda por etapa
+    $('.etapa-search').on('input', function() {
+        var $input = $(this);
+        var etapaId = $input.attr('data-etapa-id');
+        var searchTerm = $input.val().toLowerCase();
+        
+        $('.kanban-column-body[data-etapa-id="' + etapaId + '"] .kanban-card').each(function() {
+            var $card = $(this);
+            var searchData = $card.attr('data-search');
+            var shouldShow = !searchTerm || searchData.includes(searchTerm);
+            $card.toggle(shouldShow);
+        });
+        
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    });
+    
+    // Event listeners para filtros Kanban
+    $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').on('change', aplicarFiltrosKanban);
+    $('#kanbanBusquedaGlobal').on('input', aplicarFiltrosKanban);
+    
+    // Limpiar filtros Kanban
+    $('#kanbanLimpiarFiltros').on('click', function() {
+        $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').val('');
+        $('#kanbanBusquedaGlobal').val('');
+        $('.etapa-search').val('');
+        $('.kanban-card').show();
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    });
+    
+    // Cambio de etapa desde dropdown en Kanban
+    $(document).on('click', '.cambiar-etapa-kanban', function(e) {
+        e.preventDefault();
+        
+        var $link = $(this);
+        var solicitudId = $link.data('solicitud-id');
+        var etapaId = $link.data('etapa-id');
+        var etapaNombre = $link.data('etapa-nombre');
+        
+        if (!confirm(`¿Estás seguro de cambiar la etapa a "${etapaNombre}"?`)) {
+            return;
+        }
+        
+        // Realizar petición AJAX (mismo código que la tabla)
+        $.ajax({
+            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: JSON.stringify({
+                etapa_id: etapaId
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Mover la tarjeta a la nueva columna
+                    var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+                    var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+                    
+                    // Actualizar atributos de la tarjeta
+                    $card.attr('data-etapa-id', etapaId);
+                    
+                    // Mover físicamente la tarjeta
+                    $card.appendTo($nuevaColumna);
+                    
+                    // Actualizar contadores
+                    actualizarContadoresKanban();
+                    
+                    // Mostrar mensaje de éxito
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(response.mensaje);
+                    } else {
+                        alert('Etapa cambiada exitosamente');
+                    }
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'Error al cambiar etapa';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {}
+                
+                alert(errorMsg);
+            }
+        });
+    });
+    
+    // Inicializar filtros Kanban cuando la página esté lista
+    if ($('#kanbanFiltroCliente').length > 0) {
+        configurarFiltrosKanban();
+        inicializarDragAndDrop();
+    }
+    
+    // ============================================
+    // DRAG & DROP FUNCIONALIDAD
+    // ============================================
+    
+    function inicializarDragAndDrop() {
+        // Configurar eventos de drag para las tarjetas
+        $('.kanban-card').on('dragstart', function(e) {
+            var solicitudId = $(this).attr('data-solicitud-id');
+            var etapaActual = $(this).attr('data-etapa-id');
+            
+            e.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
+                solicitudId: solicitudId,
+                etapaActual: etapaActual
+            }));
+            
+            $(this).addClass('dragging');
+            
+            // Agregar efecto visual a las zonas de drop
+            $('.kanban-column-body').addClass('drop-zone-active');
+        });
+        
+        $('.kanban-card').on('dragend', function(e) {
+            $(this).removeClass('dragging');
+            $('.kanban-column-body').removeClass('drop-zone-active');
+        });
+        
+        // Configurar eventos de drop para las columnas
+        $('.kanban-column-body').on('dragover', function(e) {
+            e.preventDefault();
+            $(this).addClass('drop-zone-hover');
+        });
+        
+        $('.kanban-column-body').on('dragleave', function(e) {
+            $(this).removeClass('drop-zone-hover');
+        });
+        
+        $('.kanban-column-body').on('drop', function(e) {
+            e.preventDefault();
+            
+            var $dropZone = $(this);
+            var nuevaEtapaId = $dropZone.attr('data-etapa-id');
+            
+            // Remover clases de hover
+            $dropZone.removeClass('drop-zone-hover drop-zone-active');
+            $('.kanban-column-body').removeClass('drop-zone-active');
+            
+            try {
+                var data = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
+                var solicitudId = data.solicitudId;
+                var etapaActual = data.etapaActual;
+                
+                // Verificar si es un movimiento válido
+                if (nuevaEtapaId === etapaActual) {
+                    console.log('Movimiento cancelado: misma etapa');
+                    return;
+                }
+                
+                // Obtener nombre de la nueva etapa
+                var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
+                nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
+                
+                // Confirmar movimiento
+                if (!confirm(`¿Confirmar movimiento a "${nuevaEtapaNombre}"?`)) {
+                    return;
+                }
+                
+                // Realizar petición AJAX
+                realizarCambioEtapaDragDrop(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
+                
+            } catch (error) {
+                console.error('Error al procesar drop:', error);
+            }
+        });
+    }
+    
+    function realizarCambioEtapaDragDrop(solicitudId, nuevaEtapaId, etapaNombre) {
+        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        
+        // Agregar indicador de carga
+        $card.addClass('updating');
+        
+        $.ajax({
+            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: JSON.stringify({
+                etapa_id: nuevaEtapaId
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                if (response.success) {
+                    // Animar movimiento de tarjeta
+                    $card.fadeOut(200, function() {
+                        // Mover la tarjeta a la nueva columna
+                        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
+                        
+                        // Actualizar atributos de la tarjeta
+                        $card.attr('data-etapa-id', nuevaEtapaId);
+                        
+                        // Mover físicamente la tarjeta
+                        $card.appendTo($nuevaColumna);
+                        
+                        // Animar aparición en nueva columna
+                        $card.fadeIn(300);
+                        
+                        // Actualizar contadores
+                        actualizarContadoresKanban();
+                        
+                        // Mostrar notificación de éxito
+                        mostrarNotificacionExito(`Solicitud movida a ${etapaNombre}`);
+                    });
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'Error al cambiar etapa';
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {}
+                
+                alert(errorMsg);
+            },
+            complete: function() {
+                $card.removeClass('updating');
+            }
+        });
+    }
+    
+    function mostrarNotificacionExito(mensaje) {
+        // Crear notificación flotante
+        var $notificacion = $(`
+            <div class="drag-notification">
+                <i class="fas fa-check-circle me-2"></i>
+                ${mensaje}
+            </div>
+        `);
+        
+        $('body').append($notificacion);
+        
+        // Animar entrada
+        setTimeout(() => {
+            $notificacion.addClass('show');
+        }, 100);
+        
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            $notificacion.removeClass('show');
+            setTimeout(() => $notificacion.remove(), 300);
+        }, 3000);
+    }
 });
 </script>
+
+<style>
+/* Tamaño intermedio de letra en vista tabla */
+.workflow-table {
+    font-size: 0.9rem !important;
+}
+
+.workflow-table th {
+    font-size: 0.85rem !important;
+    padding: 0.6rem !important;
+}
+
+.workflow-table td {
+    font-size: 0.9rem !important;
+    padding: 0.6rem !important;
+}
+
+.workflow-table .fw-semibold {
+    font-size: 0.9rem !important;
+}
+
+.workflow-table small {
+    font-size: 0.75rem !important;
+}
+
+.workflow-table .badge {
+    font-size: 0.75rem !important;
+}
+
+.workflow-table .form-select-sm {
+    font-size: 0.85rem !important;
+}
+
+.workflow-table .form-control-sm {
+    font-size: 0.85rem !important;
+}
+
+.workflow-table .solicitud-link {
+    font-size: 0.9rem !important;
+}
+
+.workflow-table .text-muted {
+    font-size: 0.8rem !important;
+}
+
+.workflow-table .fas {
+    font-size: 0.8rem !important;
+}
+
+/* Eliminar completamente el borde vacío debajo del encabezado */
+.workflow-table thead {
+    border-bottom: none !important;
+    border-collapse: collapse !important;
+}
+
+.workflow-table thead tr {
+    border-bottom: none !important;
+}
+
+.workflow-table thead th {
+    border-bottom: none !important;
+    border-top: none !important;
+    vertical-align: middle !important;
+}
+
+.workflow-table thead::after,
+.workflow-table thead tr::after,
+.workflow-table thead th::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Eliminar cualquier margen o padding que cause el espacio vacío */
+.workflow-table thead {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.workflow-table tbody {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.workflow-table tbody tr:first-child {
+    border-top: none !important;
+}
+
+.workflow-table tbody tr:first-child td {
+    border-top: none !important;
+}
+
+/* Forzar que la tabla no tenga separación entre thead y tbody */
+.workflow-table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+}
+
+/* Eliminar todos los bordes del contenedor de tabla */
+.table-container {
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+}
+
+.table-responsive {
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+}
+
+.card-body {
+    border-top: none !important;
+}
+
+/* Eliminar cualquier borde superior o inferior de la tabla */
+.workflow-table {
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+}
+
+.workflow-table thead {
+    border-top: none !important;
+}
+
+.workflow-table tbody {
+    border-bottom: none !important;
+}
+
+/* Asegurar que los dropdowns Kanban aparezcan al frente */
+.kanban-column .dropdown {
+    z-index: 1050 !important;
+}
+
+.kanban-column .dropdown-menu {
+    z-index: 1052 !important;
+    position: fixed !important;
+    will-change: transform !important;
+}
+
+.kanban-column .dropdown-toggle {
+    z-index: 1051 !important;
+}
+
+/* Hacer más sutil el indicador de ordenamiento */
+.workflow-table th {
+    position: relative !important;
+    padding-right: 1.5rem !important;
+}
+
+.workflow-table th.sortable::after {
+    content: '⇅' !important;
+    position: absolute !important;
+    right: 0.5rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 0.7rem !important;
+    color: #6c757d !important;
+    opacity: 0.5 !important;
+    transition: opacity 0.2s ease !important;
+}
+
+.workflow-table th.sortable:hover::after {
+    opacity: 1 !important;
+    color: #495057 !important;
+}
+
+.workflow-table th.sorted-asc::after {
+    content: '↑' !important;
+    opacity: 1 !important;
+    color: var(--verde-pacifico) !important;
+}
+
+.workflow-table th.sorted-desc::after {
+    content: '↓' !important;
+    opacity: 1 !important;
+    color: var(--verde-pacifico) !important;
+}
+</style>
+
 {% endblock %} 
