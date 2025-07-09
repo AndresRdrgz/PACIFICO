@@ -43,11 +43,6 @@
                         Cotización
                     </h6>
                     <div class="form-group">
-                        <div class="d-flex gap-2 mb-2">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="openCotizacionModal()">
-                                <i class="fas fa-search me-2"></i>Buscar Cotización
-                            </button>
-                        </div>
                         <div class="search-container">
                             <input type="text" id="cotizacionSearch" class="form-control" 
                                    placeholder="Buscar cotización por nombre, cédula o ID...">
@@ -96,24 +91,30 @@
                 </div>
 
                 <!-- Campos Personalizados -->
-                <div id="camposPersonalizados" class="form-section" style="display: none;">
+                <div id="camposPersonalizados" class="form-section">
                     <h6 class="form-section-title">
                         <i class="fas fa-cog me-2"></i>
                         Propiedades dependientes
                     </h6>
                     <div id="camposContainer">
-                        <!-- Campos dinámicos se cargarán aquí -->
+                        <div class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Selecciona un pipeline para ver los campos personalizados
+                        </div>
                     </div>
                 </div>
 
                 <!-- Requisitos -->
-                <div id="requisitosSection" class="form-section" style="display: none;">
+                <div id="requisitosSection" class="form-section">
                     <h6 class="form-section-title">
                         <i class="fas fa-tasks me-2"></i>
                         Requisitos
                     </h6>
                     <div id="requisitosContainer">
-                        <!-- Requisitos dinámicos se cargarán aquí -->
+                        <div class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Selecciona un pipeline para ver los requisitos
+                        </div>
                     </div>
                 </div>
 
@@ -128,61 +129,6 @@
                 <i class="fas fa-plus me-2"></i>
                 Crear
             </button>
-        </div>
-    </div>
-</div>
-
-<!-- Cotización Selection Modal -->
-<div class="modal fade" id="cotizacionModal" tabindex="-1" aria-labelledby="cotizacionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cotizacionModalLabel">
-                    <i class="fas fa-calculator me-2"></i>Seleccionar Cotización
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <input type="text" id="modalCotizacionSearch" class="form-control" 
-                               placeholder="Buscar por nombre, cédula o ID...">
-                    </div>
-                    <div class="col-md-6">
-                        <select id="modalOficialFilter" class="form-control">
-                            <option value="">Todos los oficiales</option>
-                            {% for oficial in oficiales %}
-                            <option value="{{ oficial }}">{{ oficial }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table id="tablaCotizaciones" class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Cliente</th>
-                                <th>Cédula</th>
-                                <th>Tipo Préstamo</th>
-                                <th>Monto</th>
-                                <th>Oficial</th>
-                                <th>Fecha</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cotizacionesTableBody">
-                            <!-- Se carga dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="cotizacionesLoading" class="text-center py-4" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Cargando cotizaciones...</p>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -501,14 +447,11 @@
 
 /* Requisitos */
 .requisito-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
-    margin-bottom: 10px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 15px;
     transition: border-color 0.2s;
 }
 
@@ -516,8 +459,8 @@
     border-color: var(--verde-pacifico);
 }
 
-.requisito-checkbox {
-    margin-top: 2px;
+.requisito-header {
+    margin-bottom: 12px;
 }
 
 .requisito-info {
@@ -540,11 +483,111 @@
     font-size: 0.875rem;
     margin-top: 4px;
 }
+
+/* File Upload Components */
+.requisito-upload {
+    margin-top: 12px;
+}
+
+.file-upload-label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6c757d;
+    font-size: 0.875rem;
+    width: 100%;
+    text-align: center;
+}
+
+.file-upload-label:hover {
+    background: #e9ecef;
+    border-color: var(--verde-pacifico);
+    color: var(--verde-pacifico);
+}
+
+.file-upload-input {
+    display: none;
+}
+
+.file-upload-info {
+    margin-top: 6px;
+    text-align: center;
+}
+
+.file-selected {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #e8f5e8;
+    border: 1px solid #c3e6c3;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-selected .file-name {
+    flex: 1;
+    color: #2d5a2d;
+    font-size: 0.875rem;
+    margin-left: 8px;
+}
+
+.btn-remove-file {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-remove-file:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Toast Notifications */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10001;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    font-size: 0.875rem;
+    min-width: 300px;
+}
+
+.toast-notification.success {
+    background: #28a745;
+}
+
+.toast-notification.error {
+    background: #dc3545;
+}
+
+.toast-notification.warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
 </style>
 
 <script>
 // Drawer Management
-function openSolicitudDrawer(pipelineId = null) {
+window.openSolicitudDrawer = function(pipelineId = null) {
     document.getElementById('solicitudDrawer').classList.add('active');
     document.body.style.overflow = 'hidden';
     
@@ -554,7 +597,7 @@ function openSolicitudDrawer(pipelineId = null) {
     }
 }
 
-function lockPipeline(pipelineId) {
+window.lockPipeline = function(pipelineId) {
     const pipelineSelect = document.getElementById('pipelineSelect');
     const pipelineLockedInfo = document.getElementById('pipelineLockedInfo');
     const pipelineLockedName = document.getElementById('pipelineLockedName');
@@ -573,20 +616,34 @@ function lockPipeline(pipelineId) {
     loadFormularioData(pipelineId);
 }
 
-function closeSolicitudDrawer() {
+window.closeSolicitudDrawer = function() {
     document.getElementById('solicitudDrawer').classList.remove('active');
     document.body.style.overflow = '';
     resetForm();
 }
 
-function resetForm() {
+window.resetForm = function() {
     document.getElementById('solicitudForm').reset();
     document.getElementById('cotizacionId').value = '';
     document.getElementById('clienteId').value = '';
     document.getElementById('cotizacionSelected').style.display = 'none';
     document.getElementById('clienteSelected').style.display = 'none';
-    document.getElementById('camposPersonalizados').style.display = 'none';
-    document.getElementById('requisitosSection').style.display = 'none';
+    
+    // Reset campos personalizados
+    document.getElementById('camposContainer').innerHTML = `
+        <div class="text-muted text-center py-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Selecciona un pipeline para ver los campos personalizados
+        </div>
+    `;
+    
+    // Reset requisitos
+    document.getElementById('requisitosContainer').innerHTML = `
+        <div class="text-muted text-center py-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Selecciona un pipeline para ver los requisitos
+        </div>
+    `;
     
     // Reset pipeline lock
     const pipelineSelect = document.getElementById('pipelineSelect');
@@ -602,7 +659,7 @@ function resetForm() {
 let searchTimeout;
 let currentSearchType = '';
 
-function setupSearch() {
+window.setupSearch = function() {
     // Cotización search
     document.getElementById('cotizacionSearch').addEventListener('input', function(e) {
         clearTimeout(searchTimeout);
@@ -635,8 +692,20 @@ function setupSearch() {
         if (pipelineId) {
             loadFormularioData(pipelineId);
         } else {
-            document.getElementById('camposPersonalizados').style.display = 'none';
-            document.getElementById('requisitosSection').style.display = 'none';
+            // Reset to placeholder messages
+            document.getElementById('camposContainer').innerHTML = `
+                <div class="text-muted text-center py-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Selecciona un pipeline para ver los campos personalizados
+                </div>
+            `;
+            
+            document.getElementById('requisitosContainer').innerHTML = `
+                <div class="text-muted text-center py-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Selecciona un pipeline para ver los requisitos
+                </div>
+            `;
         }
     });
 }
@@ -644,7 +713,7 @@ function setupSearch() {
 function searchCotizaciones(query) {
     fetch(`/workflow/api/buscar-cotizaciones-drawer/?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
-        .then(data => {
+        .then data => {
             if (data.success) {
                 showSearchResults('cotizacion', data.cotizaciones);
             }
@@ -726,17 +795,47 @@ function selectItem(type, item) {
     hideSearchResults(type);
 }
 
-function clearCotizacion() {
+function selectCotizacion(cotizacion) {
+    document.getElementById('cotizacionId').value = cotizacion.id;
+    document.getElementById('cotizacionSearch').value = '';
+    
+    const selectedContainer = document.getElementById('cotizacionSelected');
+    const nameElement = selectedContainer.querySelector('.selected-name');
+    const detailsElement = selectedContainer.querySelector('.selected-details');
+    
+    nameElement.textContent = cotizacion.nombreCliente || 'Sin nombre';
+    detailsElement.textContent = `${cotizacion.cedulaCliente || 'Sin cédula'} • ${cotizacion.tipoPrestamo || 'Sin tipo'} • $${cotizacion.montoPrestamo.toLocaleString()}`;
+    
+    selectedContainer.style.display = 'block';
+    hideSearchResults('cotizacion');
+}
+
+function selectCliente(cliente) {
+    document.getElementById('clienteId').value = cliente.id;
+    document.getElementById('clienteSearch').value = '';
+    
+    const selectedContainer = document.getElementById('clienteSelected');
+    const nameElement = selectedContainer.querySelector('.selected-name');
+    const detailsElement = selectedContainer.querySelector('.selected-details');
+    
+    nameElement.textContent = cliente.nombreCliente || 'Sin nombre';
+    detailsElement.textContent = `${cliente.cedulaCliente || 'Sin cédula'} • ${cliente.edad || 'Sin edad'} años`;
+    
+    selectedContainer.style.display = 'block';
+    hideSearchResults('cliente');
+}
+
+window.clearCotizacion = function() {
     document.getElementById('cotizacionId').value = '';
     document.getElementById('cotizacionSelected').style.display = 'none';
 }
 
-function clearCliente() {
+window.clearCliente = function() {
     document.getElementById('clienteId').value = '';
     document.getElementById('clienteSelected').style.display = 'none';
 }
 
-function hideSearchResults(type) {
+window.hideSearchResults = function(type) {
     if (type) {
         document.getElementById(`${type}Results`).classList.remove('show');
     } else {
@@ -746,7 +845,7 @@ function hideSearchResults(type) {
 }
 
 // Load form data based on pipeline
-function loadFormularioData(pipelineId) {
+window.loadFormularioData = function(pipelineId) {
     fetch(`/workflow/api/formulario-datos/?pipeline_id=${pipelineId}`)
         .then(response => response.json())
         .then(data => {
@@ -765,7 +864,12 @@ function renderCamposPersonalizados(campos) {
     container.innerHTML = '';
     
     if (campos.length === 0) {
-        document.getElementById('camposPersonalizados').style.display = 'none';
+        container.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay campos personalizados para este pipeline
+            </div>
+        `;
         return;
     }
     
@@ -810,16 +914,50 @@ function renderCamposPersonalizados(campos) {
         
         container.appendChild(campoDiv);
     });
-    
-    document.getElementById('camposPersonalizados').style.display = 'block';
 }
 
+// File upload handling
+function setupFileUploadHandlers() {
+    document.querySelectorAll('.file-upload-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            const requisitoItem = this.closest('.requisito-item');
+            const fileSelected = requisitoItem.querySelector('.file-selected');
+            const fileName = fileSelected.querySelector('.file-name');
+            const uploadLabel = requisitoItem.querySelector('.file-upload-label');
+            
+            if (file) {
+                fileName.textContent = file.name;
+                fileSelected.style.display = 'flex';
+                uploadLabel.style.display = 'none';
+            }
+        });
+    });
+}
+
+function removeFile(button) {
+    const requisitoItem = button.closest('.requisito-item');
+    const fileSelected = requisitoItem.querySelector('.file-selected');
+    const uploadLabel = requisitoItem.querySelector('.file-upload-label');
+    const fileInput = requisitoItem.querySelector('.file-upload-input');
+    
+    fileInput.value = '';
+    fileSelected.style.display = 'none';
+    uploadLabel.style.display = 'inline-block';
+}
+
+// Call setup after rendering requisitos
 function renderRequisitos(requisitos) {
     const container = document.getElementById('requisitosContainer');
     container.innerHTML = '';
     
     if (requisitos.length === 0) {
-        document.getElementById('requisitosSection').style.display = 'none';
+        container.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay requisitos para este pipeline
+            </div>
+        `;
         return;
     }
     
@@ -828,30 +966,67 @@ function renderRequisitos(requisitos) {
         requisitoDiv.className = 'requisito-item';
         
         requisitoDiv.innerHTML = `
-            <input type="checkbox" class="requisito-checkbox" name="requisito_${requisito.id}" value="true">
-            <div class="requisito-info">
-                <div class="requisito-nombre">
-                    ${requisito.nombre}
-                    ${requisito.obligatorio ? '<span class="requisito-obligatorio">(Obligatorio)</span>' : ''}
+            <div class="requisito-header">
+                <div class="requisito-info">
+                    <div class="requisito-nombre">
+                        ${requisito.nombre}
+                        ${requisito.obligatorio ? '<span class="requisito-obligatorio">(Obligatorio)</span>' : ''}
+                    </div>
+                    ${requisito.descripcion ? `<div class="requisito-descripcion">${requisito.descripcion}</div>` : ''}
                 </div>
-                ${requisito.descripcion ? `<div class="requisito-descripcion">${requisito.descripcion}</div>` : ''}
+            </div>
+            <div class="requisito-upload">
+                <label class="file-upload-label">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Subir archivo
+                    <input type="file" class="file-upload-input" name="archivo_requisito_${requisito.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.zip,.rar">
+                </label>
+                <div class="file-upload-info">
+                    <small class="text-muted">Formatos permitidos: PDF, DOC, DOCX, JPG, PNG, GIF, ZIP, RAR</small>
+                </div>
+                <div class="file-selected" style="display: none;">
+                    <i class="fas fa-file me-2"></i>
+                    <span class="file-name"></span>
+                    <button type="button" class="btn-remove-file" onclick="removeFile(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
         `;
         
         container.appendChild(requisitoDiv);
     });
     
-    document.getElementById('requisitosSection').style.display = 'block';
+    // Setup file upload handlers after rendering
+    setTimeout(() => {
+        setupFileUploadHandlers();
+    }, 100);
 }
 
 // Submit form
-function submitSolicitud() {
+window.submitSolicitud = function() {
     const form = document.getElementById('solicitudForm');
     const formData = new FormData(form);
     
     // Validar pipeline
     if (!formData.get('pipeline')) {
         alert('Por favor selecciona un pipeline');
+        return;
+    }
+    
+    // Validar archivos obligatorios si corresponde
+    const requiredFiles = document.querySelectorAll('.requisito-item .file-upload-input[required]');
+    let hasRequiredFiles = true;
+    
+    for (let input of requiredFiles) {
+        if (!input.files || input.files.length === 0) {
+            hasRequiredFiles = false;
+            break;
+        }
+    }
+    
+    if (!hasRequiredFiles) {
+        alert('Por favor sube todos los archivos obligatorios');
         return;
     }
     
@@ -865,15 +1040,20 @@ function submitSolicitud() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             closeSolicitudDrawer();
+            // Mostrar mensaje de éxito
+            showSuccessMessage(data.message);
             // Recargar la página para mostrar la nueva solicitud
-            window.location.reload();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else {
             alert('Error: ' + data.error);
         }
@@ -888,142 +1068,34 @@ function submitSolicitud() {
     });
 }
 
-// Cotización Modal Management
-function openCotizacionModal() {
-    const modal = new bootstrap.Modal(document.getElementById('cotizacionModal'));
-    modal.show();
-    loadCotizaciones();
-}
-
-function loadCotizaciones() {
-    document.getElementById('cotizacionesLoading').style.display = 'block';
-    document.getElementById('cotizacionesTableBody').innerHTML = '';
+window.showSuccessMessage = function(message) {
+    // Create a simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification success';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+    `;
     
-    fetch('/pacifico/api/cotizaciones/')
-        .then(response => response.json())
-        .then(data => {
-            displayCotizaciones(data.cotizaciones || []);
-        })
-        .catch(error => {
-            console.error('Error loading cotizaciones:', error);
-            document.getElementById('cotizacionesTableBody').innerHTML = 
-                '<tr><td colspan="8" class="text-center text-danger">Error al cargar cotizaciones</td></tr>';
-        })
-        .finally(() => {
-            document.getElementById('cotizacionesLoading').style.display = 'none';
-        });
-}
-
-function displayCotizaciones(cotizaciones) {
-    const tbody = document.getElementById('cotizacionesTableBody');
-    tbody.innerHTML = '';
+    document.body.appendChild(toast);
     
-    if (cotizaciones.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No hay cotizaciones disponibles</td></tr>';
-        return;
-    }
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
     
-    cotizaciones.forEach(cotizacion => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${cotizacion.id}</td>
-            <td>${cotizacion.nombreCliente || 'N/A'}</td>
-            <td>${cotizacion.cedulaCliente || 'N/A'}</td>
-            <td>${cotizacion.tipoPrestamo || 'N/A'}</td>
-            <td>$${parseFloat(cotizacion.montoPrestamo || 0).toLocaleString()}</td>
-            <td>${cotizacion.oficial || 'N/A'}</td>
-            <td>${cotizacion.created_at ? new Date(cotizacion.created_at).toLocaleDateString() : 'N/A'}</td>
-            <td>
-                <button type="button" class="btn btn-sm btn-primary" onclick="selectCotizacionFromModal(${cotizacion.id}, '${cotizacion.nombreCliente}', '${cotizacion.cedulaCliente}', '${cotizacion.tipoPrestamo}', '${cotizacion.montoPrestamo}')">
-                    <i class="fas fa-check me-1"></i>Seleccionar
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-function selectCotizacion(cotizacion) {
-    document.getElementById('cotizacionId').value = cotizacion.id;
-    document.getElementById('cotizacionSearch').value = '';
-    
-    const selectedContainer = document.getElementById('cotizacionSelected');
-    const nameElement = selectedContainer.querySelector('.selected-name');
-    const detailsElement = selectedContainer.querySelector('.selected-details');
-    
-    nameElement.textContent = cotizacion.nombreCliente || 'Sin nombre';
-    detailsElement.textContent = `${cotizacion.cedulaCliente || 'Sin cédula'} • ${cotizacion.tipoPrestamo || 'Sin tipo'} • $${cotizacion.montoPrestamo.toLocaleString()}`;
-    
-    selectedContainer.style.display = 'block';
-    hideSearchResults('cotizacion');
-}
-
-function selectCliente(cliente) {
-    document.getElementById('clienteId').value = cliente.id;
-    document.getElementById('clienteSearch').value = '';
-    
-    const selectedContainer = document.getElementById('clienteSelected');
-    const nameElement = selectedContainer.querySelector('.selected-name');
-    const detailsElement = selectedContainer.querySelector('.selected-details');
-    
-    nameElement.textContent = cliente.nombreCliente || 'Sin nombre';
-    detailsElement.textContent = `${cliente.cedulaCliente || 'Sin cédula'} • ${cliente.edad || 'Sin edad'} años`;
-    
-    selectedContainer.style.display = 'block';
-    hideSearchResults('cliente');
-}
-
-function selectCotizacionFromModal(id, nombre, cedula, tipo, monto) {
-    // Close modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('cotizacionModal'));
-    modal.hide();
-    
-    // Select cotización
-    selectCotizacion({
-        id: id,
-        nombreCliente: nombre,
-        cedulaCliente: cedula,
-        tipoPrestamo: tipo,
-        montoPrestamo: monto
-    });
-    
-    // Auto-select cliente based on cotización
-    if (nombre && cedula) {
-        selectCliente({
-            id: id, // Use cotización id as reference
-            nombreCliente: nombre,
-            cedulaCliente: cedula
-        });
-    }
-}
-
-function filterCotizaciones() {
-    const searchTerm = document.getElementById('modalCotizacionSearch').value.toLowerCase();
-    const oficialFilter = document.getElementById('modalOficialFilter').value;
-    const rows = document.querySelectorAll('#cotizacionesTableBody tr');
-    
-    rows.forEach(row => {
-        const cells = row.cells;
-        if (cells.length > 1) {
-            const cliente = cells[1].textContent.toLowerCase();
-            const cedula = cells[2].textContent.toLowerCase();
-            const oficial = cells[5].textContent;
-            
-            const matchesSearch = cliente.includes(searchTerm) || cedula.includes(searchTerm) || cells[0].textContent.includes(searchTerm);
-            const matchesOficial = !oficialFilter || oficial === oficialFilter;
-            
-            row.style.display = matchesSearch && matchesOficial ? '' : 'none';
-        }
-    });
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
 }
 
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     setupSearch();
-    
-    // Setup modal filters
-    document.getElementById('modalCotizacionSearch').addEventListener('input', filterCotizaciones);
-    document.getElementById('modalOficialFilter').addEventListener('change', filterCotizaciones);
     
     // Close drawer when clicking outside
     document.getElementById('solicitudDrawer').addEventListener('click', function(e) {
@@ -1032,4 +1104,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Global function to open drawer with context - defined here to ensure it's available
+window.openSolicitudDrawerWithContext = function(pipelineId = null) {
+    if (pipelineId) {
+        openSolicitudDrawer(pipelineId);
+    } else {
+        openSolicitudDrawer();
+    }
+};
 </script>

@@ -512,10 +512,50 @@ def nueva_solicitud(request):
             )
             
             for req_pipeline in requisitos_pipeline:
-                RequisitoSolicitud.objects.create(
+                requisito_solicitud = RequisitoSolicitud.objects.create(
                     solicitud=solicitud,
                     requisito=req_pipeline.requisito
                 )
+                
+                # Verificar si hay archivo subido para este requisito
+                archivo_key = f'archivo_requisito_{req_pipeline.requisito.id}'
+                if archivo_key in request.FILES:
+                    requisito_solicitud.archivo = request.FILES[archivo_key]
+                    requisito_solicitud.save()
+            
+            # Guardar campos personalizados
+            campos_personalizados = CampoPersonalizado.objects.filter(pipeline=pipeline)
+            for campo in campos_personalizados:
+                valor = request.POST.get(f'campo_{campo.id}')
+                if valor:
+                    valor_campo = ValorCampoSolicitud.objects.create(
+                        solicitud=solicitud,
+                        campo=campo
+                    )
+                    
+                    # Guardar según el tipo de campo
+                    if campo.tipo == 'texto':
+                        valor_campo.valor_texto = valor
+                    elif campo.tipo == 'numero':
+                        valor_campo.valor_numero = float(valor) if valor else None
+                    elif campo.tipo == 'entero':
+                        valor_campo.valor_entero = int(valor) if valor else None
+                    elif campo.tipo == 'fecha':
+                        from datetime import datetime
+                        valor_campo.valor_fecha = datetime.strptime(valor, '%Y-%m-%d').date() if valor else None
+                    elif campo.tipo == 'booleano':
+                        valor_campo.valor_booleano = valor == 'true'
+                    
+                    valor_campo.save()
+            
+            # Responder con JSON para requests AJAX
+            if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'solicitud_id': solicitud.id,
+                    'codigo': solicitud.codigo,
+                    'message': f'Solicitud {codigo} creada exitosamente.'
+                })
             
             messages.success(request, f'Solicitud {codigo} creada exitosamente.')
             return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
@@ -561,7 +601,7 @@ def detalle_solicitud(request, solicitud_id):
             puede_ver=True
         ).exists()
         
-        if not tiene_permimo:
+        if not tiene_permiso:
             messages.error(request, 'No tienes permisos para ver esta solicitud.')
             return redirect('bandeja_trabajo')
     
@@ -718,7 +758,7 @@ def actualizar_requisito(request, solicitud_id, requisito_id):
                 puede_ver=True
             ).exists()
             
-            if not tiene_permito:
+            if not tiene_permiso:
                 return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         # Actualizar requisito
@@ -759,7 +799,7 @@ def actualizar_campo_personalizado(request, solicitud_id):
                 puede_ver=True
             ).exists()
             
-            if not tiene_permito:
+            if not tiene_permiso:
                 return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
