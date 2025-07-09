@@ -2050,6 +2050,9 @@ def vista_mixta_bandejas(request):
     estados_unicos = sorted(list(estados_unicos))
     etapas_unicas = sorted(list(etapas_unicas))
     
+    # Obtener todas las etapas con bandeja habilitada (para el dropdown)
+    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).select_related('pipeline')
+    
     context = {
         'solicitudes_grupales': solicitudes_grupales,
         'solicitudes_personales': solicitudes_personales,
@@ -2061,6 +2064,7 @@ def vista_mixta_bandejas(request):
         'clientes_unicos': clientes_unicos,
         'estados_unicos': estados_unicos,
         'etapas_unicas': etapas_unicas,
+        'etapas_con_bandeja': etapas_con_bandeja,
         'filtros': {
             'pipeline': filtro_pipeline,
             'estado': filtro_estado,
