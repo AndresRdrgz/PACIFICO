@@ -6,6 +6,9 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
 from django.contrib.auth.models import Group, User
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.conf import settings
 from .modelsWorkflow import *
 from .models import ClienteEntrevista
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -1981,6 +1984,95 @@ def notify_solicitud_change(solicitud, change_type, user=None):
     except Exception as e:
         print(f"Error notificando cambio: {e}")
 
+def enviar_correo_bandeja_grupal(solicitud, etapa):
+    """
+    Función para enviar correo automático cuando una solicitud entra a una etapa de bandeja grupal.
+    Basada en la implementación de correos de la app tómbola.
+    """
+    try:
+        # Destinatarios fijos según especificación
+        destinatarios = [
+            "jacastillo@fpacifico.com",
+            "arodriguez@fpacifico.com"
+        ]
+        
+        # Construir la URL de la bandeja
+        # Formato: /workflow/bandejas/?etapa_id=3
+        bandeja_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/bandejas/?etapa_id={etapa.id}"
+        
+        # Obtener nombre del cliente
+        cliente_nombre = ""
+        try:
+            if hasattr(solicitud, 'cliente') and solicitud.cliente:
+                cliente_nombre = getattr(solicitud.cliente, 'nombreCliente', 'Sin nombre')
+            elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion and solicitud.cotizacion.cliente:
+                cliente_nombre = getattr(solicitud.cotizacion.cliente, 'nombreCliente', 'Sin nombre')
+            else:
+                cliente_nombre = "Cliente no asignado"
+        except Exception as e:
+            print(f"⚠️ Error obteniendo nombre del cliente: {e}")
+            cliente_nombre = "Error al obtener cliente"
+        
+        # Contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa': etapa,
+            'cliente_nombre': cliente_nombre,
+            'bandeja_url': bandeja_url,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/bandeja_grupal_notification.html', context)
+        
+        # Crear el asunto
+        subject = f"🔔 Nueva Solicitud en Bandeja Grupal - {solicitud.codigo}"
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+        Nueva Solicitud en Bandeja Grupal
+        
+        Hola equipo,
+        
+        Una solicitud ha ingresado a una etapa de bandeja grupal y requiere atención:
+        
+        • Código: {solicitud.codigo}
+        • Cliente: {cliente_nombre or 'Sin asignar'}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Etapa: {etapa.nombre}
+        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        Para ver la solicitud, haz clic en el siguiente enlace:
+        {bandeja_url}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo
+        email.send()
+        
+        print(f"✅ Correo enviado correctamente para solicitud {solicitud.codigo} - Etapa: {etapa.nombre}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo para solicitud {solicitud.codigo}: {str(e)}")
+
+
 @login_required
 @csrf_exempt
 def api_cambiar_etapa(request, solicitud_id):
@@ -2045,6 +2137,14 @@ def api_cambiar_etapa(request, solicitud_id):
         
         # 🚨 CRÍTICO: Notificar cambio de etapa en tiempo real a TODAS las vistas
         notify_solicitud_change(solicitud, 'solicitud_cambio_etapa', request.user)
+        
+        # 📧 NUEVO: Enviar correo automático si la nueva etapa es bandeja grupal
+        print(f"🔍 DEBUG: Verificando etapa {nueva_etapa.nombre} - es_bandeja_grupal: {nueva_etapa.es_bandeja_grupal}")
+        if nueva_etapa.es_bandeja_grupal:
+            print(f"📧 ACTIVANDO envío de correo para solicitud {solicitud.codigo} en etapa {nueva_etapa.nombre}")
+            enviar_correo_bandeja_grupal(solicitud, nueva_etapa)
+        else:
+            print(f"ℹ️ No se envía correo - la etapa {nueva_etapa.nombre} no es bandeja grupal")
         
         return JsonResponse({
             'success': True,
@@ -2650,6 +2750,49 @@ def api_bandejas(request):
             'success': False,
             'error': str(e)
         })
+
+
+@login_required
+def test_envio_correo_bandeja(request):
+    """
+    Vista temporal para probar el envío de correos de bandeja grupal.
+    Usar solo para testing - eliminar después.
+    """
+    if request.method == 'POST':
+        solicitud_id = request.POST.get('solicitud_id')
+        if solicitud_id:
+            try:
+                solicitud = Solicitud.objects.get(id=solicitud_id)
+                etapa = solicitud.etapa_actual
+                
+                if etapa and etapa.es_bandeja_grupal:
+                    enviar_correo_bandeja_grupal(solicitud, etapa)
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Correo enviado para solicitud {solicitud.codigo}'
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La etapa actual no es bandeja grupal'
+                    })
+            except Solicitud.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Solicitud no encontrada'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error: {str(e)}'
+                })
+    
+    # Listar solicitudes para testing
+    solicitudes = Solicitud.objects.filter(etapa_actual__es_bandeja_grupal=True)[:10]
+    
+    return render(request, 'workflow/test_correo.html', {
+        'solicitudes': solicitudes
+    })
 
 
 @login_required

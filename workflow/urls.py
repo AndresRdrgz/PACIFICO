@@ -64,4 +64,7 @@ urlpatterns = [
     path('api/buscar-cotizaciones-drawer/', views_workflow.api_buscar_cotizaciones_drawer, name='api_buscar_cotizaciones_drawer'),
     path('api/buscar-clientes-drawer/', views_workflow.api_buscar_clientes_drawer, name='api_buscar_clientes_drawer'),
     path('api/formulario-datos/', views_workflow.api_formulario_datos, name='api_formulario_datos'),
+    
+    # Test temporal - eliminar después
+    path('test-correo-bandeja/', views_workflow.test_envio_correo_bandeja, name='test_envio_correo_bandeja'),
 ]

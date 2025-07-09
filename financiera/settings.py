@@ -290,6 +290,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'makito@fpacifico.com'
 EMAIL_HOST_PASSWORD = 'aFihr73B'
 EMAIL_DEBUG = True
+DEFAULT_FROM_EMAIL = 'workflow@fpacifico.com'
+SITE_URL = 'http://localhost:8000'  # Cambiar por tu dominio en producción
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
