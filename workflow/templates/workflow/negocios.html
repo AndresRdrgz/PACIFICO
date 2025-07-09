@@ -5,18 +5,18 @@
 {% block title %}Negocios - Sistema de Workflow{% endblock %}
 
 {% block content %}
-<div class="fade-in-up mt-0 pt-0">
-        <!-- Header Compacto Optimizado -->
-    <div class="card card-custom mb-1">
-        <div class="card-header-custom" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 8px;">
+<div class="mt-0 pt-0">
+        <!-- Header Estático - Sin Animaciones -->
+    <div class="card mb-1" style="border: 1px solid #e0e0e0;">
+        <div class="card-header" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 0; border: none;">
             <div class="d-flex justify-content-between align-items-center">
-                <div class="ribbon-content">
+                <div>
                     <h1 class="h3 mb-0 text-white fw-bold">
                         <i class="fas fa-briefcase me-2"></i>
                         {% if pipeline %}{{ pipeline.nombre }}{% else %}Pipeline de Negocio{% endif %}
                     </h1>
                 </div>
-                <div class="ribbon-actions d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center">
                     <!-- Selector de Pipeline -->
                     <div class="dropdown">
                         <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownPipeline" data-bs-toggle="dropdown" aria-expanded="false">
@@ -64,8 +64,8 @@
     </div>
 
     {% if pipeline %}
-        <!-- KPIs Compactos en Fila Horizontal -->
-    <div class="card card-custom mb-1" id="kpis-section">
+        <!-- KPIs Estáticos en Fila Horizontal -->
+    <div class="card mb-1" id="kpis-section" style="border: 1px solid #e0e0e0;">
         <div class="card-body py-2">
             <div class="row g-2">
                 <div class="col-3">
@@ -200,11 +200,11 @@
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Cliente</p>
-                                <p class="text-sm font-semibold text-gray-900 truncate">{{ s.cliente }}</p>
+                                <p class="text-sm font-semibold text-gray-900 truncate">{{ s.cliente_nombre }}</p>
                             </div>
                             <div>
                                 <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Monto</p>
-                                <p class="text-sm font-bold text-green-600">{{ s.monto }}</p>
+                                <p class="text-sm font-bold text-green-600">{{ s.monto_formateado }}</p>
                             </div>
                         </div>
 
@@ -212,11 +212,11 @@
                         <div class="space-y-2 mb-3">
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-gray-500">Cédula:</span>
-                                <span class="text-gray-900 font-medium">{{ s.cedula }}</span>
+                                <span class="text-gray-900 font-medium">{{ s.cliente_cedula }}</span>
                             </div>
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-gray-500">Producto:</span>
-                                <span class="text-gray-900 font-medium truncate ml-2">{{ s.producto }}</span>
+                                <span class="text-gray-900 font-medium truncate ml-2">{{ s.producto_descripcion }}</span>
                             </div>
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-gray-500">Propietario:</span>
@@ -428,8 +428,8 @@
                                 {% for s in solicitudes_tabla %}
                                 <tr class="align-middle table-row-hover {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
                                     data-solicitud-id="{{ s.id }}"
-                                    data-cliente="{{ s.cliente|default:'Sin cliente' }}"
-                                    data-producto="{{ s.producto|default:'Sin producto' }}"
+                                    data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
+                                    data-producto="{{ s.producto_descripcion|default:'Sin producto' }}"
                                     data-estado="{{ s.estado_actual|default:'Sin estado' }}"
                                     data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
                                     data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
@@ -440,14 +440,6 @@
                                             {% for alerta in s.alertas %}
                                             <i class="fas {{ alerta.icon }} text-{{ alerta.color }} me-1" title="{{ alerta.tooltip }}" style="font-size: 0.8rem;"></i>
                                             {% endfor %}
-                                            <!-- Indicador SLA -->
-                                            {% if s.sla_color == 'text-danger' %}
-                                                <i class="fas fa-circle text-danger me-1" title="Vencido" style="font-size: 0.6rem;"></i>
-                                            {% elif s.sla_color == 'text-warning' %}
-                                                <i class="fas fa-circle text-warning me-1" title="Por vencer" style="font-size: 0.6rem;"></i>
-                                            {% elif s.sla_color == 'text-success' %}
-                                                <i class="fas fa-circle text-success me-1" title="En tiempo" style="font-size: 0.6rem;"></i>
-                                            {% endif %}
                                             <!-- Número clickeable -->
                                             <a href="#" class="text-decoration-none fw-bold solicitud-link" 
                                                onclick="mostrarModalSolicitud({{ s.id }})" 
@@ -458,12 +450,12 @@
                                     </td>
                                     <td class="text-dark">
                                         <div>
-                                            <div class="fw-semibold">{{ s.cliente }}</div>
-                                            <small class="text-muted">{{ s.cedula }}</small>
+                                            <div class="fw-semibold">{{ s.cliente_nombre }}</div>
+                                            <small class="text-muted">{{ s.cliente_cedula }}</small>
                                         </div>
                                     </td>
-                                    <td class="text-dark">{{ s.producto }}</td>
-                                    <td><span class="fw-bold text-success">{{ s.monto }}</span></td>
+                                    <td class="text-dark">{{ s.producto_descripcion }}</td>
+                                    <td><span class="fw-bold text-success">{{ s.monto_formateado }}</span></td>
                                     <td class="text-dark"><i class="fas fa-user me-1 text-muted"></i> {{ s.propietario }}</td>
                                     <td style="max-width: 200px;">
                                         {% if s.asignado_a != 'Sin asignar' %}
@@ -678,13 +670,13 @@
                              draggable="true" 
                              data-solicitud-id="{{ s.id }}"
                              data-etapa-id="{{ etapa.id }}"
-                             data-cliente="{{ s.cliente|default:'Sin cliente' }}"
+                             data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
                              data-estado="{{ s.estado_actual|default:'Sin estado' }}"
                              data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
                              data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
-                             data-search="{{ s.codigo|lower }} {{ s.cliente|lower }}"
+                             data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}"
                              data-codigo="{{ s.codigo }}"
-                             data-monto="{{ s.monto }}"
+                             data-monto="{{ s.monto_formateado }}"
                              data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
                              data-sla-texto="{{ s.sla_restante }}"
                              style="cursor: grab;">
@@ -709,29 +701,7 @@
                                             </span>
                                         </h6>
                                         
-                                        <!-- Dropdown compacto mejorado -->
-                                        <div class="dropdown" onclick="event.stopPropagation()">
-                                            <button class="btn btn-sm btn-outline-secondary p-1" type="button" data-bs-toggle="dropdown"
-                                                    style="border-radius: 3px; font-size: 0.6rem; padding: 2px 4px !important; z-index: 1051;">
-                                                <i class="fas fa-exchange-alt"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1052; position: fixed;">
-                                                {% for etapa_dest in pipeline.etapas.all %}
-                                                <li>
-                                                    <a class="dropdown-item cambiar-etapa-kanban" 
-                                                       href="#"
-                                                       data-solicitud-id="{{ s.id }}"
-                                                       data-etapa-id="{{ etapa_dest.id }}"
-                                                       data-etapa-nombre="{{ etapa_dest.nombre }}">
-                                                        {{ etapa_dest.nombre }}
-                                                        {% if s.etapa == etapa_dest.nombre %}
-                                                        <i class="fas fa-check text-success ms-1"></i>
-                                                        {% endif %}
-                                                    </a>
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
+                                        <!-- Botón de cambio de etapa eliminado por solicitud del usuario -->
                                     </div>
                                     
                                     <!-- Contenido en 2 columnas -->
@@ -740,12 +710,12 @@
                                         <div class="col-7">
                                             <div class="d-flex align-items-center mb-1">
                                                 <i class="fas fa-user text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                <span style="font-size: 0.75rem; color: #495057;">{{ s.cliente|truncatechars:12 }}</span>
+                                                <span style="font-size: 0.75rem; color: #495057;">{{ s.cliente_nombre|truncatechars:12 }}</span>
                                             </div>
                                             
                                             <div class="d-flex align-items-center mb-1">
                                                 <i class="fas fa-dollar-sign text-success me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto }}</span>
+                                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto_formateado }}</span>
                                             </div>
                                             
                                             <div class="d-flex align-items-center">
@@ -869,6 +839,85 @@
 </div>
 
 {% include 'workflow/partials/modalSolicitud.html' %}
+
+<!-- Modal de Confirmación Personalizado -->
+<div class="modal fade" id="modalConfirmacionEtapa" tabindex="-1" aria-labelledby="modalConfirmacionEtapaLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <!-- Header con gradiente verde -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 24px 32px 20px 32px; position: relative; overflow: hidden;">
+                <!-- Decoración de fondo -->
+                <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; opacity: 0.6;"></div>
+                <div style="position: absolute; top: 40px; right: 60px; width: 60px; height: 60px; background: rgba(255, 255, 255, 0.08); border-radius: 50%;"></div>
+                
+                <div class="w-100 text-center position-relative">
+                    <h4 class="modal-title text-white fw-bold mb-1" id="modalConfirmacionEtapaLabel" style="font-size: 1.4rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-exchange-alt me-2" style="font-size: 1.2rem;"></i>
+                        Confirmar Cambio de Etapa
+                    </h4>
+                    <p class="text-white-50 mb-0" style="font-size: 0.9rem; font-weight: 500;">Sistema de Workflow</p>
+                </div>
+            </div>
+            
+            <div class="modal-body" style="padding: 32px;">
+                <!-- Icono central -->
+                <div class="text-center mb-4">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.15)); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 8px 24px rgba(40, 167, 69, 0.2);">
+                        <i class="fas fa-arrow-right" style="font-size: 2rem; color: #28a745; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"></i>
+                    </div>
+                </div>
+                
+                <!-- Mensaje principal -->
+                <div class="text-center mb-4">
+                    <h5 class="fw-bold mb-3" style="color: #2d3748; font-size: 1.2rem;">¿Está seguro del cambio?</h5>
+                    <p class="text-muted mb-3" style="font-size: 0.95rem;">La solicitud se moverá a la siguiente etapa:</p>
+                    
+                    <!-- Caja verde con nombre de etapa -->
+                    <div class="bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 p-3 mb-4" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.08), rgba(32, 201, 151, 0.12)) !important;">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-flag text-success me-2" style="font-size: 1.1rem;"></i>
+                            <span id="nombreEtapaDestino" class="fw-bold text-success" style="font-size: 1.1rem;">Nombre de la Etapa</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información del cambio -->
+                <div class="bg-light rounded-3 p-3 mb-4" style="border-left: 4px solid #28a745;">
+                    <div class="d-flex align-items-start mb-2">
+                        <i class="fas fa-info-circle text-primary me-2 mt-1" style="font-size: 1rem;"></i>
+                        <div>
+                            <h6 class="fw-bold mb-2 text-dark" style="font-size: 0.95rem;">Información del cambio:</h6>
+                            <ul class="list-unstyled mb-0" style="font-size: 0.85rem; color: #6c757d; line-height: 1.6;">
+                                <li class="mb-1">
+                                    <i class="fas fa-check text-success me-2" style="font-size: 0.75rem;"></i>
+                                    Se actualizará el estado de la solicitud
+                                </li>
+                                <li class="mb-1">
+                                    <i class="fas fa-check text-success me-2" style="font-size: 0.75rem;"></i>
+                                    Se registrará en el historial del sistema
+                                </li>
+                                <li class="mb-0">
+                                    <i class="fas fa-check text-success me-2" style="font-size: 0.75rem;"></i>
+                                    Se notificará a los usuarios correspondientes
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+                <button type="button" class="btn btn-outline-secondary" id="btnCancelarModal" style="font-weight: 600; padding: 12px 24px; border-radius: 8px; border-width: 2px;">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="btnAceptarModal" style="font-weight: 600; padding: 12px 24px; border-radius: 8px; background: linear-gradient(135deg, #28a745, #20c997); border: none; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                    <i class="fas fa-check me-2"></i>Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -876,13 +925,60 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
+
+<!-- Toastr CSS y JS para notificaciones -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.min.js"></script>
 <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
+<!-- Toastr JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <script>
 $(document).ready(function() {
+    // =====================================
+    // CONFIGURACIÓN DE TOASTR
+    // =====================================
+    
+    // Configurar toastr si está disponible
+    if (typeof toastr !== 'undefined') {
+        toastr.options = {
+            closeButton: true,
+            debug: false,
+            newestOnTop: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            preventDuplicates: true,
+            onclick: null,
+            showDuration: '300',
+            hideDuration: '1000',
+            timeOut: '4000',
+            extendedTimeOut: '1000',
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut',
+            toastClass: 'toast-pacifico',
+            iconClasses: {
+                error: 'toast-error',
+                info: 'toast-info',
+                success: 'toast-success',
+                warning: 'toast-warning'
+            }
+        };
+        
+        console.log('✅ Toastr configurado correctamente');
+    } else {
+        console.warn('⚠️ Toastr no está disponible');
+    }
+    
+    // =====================================
+    // INICIALIZACIÓN DE DATATABLES
+    // =====================================
+    
     // Inicializar DataTable con configuración mejorada
     var table = $('#tablaSolicitudes').DataTable({
         paging: true,
@@ -932,6 +1028,60 @@ $(document).ready(function() {
     $('.dataTables_filter').hide();
     
     // Configurar filtros dinámicos
+    // =====================================
+    // FUNCIONES DE NOTIFICACIÓN PERSONALIZADA
+    // =====================================
+    
+    function mostrarNotificacionExito(mensaje) {
+        var $notificacion = $(`
+            <div class="notificacion-personalizada notificacion-exito">
+                <div class="notificacion-contenido">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span>${mensaje}</span>
+                </div>
+            </div>
+        `);
+        
+        $('body').append($notificacion);
+        
+        // Animar entrada
+        setTimeout(() => {
+            $notificacion.addClass('show');
+        }, 100);
+        
+        // Auto-remover después de 4 segundos
+        setTimeout(() => {
+            $notificacion.removeClass('show');
+            setTimeout(() => $notificacion.remove(), 300);
+        }, 4000);
+    }
+    
+    function mostrarNotificacionError(mensaje) {
+        console.log('🚨 Mostrando notificación de error:', mensaje);
+        
+        var $notificacion = $(`
+            <div class="notificacion-personalizada notificacion-error">
+                <div class="notificacion-contenido">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span>${mensaje}</span>
+                </div>
+            </div>
+        `);
+        
+        $('body').append($notificacion);
+        
+        // Animar entrada
+        setTimeout(() => {
+            $notificacion.addClass('show');
+        }, 100);
+        
+        // Auto-remover después de 5 segundos (más tiempo para errores)
+        setTimeout(() => {
+            $notificacion.removeClass('show');
+            setTimeout(() => $notificacion.remove(), 300);
+        }, 5000);
+    }
+    
     function configurarFiltros() {
         console.log('Configurando filtros...');
         
@@ -1017,7 +1167,81 @@ $(document).ready(function() {
         aplicarFiltrosAvanzados();
     });
     
-    // Manejar cambio de etapa
+    // =====================================
+    // MODAL DE CONFIRMACIÓN PERSONALIZADO
+    // =====================================
+    
+    // Variables globales para el modal
+    let modalConfirmCallback = null;
+    let modalCancelCallback = null;
+    
+    // Función para mostrar modal de confirmación
+    window.mostrarModalConfirmacion = function(nombreEtapa, onConfirm, onCancel, opciones) {
+        // Opciones por defecto
+        var configuracion = {
+            titulo: 'Confirmar Cambio de Etapa',
+            subtitulo: 'Sistema de Workflow',
+            pregunta: '¿Está seguro del cambio?',
+            descripcion: 'La solicitud se moverá a la siguiente etapa:',
+            icono: 'fas fa-arrow-right',
+            tipo: 'cambio_etapa' // cambio_etapa, eliminar, accion_general
+        };
+        
+        // Sobrescribir configuración si se proporcionan opciones
+        if (opciones) {
+            configuracion = Object.assign(configuracion, opciones);
+        }
+        
+        // Configurar para diferentes tipos de acción
+        if (nombreEtapa === 'Eliminar Solicitud' || configuracion.tipo === 'eliminar') {
+            configuracion.titulo = 'Confirmar Eliminación';
+            configuracion.pregunta = '¿Está seguro de eliminar esta solicitud?';
+            configuracion.descripcion = 'Esta acción no se puede deshacer:';
+            configuracion.icono = 'fas fa-trash';
+            $('#nombreEtapaDestino').html('<span class="text-danger fw-bold">Esta acción es permanente</span>');
+        } else {
+            // Para cambio de etapa normal
+            $('#nombreEtapaDestino').text(nombreEtapa);
+        }
+        
+        // Actualizar contenido del modal
+        $('#modalConfirmacionEtapaLabel').html(`<i class="${configuracion.icono} me-2"></i>${configuracion.titulo}`);
+        $('#modalConfirmacionEtapaLabel').next('p').text(configuracion.subtitulo);
+        $('.modal-body h5').text(configuracion.pregunta);
+        $('.modal-body p.text-muted').text(configuracion.descripcion);
+        $('.modal-body .text-center .fas').removeClass().addClass(configuracion.icono).css('font-size', '2rem').css('color', '#28a745');
+        
+        // Guardar callbacks
+        modalConfirmCallback = onConfirm;
+        modalCancelCallback = onCancel || function() {};
+        
+        // Mostrar el modal
+        var modal = new bootstrap.Modal(document.getElementById('modalConfirmacionEtapa'));
+        modal.show();
+    };
+    
+    // Event listeners para los botones del modal
+    $('#btnAceptarModal').on('click', function() {
+        // Ocultar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
+        
+        // Ejecutar callback de confirmación
+        if (modalConfirmCallback) {
+            modalConfirmCallback();
+        }
+    });
+    
+    $('#btnCancelarModal').on('click', function() {
+        // Ocultar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
+        
+        // Ejecutar callback de cancelación
+        if (modalCancelCallback) {
+            modalCancelCallback();
+        }
+    });
+    
+    // Manejar cambio de etapa con modal personalizado
     $(document).on('change', '.etapa-select', function() {
         var $select = $(this);
         var solicitudId = $select.data('solicitud-id');
@@ -1025,62 +1249,81 @@ $(document).ready(function() {
         var nuevaEtapaId = $select.val();
         var nombreEtapa = $select.find('option:selected').text();
         
+        console.log('🔥 CAMBIO DE ETAPA DETECTADO:');
+        console.log('- Solicitud ID:', solicitudId);
+        console.log('- Etapa Actual:', etapaActual);
+        console.log('- Nueva Etapa ID:', nuevaEtapaId);
+        console.log('- Nombre Etapa:', nombreEtapa);
+        
         if (nuevaEtapaId === etapaActual.toString()) {
+            console.log('❌ No hay cambio de etapa - valores iguales');
             return; // No hay cambio
         }
         
-        // Confirmar cambio
-        if (!confirm(`¿Estás seguro de cambiar la etapa a "${nombreEtapa}"?`)) {
-            $select.val(etapaActual); // Revertir selección
-            return;
-        }
-        
-        // Deshabilitar select mientras se procesa
-        $select.prop('disabled', true);
-        
-        // Realizar petición AJAX
-        $.ajax({
-            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-            },
-            data: JSON.stringify({
-                etapa_id: nuevaEtapaId
-            }),
-            contentType: 'application/json',
-            success: function(response) {
-                if (response.success) {
+        // Mostrar modal de confirmación personalizado
+        mostrarModalConfirmacion(nombreEtapa, function() {
+            // CALLBACK DE CONFIRMACIÓN
+            console.log('✅ Confirmado desde modal personalizado, ejecutando cambio de etapa');
+            
+            // Deshabilitar select mientras se procesa
+            $select.prop('disabled', true);
+            
+            // Realizar petición AJAX
+            fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                body: JSON.stringify({
+                    etapa_id: nuevaEtapaId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                if (data.success) {
                     // Actualizar data attribute
                     $select.data('etapa-actual', nuevaEtapaId);
                     
-                    // Mostrar mensaje de éxito
+                    // Mostrar mensaje de éxito con toastr si está disponible
                     if (typeof toastr !== 'undefined') {
-                        toastr.success(response.mensaje);
+                        toastr.success(data.mensaje || 'Etapa cambiada exitosamente');
                     } else {
-                        alert('Etapa cambiada exitosamente');
+                        // Usar notificación personalizada en lugar de alert
+                        mostrarNotificacionExito(data.mensaje || 'Etapa cambiada exitosamente');
                     }
                     
-                    // Opcional: Recargar la fila o toda la tabla
-                    // table.ajax.reload(null, false);
+                    // Recargar página
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
                 } else {
-                    alert('Error: ' + response.error);
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error('Error: ' + data.error);
+                    } else {
+                        mostrarNotificacionError('Error: ' + data.error);
+                    }
                     $select.val(etapaActual); // Revertir selección
                 }
-            },
-            error: function(xhr) {
-                var errorMsg = 'Error al cambiar etapa';
-                try {
-                    var response = JSON.parse(xhr.responseText);
-                    errorMsg = response.error || errorMsg;
-                } catch(e) {}
-                
-                alert(errorMsg);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Error al cambiar etapa');
+                } else {
+                    mostrarNotificacionError('Error al cambiar etapa');
+                }
                 $select.val(etapaActual); // Revertir selección
-            },
-            complete: function() {
+            })
+            .finally(() => {
                 $select.prop('disabled', false);
-            }
+            });
+            
+        }, function() {
+            // CALLBACK DE CANCELACIÓN
+            console.log('❌ Cancelado desde modal personalizado');
+            $select.val(etapaActual); // Revertir selección
         });
     });
     
@@ -1687,7 +1930,7 @@ $(document).ready(function() {
 .vista-movil .text-yellow-800 { color: #92400e; }
 .vista-movil .bg-green-100 { background-color: #dcfce7; }
 .vista-movil .text-green-800 { color: #166534; }
-.vista-movil .bg-gray-800 { color: #1f2937; }
+.vista-movil .bg-gray-800 { background-color: #1f2937; }
 .vista-movil .relative { position: relative; }
 .vista-movil .p-1 { padding: 0.25rem; }
 .vista-movil .hover\:bg-gray-100:hover { background-color: #f3f4f6; }
@@ -2631,6 +2874,150 @@ $(document).ready(function() {
     font-size: 16px !important;
 }
 
+/* =====================================
+   ESTILOS PARA NOTIFICACIONES PERSONALIZADAS
+   ===================================== */
+.notificacion-personalizada {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    z-index: 9999;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notificacion-personalizada.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notificacion-exito {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.notificacion-error {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+}
+
+.notificacion-contenido {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.notificacion-personalizada i {
+    font-size: 1.1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* =====================================
+   ESTILOS PERSONALIZADOS PARA TOASTR
+   ===================================== */
+
+/* Estilos generales para toastr con tema Pacífico */
+.toast-pacifico {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    padding: 20px 24px !important;
+    min-width: 320px !important;
+    opacity: 0.95 !important;
+}
+
+/* Toast de éxito con gradiente verde Pacífico */
+.toast-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white !important;
+}
+
+.toast-success .toast-progress {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Toast de error con gradiente rojo */
+.toast-error {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+    color: white !important;
+}
+
+.toast-error .toast-progress {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Toast de información con gradiente azul */
+.toast-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+    color: white !important;
+}
+
+.toast-info .toast-progress {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Toast de advertencia con gradiente amarillo */
+.toast-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+    color: #212529 !important;
+}
+
+.toast-warning .toast-progress {
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Botón de cerrar personalizado */
+.toast-close-button {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    opacity: 0.8 !important;
+    transition: all 0.2s ease !important;
+}
+
+.toast-close-button:hover {
+    opacity: 1 !important;
+    transform: scale(1.1) !important;
+}
+
+/* Barra de progreso personalizada */
+.toast-progress {
+    height: 4px !important;
+    border-radius: 2px !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+/* Animaciones personalizadas */
+.toast-pacifico {
+    animation: toastSlideIn 0.3s ease-out !important;
+}
+
+@keyframes toastSlideIn {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 0.95;
+    }
+}
+
 /* Estilos para el header de Negocios */
 .ribbon {
     overflow: hidden;
@@ -3166,7 +3553,10 @@ function toggleMenu(button) {
 
 // Función para eliminar solicitud (reutilizada)
 function eliminarSolicitud(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta solicitud?')) {
+    mostrarModalConfirmacion('Eliminar Solicitud', function() {
+        // CALLBACK DE CONFIRMACIÓN PARA ELIMINAR
+        console.log('✅ Confirmado eliminar solicitud:', id);
+        
         fetch(`/workflow/api/solicitudes/${id}/eliminar/`, {
             method: 'DELETE',
             headers: {
@@ -3175,16 +3565,34 @@ function eliminarSolicitud(id) {
         })
         .then(response => {
             if (response.ok) {
-                location.reload();
+                if (typeof toastr !== 'undefined') {
+                    toastr.success('Solicitud eliminada exitosamente');
+                } else {
+                    mostrarNotificacionExito('Solicitud eliminada exitosamente');
+                }
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
             } else {
-                alert('Error al eliminar la solicitud');
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Error al eliminar la solicitud');
+                } else {
+                    mostrarNotificacionError('Error al eliminar la solicitud');
+                }
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al eliminar la solicitud');
+            if (typeof toastr !== 'undefined') {
+                toastr.error('Error al eliminar la solicitud');
+            } else {
+                mostrarNotificacionError('Error al eliminar la solicitud');
+            }
         });
-    }
+    }, function() {
+        // CALLBACK DE CANCELACIÓN
+        console.log('❌ Cancelada eliminación de solicitud');
+    });
 }
 
 // Función para toggle de secciones móviles
@@ -3445,11 +3853,69 @@ document.addEventListener('DOMContentLoaded', function() {
         var etapaId = $link.data('etapa-id');
         var etapaNombre = $link.data('etapa-nombre');
         
-        if (!confirm(`¿Estás seguro de cambiar la etapa a "${etapaNombre}"?`)) {
-            return;
-        }
+        // Confirmar cambio con modal personalizado
+        mostrarModalConfirmacion(etapaNombre, function() {
+            // Función que se ejecuta al confirmar - AJAX directo para Kanban
+            console.log('Ejecutando cambio de etapa Kanban:', solicitudId, etapaId);
+            
+            // Realizar petición AJAX para cambiar etapa
+            $.ajax({
+                url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                data: JSON.stringify({
+                    etapa_id: etapaId
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log('Respuesta del servidor Kanban:', response);
+                    if (response.success) {
+                        // Mostrar mensaje de éxito
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(response.mensaje || 'Etapa cambiada exitosamente');
+                        } else {
+                            alert('Etapa cambiada exitosamente');
+                        }
+                        
+                        // Recargar la página para mostrar cambios
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + (response.error || 'No se pudo cambiar la etapa'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error AJAX Kanban:', xhr, status, error);
+                    var errorMsg = 'Error al cambiar etapa';
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        errorMsg = response.error || errorMsg;
+                    } catch(e) {
+                        errorMsg = 'Error de conexión';
+                    }
+                    
+                    alert(errorMsg);
+                }
+            });
+        });
+        return;
+    });
+    
+    function realizarCambioEtapaKanban(solicitudId, etapaId, etapaNombre) {
+        console.log('🔄 KANBAN: Iniciando cambio de etapa', {
+            solicitudId: solicitudId,
+            etapaId: etapaId,
+            etapaNombre: etapaNombre
+        });
         
-        // Realizar petición AJAX (mismo código que la tabla)
+        // Agregar indicador visual de carga
+        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        $card.addClass('updating').css('opacity', '0.6');
+        
+        // Realizar petición AJAX
         $.ajax({
             url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
             type: 'POST',
@@ -3461,44 +3927,92 @@ document.addEventListener('DOMContentLoaded', function() {
             }),
             contentType: 'application/json',
             success: function(response) {
+                console.log('✅ KANBAN: Respuesta exitosa del servidor', response);
+                
                 if (response.success) {
-                    // Mover la tarjeta a la nueva columna
-                    var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
-                    var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+                    // Mostrar toast de éxito
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(response.mensaje || `Solicitud movida a ${etapaNombre}`, 'Etapa Actualizada', {
+                            positionClass: 'toast-top-right',
+                            timeOut: 3000,
+                            showMethod: 'slideDown',
+                            hideMethod: 'slideUp'
+                        });
+                    } else {
+                        mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${etapaNombre}`);
+                    }
                     
-                    // Actualizar atributos de la tarjeta
-                    $card.attr('data-etapa-id', etapaId);
+                    console.log('🔄 KANBAN: Actualizando vista...');
                     
-                    // Mover físicamente la tarjeta
-                    $card.appendTo($nuevaColumna);
+                    // Animar movimiento de tarjeta
+                    $card.fadeOut(300, function() {
+                        // Mover la tarjeta a la nueva columna
+                        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+                        
+                        // Actualizar atributos de la tarjeta
+                        $card.attr('data-etapa-id', etapaId);
+                        
+                        // Mover físicamente la tarjeta
+                        $card.appendTo($nuevaColumna);
+                        
+                        // Restablecer opacidad y animar aparición
+                        $card.css('opacity', '1').removeClass('updating').fadeIn(300);
+                        
+                        // Actualizar contadores
+                        actualizarContadoresKanban();
+                        
+                        console.log('✅ KANBAN: Vista actualizada correctamente');
+                    });
                     
-                    // Actualizar contadores
-                    actualizarContadoresKanban();
-                    
-                    // 🚨 CRÍTICO: Sincronizar con otras vistas
+                    // Sincronizar con otras vistas
                     sincronizarCambioEtapa(solicitudId, etapaId, response);
                     
-                    // Mostrar mensaje de éxito
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.mensaje);
-                    } else {
-                        alert('Etapa cambiada exitosamente');
-                    }
                 } else {
-                    alert('Error: ' + response.error);
+                    console.error('❌ KANBAN: Error en respuesta del servidor', response.error);
+                    
+                    // Mostrar toast de error
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(response.error || 'Error desconocido', 'Error al Cambiar Etapa', {
+                            positionClass: 'toast-top-right',
+                            timeOut: 5000
+                        });
+                    } else {
+                        mostrarNotificacionError(response.error || 'Error al cambiar etapa');
+                    }
                 }
             },
-            error: function(xhr) {
+            error: function(xhr, status, error) {
+                console.error('❌ KANBAN: Error AJAX', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                
                 var errorMsg = 'Error al cambiar etapa';
                 try {
                     var response = JSON.parse(xhr.responseText);
                     errorMsg = response.error || errorMsg;
-                } catch(e) {}
+                } catch(e) {
+                    errorMsg = 'Error de conexión con el servidor';
+                }
                 
-                alert(errorMsg);
+                // Mostrar toast de error
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(errorMsg, 'Error de Conexión', {
+                        positionClass: 'toast-top-right',
+                        timeOut: 5000
+                    });
+                } else {
+                    mostrarNotificacionError(errorMsg);
+                }
+            },
+            complete: function() {
+                // Asegurar que se remueva el indicador de carga
+                $card.removeClass('updating').css('opacity', '1');
+                console.log('🏁 KANBAN: Petición completada');
             }
         });
-    });
+    }
     
     // Inicializar filtros Kanban cuando la página esté lista
     if ($('#kanbanFiltroCliente').length > 0) {
@@ -3567,13 +4081,88 @@ document.addEventListener('DOMContentLoaded', function() {
                 var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
                 nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                 
-                // Confirmar movimiento
-                if (!confirm(`¿Confirmar movimiento a "${nuevaEtapaNombre}"?`)) {
-                    return;
-                }
-                
-                // Realizar petición AJAX
-                realizarCambioEtapaDragDrop(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
+                // Confirmar movimiento con modal personalizado
+                mostrarModalConfirmacion(nuevaEtapaNombre, function() {
+                    // Función que se ejecuta al confirmar - AJAX directo para Drag & Drop
+                    console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
+                    
+                    // Realizar petición AJAX para cambiar etapa
+                    $.ajax({
+                        url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                        },
+                        data: JSON.stringify({
+                            etapa_id: nuevaEtapaId
+                        }),
+                        contentType: 'application/json',
+                        success: function(response) {
+                            console.log('✅ DRAG & DROP: Respuesta exitosa del servidor', response);
+                            if (response.success) {
+                                // Mostrar toast de éxito con configuración específica
+                                if (typeof toastr !== 'undefined') {
+                                    toastr.success(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`, 'Movimiento Completado', {
+                                        positionClass: 'toast-top-right',
+                                        timeOut: 3000,
+                                        showMethod: 'fadeIn',
+                                        hideMethod: 'fadeOut',
+                                        iconClass: 'toast-success-custom'
+                                    });
+                                } else {
+                                    mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`);
+                                }
+                                
+                                console.log('🔄 DRAG & DROP: Actualizando kanban sin recargar página completa...');
+                                
+                                // Actualizar la vista kanban dinámicamente sin recargar
+                                actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
+                                
+                            } else {
+                                console.error('❌ DRAG & DROP: Error en respuesta', response.error);
+                                
+                                // Mostrar toast de error
+                                if (typeof toastr !== 'undefined') {
+                                    toastr.error(response.error || 'No se pudo cambiar la etapa', 'Error en Movimiento', {
+                                        positionClass: 'toast-top-right',
+                                        timeOut: 5000
+                                    });
+                                } else {
+                                    mostrarNotificacionError(response.error || 'No se pudo cambiar la etapa');
+                                }
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('❌ DRAG & DROP: Error AJAX', {
+                                status: status,
+                                error: error,
+                                response: xhr.responseText,
+                                solicitudId: solicitudId,
+                                nuevaEtapaId: nuevaEtapaId
+                            });
+                            
+                            var errorMsg = 'Error al cambiar etapa';
+                            try {
+                                var response = JSON.parse(xhr.responseText);
+                                errorMsg = response.error || errorMsg;
+                            } catch(e) {
+                                errorMsg = 'Error de conexión con el servidor';
+                            }
+                            
+                            // Mostrar toast de error con más detalles
+                            if (typeof toastr !== 'undefined') {
+                                toastr.error(errorMsg, 'Error de Conexión', {
+                                    positionClass: 'toast-top-right',
+                                    timeOut: 6000,
+                                    extendedTimeOut: 2000
+                                });
+                            } else {
+                                mostrarNotificacionError(errorMsg);
+                            }
+                        }
+                    });
+                });
+                return;
                 
             } catch (error) {
                 console.error('Error al procesar drop:', error);
@@ -3582,10 +4171,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function realizarCambioEtapaDragDrop(solicitudId, nuevaEtapaId, etapaNombre) {
+        console.log('🔄 DRAG DROP (Función): Iniciando cambio de etapa', {
+            solicitudId: solicitudId,
+            nuevaEtapaId: nuevaEtapaId,
+            etapaNombre: etapaNombre
+        });
+        
         var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
         
-        // Agregar indicador de carga
-        $card.addClass('updating');
+        // Agregar indicador de carga visual
+        $card.addClass('updating').css('opacity', '0.7');
         
         $.ajax({
             url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
@@ -3598,7 +4193,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }),
             contentType: 'application/json',
             success: function(response) {
+                console.log('✅ DRAG DROP (Función): Respuesta exitosa', response);
+                
                 if (response.success) {
+                    // Mostrar toast de éxito
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(response.mensaje || `Solicitud movida a ${etapaNombre}`, 'Arrastre Completado', {
+                            positionClass: 'toast-top-right',
+                            timeOut: 3000,
+                            showMethod: 'slideDown'
+                        });
+                    } else {
+                        mostrarNotificacionExito(`Solicitud movida a ${etapaNombre}`);
+                    }
+                    
                     // Animar movimiento de tarjeta
                     $card.fadeOut(200, function() {
                         // Mover la tarjeta a la nueva columna
@@ -3610,35 +4218,103 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Mover físicamente la tarjeta
                         $card.appendTo($nuevaColumna);
                         
-                        // Animar aparición en nueva columna
-                        $card.fadeIn(300);
+                        // Restablecer estilos y animar aparición
+                        $card.css('opacity', '1').removeClass('updating').fadeIn(300);
                         
                         // Actualizar contadores
                         actualizarContadoresKanban();
                         
-                        // 🚨 CRÍTICO: Sincronizar con otras vistas
-                        sincronizarCambioEtapa(solicitudId, nuevaEtapaId, response);
-                        
-                        // Mostrar notificación de éxito
-                        mostrarNotificacionExito(`Solicitud movida a ${etapaNombre}`);
+                        console.log('✅ DRAG DROP (Función): Tarjeta movida y vista actualizada');
                     });
+                    
+                    // Sincronizar con otras vistas
+                    sincronizarCambioEtapa(solicitudId, nuevaEtapaId, response);
+                    
                 } else {
-                    alert('Error: ' + response.error);
+                    console.error('❌ DRAG DROP (Función): Error en respuesta', response.error);
+                    
+                    // Mostrar toast de error
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(response.error || 'Error desconocido', 'Error en Arrastre', {
+                            positionClass: 'toast-top-right',
+                            timeOut: 5000
+                        });
+                    } else {
+                        mostrarNotificacionError(response.error || 'Error al cambiar etapa');
+                    }
                 }
             },
-            error: function(xhr) {
+            error: function(xhr, status, error) {
+                console.error('❌ DRAG DROP (Función): Error AJAX', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                
                 var errorMsg = 'Error al cambiar etapa';
                 try {
                     var response = JSON.parse(xhr.responseText);
                     errorMsg = response.error || errorMsg;
-                } catch(e) {}
+                } catch(e) {
+                    errorMsg = 'Error de conexión';
+                }
                 
-                alert(errorMsg);
+                // Mostrar toast de error
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(errorMsg, 'Error de Conexión', {
+                        positionClass: 'toast-top-right',
+                        timeOut: 5000
+                    });
+                } else {
+                    mostrarNotificacionError(errorMsg);
+                }
             },
             complete: function() {
-                $card.removeClass('updating');
+                // Asegurar que se remueva el indicador de carga
+                $card.removeClass('updating').css('opacity', '1');
+                console.log('🏁 DRAG DROP (Función): Petición completada');
             }
         });
+    }
+    
+    // Nueva función para actualizar kanban tras movimiento sin recargar página
+    function actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, etapaNombre) {
+        console.log('🔄 Actualizando kanban tras movimiento', {
+            solicitudId: solicitudId,
+            nuevaEtapaId: nuevaEtapaId,
+            etapaNombre: etapaNombre
+        });
+        
+        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
+        
+        if ($card.length && $nuevaColumna.length) {
+            // Animar movimiento suave
+            $card.fadeOut(300, function() {
+                // Actualizar atributos
+                $card.attr('data-etapa-id', nuevaEtapaId);
+                
+                // Mover a nueva columna
+                $card.appendTo($nuevaColumna);
+                
+                // Mostrar con animación
+                $card.fadeIn(400);
+                
+                // Actualizar contadores
+                if (typeof actualizarContadoresKanban === 'function') {
+                    actualizarContadoresKanban();
+                }
+                
+                console.log('✅ Kanban actualizado dinámicamente');
+            });
+        } else {
+            console.warn('⚠️ No se pudo encontrar la tarjeta o columna para actualizar');
+            // Fallback: recargar página después de un breve delay
+            setTimeout(() => {
+                console.log('🔄 Recargando página como fallback...');
+                location.reload();
+            }, 1500);
+        }
     }
     
     function mostrarNotificacionExito(mensaje) {

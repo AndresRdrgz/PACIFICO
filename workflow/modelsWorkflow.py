@@ -96,6 +96,43 @@ class Solicitud(models.Model):
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
+    
+    @property
+    def cliente_nombre(self):
+        """Obtiene el nombre del cliente de forma consistente"""
+        if self.cotizacion and self.cotizacion.nombreCliente:
+            return self.cotizacion.nombreCliente
+        elif self.cliente and self.cliente.nombreCliente:
+            return self.cliente.nombreCliente
+        else:
+            return ""  # Campo en blanco si no hay cliente
+    
+    @property
+    def cliente_cedula(self):
+        """Obtiene la cédula del cliente de forma consistente"""
+        if self.cotizacion and self.cotizacion.cedulaCliente:
+            return self.cotizacion.cedulaCliente
+        elif self.cliente and self.cliente.cedulaCliente:
+            return self.cliente.cedulaCliente
+        else:
+            return ""  # Campo en blanco si no hay cédula
+    
+    @property
+    def monto_formateado(self):
+        """Obtiene el monto formateado"""
+        if self.cotizacion and self.cotizacion.montoPrestamo:
+            return f"$ {self.cotizacion.montoPrestamo:,.0f}"
+        return "$ 0"
+    
+    @property
+    def producto_descripcion(self):
+        """Obtiene el tipo de producto (auto vs préstamo personal)"""
+        if self.cotizacion:
+            if self.cotizacion.tipoPrestamo == 'auto':
+                return "Auto"
+            else:
+                return "Préstamo Personal"
+        return ""  # Campo en blanco si no hay cotización
 
 
 class HistorialSolicitud(models.Model):

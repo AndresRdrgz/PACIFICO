@@ -6,6 +6,9 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
 from django.contrib.auth.models import Group, User
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.conf import settings
 from .modelsWorkflow import *
 from .models import ClienteEntrevista
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -104,22 +107,43 @@ def negocios_view(request):
                 # Si no tiene UserProfile, mantener rol por defecto
                 pass
         
-        # Lógica de permisos basada en rol
-        if user_role == 'Administrador':
-            # Administrador ve TODAS las solicitudes
-            solicitudes = Solicitud.objects.filter(pipeline=pipeline)
-        elif user_role == 'Supervisor':
-            # Supervisor ve todas las solicitudes de su(s) grupo(s)
-            user_groups = request.user.groups.all()
-            if user_groups.exists():
-                group_users = User.objects.filter(groups__in=user_groups)
-                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users)
-            else:
-                # Si no tiene grupos asignados, solo ve las suyas
-                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden ver TODO
+        if request.user.is_staff:
+            # Super staff ve TODAS las solicitudes del pipeline
+            solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            )
         else:
-            # Oficial y Usuario solo ven sus propias solicitudes
-            solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
+            # Lógica de permisos basada en rol para usuarios regulares
+            if user_role == 'Administrador':
+                # Administrador ve TODAS las solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
+            elif user_role == 'Supervisor':
+                # Supervisor ve todas las solicitudes de su(s) grupo(s)
+                user_groups = request.user.groups.all()
+                if user_groups.exists():
+                    group_users = User.objects.filter(groups__in=user_groups)
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+                else:
+                    # Si no tiene grupos asignados, solo ve las suyas
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+            else:
+                # Oficial y Usuario solo ven sus propias solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
         
         # Filtros básicos
         filtro_estado = request.GET.get('estado', '')
@@ -216,20 +240,35 @@ def negocios_view(request):
         etapa_color_map = {nombre: ETAPA_COLORS[i % len(ETAPA_COLORS)] for i, nombre in enumerate(etapas_pipeline)}
 
         for solicitud in page_obj:
+            # === DEBUG TEMPORAL ===
+            if solicitud.codigo == 'PRU-4811C164':
+                print(f"DEBUG - Solicitud {solicitud.codigo}:")
+                print(f"  - Cliente: {solicitud.cliente}")
+                print(f"  - Cotización: {solicitud.cotizacion}")
+                if solicitud.cotizacion:
+                    print(f"  - Cotización nombreCliente: {solicitud.cotizacion.nombreCliente}")
+                    print(f"  - Cotización cedulaCliente: {solicitud.cotizacion.cedulaCliente}")
+                    print(f"  - Cotización montoPrestamo: {solicitud.cotizacion.montoPrestamo}")
+                    print(f"  - Cotización tipoPrestamo: {solicitud.cotizacion.tipoPrestamo}")
+                if solicitud.cliente:
+                    print(f"  - Cliente nombreCliente: {solicitud.cliente.nombreCliente}")
+                    print(f"  - Cliente cedulaCliente: {solicitud.cliente.cedulaCliente}")
+                print(f"  - Propiedades:")
+                print(f"    - cliente_nombre: {solicitud.cliente_nombre}")
+                print(f"    - cliente_cedula: {solicitud.cliente_cedula}")
+                print(f"    - producto_descripcion: {solicitud.producto_descripcion}")
+                print(f"    - monto_formateado: {solicitud.monto_formateado}")
+            # === FIN DEBUG ===
+
             # Campos personalizados
             valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
             get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
 
-            # Cliente y cédula
-            cliente = get_valor('cliente') or (solicitud.creada_por.get_full_name() or solicitud.creada_por.username)
-            cedula = get_valor('cédula') or get_valor('cedula') or ''
-            producto = get_valor('producto') or ''
-            monto = get_valor('monto solicitado') or get_valor('monto') or 0
-            try:
-                monto_float = float(monto)
-            except:
-                monto_float = 0
-            monto_formateado = "$ {:,.0f}".format(monto_float)
+            # Cliente, cédula, producto y monto usando las nuevas propiedades del modelo
+            cliente = solicitud.cliente_nombre
+            cedula = solicitud.cliente_cedula
+            producto = solicitud.producto_descripcion
+            monto_formateado = solicitud.monto_formateado
 
             # Fechas
             fecha_inicio = solicitud.fecha_creacion
@@ -300,6 +339,11 @@ def negocios_view(request):
 
             solicitudes_tabla.append({
                 'codigo': solicitud.codigo,
+                'cliente_nombre': cliente,
+                'cliente_cedula': cedula,
+                'producto_descripcion': producto,
+                'monto_formateado': monto_formateado,
+                # Mantener compatibilidad con código existente
                 'cliente': cliente,
                 'cedula': cedula,
                 'producto': producto,
@@ -337,8 +381,13 @@ def negocios_view(request):
                     solicitudes_dict.get(sol.id, {
                         'id': sol.id,
                         'codigo': sol.codigo,
-                        'cliente': 'Sin cliente',
-                        'monto': '$0',
+                        'cliente_nombre': sol.cliente_nombre,
+                        'cliente_cedula': sol.cliente_cedula,
+                        'producto_descripcion': sol.producto_descripcion,
+                        'monto_formateado': sol.monto_formateado,
+                        # Mantener compatibilidad
+                        'cliente': sol.cliente_nombre,
+                        'monto': sol.monto_formateado,
                         'asignado_a': 'Sin asignar',
                         'sla_restante': 'N/A',
                         'sla_color': 'text-secondary',
@@ -406,23 +455,51 @@ def negocios_view(request):
 def bandeja_trabajo(request):
     """Bandeja de trabajo del usuario"""
     
-    # Obtener solicitudes asignadas al usuario
-    solicitudes_asignadas = Solicitud.objects.filter(
-        asignada_a=request.user
-    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
-    
-    # Obtener bandejas grupales
-    grupos_usuario = request.user.groups.all()
-    etapas_grupales = Etapa.objects.filter(
-        es_bandeja_grupal=True,
-        permisos__grupo__in=grupos_usuario,
-        permisos__puede_autoasignar=True
-    )
-    
-    solicitudes_grupales = Solicitud.objects.filter(
-        etapa_actual__in=etapas_grupales,
-        asignada_a__isnull=True
-    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    # === SISTEMA DE PERMISOS SUPER STAFF ===
+    # Los usuarios super staff (is_staff=True) pueden ver TODO
+    if request.user.is_staff:
+        # Super staff ve TODAS las solicitudes asignadas
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a__isnull=False
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Super staff ve TODAS las bandejas grupales
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+    else:
+        # Usuarios regulares - permisos normales
+        # Obtener solicitudes asignadas al usuario
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a=request.user
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Obtener bandejas grupales
+        grupos_usuario = request.user.groups.all()
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_autoasignar=True
+        )
+        
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
     
     # Filtros
     filtro_estado = request.GET.get('estado', '')
@@ -1949,6 +2026,95 @@ def notify_solicitud_change(solicitud, change_type, user=None):
     except Exception as e:
         print(f"Error notificando cambio: {e}")
 
+def enviar_correo_bandeja_grupal(solicitud, etapa):
+    """
+    Función para enviar correo automático cuando una solicitud entra a una etapa de bandeja grupal.
+    Basada en la implementación de correos de la app tómbola.
+    """
+    try:
+        # Destinatarios fijos según especificación
+        destinatarios = [
+            "jacastillo@fpacifico.com",
+            "arodriguez@fpacifico.com"
+        ]
+        
+        # Construir la URL de la bandeja
+        # Formato: /workflow/bandejas/?etapa_id=3
+        bandeja_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/bandejas/?etapa_id={etapa.id}"
+        
+        # Obtener nombre del cliente
+        cliente_nombre = ""
+        try:
+            if hasattr(solicitud, 'cliente') and solicitud.cliente:
+                cliente_nombre = getattr(solicitud.cliente, 'nombreCliente', 'Sin nombre')
+            elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion and solicitud.cotizacion.cliente:
+                cliente_nombre = getattr(solicitud.cotizacion.cliente, 'nombreCliente', 'Sin nombre')
+            else:
+                cliente_nombre = "Cliente no asignado"
+        except Exception as e:
+            print(f"⚠️ Error obteniendo nombre del cliente: {e}")
+            cliente_nombre = "Error al obtener cliente"
+        
+        # Contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa': etapa,
+            'cliente_nombre': cliente_nombre,
+            'bandeja_url': bandeja_url,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/bandeja_grupal_notification.html', context)
+        
+        # Crear el asunto
+        subject = f"🔔 Nueva Solicitud en Bandeja Grupal - {solicitud.codigo}"
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+        Nueva Solicitud en Bandeja Grupal
+        
+        Hola equipo,
+        
+        Una solicitud ha ingresado a una etapa de bandeja grupal y requiere atención:
+        
+        • Código: {solicitud.codigo}
+        • Cliente: {cliente_nombre or 'Sin asignar'}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Etapa: {etapa.nombre}
+        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        Para ver la solicitud, haz clic en el siguiente enlace:
+        {bandeja_url}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo
+        email.send()
+        
+        print(f"✅ Correo enviado correctamente para solicitud {solicitud.codigo} - Etapa: {etapa.nombre}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo para solicitud {solicitud.codigo}: {str(e)}")
+
+
 @login_required
 @csrf_exempt
 def api_cambiar_etapa(request, solicitud_id):
@@ -2014,6 +2180,14 @@ def api_cambiar_etapa(request, solicitud_id):
         # 🚨 CRÍTICO: Notificar cambio de etapa en tiempo real a TODAS las vistas
         notify_solicitud_change(solicitud, 'solicitud_cambio_etapa', request.user)
         
+        # 📧 NUEVO: Enviar correo automático si la nueva etapa es bandeja grupal
+        print(f"🔍 DEBUG: Verificando etapa {nueva_etapa.nombre} - es_bandeja_grupal: {nueva_etapa.es_bandeja_grupal}")
+        if nueva_etapa.es_bandeja_grupal:
+            print(f"📧 ACTIVANDO envío de correo para solicitud {solicitud.codigo} en etapa {nueva_etapa.nombre}")
+            enviar_correo_bandeja_grupal(solicitud, nueva_etapa)
+        else:
+            print(f"ℹ️ No se envía correo - la etapa {nueva_etapa.nombre} no es bandeja grupal")
+        
         return JsonResponse({
             'success': True,
             'mensaje': f'Solicitud {solicitud.codigo} movida de "{etapa_anterior.nombre if etapa_anterior else "Sin etapa"}" a "{nueva_etapa.nombre}"',
@@ -2042,32 +2216,55 @@ def vista_mixta_bandejas(request):
     from datetime import timedelta
     from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
     
-    # Obtener grupos del usuario
-    grupos_usuario = request.user.groups.all()
-    
-    # === BANDEJA GRUPAL ===
-    # Obtener etapas grupales donde el usuario tiene permisos
-    etapas_grupales = Etapa.objects.filter(
-        es_bandeja_grupal=True,
-        permisos__grupo__in=grupos_usuario,
-        permisos__puede_autoasignar=True
-    ).distinct()
-    
-    # Solicitudes grupales (sin asignar)
-    solicitudes_grupales = Solicitud.objects.filter(
-        etapa_actual__in=etapas_grupales,
-        asignada_a__isnull=True
-    ).select_related(
-        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
-    ).order_by('-fecha_creacion')
-    
-    # === BANDEJA PERSONAL ===
-    # Solicitudes asignadas al usuario
-    solicitudes_personales = Solicitud.objects.filter(
-        asignada_a=request.user
-    ).select_related(
-        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
-    ).order_by('-fecha_ultima_actualizacion')
+    # === SISTEMA DE PERMISOS SUPER STAFF ===
+    # Los usuarios super staff (is_staff=True) pueden ver TODO
+    if request.user.is_staff:
+        # Super staff ve TODAS las solicitudes en ambas bandejas
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_creacion')
+        
+        # Super staff ve TODAS las solicitudes personales
+        solicitudes_personales = Solicitud.objects.filter(
+            asignada_a__isnull=False
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_ultima_actualizacion')
+    else:
+        # Usuarios regulares - permisos normales
+        grupos_usuario = request.user.groups.all()
+        
+        # === BANDEJA GRUPAL ===
+        # Obtener etapas grupales donde el usuario tiene permisos
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_autoasignar=True
+        ).distinct()
+        
+        # Solicitudes grupales (sin asignar)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_creacion')
+        
+        # === BANDEJA PERSONAL ===
+        # Solicitudes asignadas al usuario
+        solicitudes_personales = Solicitud.objects.filter(
+            asignada_a=request.user
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_ultima_actualizacion')
     
     # === MÉTRICAS ===
     # Total en bandeja grupal
@@ -2170,23 +2367,19 @@ def vista_mixta_bandejas(request):
                 solicitud.sla_restante = 'N/A'
                 solicitud.sla_color = 'text-secondary'
             
-            # Información de cliente (buscar en cotizaciones relacionadas)
-            solicitud.cliente_nombre = 'Sin cliente'
-            solicitud.cliente_cedula = 'Sin cédula'
+            # Las propiedades del modelo ya están disponibles directamente
+            # No es necesario asignar nada - cliente_nombre, cliente_cedula, etc. 
+            # están disponibles automáticamente como propiedades del modelo
             
-            # Intentar obtener información de cliente desde cotizaciones
+            # Debug temporal para verificar que las propiedades funcionan correctamente
             try:
-                from pacifico.models import Cotizacion
-                cotizacion = Cotizacion.objects.filter(
-                    solicitud_workflow=solicitud
-                ).first()
-                
-                if cotizacion:
-                    solicitud.cliente_nombre = cotizacion.cliente or 'Sin cliente'
-                    solicitud.cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
-            except:
-                # Si no se puede obtener información de cotización, usar valores por defecto
-                pass
+                # Estas propiedades se pueden leer sin problema
+                _ = solicitud.cliente_nombre
+                _ = solicitud.cliente_cedula
+                _ = solicitud.monto_formateado
+                _ = solicitud.producto_descripcion
+            except Exception as e:
+                print(f"Error accediendo propiedades del modelo: {e}")
             
             # Estado actual
             solicitud.estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
@@ -2256,13 +2449,19 @@ def api_tomar_solicitud(request, solicitud_id):
                 'error': 'Esta solicitud no está disponible para tomar.'
             })
         
-        # Verificar permisos
-        grupos_usuario = request.user.groups.all()
-        tiene_permiso = PermisoEtapa.objects.filter(
-            etapa=solicitud.etapa_actual,
-            grupo__in=grupos_usuario,
-            puede_autoasignar=True
-        ).exists()
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden tomar cualquier solicitud
+        if request.user.is_staff:
+            # Super staff tiene permisos completos
+            tiene_permiso = True
+        else:
+            # Verificar permisos regulares para usuarios normales
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_autoasignar=True
+            ).exists()
         
         if not tiene_permiso:
             return JsonResponse({
@@ -2312,8 +2511,21 @@ def api_devolver_solicitud(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar que el usuario puede devolver la solicitud
-        if solicitud.asignada_a != request.user and not request.user.is_superuser:
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden devolver cualquier solicitud
+        if request.user.is_staff:
+            # Super staff tiene permisos completos
+            puede_devolver = True
+        elif request.user.is_superuser:
+            # Superuser también puede devolver cualquier solicitud
+            puede_devolver = True
+        elif solicitud.asignada_a == request.user:
+            # Usuario regular solo puede devolver sus propias solicitudes
+            puede_devolver = True
+        else:
+            puede_devolver = False
+        
+        if not puede_devolver:
             return JsonResponse({
                 'success': False,
                 'error': 'No puedes devolver esta solicitud.'
@@ -2580,6 +2792,49 @@ def api_bandejas(request):
             'success': False,
             'error': str(e)
         })
+
+
+@login_required
+def test_envio_correo_bandeja(request):
+    """
+    Vista temporal para probar el envío de correos de bandeja grupal.
+    Usar solo para testing - eliminar después.
+    """
+    if request.method == 'POST':
+        solicitud_id = request.POST.get('solicitud_id')
+        if solicitud_id:
+            try:
+                solicitud = Solicitud.objects.get(id=solicitud_id)
+                etapa = solicitud.etapa_actual
+                
+                if etapa and etapa.es_bandeja_grupal:
+                    enviar_correo_bandeja_grupal(solicitud, etapa)
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Correo enviado para solicitud {solicitud.codigo}'
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La etapa actual no es bandeja grupal'
+                    })
+            except Solicitud.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Solicitud no encontrada'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error: {str(e)}'
+                })
+    
+    # Listar solicitudes para testing
+    solicitudes = Solicitud.objects.filter(etapa_actual__es_bandeja_grupal=True)[:10]
+    
+    return render(request, 'workflow/test_correo.html', {
+        'solicitudes': solicitudes
+    })
 
 
 @login_required
