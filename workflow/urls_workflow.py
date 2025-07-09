@@ -27,6 +27,11 @@ urlpatterns = [
     # APIs para bandeja mixta
     path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),
     path('api/solicitudes/<int:solicitud_id>/devolver/', views_workflow.api_devolver_solicitud, name='api_devolver_solicitud'),
+    path('api/kpis/', views_workflow.api_kpis, name='api_kpis'),
+    path('api/bandejas/', views_workflow.api_bandejas, name='api_bandejas'),
+    path('api/notifications/stream/', views_workflow.api_notifications_stream, name='api_notifications_stream'),
+    path('api/check-updates/', views_workflow.api_check_updates, name='api_check_updates'),
+    path('api/get-updated-solicitudes/', views_workflow.api_get_updated_solicitudes, name='api_get_updated_solicitudes'),
     
     # Vistas de administración
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
