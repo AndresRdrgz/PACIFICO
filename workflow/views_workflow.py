@@ -102,22 +102,43 @@ def negocios_view(request):
                 # Si no tiene UserProfile, mantener rol por defecto
                 pass
         
-        # Lógica de permisos basada en rol
-        if user_role == 'Administrador':
-            # Administrador ve TODAS las solicitudes
-            solicitudes = Solicitud.objects.filter(pipeline=pipeline)
-        elif user_role == 'Supervisor':
-            # Supervisor ve todas las solicitudes de su(s) grupo(s)
-            user_groups = request.user.groups.all()
-            if user_groups.exists():
-                group_users = User.objects.filter(groups__in=user_groups)
-                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users)
-            else:
-                # Si no tiene grupos asignados, solo ve las suyas
-                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden ver TODO
+        if request.user.is_staff:
+            # Super staff ve TODAS las solicitudes del pipeline
+            solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            )
         else:
-            # Oficial y Usuario solo ven sus propias solicitudes
-            solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user)
+            # Lógica de permisos basada en rol para usuarios regulares
+            if user_role == 'Administrador':
+                # Administrador ve TODAS las solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
+            elif user_role == 'Supervisor':
+                # Supervisor ve todas las solicitudes de su(s) grupo(s)
+                user_groups = request.user.groups.all()
+                if user_groups.exists():
+                    group_users = User.objects.filter(groups__in=user_groups)
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+                else:
+                    # Si no tiene grupos asignados, solo ve las suyas
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+            else:
+                # Oficial y Usuario solo ven sus propias solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
         
         # Filtros básicos
         filtro_estado = request.GET.get('estado', '')
@@ -214,20 +235,35 @@ def negocios_view(request):
         etapa_color_map = {nombre: ETAPA_COLORS[i % len(ETAPA_COLORS)] for i, nombre in enumerate(etapas_pipeline)}
 
         for solicitud in page_obj:
+            # === DEBUG TEMPORAL ===
+            if solicitud.codigo == 'PRU-4811C164':
+                print(f"DEBUG - Solicitud {solicitud.codigo}:")
+                print(f"  - Cliente: {solicitud.cliente}")
+                print(f"  - Cotización: {solicitud.cotizacion}")
+                if solicitud.cotizacion:
+                    print(f"  - Cotización nombreCliente: {solicitud.cotizacion.nombreCliente}")
+                    print(f"  - Cotización cedulaCliente: {solicitud.cotizacion.cedulaCliente}")
+                    print(f"  - Cotización montoPrestamo: {solicitud.cotizacion.montoPrestamo}")
+                    print(f"  - Cotización tipoPrestamo: {solicitud.cotizacion.tipoPrestamo}")
+                if solicitud.cliente:
+                    print(f"  - Cliente nombreCliente: {solicitud.cliente.nombreCliente}")
+                    print(f"  - Cliente cedulaCliente: {solicitud.cliente.cedulaCliente}")
+                print(f"  - Propiedades:")
+                print(f"    - cliente_nombre: {solicitud.cliente_nombre}")
+                print(f"    - cliente_cedula: {solicitud.cliente_cedula}")
+                print(f"    - producto_descripcion: {solicitud.producto_descripcion}")
+                print(f"    - monto_formateado: {solicitud.monto_formateado}")
+            # === FIN DEBUG ===
+
             # Campos personalizados
             valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
             get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
 
-            # Cliente y cédula
-            cliente = get_valor('cliente') or (solicitud.creada_por.get_full_name() or solicitud.creada_por.username)
-            cedula = get_valor('cédula') or get_valor('cedula') or ''
-            producto = get_valor('producto') or ''
-            monto = get_valor('monto solicitado') or get_valor('monto') or 0
-            try:
-                monto_float = float(monto)
-            except:
-                monto_float = 0
-            monto_formateado = "$ {:,.0f}".format(monto_float)
+            # Cliente, cédula, producto y monto usando las nuevas propiedades del modelo
+            cliente = solicitud.cliente_nombre
+            cedula = solicitud.cliente_cedula
+            producto = solicitud.producto_descripcion
+            monto_formateado = solicitud.monto_formateado
 
             # Fechas
             fecha_inicio = solicitud.fecha_creacion
@@ -298,6 +334,11 @@ def negocios_view(request):
 
             solicitudes_tabla.append({
                 'codigo': solicitud.codigo,
+                'cliente_nombre': cliente,
+                'cliente_cedula': cedula,
+                'producto_descripcion': producto,
+                'monto_formateado': monto_formateado,
+                # Mantener compatibilidad con código existente
                 'cliente': cliente,
                 'cedula': cedula,
                 'producto': producto,
@@ -335,8 +376,13 @@ def negocios_view(request):
                     solicitudes_dict.get(sol.id, {
                         'id': sol.id,
                         'codigo': sol.codigo,
-                        'cliente': 'Sin cliente',
-                        'monto': '$0',
+                        'cliente_nombre': sol.cliente_nombre,
+                        'cliente_cedula': sol.cliente_cedula,
+                        'producto_descripcion': sol.producto_descripcion,
+                        'monto_formateado': sol.monto_formateado,
+                        # Mantener compatibilidad
+                        'cliente': sol.cliente_nombre,
+                        'monto': sol.monto_formateado,
                         'asignado_a': 'Sin asignar',
                         'sla_restante': 'N/A',
                         'sla_color': 'text-secondary',
@@ -404,23 +450,51 @@ def negocios_view(request):
 def bandeja_trabajo(request):
     """Bandeja de trabajo del usuario"""
     
-    # Obtener solicitudes asignadas al usuario
-    solicitudes_asignadas = Solicitud.objects.filter(
-        asignada_a=request.user
-    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
-    
-    # Obtener bandejas grupales
-    grupos_usuario = request.user.groups.all()
-    etapas_grupales = Etapa.objects.filter(
-        es_bandeja_grupal=True,
-        permisos__grupo__in=grupos_usuario,
-        permisos__puede_autoasignar=True
-    )
-    
-    solicitudes_grupales = Solicitud.objects.filter(
-        etapa_actual__in=etapas_grupales,
-        asignada_a__isnull=True
-    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    # === SISTEMA DE PERMISOS SUPER STAFF ===
+    # Los usuarios super staff (is_staff=True) pueden ver TODO
+    if request.user.is_staff:
+        # Super staff ve TODAS las solicitudes asignadas
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a__isnull=False
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Super staff ve TODAS las bandejas grupales
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+    else:
+        # Usuarios regulares - permisos normales
+        # Obtener solicitudes asignadas al usuario
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a=request.user
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Obtener bandejas grupales
+        grupos_usuario = request.user.groups.all()
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_autoasignar=True
+        )
+        
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
     
     # Filtros
     filtro_estado = request.GET.get('estado', '')
@@ -2000,32 +2074,55 @@ def vista_mixta_bandejas(request):
     from datetime import timedelta
     from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
     
-    # Obtener grupos del usuario
-    grupos_usuario = request.user.groups.all()
-    
-    # === BANDEJA GRUPAL ===
-    # Obtener etapas grupales donde el usuario tiene permisos
-    etapas_grupales = Etapa.objects.filter(
-        es_bandeja_grupal=True,
-        permisos__grupo__in=grupos_usuario,
-        permisos__puede_autoasignar=True
-    ).distinct()
-    
-    # Solicitudes grupales (sin asignar)
-    solicitudes_grupales = Solicitud.objects.filter(
-        etapa_actual__in=etapas_grupales,
-        asignada_a__isnull=True
-    ).select_related(
-        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
-    ).order_by('-fecha_creacion')
-    
-    # === BANDEJA PERSONAL ===
-    # Solicitudes asignadas al usuario
-    solicitudes_personales = Solicitud.objects.filter(
-        asignada_a=request.user
-    ).select_related(
-        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
-    ).order_by('-fecha_ultima_actualizacion')
+    # === SISTEMA DE PERMISOS SUPER STAFF ===
+    # Los usuarios super staff (is_staff=True) pueden ver TODO
+    if request.user.is_staff:
+        # Super staff ve TODAS las solicitudes en ambas bandejas
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_creacion')
+        
+        # Super staff ve TODAS las solicitudes personales
+        solicitudes_personales = Solicitud.objects.filter(
+            asignada_a__isnull=False
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_ultima_actualizacion')
+    else:
+        # Usuarios regulares - permisos normales
+        grupos_usuario = request.user.groups.all()
+        
+        # === BANDEJA GRUPAL ===
+        # Obtener etapas grupales donde el usuario tiene permisos
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_autoasignar=True
+        ).distinct()
+        
+        # Solicitudes grupales (sin asignar)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_creacion')
+        
+        # === BANDEJA PERSONAL ===
+        # Solicitudes asignadas al usuario
+        solicitudes_personales = Solicitud.objects.filter(
+            asignada_a=request.user
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).order_by('-fecha_ultima_actualizacion')
     
     # === MÉTRICAS ===
     # Total en bandeja grupal
@@ -2128,23 +2225,19 @@ def vista_mixta_bandejas(request):
                 solicitud.sla_restante = 'N/A'
                 solicitud.sla_color = 'text-secondary'
             
-            # Información de cliente (buscar en cotizaciones relacionadas)
-            solicitud.cliente_nombre = 'Sin cliente'
-            solicitud.cliente_cedula = 'Sin cédula'
+            # Las propiedades del modelo ya están disponibles directamente
+            # No es necesario asignar nada - cliente_nombre, cliente_cedula, etc. 
+            # están disponibles automáticamente como propiedades del modelo
             
-            # Intentar obtener información de cliente desde cotizaciones
+            # Debug temporal para verificar que las propiedades funcionan correctamente
             try:
-                from pacifico.models import Cotizacion
-                cotizacion = Cotizacion.objects.filter(
-                    solicitud_workflow=solicitud
-                ).first()
-                
-                if cotizacion:
-                    solicitud.cliente_nombre = cotizacion.cliente or 'Sin cliente'
-                    solicitud.cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
-            except:
-                # Si no se puede obtener información de cotización, usar valores por defecto
-                pass
+                # Estas propiedades se pueden leer sin problema
+                _ = solicitud.cliente_nombre
+                _ = solicitud.cliente_cedula
+                _ = solicitud.monto_formateado
+                _ = solicitud.producto_descripcion
+            except Exception as e:
+                print(f"Error accediendo propiedades del modelo: {e}")
             
             # Estado actual
             solicitud.estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
