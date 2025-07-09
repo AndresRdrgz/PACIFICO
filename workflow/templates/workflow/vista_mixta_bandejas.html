@@ -1,0 +1,984 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Vista Mixta - Sistema de Workflow{% endblock %}
+
+{% block content %}
+<div class="mt-0 pt-0">
+    <!-- Header Compacto Optimizado -->
+    <div class="card card-custom mb-1">
+        <div class="card-header-custom" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 8px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="ribbon-content">
+                    <h1 class="h3 mb-0 text-white fw-bold">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        <span id="titulo-bandeja">Vista Mixta</span>
+                    </h1>
+                </div>
+                <div class="ribbon-actions d-flex gap-2 align-items-center">
+                    <!-- Selector de Etapas con Bandeja -->
+                    <div class="dropdown position-static">
+                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownEtapas" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-list me-1"></i>
+                            Etapas con Bandeja
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownEtapas" style="z-index: 99999;">
+                            {% for etapa in etapas_con_bandeja %}
+                            <li>
+                                <a class="dropdown-item" href="?etapa={{ etapa.id }}">
+                                    <i class="fas fa-layer-group me-2"></i>
+                                    {{ etapa.pipeline.nombre }} - {{ etapa.nombre }}
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li><span class="dropdown-item-text text-muted">No hay etapas con bandeja habilitada</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <!-- Botones de Tipo de Bandeja -->
+                    <div class="btn-group" role="group" aria-label="Tipo de bandeja">
+                        <button type="button" class="btn btn-light btn-sm active" id="btnVistaMixta" onclick="cambiarTipoBandeja('mixta')">
+                            <i class="fas fa-layer-group me-1"></i>Vista Mixta
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaGrupal" onclick="cambiarTipoBandeja('grupal')">
+                            <i class="fas fa-users me-1"></i>Bandeja Grupal
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaPersonal" onclick="cambiarTipoBandeja('personal')">
+                            <i class="fas fa-user me-1"></i>Bandeja Personal
+                        </button>
+                    </div>
+                    
+                    <a href="{% url 'workflow:dashboard' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-chart-bar me-1"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Filtros Compactos -->
+    <div class="card card-custom mb-2">
+        <div class="card-body py-2">
+            <div class="row g-1 align-items-center">
+                <div class="col-6 col-md-2">
+                    <select id="filtroCliente" class="form-select form-select-sm">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes_unicos %}
+                        <option value="{{ cliente }}">{{ cliente }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="filtroEstado" class="form-select form-select-sm">
+                        <option value="">Todos los estados</option>
+                        {% for estado in estados_unicos %}
+                        <option value="{{ estado }}">{{ estado }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="filtroEtapa" class="form-select form-select-sm">
+                        <option value="">Todas las etapas</option>
+                        {% for etapa in etapas_unicas %}
+                        <option value="{{ etapa }}">{{ etapa }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select id="filtroSLA" class="form-select form-select-sm">
+                        <option value="">Todos los SLA</option>
+                        <option value="en_tiempo">En tiempo</option>
+                        <option value="por_vencer">Por vencer</option>
+                        <option value="vencido">Vencido</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <input type="text" id="busquedaGlobal" class="form-control form-control-sm" 
+                           placeholder="Buscar por código, cliente, cédula...">
+                </div>
+                <div class="col-12 col-md-1">
+                    <button type="button" class="btn btn-sm btn-outline-info w-100" id="limpiarFiltros">
+                        <i class="fas fa-filter-circle-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leyenda SLA Compacta -->
+    <small class="text-muted mb-2 d-block" style="font-size: 0.7rem;">
+        <i class="fas fa-info-circle me-1"></i>Leyenda SLA:
+        <i class="fas fa-circle text-success me-1 ms-2" style="font-size: 0.5rem;"></i>En tiempo
+        <i class="fas fa-circle text-warning me-1 ms-2" style="font-size: 0.5rem;"></i>Por vencer
+        <i class="fas fa-circle text-danger me-1 ms-2" style="font-size: 0.5rem;"></i>Vencido
+    </small>
+
+    <!-- Contenedor de Bandejas -->
+    <div id="contenedor-bandejas">
+        <!-- Vista Mixta (Default) -->
+        <div id="vista-mixta" class="vista-bandeja">
+            <div class="row">
+                <!-- Bandeja Grupal -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header" style="background: var(--verde-pacifico); color: #fff;">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users me-2"></i>
+                                Bandeja Grupal
+                                <span class="badge bg-light text-dark ms-2">{{ solicitudes_grupales|length }}</span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Cliente</th>
+                                            <th>Etapa</th>
+                                            <th>SLA</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-grupal">
+                                        {% for solicitud in solicitudes_grupales %}
+                                        <tr id="solicitud-grupal-{{ solicitud.id }}" 
+                                            class="solicitud-row"
+                                            data-cliente="{{ solicitud.cliente_nombre }}"
+                                            data-estado="{{ solicitud.estado_actual }}"
+                                            data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                                            data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                            <td>
+                                                <strong>{{ solicitud.codigo }}</strong>
+                                                <br><small class="text-muted">{{ solicitud.fecha_inicio|date:"d/m/Y" }}</small>
+                                            </td>
+                                            <td>
+                                                {{ solicitud.cliente_nombre }}
+                                                <br><small class="text-muted">{{ solicitud.cliente_cedula }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                                <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-success btn-sm tomar-solicitud" 
+                                                            data-solicitud-id="{{ solicitud.id }}"
+                                                            data-codigo="{{ solicitud.codigo }}">
+                                                        <i class="fas fa-hand-paper me-1"></i><span class="btn-action-text">Tomar</span>
+                                                    </button>
+                                                    <button class="btn btn-info btn-sm ver-detalle" 
+                                                            data-solicitud-id="{{ solicitud.id }}">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                <br>No hay solicitudes en bandeja grupal
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bandeja Personal -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header" style="background: var(--verde-pacifico); color: #fff;">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user me-2"></i>
+                                Mis Tareas
+                                <span class="badge bg-light text-dark ms-2">{{ solicitudes_personales|length }}</span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Cliente</th>
+                                            <th>Etapa</th>
+                                            <th>SLA</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-personal">
+                                        {% for solicitud in solicitudes_personales %}
+                                        <tr id="solicitud-personal-{{ solicitud.id }}" 
+                                            class="solicitud-row"
+                                            data-cliente="{{ solicitud.cliente_nombre }}"
+                                            data-estado="{{ solicitud.estado_actual }}"
+                                            data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                                            data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                            <td>
+                                                <strong>{{ solicitud.codigo }}</strong>
+                                                <br><small class="text-muted">{{ solicitud.fecha_inicio|date:"d/m/Y" }}</small>
+                                            </td>
+                                            <td>
+                                                {{ solicitud.cliente_nombre }}
+                                                <br><small class="text-muted">{{ solicitud.cliente_cedula }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                                <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-success btn-sm procesar-solicitud" 
+                                                            data-solicitud-id="{{ solicitud.id }}">
+                                                        <i class="fas fa-cogs me-1"></i> Procesar
+                                                    </button>
+                                                    <button class="btn btn-warning btn-sm devolver-solicitud" 
+                                                            data-solicitud-id="{{ solicitud.id }}"
+                                                            data-codigo="{{ solicitud.codigo }}">
+                                                        <i class="fas fa-undo me-1"></i> Devolver
+                                                    </button>
+                                                    <button class="btn btn-info btn-sm ver-solicitud" 
+                                                            data-solicitud-id="{{ solicitud.id }}">
+                                                        <i class="fas fa-eye me-1"></i> Ver
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                <br>No tienes tareas asignadas
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vista Solo Bandeja Grupal -->
+        <div id="vista-grupal" class="vista-bandeja" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Bandeja Grupal
+                        <span class="badge bg-light text-dark ms-2">{{ solicitudes_grupales|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 700px; overflow-y: auto;">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Cliente</th>
+                                    <th>Cédula</th>
+                                    <th>Etapa</th>
+                                    <th>Estado</th>
+                                    <th>SLA</th>
+                                    <th>Fecha Inicio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-grupal-expandida">
+                                {% for solicitud in solicitudes_grupales %}
+                                <tr class="solicitud-row"
+                                    data-cliente="{{ solicitud.cliente_nombre }}"
+                                    data-estado="{{ solicitud.estado_actual }}"
+                                    data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                                    data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                    <td><strong>{{ solicitud.codigo }}</strong></td>
+                                    <td>{{ solicitud.cliente_nombre }}</td>
+                                    <td>{{ solicitud.cliente_cedula }}</td>
+                                    <td><span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span></td>
+                                    <td><span class="badge bg-secondary">{{ solicitud.estado_actual }}</span></td>
+                                    <td>
+                                        <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                        <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                    </td>
+                                    <td>{{ solicitud.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-success btn-sm tomar-solicitud" 
+                                                    data-solicitud-id="{{ solicitud.id }}"
+                                                    data-codigo="{{ solicitud.codigo }}">
+                                                <i class="fas fa-hand-paper me-1"></i><span class="btn-action-text">Tomar</span>
+                                            </button>
+                                            <button class="btn btn-info btn-sm ver-detalle" 
+                                                    data-solicitud-id="{{ solicitud.id }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                        <br>No hay solicitudes en bandeja grupal
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vista Solo Bandeja Personal -->
+        <div id="vista-personal" class="vista-bandeja" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Mis Tareas
+                        <span class="badge bg-light text-dark ms-2">{{ solicitudes_personales|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 700px; overflow-y: auto;">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Cliente</th>
+                                    <th>Cédula</th>
+                                    <th>Etapa</th>
+                                    <th>Estado</th>
+                                    <th>SLA</th>
+                                    <th>Fecha Inicio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-personal-expandida">
+                                {% for solicitud in solicitudes_personales %}
+                                <tr class="solicitud-row"
+                                    data-cliente="{{ solicitud.cliente_nombre }}"
+                                    data-estado="{{ solicitud.estado_actual }}"
+                                    data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                                    data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                    <td><strong>{{ solicitud.codigo }}</strong></td>
+                                    <td>{{ solicitud.cliente_nombre }}</td>
+                                    <td>{{ solicitud.cliente_cedula }}</td>
+                                    <td><span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span></td>
+                                    <td><span class="badge bg-secondary">{{ solicitud.estado_actual }}</span></td>
+                                    <td>
+                                        <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                        <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                    </td>
+                                    <td>{{ solicitud.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-success btn-sm procesar-solicitud" 
+                                                    data-solicitud-id="{{ solicitud.id }}">
+                                                <i class="fas fa-cogs me-1"></i><span class="btn-action-text">Procesar</span>
+                                            </button>
+                                            <button class="btn btn-warning btn-sm devolver-solicitud" 
+                                                    data-solicitud-id="{{ solicitud.id }}"
+                                                    data-codigo="{{ solicitud.codigo }}">
+                                                <i class="fas fa-undo me-1"></i><span class="btn-action-text">Devolver</span>
+                                            </button>
+                                            <button class="btn btn-info btn-sm ver-detalle" 
+                                                    data-solicitud-id="{{ solicitud.id }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                        <br>No tienes tareas asignadas
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPIs con formato EXACTO de negocios.html -->
+    <div class="card card-custom mt-3" id="kpis-section">
+        <div class="card-body py-2">
+            <div class="row g-2">
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-total">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Total</p>
+                            <h4 class="kpi-number-compact" id="kpi-total-grupo">{{ total_grupo }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-activas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Activas</p>
+                            <h4 class="kpi-number-compact" id="kpi-mis-tareas">{{ mis_tareas }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-completadas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Completadas</p>
+                            <h4 class="kpi-number-compact" id="kpi-en-tiempo">{{ en_tiempo }}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="kpi-card-compact kpi-vencidas">
+                        <div class="kpi-icon-compact">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="kpi-content-compact">
+                            <p class="kpi-label-compact">Vencidas</p>
+                            <h4 class="kpi-number-compact" id="kpi-por-vencer">{{ por_vencer }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ver Detalle -->
+<div class="modal fade" id="detalleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle de Solicitud</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detalle-contenido">
+                    <!-- Contenido se carga dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast para notificaciones -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="notificacionToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-info-circle me-2 text-success"></i>
+            <strong class="me-auto">Notificación</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            <!-- Mensaje se establece dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para obtener token CSRF de las cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Función para cambiar tipo de bandeja
+    window.cambiarTipoBandeja = function(tipo) {
+        const vistas = document.querySelectorAll('.vista-bandeja');
+        const tituloBandeja = document.getElementById('titulo-bandeja');
+        
+        // Actualizar botones activos
+        document.querySelectorAll('.btn-group button').forEach(btn => {
+            btn.classList.remove('active', 'btn-light');
+            btn.classList.add('btn-outline-light');
+        });
+        
+        // Ocultar todas las vistas
+        vistas.forEach(vista => vista.style.display = 'none');
+        
+        // Mostrar la vista seleccionada y activar botón correspondiente
+        switch(tipo) {
+            case 'mixta':
+                document.getElementById('vista-mixta').style.display = 'block';
+                tituloBandeja.textContent = 'Vista Mixta';
+                const btnMixta = document.getElementById('btnVistaMixta');
+                btnMixta.classList.remove('btn-outline-light');
+                btnMixta.classList.add('btn-light', 'active');
+                break;
+            case 'grupal':
+                document.getElementById('vista-grupal').style.display = 'block';
+                tituloBandeja.textContent = 'Bandeja Grupal';
+                const btnGrupal = document.getElementById('btnVistaGrupal');
+                btnGrupal.classList.remove('btn-outline-light');
+                btnGrupal.classList.add('btn-light', 'active');
+                break;
+            case 'personal':
+                document.getElementById('vista-personal').style.display = 'block';
+                tituloBandeja.textContent = 'Bandeja Personal';
+                const btnPersonal = document.getElementById('btnVistaPersonal');
+                btnPersonal.classList.remove('btn-outline-light');
+                btnPersonal.classList.add('btn-light', 'active');
+                break;
+        }
+    };
+    
+    // Función para aplicar filtros
+    function aplicarFiltros() {
+        const filtroCliente = document.getElementById('filtroCliente').value.toLowerCase();
+        const filtroEstado = document.getElementById('filtroEstado').value.toLowerCase();
+        const filtroEtapa = document.getElementById('filtroEtapa').value.toLowerCase();
+        const filtroSLA = document.getElementById('filtroSLA').value;
+        const busqueda = document.getElementById('busquedaGlobal').value.toLowerCase();
+        
+        const filas = document.querySelectorAll('.solicitud-row');
+        
+        filas.forEach(fila => {
+            const cliente = fila.dataset.cliente.toLowerCase();
+            const estado = fila.dataset.estado.toLowerCase();
+            const etapa = fila.dataset.etapa.toLowerCase();
+            const sla = fila.dataset.sla;
+            const search = fila.dataset.search || '';
+            
+            let mostrar = true;
+            
+            // Filtro por cliente
+            if (filtroCliente && !cliente.includes(filtroCliente)) {
+                mostrar = false;
+            }
+            
+            // Filtro por estado
+            if (filtroEstado && !estado.includes(filtroEstado)) {
+                mostrar = false;
+            }
+            
+            // Filtro por etapa
+            if (filtroEtapa && !etapa.includes(filtroEtapa)) {
+                mostrar = false;
+            }
+            
+            // Filtro por SLA
+            if (filtroSLA && sla !== filtroSLA) {
+                mostrar = false;
+            }
+            
+            // Búsqueda global
+            if (busqueda && !search.includes(busqueda)) {
+                mostrar = false;
+            }
+            
+            fila.style.display = mostrar ? '' : 'none';
+        });
+    }
+    
+    // Event listeners para filtros
+    document.getElementById('filtroCliente').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroEtapa').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroSLA').addEventListener('change', aplicarFiltros);
+    document.getElementById('busquedaGlobal').addEventListener('input', aplicarFiltros);
+    
+    // Botón limpiar filtros
+    document.getElementById('limpiarFiltros').addEventListener('click', function() {
+        document.getElementById('filtroCliente').value = '';
+        document.getElementById('filtroEstado').value = '';
+        document.getElementById('filtroEtapa').value = '';
+        document.getElementById('filtroSLA').value = '';
+        document.getElementById('busquedaGlobal').value = '';
+        aplicarFiltros();
+    });
+    
+    // Función para mostrar notificaciones
+    function mostrarNotificacion(mensaje, tipo = 'success') {
+        const toast = document.getElementById('notificacionToast');
+        const toastBody = toast.querySelector('.toast-body');
+        const toastHeader = toast.querySelector('.toast-header i');
+        
+        toastBody.textContent = mensaje;
+        
+        // Cambiar icono según tipo
+        toastHeader.className = `fas me-2 ${tipo === 'success' ? 'fa-check-circle text-success' : 'fa-exclamation-triangle text-warning'}`;
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+    
+    // BOTONES TOMAR SOLICITUD - COPIADO EXACTO DE CAPACITACIONES
+    document.querySelectorAll('.tomar-solicitud').forEach(button => {
+        button.addEventListener('click', function() {
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            const codigo = this.getAttribute('data-codigo');
+            
+            console.log('🔵 Tomando solicitud:', solicitudId, codigo);
+            
+            // Deshabilitar botón
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Tomando...';
+            
+            fetch(`/workflow/api/solicitudes/${solicitudId}/tomar/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // COPIADO EXACTO DE CAPACITACIONES
+                    alert("Solicitud tomada correctamente.");
+                    location.reload();
+                } else {
+                    alert("Error: " + (data.error || 'Error desconocido'));
+                    // Rehabilitar botón
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("Error de red al tomar la solicitud.");
+                // Rehabilitar botón
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
+            });
+        });
+    });
+    
+    // BOTONES DEVOLVER SOLICITUD - COPIADO EXACTO DE CAPACITACIONES
+    document.querySelectorAll('.devolver-solicitud').forEach(button => {
+        button.addEventListener('click', function() {
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            const codigo = this.getAttribute('data-codigo');
+            
+            console.log('🔴 Devolviendo solicitud:', solicitudId, codigo);
+            
+            if (confirm(`¿Estás seguro de devolver la solicitud ${codigo} a bandeja grupal?`)) {
+                // Deshabilitar botón
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Devolviendo...';
+                
+                fetch(`/workflow/api/solicitudes/${solicitudId}/devolver/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // COPIADO EXACTO DE CAPACITACIONES
+                        alert("Solicitud devuelta correctamente.");
+                        location.reload();
+                    } else {
+                        alert("Error: " + (data.error || 'Error desconocido'));
+                        // Rehabilitar botón
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert("Error de red al devolver la solicitud.");
+                    // Rehabilitar botón
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
+                });
+            }
+        });
+    });
+    
+    // Función para ver detalle
+    document.querySelectorAll('.ver-detalle').forEach(button => {
+        button.addEventListener('click', function() {
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            
+            // Abrir modal y cargar contenido
+            const modal = new bootstrap.Modal(document.getElementById('detalleModal'));
+            const contenido = document.getElementById('detalle-contenido');
+            
+            contenido.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Cargando...</div>';
+            modal.show();
+            
+            // Cargar detalle de la solicitud
+            fetch(`/workflow/solicitud/${solicitudId}/`)
+                .then(response => response.text())
+                .then(html => {
+                    // Extraer solo el contenido relevante del HTML
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const contenidoDetalle = doc.querySelector('.card-body') || doc.querySelector('main');
+                    
+                    if (contenidoDetalle) {
+                        contenido.innerHTML = contenidoDetalle.innerHTML;
+                    } else {
+                        contenido.innerHTML = '<p>Error al cargar el detalle</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    contenido.innerHTML = '<p>Error al cargar el detalle</p>';
+                });
+        });
+    });
+    
+    // Función para procesar solicitud
+    document.querySelectorAll('.procesar-solicitud').forEach(button => {
+        button.addEventListener('click', function() {
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            
+            // Redirigir a la página de detalle para procesar
+            window.location.href = `/workflow/solicitud/${solicitudId}/`;
+        });
+    });
+    
+    // RECARGA AUTOMÁTICA CADA 30 SEGUNDOS (COMO RESPALDO)
+    setInterval(function() {
+        if (!document.hidden) {
+            console.log('🔄 Recarga automática programada');
+            location.reload();
+        }
+    }, 30000); // 30 segundos
+    
+    console.log('✅ Sistema de bandejas inicializado correctamente');
+});
+</script>
+
+<style>
+/* Estilos para KPIs compactos - EXACTOS de negocios.html */
+.kpi-card-compact {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    height: 60px;
+}
+
+.kpi-card-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.kpi-icon-compact {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 1.2rem;
+}
+
+.kpi-content-compact {
+    flex: 1;
+}
+
+.kpi-label-compact {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.kpi-number-compact {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+}
+
+/* Variantes de KPIs compactos - EXACTOS de negocios.html */
+.kpi-total .kpi-icon-compact {
+    background: linear-gradient(135deg, #009c3c, #22a650);
+    color: white;
+}
+
+.kpi-total .kpi-number-compact {
+    color: #009c3c;
+}
+
+.kpi-activas .kpi-icon-compact {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    color: white;
+}
+
+.kpi-activas .kpi-number-compact {
+    color: #0d6efd;
+}
+
+.kpi-completadas .kpi-icon-compact {
+    background: linear-gradient(135deg, #ffc107, #ffb84d);
+    color: #000;
+}
+
+.kpi-completadas .kpi-number-compact {
+    color: #ffc107;
+}
+
+.kpi-vencidas .kpi-icon-compact {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+}
+
+.kpi-vencidas .kpi-number-compact {
+    color: #dc3545;
+}
+
+/* Estilos para el header personalizado */
+.card-custom {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-header-custom {
+    border: none;
+}
+
+/* Variable CSS para el verde Pacífico */
+:root {
+    --verde-pacifico: #28a745;
+}
+
+/* Estilos para las tablas */
+.table-responsive {
+    border-radius: 8px;
+    height: 420px;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        height: 280px;
+    }
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-top: none;
+}
+
+.table td {
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+/* Animación fade-in */
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Animación fade-in y hover para filas de tabla */
+.solicitud-row {
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Estilos para botones de acción más pequeños y responsivos */
+.table .btn-group-sm .btn {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    min-width: 56px;
+    text-align: center;
+    border-radius: 4px;
+}
+
+.table .btn-group-sm .btn .fas {
+    margin-right: 0.3rem; /* Espacio reducido entre icono y texto */
+}
+
+/* En pantallas pequeñas, ocultar el texto de los botones para ahorrar espacio */
+@media (max-width: 768px) {
+    .btn-action-text {
+        display: none;
+    }
+    .table .btn-group-sm .btn .fas {
+        margin-right: 0; /* Sin margen si no hay texto */
+    }
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .kpi-card-compact {
+        height: 50px;
+        padding: 6px 8px;
+    }
+    
+    .kpi-icon-compact {
+        font-size: 1.2rem;
+        margin-right: 8px;
+    }
+    
+    .kpi-number-compact {
+        font-size: 1.2rem;
+    }
+    
+    .kpi-label-compact {
+        font-size: 0.7rem;
+    }
+}
+</style>
+
+{% endblock %} 

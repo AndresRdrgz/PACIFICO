@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
@@ -12,6 +12,9 @@ from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
+import time
+import threading
+import queue
 
 # ==========================================
 # VISTAS PRINCIPALES DEL WORKFLOW
@@ -1680,6 +1683,230 @@ def health_check(request):
 def pwa_test_view(request):
     """PWA testing page"""
     return render(request, 'workflow/pwa_test.html')
+
+
+# Sistema de notificaciones en tiempo real
+class NotificationManager:
+    def __init__(self):
+        self.clients = {}
+        self.last_update = {}
+    
+    def add_client(self, user_id, response_queue):
+        """Agregar cliente para notificaciones"""
+        self.clients[user_id] = response_queue
+        self.last_update[user_id] = timezone.now()
+    
+    def remove_client(self, user_id):
+        """Remover cliente"""
+        if user_id in self.clients:
+            del self.clients[user_id]
+        if user_id in self.last_update:
+            del self.last_update[user_id]
+    
+    def notify_change(self, change_type, data, affected_users=None):
+        """Notificar cambio a usuarios específicos o todos"""
+        if affected_users is None:
+            affected_users = list(self.clients.keys())
+        
+        notification = {
+            'type': change_type,
+            'data': data,
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        for user_id in affected_users:
+            if user_id in self.clients:
+                try:
+                    self.clients[user_id].put(notification)
+                except:
+                    # Cliente desconectado, remover
+                    self.remove_client(user_id)
+
+# Instancia global del manager
+notification_manager = NotificationManager()
+
+@login_required
+def api_notifications_stream(request):
+    """API de Server-Sent Events para notificaciones en tiempo real"""
+    def event_stream():
+        user_id = request.user.id
+        response_queue = queue.Queue()
+        
+        # Agregar cliente
+        notification_manager.add_client(user_id, response_queue)
+        
+        try:
+            # Enviar evento inicial
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'Conectado a notificaciones'})}\n\n"
+            
+            while True:
+                try:
+                    # Esperar por notificaciones con timeout
+                    notification = response_queue.get(timeout=30)
+                    yield f"data: {json.dumps(notification)}\n\n"
+                except queue.Empty:
+                    # Enviar heartbeat cada 30 segundos
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': timezone.now().isoformat()})}\n\n"
+                except:
+                    break
+        finally:
+            # Limpiar cliente al desconectar
+            notification_manager.remove_client(user_id)
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
+
+@login_required
+def api_check_updates(request):
+    """API mejorada para verificar actualizaciones con detección inteligente"""
+    try:
+        # Obtener timestamp de la última actualización del usuario
+        last_check = request.GET.get('last_check')
+        if last_check:
+            try:
+                last_check_time = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+            except:
+                last_check_time = timezone.now() - timedelta(minutes=5)
+        else:
+            last_check_time = timezone.now() - timedelta(minutes=5)
+        
+        # Obtener vista actual para filtros específicos
+        current_view = request.GET.get('view', 'bandejas')  # bandejas, tabla, kanban
+        
+        # Solicitudes del usuario según sus grupos
+        solicitudes_base = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all()
+        ).select_related('etapa_actual', 'asignada_a', 'pipeline')
+        
+        # Verificar cambios específicos por tipo de vista
+        cambios_detectados = []
+        
+        # 1. Cambios en bandeja grupal (para vista bandejas)
+        if current_view in ['bandejas', 'all']:
+            solicitudes_grupales_nuevas = solicitudes_base.filter(
+                etapa_actual__es_bandeja_grupal=True,
+                asignada_a__isnull=True,
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_grupales_nuevas > 0:
+                cambios_detectados.append({
+                    'tipo': 'bandeja_grupal',
+                    'count': solicitudes_grupales_nuevas
+                })
+        
+        # 2. Cambios en tareas personales (para vista bandejas)
+        if current_view in ['bandejas', 'all']:
+            solicitudes_personales_nuevas = solicitudes_base.filter(
+                asignada_a=request.user,
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_personales_nuevas > 0:
+                cambios_detectados.append({
+                    'tipo': 'bandeja_personal',
+                    'count': solicitudes_personales_nuevas
+                })
+        
+        # 3. Cambios generales en solicitudes (para tabla/kanban)
+        if current_view in ['tabla', 'kanban', 'all']:
+            solicitudes_actualizadas = solicitudes_base.filter(
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_actualizadas > 0:
+                cambios_detectados.append({
+                    'tipo': 'solicitudes_generales',
+                    'count': solicitudes_actualizadas
+                })
+        
+        # 4. Nuevas solicitudes creadas
+        nuevas_solicitudes = solicitudes_base.filter(
+            fecha_creacion__gt=last_check_time
+        ).count()
+        
+        if nuevas_solicitudes > 0:
+            cambios_detectados.append({
+                'tipo': 'nuevas_solicitudes',
+                'count': nuevas_solicitudes
+            })
+        
+        # Obtener detalles de cambios para debugging
+        solicitudes_modificadas = list(solicitudes_base.filter(
+            fecha_ultima_actualizacion__gt=last_check_time
+        ).values('id', 'codigo', 'etapa_actual__nombre', 'asignada_a__username')[:10])
+        
+        has_updates = len(cambios_detectados) > 0
+        
+        return JsonResponse({
+            'success': True,
+            'has_updates': has_updates,
+            'cambios_detectados': cambios_detectados,
+            'total_cambios': sum(c['count'] for c in cambios_detectados),
+            'nuevas_solicitudes': nuevas_solicitudes,
+            'solicitudes_modificadas': solicitudes_modificadas,
+            'timestamp': timezone.now().isoformat(),
+            'last_check': last_check_time.isoformat(),
+            'view': current_view
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        })
+
+# Función para notificar cambios automáticamente
+def notify_solicitud_change(solicitud, change_type, user=None):
+    """Notificar cambio en solicitud a usuarios relevantes"""
+    try:
+        # Obtener usuarios que deben ser notificados
+        affected_users = []
+        
+        # Usuarios del grupo de la etapa actual
+        if solicitud.etapa_actual:
+            group_users = User.objects.filter(
+                groups__in=solicitud.etapa_actual.pipeline.grupos.all()
+            ).values_list('id', flat=True)
+            affected_users.extend(group_users)
+        
+        # Usuario asignado
+        if solicitud.asignada_a:
+            affected_users.append(solicitud.asignada_a.id)
+        
+        # Datos de la notificación
+        notification_data = {
+            'solicitud_id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'etapa_actual': {
+                'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False
+            },
+            'asignada_a': {
+                'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                'username': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else None
+            },
+            'user_action': {
+                'id': user.id if user else None,
+                'username': user.username if user else None,
+                'nombre_completo': user.get_full_name() if user else None
+            },
+            'pipeline_id': solicitud.pipeline.id if solicitud.pipeline else None,
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        # Enviar notificación
+        notification_manager.notify_change(change_type, notification_data, affected_users)
+        
+    except Exception as e:
+        print(f"Error notificando cambio: {e}")
+
 @login_required
 @csrf_exempt
 def api_cambiar_etapa(request, solicitud_id):
@@ -1742,6 +1969,9 @@ def api_cambiar_etapa(request, solicitud_id):
             fecha_inicio=timezone.now()
         )
         
+        # 🚨 CRÍTICO: Notificar cambio de etapa en tiempo real a TODAS las vistas
+        notify_solicitud_change(solicitud, 'solicitud_cambio_etapa', request.user)
+        
         return JsonResponse({
             'success': True,
             'mensaje': f'Solicitud {solicitud.codigo} movida de "{etapa_anterior.nombre if etapa_anterior else "Sin etapa"}" a "{nueva_etapa.nombre}"',
@@ -1749,6 +1979,10 @@ def api_cambiar_etapa(request, solicitud_id):
                 'id': nueva_etapa.id,
                 'nombre': nueva_etapa.nombre,
                 'orden': nueva_etapa.orden
+            },
+            'etapa_anterior': {
+                'id': etapa_anterior.id if etapa_anterior else None,
+                'nombre': etapa_anterior.nombre if etapa_anterior else None
             }
         })
         
@@ -1756,3 +1990,662 @@ def api_cambiar_etapa(request, solicitud_id):
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def vista_mixta_bandejas(request):
+    """Vista mixta que combina bandeja grupal y personal"""
+    from django.db.models import Count, Q
+    from django.utils import timezone
+    from datetime import timedelta
+    from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
+    
+    # Obtener grupos del usuario
+    grupos_usuario = request.user.groups.all()
+    
+    # === BANDEJA GRUPAL ===
+    # Obtener etapas grupales donde el usuario tiene permisos
+    etapas_grupales = Etapa.objects.filter(
+        es_bandeja_grupal=True,
+        permisos__grupo__in=grupos_usuario,
+        permisos__puede_autoasignar=True
+    ).distinct()
+    
+    # Solicitudes grupales (sin asignar)
+    solicitudes_grupales = Solicitud.objects.filter(
+        etapa_actual__in=etapas_grupales,
+        asignada_a__isnull=True
+    ).select_related(
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
+    ).order_by('-fecha_creacion')
+    
+    # === BANDEJA PERSONAL ===
+    # Solicitudes asignadas al usuario
+    solicitudes_personales = Solicitud.objects.filter(
+        asignada_a=request.user
+    ).select_related(
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por'
+    ).order_by('-fecha_ultima_actualizacion')
+    
+    # === MÉTRICAS ===
+    # Total en bandeja grupal
+    total_grupo = solicitudes_grupales.count()
+    
+    # Mis tareas
+    mis_tareas = solicitudes_personales.count()
+    
+    # Calcular vencimientos
+    ahora = timezone.now()
+    
+    # Solicitudes por vencer (próximas 24 horas)
+    por_vencer = 0
+    en_tiempo = 0
+    
+    todas_solicitudes = list(solicitudes_grupales) + list(solicitudes_personales)
+    
+    for solicitud in todas_solicitudes:
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            
+            if fecha_vencimiento < ahora:
+                # Ya vencida
+                continue
+            elif fecha_vencimiento <= ahora + timedelta(hours=24):
+                # Por vencer en 24 horas
+                por_vencer += 1
+            else:
+                # En tiempo
+                en_tiempo += 1
+    
+    # Filtros
+    filtro_pipeline = request.GET.get('pipeline', '')
+    filtro_estado = request.GET.get('estado', '')
+    
+    if filtro_pipeline:
+        solicitudes_grupales = solicitudes_grupales.filter(pipeline_id=filtro_pipeline)
+        solicitudes_personales = solicitudes_personales.filter(pipeline_id=filtro_pipeline)
+    
+    if filtro_estado == 'vencidas':
+        # Filtrar solo las vencidas
+        solicitudes_vencidas_ids = []
+        for solicitud in todas_solicitudes:
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+                fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+                if fecha_vencimiento < ahora:
+                    solicitudes_vencidas_ids.append(solicitud.id)
+        
+        solicitudes_grupales = solicitudes_grupales.filter(id__in=solicitudes_vencidas_ids)
+        solicitudes_personales = solicitudes_personales.filter(id__in=solicitudes_vencidas_ids)
+    
+    # Agregar información de vencimiento y enriquecimiento a cada solicitud
+    def agregar_info_vencimiento(solicitudes):
+        for solicitud in solicitudes:
+            # Información de SLA
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+                fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+                solicitud.fecha_vencimiento = fecha_vencimiento
+                solicitud.esta_vencida = fecha_vencimiento < ahora
+                solicitud.por_vencer = fecha_vencimiento <= ahora + timedelta(hours=24)
+                
+                # Calcular SLA restante y color
+                tiempo_total = solicitud.etapa_actual.sla.total_seconds()
+                tiempo_transcurrido = (ahora - solicitud.fecha_ultima_actualizacion).total_seconds()
+                segundos_restantes = tiempo_total - tiempo_transcurrido
+                porcentaje_restante = (segundos_restantes / tiempo_total) * 100 if tiempo_total > 0 else 0
+                
+                abs_segundos = abs(int(segundos_restantes))
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                
+                if segundos_restantes < 0:
+                    if horas > 0:
+                        solicitud.sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"-{minutos}m"
+                    solicitud.sla_color = 'text-danger'
+                elif porcentaje_restante > 40:
+                    if horas > 0:
+                        solicitud.sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"{minutos}m"
+                    solicitud.sla_color = 'text-success'
+                elif porcentaje_restante > 0:
+                    if horas > 0:
+                        solicitud.sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"{minutos}m"
+                    solicitud.sla_color = 'text-warning'
+                else:
+                    if horas > 0:
+                        solicitud.sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        solicitud.sla_restante = f"-{minutos}m"
+                    solicitud.sla_color = 'text-danger'
+            else:
+                solicitud.fecha_vencimiento = None
+                solicitud.esta_vencida = False
+                solicitud.por_vencer = False
+                solicitud.sla_restante = 'N/A'
+                solicitud.sla_color = 'text-secondary'
+            
+            # Información de cliente (buscar en cotizaciones relacionadas)
+            solicitud.cliente_nombre = 'Sin cliente'
+            solicitud.cliente_cedula = 'Sin cédula'
+            
+            # Intentar obtener información de cliente desde cotizaciones
+            try:
+                from pacifico.models import Cotizacion
+                cotizacion = Cotizacion.objects.filter(
+                    solicitud_workflow=solicitud
+                ).first()
+                
+                if cotizacion:
+                    solicitud.cliente_nombre = cotizacion.cliente or 'Sin cliente'
+                    solicitud.cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
+            except:
+                # Si no se puede obtener información de cotización, usar valores por defecto
+                pass
+            
+            # Estado actual
+            solicitud.estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            
+        return solicitudes
+    
+    solicitudes_grupales = agregar_info_vencimiento(solicitudes_grupales)
+    solicitudes_personales = agregar_info_vencimiento(solicitudes_personales)
+    
+    # Obtener datos únicos para los filtros
+    todas_solicitudes_para_filtros = list(solicitudes_grupales) + list(solicitudes_personales)
+    
+    clientes_unicos = set()
+    estados_unicos = set()
+    etapas_unicas = set()
+    
+    for solicitud in todas_solicitudes_para_filtros:
+        if hasattr(solicitud, 'cliente_nombre') and solicitud.cliente_nombre:
+            clientes_unicos.add(solicitud.cliente_nombre)
+        if hasattr(solicitud, 'estado_actual') and solicitud.estado_actual:
+            estados_unicos.add(solicitud.estado_actual)
+        if solicitud.etapa_actual:
+            etapas_unicas.add(solicitud.etapa_actual.nombre)
+    
+    # Convertir a listas ordenadas
+    clientes_unicos = sorted(list(clientes_unicos))
+    estados_unicos = sorted(list(estados_unicos))
+    etapas_unicas = sorted(list(etapas_unicas))
+    
+    # Obtener todas las etapas con bandeja habilitada (para el dropdown)
+    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).select_related('pipeline')
+    
+    context = {
+        'solicitudes_grupales': solicitudes_grupales,
+        'solicitudes_personales': solicitudes_personales,
+        'total_grupo': total_grupo,
+        'mis_tareas': mis_tareas,
+        'por_vencer': por_vencer,
+        'en_tiempo': en_tiempo,
+        'pipelines': Pipeline.objects.all(),
+        'clientes_unicos': clientes_unicos,
+        'estados_unicos': estados_unicos,
+        'etapas_unicas': etapas_unicas,
+        'etapas_con_bandeja': etapas_con_bandeja,
+        'filtros': {
+            'pipeline': filtro_pipeline,
+            'estado': filtro_estado,
+        }
+    }
+    
+    return render(request, 'workflow/vista_mixta_bandejas.html', context)
+
+
+@login_required
+def api_tomar_solicitud(request, solicitud_id):
+    """API para tomar una solicitud de bandeja grupal"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que la solicitud está en bandeja grupal
+        if not solicitud.etapa_actual.es_bandeja_grupal or solicitud.asignada_a:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Esta solicitud no está disponible para tomar.'
+            })
+        
+        # Verificar permisos
+        grupos_usuario = request.user.groups.all()
+        tiene_permiso = PermisoEtapa.objects.filter(
+            etapa=solicitud.etapa_actual,
+            grupo__in=grupos_usuario,
+            puede_autoasignar=True
+        ).exists()
+        
+        if not tiene_permiso:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para tomar solicitudes en esta etapa.'
+            })
+        
+        # Asignar solicitud
+        solicitud.asignada_a = request.user
+        solicitud.fecha_ultima_actualizacion = timezone.now()
+        solicitud.save()
+        
+        # Actualizar historial
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.usuario_responsable = request.user
+            historial_actual.save()
+        
+        # CRÍTICO: Notificar cambio en tiempo real
+        notify_solicitud_change(solicitud, 'solicitud_tomada', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Solicitud {solicitud.codigo} asignada exitosamente.',
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'asignada_a': request.user.get_full_name() or request.user.username
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_devolver_solicitud(request, solicitud_id):
+    """API para devolver una solicitud a bandeja grupal"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que el usuario puede devolver la solicitud
+        if solicitud.asignada_a != request.user and not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No puedes devolver esta solicitud.'
+            })
+        
+        # Verificar que la etapa actual permite bandeja grupal
+        if not solicitud.etapa_actual.es_bandeja_grupal:
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta etapa no permite bandeja grupal.'
+            })
+        
+        # Devolver a bandeja grupal
+        solicitud.asignada_a = None
+        solicitud.fecha_ultima_actualizacion = timezone.now()
+        solicitud.save()
+        
+        # CRÍTICO: Notificar cambio en tiempo real
+        notify_solicitud_change(solicitud, 'solicitud_devuelta', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Solicitud {solicitud.codigo} devuelta a bandeja grupal.',
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_kpis(request):
+    """API para obtener KPIs actualizados"""
+    try:
+        # Obtener solicitudes del usuario
+        solicitudes_usuario = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all()
+        ).select_related('etapa_actual', 'asignada_a', 'cliente')
+        
+        # Calcular métricas
+        total_grupo = solicitudes_usuario.filter(
+            etapa_actual__es_bandeja_grupal=True,
+            asignada_a__isnull=True
+        ).count()
+        
+        mis_tareas = solicitudes_usuario.filter(
+            asignada_a=request.user
+        ).count()
+        
+        # Calcular por vencer y en tiempo
+        por_vencer = 0
+        en_tiempo = 0
+        
+        def calcular_sla_solicitud(solicitud):
+            """Calcular SLA para una solicitud específica"""
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla_horas:
+                fecha_inicio = solicitud.fecha_creacion
+                sla_horas = solicitud.etapa_actual.sla_horas
+                fecha_vencimiento = fecha_inicio + timedelta(hours=sla_horas)
+                ahora = timezone.now()
+                
+                segundos_restantes = (fecha_vencimiento - ahora).total_seconds()
+                porcentaje_restante = (segundos_restantes / (sla_horas * 3600)) * 100
+                
+                if segundos_restantes < 0:
+                    return 'text-danger'
+                elif porcentaje_restante > 40:
+                    return 'text-success'
+                elif porcentaje_restante > 0:
+                    return 'text-warning'
+                else:
+                    return 'text-danger'
+            return 'text-secondary'
+        
+        for solicitud in solicitudes_usuario:
+            sla_color = calcular_sla_solicitud(solicitud)
+            if sla_color == 'text-warning':
+                por_vencer += 1
+            elif sla_color == 'text-success':
+                en_tiempo += 1
+        
+        return JsonResponse({
+            'success': True,
+            'total_grupo': total_grupo,
+            'mis_tareas': mis_tareas,
+            'por_vencer': por_vencer,
+            'en_tiempo': en_tiempo
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def api_bandejas(request):
+    """API para obtener contenido actualizado de las bandejas"""
+    try:
+        # Obtener solicitudes del usuario
+        solicitudes_usuario = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all()
+        ).select_related('etapa_actual', 'asignada_a', 'cliente')
+        
+        # Bandeja grupal
+        bandeja_grupal = solicitudes_usuario.filter(
+            etapa_actual__es_bandeja_grupal=True,
+            asignada_a__isnull=True
+        ).order_by('-fecha_creacion')
+        
+        # Bandeja personal
+        bandeja_personal = solicitudes_usuario.filter(
+            asignada_a=request.user
+        ).order_by('-fecha_creacion')
+        
+        def generar_info_solicitud(solicitud):
+            """Generar información completa de una solicitud"""
+            info = {
+                'cliente_nombre': 'Sin cliente',
+                'cliente_cedula': 'Sin cédula',
+                'sla_color': 'text-secondary',
+                'tiempo_restante': 'N/A'
+            }
+            
+            # Información de cliente
+            try:
+                from pacifico.models import Cotizacion
+                cotizacion = Cotizacion.objects.filter(
+                    solicitud_workflow=solicitud
+                ).first()
+                
+                if cotizacion:
+                    info['cliente_nombre'] = cotizacion.cliente or 'Sin cliente'
+                    info['cliente_cedula'] = cotizacion.cedulaCliente or 'Sin cédula'
+            except:
+                pass
+            
+            # Información de SLA
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla_horas:
+                fecha_inicio = solicitud.fecha_creacion
+                sla_horas = solicitud.etapa_actual.sla_horas
+                fecha_vencimiento = fecha_inicio + timedelta(hours=sla_horas)
+                ahora = timezone.now()
+                
+                segundos_restantes = (fecha_vencimiento - ahora).total_seconds()
+                porcentaje_restante = (segundos_restantes / (sla_horas * 3600)) * 100
+                abs_segundos = abs(segundos_restantes)
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                
+                if segundos_restantes < 0:
+                    info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    info['sla_color'] = 'text-danger'
+                elif porcentaje_restante > 40:
+                    info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    info['sla_color'] = 'text-success'
+                elif porcentaje_restante > 0:
+                    info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    info['sla_color'] = 'text-warning'
+                else:
+                    info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    info['sla_color'] = 'text-danger'
+            
+            return info
+        
+        # Generar HTML para bandeja grupal
+        html_grupal = ""
+        for solicitud in bandeja_grupal:
+            info = generar_info_solicitud(solicitud)
+            estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            
+            html_grupal += f"""
+            <tr class="solicitud-row" data-cliente="{info['cliente_nombre']}" 
+                data-estado="{estado_actual}" 
+                data-etapa="{solicitud.etapa_actual.nombre}" 
+                data-sla="{info['sla_color']}" 
+                data-search="{solicitud.codigo} {info['cliente_nombre']} {info['cliente_cedula']}"
+                id="solicitud-grupal-{solicitud.id}">
+                <td>
+                    <span class="badge bg-primary">{solicitud.codigo}</span>
+                </td>
+                <td>{info['cliente_nombre']}</td>
+                <td>{info['cliente_cedula']}</td>
+                <td>
+                    <span class="badge bg-info">{solicitud.etapa_actual.nombre}</span>
+                </td>
+                <td>
+                    <i class="fas fa-circle {info['sla_color']} me-1"></i>
+                    {info['tiempo_restante']}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-success btn-sm tomar-solicitud" 
+                                data-solicitud-id="{solicitud.id}" 
+                                data-codigo="{solicitud.codigo}">
+                            <i class="fas fa-hand-paper me-1"></i>Tomar
+                        </button>
+                        <button class="btn btn-info btn-sm ver-detalle" 
+                                data-solicitud-id="{solicitud.id}">
+                            <i class="fas fa-eye me-1"></i>Ver
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            """
+        
+        # Generar HTML para bandeja personal
+        html_personal = ""
+        for solicitud in bandeja_personal:
+            info = generar_info_solicitud(solicitud)
+            estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            
+            html_personal += f"""
+            <tr class="solicitud-row" data-cliente="{info['cliente_nombre']}" 
+                data-estado="{estado_actual}" 
+                data-etapa="{solicitud.etapa_actual.nombre}" 
+                data-sla="{info['sla_color']}" 
+                data-search="{solicitud.codigo} {info['cliente_nombre']} {info['cliente_cedula']}"
+                id="solicitud-personal-{solicitud.id}">
+                <td>
+                    <span class="badge bg-primary">{solicitud.codigo}</span>
+                </td>
+                <td>{info['cliente_nombre']}</td>
+                <td>{info['cliente_cedula']}</td>
+                <td>
+                    <span class="badge bg-info">{solicitud.etapa_actual.nombre}</span>
+                </td>
+                <td>
+                    <i class="fas fa-circle {info['sla_color']} me-1"></i>
+                    {info['tiempo_restante']}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-warning btn-sm devolver-solicitud" 
+                                data-solicitud-id="{solicitud.id}" 
+                                data-codigo="{solicitud.codigo}">
+                            <i class="fas fa-undo me-1"></i>Devolver
+                        </button>
+                        <button class="btn btn-primary btn-sm procesar-solicitud" 
+                                data-solicitud-id="{solicitud.id}">
+                            <i class="fas fa-cogs me-1"></i>Procesar
+                        </button>
+                        <button class="btn btn-info btn-sm ver-detalle" 
+                                data-solicitud-id="{solicitud.id}">
+                            <i class="fas fa-eye me-1"></i>Ver
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            """
+        
+        return JsonResponse({
+            'success': True,
+            'bandeja_grupal': html_grupal,
+            'bandeja_personal': html_personal
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def api_get_updated_solicitudes(request):
+    """API para obtener solo las solicitudes que han sido actualizadas"""
+    try:
+        # Obtener timestamp de la última consulta
+        last_check = request.GET.get('last_check')
+        if last_check:
+            try:
+                last_check_time = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+            except:
+                last_check_time = timezone.now() - timedelta(minutes=5)
+        else:
+            last_check_time = timezone.now() - timedelta(minutes=5)
+        
+        view_type = request.GET.get('view', 'bandejas')
+        
+        # Obtener solicitudes actualizadas
+        solicitudes_base = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all(),
+            fecha_ultima_actualizacion__gt=last_check_time
+        ).select_related('etapa_actual', 'asignada_a', 'pipeline')
+        
+        # Formatear datos según la vista
+        solicitudes_data = []
+        
+        for solicitud in solicitudes_base:
+            # Información de cliente
+            cliente_nombre = 'Sin cliente'
+            cliente_cedula = 'Sin cédula'
+            
+            try:
+                from pacifico.models import Cotizacion
+                cotizacion = Cotizacion.objects.filter(
+                    solicitud_workflow=solicitud
+                ).first()
+                
+                if cotizacion:
+                    cliente_nombre = cotizacion.cliente or 'Sin cliente'
+                    cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
+            except:
+                pass
+            
+            # Calcular SLA
+            sla_info = {
+                'color': 'text-secondary',
+                'tiempo_restante': 'N/A'
+            }
+            
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla_horas:
+                fecha_inicio = solicitud.fecha_creacion
+                sla_horas = solicitud.etapa_actual.sla_horas
+                fecha_vencimiento = fecha_inicio + timedelta(hours=sla_horas)
+                ahora = timezone.now()
+                
+                segundos_restantes = (fecha_vencimiento - ahora).total_seconds()
+                porcentaje_restante = (segundos_restantes / (sla_horas * 3600)) * 100
+                abs_segundos = abs(segundos_restantes)
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                
+                if segundos_restantes < 0:
+                    sla_info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    sla_info['color'] = 'text-danger'
+                elif porcentaje_restante > 40:
+                    sla_info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    sla_info['color'] = 'text-success'
+                elif porcentaje_restante > 0:
+                    sla_info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    sla_info['color'] = 'text-warning'
+                else:
+                    sla_info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    sla_info['color'] = 'text-danger'
+            
+            solicitudes_data.append({
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente_nombre,
+                'cliente_cedula': cliente_cedula,
+                'etapa': {
+                    'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                    'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                    'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False
+                },
+                'asignada_a': {
+                    'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                    'username': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                    'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else None
+                },
+                'estado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else "En Proceso",
+                'sla': sla_info,
+                'fecha_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+                'fecha_creacion': solicitud.fecha_creacion.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes': solicitudes_data,
+            'total': len(solicitudes_data),
+            'timestamp': timezone.now().isoformat(),
+            'last_check': last_check_time.isoformat(),
+            'view': view_type
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        })
