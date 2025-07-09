@@ -189,3 +189,45 @@ class ValorCampoSolicitud(models.Model):
 
     def valor(self):
         return getattr(self, f"valor_{self.campo.tipo}", None)
+
+# --------------------------------------
+# COMENTARIOS SOLICITUD
+# --------------------------------------
+
+class SolicitudComentario(models.Model):
+    solicitud = models.ForeignKey('Solicitud', on_delete=models.CASCADE, related_name='comentarios')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    comentario = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    es_editado = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        
+    def __str__(self):
+        return f"Comentario de {self.usuario.username} en {self.solicitud.codigo}"
+    
+    def save(self, *args, **kwargs):
+        if self.pk:  # If updating existing comment
+            self.es_editado = True
+        super().save(*args, **kwargs)
+        
+    def get_tiempo_transcurrido(self):
+        """Return human-readable time elapsed since creation"""
+        from django.utils import timezone
+        import datetime
+        
+        now = timezone.now()
+        diff = now - self.fecha_creacion
+        
+        if diff.days > 0:
+            return f"hace {diff.days} día{'s' if diff.days > 1 else ''}"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"hace {hours} hora{'s' if hours > 1 else ''}"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"hace {minutes} minuto{'s' if minutes > 1 else ''}"
+        else:
+            return "hace unos segundos"

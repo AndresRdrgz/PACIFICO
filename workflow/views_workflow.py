@@ -2734,7 +2734,8 @@ def api_solicitud_brief(request, solicitud_id):
                 'nombre': etapa.nombre,
                 'completada': solicitud.historial.filter(etapa=etapa, fecha_fin__isnull=False).exists(),
                 'actual': solicitud.etapa_actual_id == etapa.id,
-                'responsable': getattr(etapa, 'area_responsable', '-')
+                'responsable': getattr(etapa, 'area_responsable', '-'),
+                'sla': getattr(etapa, 'sla_dias', None) and f"{etapa.sla_dias} días" or None
             }
             workflow.append(etapa_dict)
 

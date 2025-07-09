@@ -8,15 +8,17 @@ from .forms import (
     ReferenciaComercialFormSet,
     OtroIngresoFormSet,
 )
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
+from django.conf import settings
 import openpyxl
 from openpyxl.utils import get_column_letter
 import datetime
 import csv
 import json
+import os
 
 # PWA Views
 @require_GET
@@ -129,23 +131,98 @@ def manifest_view(request):
     return JsonResponse(manifest_data, content_type='application/manifest+json')
 
 @require_GET
-@cache_control(max_age=86400)  # Cache for 24 hours
 def service_worker_view(request):
-    """Serve the service worker with proper content type"""
+    """Serve the service worker with proper content type and headers"""
+    
+    try:
+        sw_path = os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow', 'sw.js')
+        
+        # Check if file exists
+        if not os.path.exists(sw_path):
+            return HttpResponse(
+                f"// Service worker file not found at: {sw_path}\nconsole.error('Service worker file not found');",
+                content_type='application/javascript; charset=utf-8',
+                status=404
+            )
+        
+        # Read the service worker file
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            sw_content = f.read()
+        
+        # Create response with proper headers
+        response = HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
+        
+        # Add PWA-specific headers for service workers
+        response['Service-Worker-Allowed'] = '/workflow/'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        
+        # Add CORS headers if needed
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        # Return a simple service worker that just logs the error
+        error_sw = f"""
+// Service Worker Error: {str(e)}
+console.error('Service Worker load error: {str(e)}');
+
+self.addEventListener('install', function(event) {{
+    console.log('Error service worker installed');
+    self.skipWaiting();
+}});
+
+self.addEventListener('activate', function(event) {{
+    console.log('Error service worker activated');
+    event.waitUntil(self.clients.claim());
+}});
+
+self.addEventListener('fetch', function(event) {{
+    // Just pass through all requests
+    event.respondWith(fetch(event.request));
+}});
+"""
+        response = HttpResponse(error_sw, content_type='application/javascript; charset=utf-8')
+        response['Service-Worker-Allowed'] = '/workflow/'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return response
+
+
+# Test view to debug service worker
+@require_GET
+def test_service_worker(request):
+    """Test view to debug service worker issues"""
     import os
     from django.conf import settings
-    from django.http import Http404
     
     sw_path = os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow', 'sw.js')
     
-    try:
-        with open(sw_path, 'rb') as f:
-            sw_content = f.read()
-        response = HttpResponse(sw_content, content_type='application/javascript; charset=utf-8')
-        response['Cache-Control'] = 'max-age=86400'  # 24 hours
-        return response
-    except FileNotFoundError:
-        raise Http404("Service worker not found")
+    debug_info = {
+        'sw_path': sw_path,
+        'sw_exists': os.path.exists(sw_path),
+        'base_dir': settings.BASE_DIR,
+        'static_url': settings.STATIC_URL,
+        'static_root': getattr(settings, 'STATIC_ROOT', 'Not set'),
+        'debug': settings.DEBUG,
+        'request_path': request.path,
+        'request_full_path': request.get_full_path(),
+        'request_host': request.get_host(),
+    }
+    
+    if os.path.exists(sw_path):
+        try:
+            with open(sw_path, 'r', encoding='utf-8') as f:
+                first_lines = f.read(500)  # Read first 500 chars
+            debug_info['sw_content_preview'] = first_lines
+            debug_info['sw_file_size'] = os.path.getsize(sw_path)
+        except Exception as e:
+            debug_info['sw_read_error'] = str(e)
+    
+    return JsonResponse(debug_info, json_dumps_params={'indent': 2})
 
 
 def entrevista_cliente_view(request):

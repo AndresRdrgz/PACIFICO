@@ -1182,7 +1182,23 @@
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('{% url "workflow:service_worker" %}')
+                const swUrl = '{% url "workflow:service_worker" %}';
+                console.log('Attempting to register Service Worker from:', swUrl);
+                
+                // Test if SW file is accessible
+                fetch(swUrl)
+                    .then(response => {
+                        console.log('SW file fetch response:', response.status, response.statusText);
+                        if (!response.ok) {
+                            throw new Error(`SW file not accessible: ${response.status} ${response.statusText}`);
+                        }
+                        return response.text();
+                    })
+                    .then(swContent => {
+                        console.log('SW file accessible, size:', swContent.length);
+                        // Now register the service worker
+                        return navigator.serviceWorker.register(swUrl);
+                    })
                     .then(function(registration) {
                         console.log('Service Worker registered successfully:', registration.scope);
                         
@@ -1203,7 +1219,22 @@
                     })
                     .catch(function(error) {
                         console.error('Service Worker registration failed:', error);
-                        showToast('Error al registrar Service Worker', 'warning');
+                        console.error('Error details:', {
+                            message: error.message,
+                            stack: error.stack,
+                            swUrl: swUrl
+                        });
+                        showToast('Error al registrar Service Worker: ' + error.message, 'warning');
+                        
+                        // Additional debugging - test debug endpoint
+                        fetch('/workflow/test-sw-debug/')
+                            .then(response => response.json())
+                            .then(debugInfo => {
+                                console.log('SW Debug Info:', debugInfo);
+                            })
+                            .catch(debugError => {
+                                console.error('Debug endpoint also failed:', debugError);
+                            });
                     });
             });
             

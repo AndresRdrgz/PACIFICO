@@ -2,6 +2,9 @@ const CACHE_NAME = 'pacifico-workflow-v1.0.1';
 const STATIC_CACHE = 'pacifico-static-v1.0.1';
 const DYNAMIC_CACHE = 'pacifico-dynamic-v1.0.1';
 
+console.log('Service Worker script loaded successfully');
+console.log('Cache names:', { CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE });
+
 const urlsToCache = [
   '/workflow/',
   '/workflow/dashboard/',

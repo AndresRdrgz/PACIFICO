@@ -1,6 +1,9 @@
 from django.urls import path
+from django.views.static import serve
+from django.conf import settings
 from . import views_workflow
 from . import views
+import os
 
 app_name = 'workflow'
 
@@ -8,9 +11,23 @@ urlpatterns = [
     # PWA routes
     path('manifest.json', views.manifest_view, name='manifest'),
     path('sw.js', views.service_worker_view, name='service_worker'),
+    path('test-sw-debug/', views.test_service_worker, name='test_service_worker'),
     path('offline/', views_workflow.offline_view, name='offline'),
     path('api/health-check/', views_workflow.health_check, name='health_check'),
     path('pwa-test/', views_workflow.pwa_test_view, name='pwa_test'),
+    
+    # Alternative service worker route for debugging
+] 
+
+# Add static file serving for service worker in development
+if settings.DEBUG:
+    from django.views.static import serve
+    urlpatterns += [
+        path('sw-static.js', serve, {
+            'document_root': os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow'),
+            'path': 'sw.js'
+        }, name='service_worker_static'),
+    ]
     
     # Vistas principales
     path('', views_workflow.dashboard_workflow, name='dashboard'),
@@ -73,4 +90,4 @@ urlpatterns = [
     # API para cambio de etapa
     path('api/solicitudes/<int:solicitud_id>/cambiar-etapa/', views_workflow.api_cambiar_etapa, name='api_cambiar_etapa'),
     path('api/solicitud_brief/<int:solicitud_id>/', views_workflow.api_solicitud_brief, name='api_solicitud_brief'),
-] 
+]
