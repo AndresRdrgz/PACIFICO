@@ -868,89 +868,7 @@
     {% endif %}
 </div>
 
-<!-- Modal Mejorado para Detalles de Solicitud -->
-<div class="modal fade" id="modalSolicitud" tabindex="-1" aria-labelledby="modalSolicitudLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-gradient-primary text-white">
-                <h5 class="modal-title" id="modalSolicitudLabel">
-                    <i class="fas fa-file-alt me-2"></i>
-                    <span id="modalSolicitudCodigo">Detalles de Solicitud</span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="modalSolicitudBody">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Cliente</label>
-                            <p class="mb-0" id="modalCliente">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Cédula</label>
-                            <p class="mb-0" id="modalCedula">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Producto</label>
-                            <p class="mb-0" id="modalProducto">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Monto</label>
-                            <p class="mb-0 fw-bold text-success" id="modalMonto">-</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Estado</label>
-                            <p class="mb-0" id="modalEstado">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Etapa</label>
-                            <p class="mb-0" id="modalEtapa">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Asignado a</label>
-                            <p class="mb-0" id="modalAsignado">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">SLA</label>
-                            <p class="mb-0" id="modalSLA">-</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Fecha de Inicio</label>
-                            <p class="mb-0" id="modalFechaInicio">-</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-muted">Vencimiento SLA</label>
-                            <p class="mb-0" id="modalVencimiento">-</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Cerrar
-                </button>
-                <a href="#" class="btn btn-primary" id="btnVerDetalle">
-                    <i class="fas fa-eye me-1"></i>Ver Detalle Completo
-                </a>
-                <a href="#" class="btn btn-success" id="btnCambiarEtapa">
-                    <i class="fas fa-arrow-right me-1"></i>Cambiar Etapa
-                </a>
-                <a href="#" class="btn btn-warning" id="btnEditar">
-                    <i class="fas fa-edit me-1"></i>Editar
-                </a>
-                <button type="button" class="btn btn-danger" id="btnEliminar" style="display: none;">
-                    <i class="fas fa-trash me-1"></i>Eliminar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'workflow/partials/modalSolicitud.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -1244,74 +1162,97 @@ $(document).ready(function() {
     
     // Función mejorada para mostrar modal de solicitud
     window.mostrarModalSolicitud = function(solicitudId) {
-        console.log('Abriendo modal para solicitud:', solicitudId);
-        
-        var codigo, cliente, cedula, producto, monto, propietario, asignado, etapa, estado, fechaInicio, vencimiento, sla;
-        
-        // Primero intentar obtener datos de la vista Kanban
-        var $kanbanCard = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
-        if ($kanbanCard.length > 0) {
-            console.log('Obteniendo datos de tarjeta Kanban');
-            
-            // Obtener datos de la tarjeta Kanban usando atributos data-*
-            codigo = $kanbanCard.attr('data-codigo') || 'Sin código';
-            cliente = $kanbanCard.attr('data-cliente') || 'Sin cliente';
-            cedula = '-'; // No disponible en Kanban
-            producto = '-'; // No disponible en Kanban
-            monto = $kanbanCard.attr('data-monto') || '$ 0';
-            propietario = '-'; // No disponible en Kanban
-            asignado = $kanbanCard.attr('data-asignado') || 'Sin asignar';
-            etapa = $kanbanCard.closest('.kanban-column').find('h6').text().trim();
-            estado = $kanbanCard.attr('data-estado') || 'Sin estado';
-            fechaInicio = $kanbanCard.attr('data-fecha-inicio') || 'Sin fecha';
-            vencimiento = 'N/A'; // No disponible en Kanban
-            sla = $kanbanCard.attr('data-sla-texto') || 'Sin SLA';
-            
-        } else {
-            // Si no es Kanban, obtener datos de la tabla
-            var rowNode = table.row(`[data-solicitud-id="${solicitudId}"]`).node();
-            if (!rowNode) {
-                console.error('No se encontró la fila con data-solicitud-id:', solicitudId);
-                alert('No se encontraron datos de la solicitud');
-                return;
+        // Limpia el modal
+        $('#modalSolicitudCodigo').text('Cargando...');
+        $('#modalSolicitudEstadoBadge').text('');
+        $('#modalSolicitudTipo').text('');
+        $('#modalSolicitudFechaInicio').text('-');
+        $('#modalSolicitudVencimiento').text('-');
+        $('#modalSolicitudEtapaActual').text('-');
+        $('#modalSolicitudArea').text('-');
+        $('#modalSolicitudCliente').text('-');
+        $('#modalSolicitudCedula').text('-');
+        $('#modalSolicitudCanal').text('-');
+        // Acciones
+        $('#modalBtnProcesarTarea').prop('disabled', true);
+        $('#modalBtnDevolver').prop('disabled', true);
+        $('#modalBtnAnular').prop('disabled', true);
+        $('#modalBtnComentarios').prop('disabled', true);
+        // Workflow, historial, comentarios
+        $('#modalSolicitudWorkflowProgress').html('<div class="text-center text-muted py-2">Cargando...</div>');
+        $('#modalSolicitudWorkflowDetail').html('');
+        $('#modalSolicitudHistorial').html('');
+        $('#modalSolicitudComentarios').html('');
+
+        // Fetch API
+        $.get(`/workflow/api/solicitud_brief/${solicitudId}/`, function(data) {
+            // General
+            $('#modalSolicitudCodigo').text(data.general.codigo || '-');
+            $('#modalSolicitudEstadoBadge').text(data.general.estado || '-');
+            $('#modalSolicitudTipo').text(data.general.tipo || '-');
+            $('#modalSolicitudFechaInicio').text(data.general.fecha_inicio || '-');
+            $('#modalSolicitudVencimiento').text(data.general.vencimiento || '-');
+            $('#modalSolicitudEtapaActual').text(data.general.etapa_actual || '-');
+            $('#modalSolicitudArea').text(data.general.area || '-');
+            // Cliente
+            $('#modalSolicitudCliente').text(data.cliente.nombre || '-');
+            $('#modalSolicitudCedula').text(data.cliente.cedula || '-');
+            $('#modalSolicitudCanal').text(data.cliente.canal || '-');
+            // Acciones
+            $('#modalBtnProcesarTarea').prop('disabled', !data.acciones.puede_procesar);
+            $('#modalBtnDevolver').prop('disabled', !data.acciones.puede_devolver);
+            $('#modalBtnAnular').prop('disabled', !data.acciones.puede_anular);
+            $('#modalBtnComentarios').prop('disabled', !data.acciones.puede_comentar);
+            // --- WORKFLOW ROADMAP ---
+            let etapas = data.workflow;
+            let roadmapHtml = '<div class="workflow-roadmap">';
+            etapas.forEach(function(etapa, idx) {
+                let stepClass = etapa.actual ? 'workflow-step current' : (etapa.completada ? 'workflow-step completed' : 'workflow-step pending');
+                let icon = etapa.completada ? '<i class="fas fa-check"></i>' : (etapa.actual ? '<i class="fas fa-bolt"></i>' : (idx+1));
+                let sla = etapa.sla ? `<div class='sla-label'>SLA: ${etapa.sla}</div>` : '';
+                roadmapHtml += `<div class="${stepClass}">
+                    <div class="circle">${icon}</div>
+                    <div class="step-label">${etapa.nombre}</div>
+                    ${sla}
+                </div>`;
+                if (idx < etapas.length - 1) {
+                    roadmapHtml += '<div class="workflow-connector"></div>';
+                }
+            });
+            roadmapHtml += '</div>';
+            $('#modalSolicitudWorkflowProgress').html(roadmapHtml);
+            // Workflow detail (tab)
+            let detailHtml = '<ul class="list-group">';
+            etapas.forEach(function(etapa) {
+                detailHtml += `<li class="list-group-item d-flex justify-content-between align-items-center ${etapa.actual ? 'active' : ''}">
+                    <span>${etapa.nombre}</span>
+                    <span class="badge bg-${etapa.completada ? 'success' : (etapa.actual ? 'warning text-dark' : 'secondary')}">${etapa.completada ? 'Completada' : (etapa.actual ? 'Actual' : 'Pendiente')}</span>
+                </li>`;
+            });
+            detailHtml += '</ul>';
+            $('#modalSolicitudWorkflowDetail').html(detailHtml);
+            // Historial
+            let histHtml = '<ul class="list-group">';
+            data.historial.forEach(function(h) {
+                histHtml += `<li class="list-group-item">
+                    <div><b>Etapa:</b> ${h.etapa} <span class="text-muted small">(${h.subestado})</span></div>
+                    <div><b>Usuario:</b> ${h.usuario}</div>
+                    <div><b>Inicio:</b> ${h.fecha_inicio} ${h.fecha_fin ? '<b>Fin:</b> ' + h.fecha_fin : ''}</div>
+                </li>`;
+            });
+            histHtml += '</ul>';
+            $('#modalSolicitudHistorial').html(histHtml);
+            // Comentarios
+            let comHtml = '';
+            if (data.comentarios.length === 0) {
+                comHtml = '<div class="text-muted">Sin comentarios.</div>';
+            } else {
+                data.comentarios.forEach(function(c) {
+                    comHtml += `<div class="border rounded p-2 mb-2"><b>${c.usuario}</b> <span class="text-muted small">${c.fecha}</span><br>${c.texto}</div>`;
+                });
             }
-            
-            console.log('Obteniendo datos de tabla');
-            
-            // Obtener datos de las celdas de la tabla
-            var $row = $(rowNode);
-            codigo = $row.find('td:eq(0) .solicitud-link').text().trim();
-            cliente = $row.find('td:eq(1) .fw-semibold').text().trim();
-            cedula = $row.find('td:eq(1) small').text().trim();
-            producto = $row.find('td:eq(2)').text().trim();
-            monto = $row.find('td:eq(3) .text-success').text().trim();
-            propietario = $row.find('td:eq(4)').text().trim().replace('👤', '').trim();
-            asignado = $row.find('td:eq(5)').text().trim();
-            etapa = $row.find('td:eq(6) .etapa-select option:selected').text().trim();
-            estado = $row.find('td:eq(7) .badge').text().trim();
-            fechaInicio = $row.find('td:eq(8) div:first').text().trim().replace('Ini:', '').trim();
-            vencimiento = $row.find('td:eq(8) div:last').text().trim().replace('Ven:', '').trim();
-            sla = $row.find('td:eq(9) .fw-bold').text().trim();
-        }
-        
-        // Poblar modal con los datos obtenidos
-        $('#modalSolicitudCodigo').text(codigo);
-        $('#modalCliente').text(cliente);
-        $('#modalCedula').text(cedula);
-        $('#modalProducto').text(producto);
-        $('#modalMonto').text(monto);
-        $('#modalEstado').text(estado);
-        $('#modalEtapa').text(etapa || 'Sin etapa');
-        $('#modalAsignado').text(asignado);
-        $('#modalSLA').text(sla);
-        $('#modalFechaInicio').text(fechaInicio);
-        $('#modalVencimiento').text(vencimiento);
-        
-        // Configurar botones de acción
-        $('#btnVerDetalle').attr('href', `/workflow/solicitudes/${solicitudId}/detalle/`);
-        $('#btnCambiarEtapa').attr('href', `/workflow/solicitudes/${solicitudId}/transicion/`);
-        $('#btnEditar').attr('href', `/workflow/solicitudes/${solicitudId}/editar/`);
-        
+            $('#modalSolicitudComentarios').html(comHtml);
+        });
         // Mostrar modal
         var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
         modal.show();
@@ -4128,8 +4069,844 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 1 !important;
     color: var(--verde-pacifico) !important;
 }
+
+/* Toast notification styles */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10001;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 300px;
+    font-weight: 500;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+.toast-notification.success {
+    background: #28a745;
+}
+
+.toast-notification.error {
+    background: #dc3545;
+}
+
+/* Auto-populated indicator styles */
+.selected-item.auto-populated {
+    border-left: 3px solid #28a745;
+    background-color: #f8fff9;
+}
+
+.auto-populated-indicator {
+    color: #28a745 !important;
+    font-size: 0.75rem !important;
+    display: block !important;
+    margin-top: 4px !important;
+    font-style: italic;
+}
+
+/* Cliente placeholder styles */
+#clientePlaceholder {
+    background-color: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+#clientePlaceholder i {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    display: block;
+}
 </style>
 
 {% include 'workflow/partials/drawer.html' %}
+
+<!-- JavaScript functions for drawer functionality -->
+<script>
+// Define functions immediately to ensure they're available
+(function() {
+    // Ensure drawer functions are available globally
+window.openSolicitudDrawerWithContext = function(pipelineId = null) {
+    console.log('🔧 openSolicitudDrawerWithContext called with pipelineId:', pipelineId);
+    
+    // Check if drawer exists
+    const drawer = document.getElementById('solicitudDrawer');
+    if (!drawer) {
+        console.error('❌ Drawer element not found!');
+        alert('Error: Drawer not found. Please refresh the page.');
+        return;
+    }
+    
+    // Open drawer
+    drawer.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // If pipelineId is provided, lock the pipeline selection
+    if (pipelineId) {
+        console.log('🔒 Locking pipeline:', pipelineId);
+        lockPipeline(pipelineId);
+    }
+    
+    console.log('✅ Drawer opened successfully');
+};
+
+// Also define the base openSolicitudDrawer function
+window.openSolicitudDrawer = function(pipelineId = null) {
+    console.log('🔧 openSolicitudDrawer called with pipelineId:', pipelineId);
+    
+    const drawer = document.getElementById('solicitudDrawer');
+    if (!drawer) {
+        console.error('❌ Drawer element not found!');
+        return;
+    }
+    
+    drawer.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    if (pipelineId) {
+        lockPipeline(pipelineId);
+    }
+};
+
+window.lockPipeline = function(pipelineId) {
+    console.log('🔒 lockPipeline called with:', pipelineId);
+    
+    const pipelineSelect = document.getElementById('pipelineSelect');
+    const pipelineLockedInfo = document.getElementById('pipelineLockedInfo');
+    const pipelineLockedName = document.getElementById('pipelineLockedName');
+    
+    if (!pipelineSelect || !pipelineLockedInfo || !pipelineLockedName) {
+        console.error('❌ Pipeline elements not found!');
+        return;
+    }
+    
+    // Set and disable the select
+    pipelineSelect.value = pipelineId;
+    pipelineSelect.disabled = true;
+    pipelineSelect.style.display = 'none';
+    
+    console.log('🔒 Pipeline select value set to:', pipelineSelect.value);
+    console.log('🔒 Pipeline select disabled:', pipelineSelect.disabled);
+    console.log('🔒 Pipeline select display:', pipelineSelect.style.display);
+    
+    // Show locked info
+    const selectedOption = pipelineSelect.options[pipelineSelect.selectedIndex];
+    if (selectedOption) {
+        pipelineLockedName.textContent = selectedOption.text;
+        pipelineLockedInfo.style.display = 'block';
+        
+        console.log('🔒 Pipeline locked info displayed:', pipelineLockedInfo.style.display);
+        console.log('🔒 Pipeline locked name:', pipelineLockedName.textContent);
+        
+        // Load form data for the locked pipeline
+        loadFormularioData(pipelineId);
+    }
+    
+    console.log('✅ Pipeline locked successfully');
+};
+
+window.closeSolicitudDrawer = function() {
+    console.log('🔧 closeSolicitudDrawer called');
+    
+    const drawer = document.getElementById('solicitudDrawer');
+    if (drawer) {
+        drawer.classList.remove('active');
+        document.body.style.overflow = '';
+        resetForm();
+        console.log('✅ Drawer closed successfully');
+    }
+};
+
+window.resetForm = function() {
+    console.log('🔧 resetForm called');
+    
+    const form = document.getElementById('solicitudForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Reset hidden inputs
+    const cotizacionId = document.getElementById('cotizacionId');
+    const clienteId = document.getElementById('clienteId');
+    if (cotizacionId) cotizacionId.value = '';
+    if (clienteId) clienteId.value = '';
+    
+    // Reset selected displays
+    const cotizacionSelected = document.getElementById('cotizacionSelected');
+    const clienteSelected = document.getElementById('clienteSelected');
+    const clientePlaceholder = document.getElementById('clientePlaceholder');
+    
+    if (cotizacionSelected) cotizacionSelected.style.display = 'none';
+    if (clienteSelected) {
+        clienteSelected.style.display = 'none';
+        clienteSelected.classList.remove('auto-populated');
+        
+        // Remove auto-populated indicator
+        const indicator = clienteSelected.querySelector('.auto-populated-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    if (clientePlaceholder) {
+        clientePlaceholder.style.display = 'block';
+    }
+    
+    // Clear search inputs
+    const cotizacionSearch = document.getElementById('cotizacionSearch');
+    if (cotizacionSearch) cotizacionSearch.value = '';
+    
+    // Reset campos personalizados
+    const camposContainer = document.getElementById('camposContainer');
+    if (camposContainer) {
+        camposContainer.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Selecciona un pipeline para ver los campos personalizados
+            </div>
+        `;
+    }
+    
+    // Reset requisitos
+    const requisitosContainer = document.getElementById('requisitosContainer');
+    if (requisitosContainer) {
+        requisitosContainer.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Selecciona un pipeline para ver los requisitos
+            </div>
+        `;
+    }
+    
+    // Reset pipeline lock
+    const pipelineSelect = document.getElementById('pipelineSelect');
+    const pipelineLockedInfo = document.getElementById('pipelineLockedInfo');
+    if (pipelineSelect) {
+        pipelineSelect.disabled = false;
+        pipelineSelect.style.display = 'block';
+        console.log('🔧 Pipeline select reset - disabled:', pipelineSelect.disabled, 'display:', pipelineSelect.style.display);
+    }
+    if (pipelineLockedInfo) {
+        pipelineLockedInfo.style.display = 'none';
+        console.log('🔧 Pipeline locked info reset - display:', pipelineLockedInfo.style.display);
+    }
+    
+    hideSearchResults();
+    console.log('✅ Form reset successfully');
+};
+
+window.loadFormularioData = function(pipelineId) {
+    console.log('🔧 loadFormularioData called with pipelineId:', pipelineId);
+    
+    fetch(`/workflow/api/formulario-datos/?pipeline_id=${pipelineId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Form data loaded:', data);
+                renderCamposPersonalizados(data.campos_personalizados);
+                renderRequisitos(data.requisitos);
+            } else {
+                console.error('❌ Error loading form data:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading form data:', error);
+        });
+};
+
+window.hideSearchResults = function(type) {
+    if (type) {
+        const results = document.getElementById(`${type}Results`);
+        if (results) results.classList.remove('show');
+    } else {
+        const cotizacionResults = document.getElementById('cotizacionResults');
+        if (cotizacionResults) cotizacionResults.classList.remove('show');
+    }
+};
+
+// Initialize drawer functionality when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing drawer functionality...');
+    
+    // Close drawer when clicking outside
+    const drawer = document.getElementById('solicitudDrawer');
+    if (drawer) {
+        drawer.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSolicitudDrawer();
+            }
+        });
+        console.log('✅ Drawer click outside handler initialized');
+    }
+    
+    // Setup search functionality if elements exist
+    const cotizacionSearch = document.getElementById('cotizacionSearch');
+    if (cotizacionSearch) {
+        setupSearch();
+        console.log('✅ Search functionality initialized');
+    }
+    
+    console.log('✅ Drawer functionality initialized successfully');
+});
+
+// Fallback function in case the drawer functions are not loaded
+window.openSolicitudDrawer = function(pipelineId = null) {
+    console.log('🔧 openSolicitudDrawer fallback called with pipelineId:', pipelineId);
+    openSolicitudDrawerWithContext(pipelineId);
+};
+
+// Missing functions that are referenced but not defined
+window.renderCamposPersonalizados = function(campos) {
+    console.log('🔧 renderCamposPersonalizados called with:', campos);
+    
+    const container = document.getElementById('camposContainer');
+    if (!container) {
+        console.error('❌ camposContainer not found!');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (!campos || campos.length === 0) {
+        container.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay campos personalizados para este pipeline
+            </div>
+        `;
+        return;
+    }
+    
+    campos.forEach(campo => {
+        const campoDiv = document.createElement('div');
+        campoDiv.className = 'campo-dinamico';
+        
+        let inputHtml = '';
+        const required = campo.requerido ? 'required' : '';
+        const requiredStar = campo.requerido ? '<span class="campo-required">*</span>' : '';
+        
+        switch (campo.tipo) {
+            case 'texto':
+                inputHtml = `<input type="text" class="form-control" name="campo_${campo.id}" ${required}>`;
+                break;
+            case 'numero':
+                inputHtml = `<input type="number" step="0.01" class="form-control" name="campo_${campo.id}" ${required}>`;
+                break;
+            case 'entero':
+                inputHtml = `<input type="number" class="form-control" name="campo_${campo.id}" ${required}>`;
+                break;
+            case 'fecha':
+                inputHtml = `<input type="date" class="form-control" name="campo_${campo.id}" ${required}>`;
+                break;
+            case 'booleano':
+                inputHtml = `
+                    <select class="form-control" name="campo_${campo.id}" ${required}>
+                        <option value="">Seleccionar...</option>
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                `;
+                break;
+        }
+        
+        campoDiv.innerHTML = `
+            <label class="campo-label">
+                ${campo.nombre} ${requiredStar}
+            </label>
+            ${inputHtml}
+        `;
+        
+        container.appendChild(campoDiv);
+    });
+    
+    console.log('✅ Campos personalizados rendered successfully');
+};
+
+window.renderRequisitos = function(requisitos) {
+    console.log('🔧 renderRequisitos called with:', requisitos);
+    
+    const container = document.getElementById('requisitosContainer');
+    if (!container) {
+        console.error('❌ requisitosContainer not found!');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (!requisitos || requisitos.length === 0) {
+        container.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay requisitos para este pipeline
+            </div>
+        `;
+        return;
+    }
+    
+    requisitos.forEach(requisito => {
+        const requisitoDiv = document.createElement('div');
+        requisitoDiv.className = 'requisito-item';
+        
+        requisitoDiv.innerHTML = `
+            <div class="requisito-header">
+                <div class="requisito-info">
+                    <div class="requisito-nombre">
+                        ${requisito.nombre}
+                        ${requisito.obligatorio ? '<span class="requisito-obligatorio">(Obligatorio)</span>' : ''}
+                    </div>
+                    ${requisito.descripcion ? `<div class="requisito-descripcion">${requisito.descripcion}</div>` : ''}
+                </div>
+            </div>
+            <div class="requisito-upload">
+                <label class="file-upload-label">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Subir archivo
+                    <input type="file" class="file-upload-input" name="archivo_requisito_${requisito.id}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.zip,.rar">
+                </label>
+                <div class="file-upload-info">
+                    <small class="text-muted">Formatos permitidos: PDF, DOC, DOCX, JPG, PNG, GIF, ZIP, RAR</small>
+                </div>
+                <div class="file-selected" style="display: none;">
+                    <i class="fas fa-file me-2"></i>
+                    <span class="file-name"></span>
+                    <button type="button" class="btn-remove-file" onclick="removeFile(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(requisitoDiv);
+    });
+    
+    // Setup file upload handlers after rendering
+    setTimeout(() => {
+        setupFileUploadHandlers();
+    }, 100);
+    
+    console.log('✅ Requisitos rendered successfully');
+};
+
+window.setupSearch = function() {
+    console.log('🔧 setupSearch called');
+    
+    // Cotización search
+    const cotizacionSearch = document.getElementById('cotizacionSearch');
+    if (cotizacionSearch) {
+        cotizacionSearch.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if (query.length < 2) {
+                hideSearchResults('cotizacion');
+                return;
+            }
+            searchTimeout = setTimeout(() => {
+                searchCotizaciones(query);
+            }, 300);
+        });
+    }
+
+
+
+    // Pipeline change
+    const pipelineSelect = document.getElementById('pipelineSelect');
+    if (pipelineSelect) {
+        pipelineSelect.addEventListener('change', function(e) {
+            const pipelineId = e.target.value;
+            if (pipelineId) {
+                loadFormularioData(pipelineId);
+            } else {
+                // Reset to placeholder messages
+                const camposContainer = document.getElementById('camposContainer');
+                const requisitosContainer = document.getElementById('requisitosContainer');
+                
+                if (camposContainer) {
+                    camposContainer.innerHTML = `
+                        <div class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Selecciona un pipeline para ver los campos personalizados
+                        </div>
+                    `;
+                }
+                
+                if (requisitosContainer) {
+                    requisitosContainer.innerHTML = `
+                        <div class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Selecciona un pipeline para ver los requisitos
+                        </div>
+                    `;
+                }
+            }
+        });
+    }
+    
+    console.log('✅ Search functionality setup successfully');
+};
+
+// Search functionality variables
+let searchTimeout;
+let currentSearchType = '';
+
+function searchCotizaciones(query) {
+    console.log('🔧 searchCotizaciones called with query:', query);
+    
+    fetch(`/workflow/api/buscar-cotizaciones-drawer/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSearchResults('cotizacion', data.cotizaciones);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error searching cotizaciones:', error);
+        });
+}
+
+
+
+function showSearchResults(type, results) {
+    console.log('🔧 showSearchResults called with type:', type, 'results:', results);
+    
+    const resultsContainer = document.getElementById(`${type}Results`);
+    if (!resultsContainer) {
+        console.error('❌ Results container not found for type:', type);
+        return;
+    }
+    
+    resultsContainer.innerHTML = '';
+    
+    if (!results || results.length === 0) {
+        resultsContainer.innerHTML = '<div class="search-result-item">No se encontraron resultados</div>';
+    } else {
+        results.forEach(item => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'search-result-item';
+            resultItem.onclick = () => selectItem(type, item);
+            
+            resultItem.innerHTML = `
+                <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
+                <div class="search-result-details">
+                    ${item.cedulaCliente || 'Sin cédula'} • 
+                    ${item.tipoPrestamo || 'Sin tipo'} • 
+                    $${item.montoPrestamo.toLocaleString()}
+                </div>
+            `;
+            
+            resultsContainer.appendChild(resultItem);
+        });
+    }
+    
+    resultsContainer.classList.add('show');
+}
+
+function selectItem(type, item) {
+    console.log('🔧 selectItem called with type:', type, 'item:', item);
+    
+    const idInput = document.getElementById(`${type}Id`);
+    const searchInput = document.getElementById(`${type}Search`);
+    const selectedContainer = document.getElementById(`${type}Selected`);
+    
+    if (idInput) idInput.value = item.id;
+    if (searchInput) searchInput.value = '';
+    
+    if (selectedContainer) {
+        const nameElement = selectedContainer.querySelector('.selected-name');
+        const detailsElement = selectedContainer.querySelector('.selected-details');
+        
+        if (nameElement) nameElement.textContent = item.nombreCliente || 'Sin nombre';
+        if (detailsElement) detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${item.montoPrestamo.toLocaleString()}`;
+        
+        selectedContainer.style.display = 'block';
+        
+        // Auto-populate cliente when cotización is selected
+        autoPopulateClienteFromCotizacion(item);
+    }
+    
+    hideSearchResults(type);
+}
+
+function autoPopulateClienteFromCotizacion(cotizacion) {
+    console.log('🔧 autoPopulateClienteFromCotizacion called with:', cotizacion);
+    
+    // Clear any existing cliente first
+    clearCliente();
+    
+    // Create a cliente object from cotización data
+    const clienteData = {
+        id: null, // We'll need to find the actual cliente ID
+        nombreCliente: cotizacion.nombreCliente,
+        cedulaCliente: cotizacion.cedulaCliente,
+        edad: null, // Not available in cotización data
+        sexo: null  // Not available in cotización data
+    };
+    
+    // Search for the actual cliente by cédula
+    if (clienteData.cedulaCliente) {
+        fetch(`/workflow/api/buscar-clientes-drawer/?q=${encodeURIComponent(clienteData.cedulaCliente)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.clientes.length > 0) {
+                    // Use the first matching cliente
+                    const cliente = data.clientes[0];
+                    console.log('🔧 Found matching cliente:', cliente);
+                    selectClienteAutomatically(cliente);
+                } else {
+                    // If no cliente found, create a virtual cliente object
+                    console.log('🔧 No matching cliente found, using cotización data');
+                    selectClienteAutomatically(clienteData);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error searching for cliente:', error);
+                // Fallback to using cotización data
+                selectClienteAutomatically(clienteData);
+            });
+    } else {
+        // No cédula available, use cotización data directly
+        selectClienteAutomatically(clienteData);
+    }
+}
+
+function selectClienteAutomatically(cliente) {
+    console.log('🔧 selectClienteAutomatically called with:', cliente);
+    
+    const clienteIdInput = document.getElementById('clienteId');
+    const clienteSelectedContainer = document.getElementById('clienteSelected');
+    const clientePlaceholder = document.getElementById('clientePlaceholder');
+    
+    if (clienteIdInput) clienteIdInput.value = cliente.id || '';
+    
+    if (clienteSelectedContainer && clientePlaceholder) {
+        const nameElement = clienteSelectedContainer.querySelector('.selected-name');
+        const detailsElement = clienteSelectedContainer.querySelector('.selected-details');
+        
+        if (nameElement) nameElement.textContent = cliente.nombreCliente || 'Sin nombre';
+        if (detailsElement) {
+            if (cliente.id) {
+                // Real cliente with full data
+                detailsElement.textContent = `${cliente.cedulaCliente || 'Sin cédula'} • ${cliente.edad || 'Sin edad'} años`;
+            } else {
+                // Virtual cliente from cotización data
+                detailsElement.textContent = `${cliente.cedulaCliente || 'Sin cédula'} • (Datos de cotización)`;
+            }
+        }
+        
+        // Add auto-populated indicator
+        clienteSelectedContainer.classList.add('auto-populated');
+        clienteSelectedContainer.style.display = 'block';
+        clientePlaceholder.style.display = 'none';
+        
+        // Add a small indicator text
+        const indicator = document.createElement('small');
+        indicator.className = 'auto-populated-indicator';
+        indicator.innerHTML = '<i class="fas fa-magic me-1"></i>Auto-completado desde cotización';
+        
+        // Remove any existing indicator
+        const existingIndicator = clienteSelectedContainer.querySelector('.auto-populated-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        clienteSelectedContainer.appendChild(indicator);
+    }
+}
+
+function setupFileUploadHandlers() {
+    console.log('🔧 setupFileUploadHandlers called');
+    
+    document.querySelectorAll('.file-upload-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            const requisitoItem = this.closest('.requisito-item');
+            const fileSelected = requisitoItem.querySelector('.file-selected');
+            const fileName = fileSelected.querySelector('.file-name');
+            const uploadLabel = requisitoItem.querySelector('.file-upload-label');
+            
+            if (file) {
+                fileName.textContent = file.name;
+                fileSelected.style.display = 'flex';
+                uploadLabel.style.display = 'none';
+            }
+        });
+    });
+}
+
+function removeFile(button) {
+    console.log('🔧 removeFile called');
+    
+    const requisitoItem = button.closest('.requisito-item');
+    const fileSelected = requisitoItem.querySelector('.file-selected');
+    const uploadLabel = requisitoItem.querySelector('.file-upload-label');
+    const fileInput = requisitoItem.querySelector('.file-upload-input');
+    
+    fileInput.value = '';
+    fileSelected.style.display = 'none';
+    uploadLabel.style.display = 'inline-block';
+}
+
+// Additional functions that might be missing
+window.submitSolicitud = function() {
+    console.log('🔧 submitSolicitud called');
+    
+    const form = document.getElementById('solicitudForm');
+    const formData = new FormData(form);
+    
+    // Validar pipeline - check both form data and locked pipeline
+    const pipelineFromForm = formData.get('pipeline');
+    const pipelineSelect = document.getElementById('pipelineSelect');
+    const pipelineLockedInfo = document.getElementById('pipelineLockedInfo');
+    
+    let pipelineId = pipelineFromForm;
+    
+    // If pipeline is locked (hidden), get the value from the select element
+    if (!pipelineId && pipelineLockedInfo && pipelineLockedInfo.style.display !== 'none') {
+        pipelineId = pipelineSelect ? pipelineSelect.value : null;
+        console.log('🔧 Pipeline is locked, using value from select:', pipelineId);
+    }
+    
+    if (!pipelineId) {
+        alert('Por favor selecciona un pipeline');
+        return;
+    }
+    
+    // If pipeline was locked, add it to form data
+    if (!pipelineFromForm && pipelineId) {
+        formData.set('pipeline', pipelineId);
+        console.log('🔧 Added locked pipeline to form data:', pipelineId);
+    }
+    
+    // Debug: Log all form data
+    console.log('🔧 Form data contents:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+    }
+    
+    // Validar archivos obligatorios si corresponde
+    const requiredFiles = document.querySelectorAll('.requisito-item .file-upload-input[required]');
+    let hasRequiredFiles = true;
+    
+    for (let input of requiredFiles) {
+        if (!input.files || input.files.length === 0) {
+            hasRequiredFiles = false;
+            break;
+        }
+    }
+    
+    if (!hasRequiredFiles) {
+        alert('Por favor sube todos los archivos obligatorios');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('.drawer-footer .btn-primary');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner"></span> Creando...';
+    submitBtn.disabled = true;
+    
+    fetch('/workflow/nueva-solicitud/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeSolicitudDrawer();
+            // Mostrar mensaje de éxito
+            showSuccessMessage(data.message);
+            // Recargar la página para mostrar la nueva solicitud
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al crear la solicitud');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+};
+
+window.showSuccessMessage = function(message) {
+    console.log('🔧 showSuccessMessage called with:', message);
+    
+    // Create a simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification success';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+};
+
+window.clearCotizacion = function() {
+    console.log('🔧 clearCotizacion called');
+    document.getElementById('cotizacionId').value = '';
+    document.getElementById('cotizacionSelected').style.display = 'none';
+    
+    // Also clear cliente when cotización is cleared
+    console.log('🔧 Also clearing cliente due to cotización clear');
+    clearCliente();
+};
+
+window.clearCliente = function() {
+    console.log('🔧 clearCliente called');
+    document.getElementById('clienteId').value = '';
+    const clienteSelected = document.getElementById('clienteSelected');
+    const clientePlaceholder = document.getElementById('clientePlaceholder');
+    
+    if (clienteSelected) {
+        clienteSelected.style.display = 'none';
+        clienteSelected.classList.remove('auto-populated');
+        
+        // Remove auto-populated indicator
+        const indicator = clienteSelected.querySelector('.auto-populated-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    if (clientePlaceholder) {
+        clientePlaceholder.style.display = 'block';
+    }
+};
+})(); // Close IIFE
+</script>
 
 {% endblock %} 

@@ -15,6 +15,8 @@ from django.views.decorators.csrf import csrf_exempt
 import time
 import threading
 import queue
+from django.core.serializers.json import DjangoJSONEncoder
+from django.forms.models import model_to_dict
 
 # ==========================================
 # VISTAS PRINCIPALES DEL WORKFLOW
@@ -2689,3 +2691,82 @@ def api_get_updated_solicitudes(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat()
         })
+
+
+@login_required
+def api_solicitud_brief(request, solicitud_id):
+    """API: Briefing de una solicitud para el modal"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+
+    # General info
+    general = {
+        'codigo': solicitud.codigo,
+        'estado': solicitud.subestado_actual.nombre if solicitud.subestado_actual else (solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-'),
+        'tipo': solicitud.pipeline.nombre if solicitud.pipeline else '-',
+        'fecha_inicio': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else '-',
+        'vencimiento': solicitud.historial.last().fecha_fin.strftime('%d/%m/%Y') if solicitud.historial.last() and solicitud.historial.last().fecha_fin else '-',
+        'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-',
+        'area': getattr(solicitud.etapa_actual, 'area_responsable', '-') if solicitud.etapa_actual else '-',
+    }
+
+    # Cliente info
+    cliente = solicitud.cliente
+    cliente_info = {
+        'nombre': cliente.nombreCliente if cliente else '-',
+        'cedula': cliente.cedulaCliente if cliente else '-',
+        'canal': getattr(cliente, 'canal_origen', '-') if cliente else '-',
+    }
+
+    # Acciones (permisos y flags)
+    acciones = {
+        'puede_procesar': True,  # TODO: lógica de permisos
+        'puede_devolver': True,
+        'puede_anular': True,
+        'puede_comentar': True,
+    }
+
+    # Workflow progress (etapas)
+    workflow = []
+    if solicitud.pipeline:
+        etapas = solicitud.pipeline.etapas.order_by('orden')
+        for etapa in etapas:
+            etapa_dict = {
+                'nombre': etapa.nombre,
+                'completada': solicitud.historial.filter(etapa=etapa, fecha_fin__isnull=False).exists(),
+                'actual': solicitud.etapa_actual_id == etapa.id,
+                'responsable': getattr(etapa, 'area_responsable', '-')
+            }
+            workflow.append(etapa_dict)
+
+    # Historial
+    historial = [
+        {
+            'etapa': h.etapa.nombre if h.etapa else '-',
+            'subestado': h.subestado.nombre if h.subestado else '-',
+            'usuario': h.usuario_responsable.get_full_name() if h.usuario_responsable else '-',
+            'fecha_inicio': h.fecha_inicio.strftime('%d/%m/%Y %H:%M') if h.fecha_inicio else '-',
+            'fecha_fin': h.fecha_fin.strftime('%d/%m/%Y %H:%M') if h.fecha_fin else None,
+        }
+        for h in solicitud.historial.all().order_by('fecha_inicio')
+    ]
+
+    # Comentarios (si tienes modelo de comentarios relacionado)
+    comentarios = []
+    if hasattr(solicitud, 'comentarios'):
+        comentarios = [
+            {
+                'usuario': c.usuario.get_full_name() if c.usuario else '-',
+                'texto': c.texto,
+                'fecha': c.fecha.strftime('%d/%m/%Y %H:%M') if c.fecha else '-',
+            }
+            for c in solicitud.comentarios.all().order_by('-fecha')
+        ]
+
+    return JsonResponse({
+        'general': general,
+        'cliente': cliente_info,
+        'acciones': acciones,
+        'workflow': workflow,
+        'historial': historial,
+        'comentarios': comentarios,
+    }, encoder=DjangoJSONEncoder)
