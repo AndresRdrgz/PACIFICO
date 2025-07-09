@@ -10,8 +10,7 @@ import json
 import pandas as pd
 
 from .models import (
-    Curso, GrupoAsignacion, Asignacion, ProgresoCurso,
-    ProgresoTema, ResultadoQuiz, Quiz, PerfilUsuario
+    Curso, GrupoAsignacion, Asignacion, ProgresoCurso, ProgresoTema, ResultadoQuiz, Quiz, PerfilUsuario
 )
 
 
@@ -229,12 +228,36 @@ def exportar_asignaciones_excel(request):
         if not nombre_completo:
             nombre_completo = a.usuario.username
 
+        # Obtener número de colaborador
+        numero_colaborador = None
+        if hasattr(a.usuario, 'userprofile') and a.usuario.userprofile.numeroColaborador:
+            numero_colaborador = a.usuario.userprofile.numeroColaborador
+
+        # Tipo de curso y duración
+        tipo_curso = a.curso.get_tipo_curso_display() if a.curso and a.curso.tipo_curso else ''
+        duracion_horas = a.curso.duracion_horas if a.curso and a.curso.duracion_horas else ''
+
+        # Progreso y fecha de finalización
+        progreso_obj = ProgresoCurso.objects.filter(usuario=a.usuario, curso=a.curso).first()
+        progreso = None
+        fecha_final = None
+        if progreso_obj:
+            total_modulos = a.curso.modulos.count()
+            completados = progreso_obj.modulos_completados.count()
+            progreso = round((completados / total_modulos) * 100) if total_modulos > 0 else 0
+            fecha_final = progreso_obj.fecha_completado.strftime('%Y-%m-%d %H:%M') if progreso_obj.fecha_completado else ''
+
         data.append({
-            'Fecha': a.fecha.strftime('%Y-%m-%d %H:%M'),
+            'Fecha asignación': a.fecha.strftime('%Y-%m-%d %H:%M'),
             'Curso': a.curso.titulo,
+            'Tipo de curso': tipo_curso,
+            'Duración (horas)': duracion_horas,
             'Usuario': nombre_completo,
+            'Número de colaborador': numero_colaborador,
             'Grupo': a.grupo.nombre if a.grupo else '',
             'Método': a.metodo,
+            'Progreso (%)': progreso if progreso is not None else '',
+            'Fecha finalización': fecha_final if fecha_final else '',
         })
 
     df = pd.DataFrame(data)
