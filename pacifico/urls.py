@@ -12,6 +12,7 @@ from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
 from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
 from .viewsCotizadorAuto import cotizadorPrestAuto
 from workflow.views_workflow import sitio_construccion
+from django.urls import include
 
 
 urlpatterns = [
@@ -49,6 +50,9 @@ urlpatterns = [
     path('debida-diligencia/upload/<int:diligencia_id>/', viewsDebidaDiligencia.debida_diligencia_upload, name='debida_diligencia_upload'),
     path('debida-diligencia/status/<int:cliente_id>/', viewsDebidaDiligencia.get_debida_diligencia_status, name='get_debida_diligencia_status'),
     path('sitio-construccion/', sitio_construccion, name='sitio_construccion'),
+    
+    # Workflow URLs
+    path('workflow/', include('workflow.urls')),
 ]
 
 if settings.DEBUG:

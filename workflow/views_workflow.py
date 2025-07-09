@@ -24,7 +24,7 @@ def dashboard_workflow(request):
     # Obtener solicitudes del usuario
     solicitudes_asignadas = Solicitud.objects.filter(
         asignada_a=request.user
-    ).select_related('tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual')
+    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Obtener bandejas grupales a las que tiene acceso
     grupos_usuario = request.user.groups.all()
@@ -37,7 +37,7 @@ def dashboard_workflow(request):
     solicitudes_grupales = Solicitud.objects.filter(
         etapa_actual__in=etapas_grupales,
         asignada_a__isnull=True
-    ).select_related('tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual')
+    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Estadísticas
     total_solicitudes = solicitudes_asignadas.count() + solicitudes_grupales.count()
@@ -354,6 +354,11 @@ def negocios_view(request):
             "🕐 Esperando confirmación", "🧾 Enviado a crédito", "🔒 En validación", "❌ Caso descartado"
         ]
         
+        # Obtener lista de oficiales para el drawer
+        oficiales = User.objects.filter(
+            userprofile__rol__in=['Oficial', 'Supervisor', 'Administrador']
+        ).values_list('username', flat=True).distinct()
+        
         context = {
             'pipeline': pipeline,
             'pipelines': pipelines,
@@ -374,12 +379,19 @@ def negocios_view(request):
             'prioridades_posibles': ['Alta', 'Media', 'Baja'],
             'etiquetas_predefinidas': etiquetas_predefinidas,
             'user_role': user_role,  # Agregar rol del usuario al contexto
+            'oficiales': oficiales,  # Para el drawer
         }
     else:
         # Si no hay pipeline seleccionado, mostrar lista de pipelines
+        # Obtener lista de oficiales para el drawer
+        oficiales = User.objects.filter(
+            userprofile__rol__in=['Oficial', 'Supervisor', 'Administrador']
+        ).values_list('username', flat=True).distinct()
+        
         context = {
             'pipelines': pipelines,
             'view_type': view_type,
+            'oficiales': oficiales,  # Para el drawer
         }
     
     return render(request, 'workflow/negocios.html', context)
@@ -392,7 +404,7 @@ def bandeja_trabajo(request):
     # Obtener solicitudes asignadas al usuario
     solicitudes_asignadas = Solicitud.objects.filter(
         asignada_a=request.user
-    ).select_related('tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual')
+    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Obtener bandejas grupales
     grupos_usuario = request.user.groups.all()
@@ -405,7 +417,7 @@ def bandeja_trabajo(request):
     solicitudes_grupales = Solicitud.objects.filter(
         etapa_actual__in=etapas_grupales,
         asignada_a__isnull=True
-    ).select_related('tipo_solicitud', 'pipeline', 'etapa_actual', 'subestado_actual')
+    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Filtros
     filtro_estado = request.GET.get('estado', '')
@@ -1533,6 +1545,118 @@ def api_buscar_cotizaciones(request):
         return JsonResponse({'cotizaciones': resultados})
     
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_buscar_cotizaciones_drawer(request):
+    """API para buscar cotizaciones en el drawer"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 10))
+        
+        if not query:
+            return JsonResponse({'success': True, 'cotizaciones': []})
+        
+        # Buscar cotizaciones por nombre de cliente, cédula o ID
+        cotizaciones = Cotizacion.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query) |
+            Q(id__icontains=query)
+        ).order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            resultados.append({
+                'id': cotizacion.id,
+                'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
+                'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'montoPrestamo': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
+                'oficial': cotizacion.oficial or 'Sin oficial',
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
+            })
+        
+        return JsonResponse({'success': True, 'cotizaciones': resultados})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_buscar_clientes_drawer(request):
+    """API para buscar clientes en el drawer"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 10))
+        
+        if not query:
+            return JsonResponse({'success': True, 'clientes': []})
+        
+        # Buscar clientes por nombre o cédula
+        clientes = Cliente.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query)
+        ).order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cliente in clientes:
+            resultados.append({
+                'id': cliente.id,
+                'nombreCliente': cliente.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cliente.cedulaCliente or 'Sin cédula',
+                'edad': cliente.edad or 'Sin edad',
+                'sexo': cliente.sexo or 'Sin sexo'
+            })
+        
+        return JsonResponse({'success': True, 'clientes': resultados})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_formulario_datos(request):
+    """API para obtener datos del formulario basado en el pipeline"""
+    if request.method == 'GET':
+        pipeline_id = request.GET.get('pipeline_id')
+        
+        if not pipeline_id:
+            return JsonResponse({'success': False, 'error': 'ID de pipeline requerido'})
+        
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            # Obtener campos personalizados del pipeline
+            campos_personalizados = CampoPersonalizado.objects.filter(
+                pipeline=pipeline
+            ).values('id', 'nombre', 'tipo', 'requerido', 'descripcion')
+            
+            # Obtener requisitos del pipeline
+            requisitos_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=pipeline
+            ).select_related('requisito')
+            
+            requisitos = []
+            for req_pipeline in requisitos_pipeline:
+                requisitos.append({
+                    'id': req_pipeline.requisito.id,
+                    'nombre': req_pipeline.requisito.nombre,
+                    'descripcion': req_pipeline.requisito.descripcion,
+                    'obligatorio': req_pipeline.obligatorio
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'campos_personalizados': list(campos_personalizados),
+                'requisitos': requisitos
+            })
+            
+        except Pipeline.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Pipeline no encontrado'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
 # ==========================================
