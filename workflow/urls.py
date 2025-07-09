@@ -50,6 +50,15 @@ urlpatterns = [
     path('api/buscar-clientes/', views_workflow.api_buscar_clientes, name='api_buscar_clientes'),
     path('api/buscar-cotizaciones/', views_workflow.api_buscar_cotizaciones, name='api_buscar_cotizaciones'),
     path('api/solicitudes/<int:solicitud_id>/cambiar-etapa/', views_workflow.api_cambiar_etapa, name='api_cambiar_etapa'),
+    path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),
+    path('api/solicitudes/<int:solicitud_id>/devolver/', views_workflow.api_devolver_solicitud, name='api_devolver_solicitud'),
+    
+    # Bandejas de trabajo URLs
+    path('bandejas/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
+    path('api/kpis/', views_workflow.api_kpis, name='api_kpis'),
+    path('api/bandejas/', views_workflow.api_bandejas, name='api_bandejas'),
+    path('api/check-updates/', views_workflow.api_check_updates, name='api_check_updates'),
+    path('api/notifications-stream/', views_workflow.api_notifications_stream, name='api_notifications_stream'),
     
     # Drawer API URLs
     path('api/buscar-cotizaciones-drawer/', views_workflow.api_buscar_cotizaciones_drawer, name='api_buscar_cotizaciones_drawer'),

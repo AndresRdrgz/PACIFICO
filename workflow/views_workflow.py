@@ -2307,13 +2307,19 @@ def api_tomar_solicitud(request, solicitud_id):
                 'error': 'Esta solicitud no está disponible para tomar.'
             })
         
-        # Verificar permisos
-        grupos_usuario = request.user.groups.all()
-        tiene_permiso = PermisoEtapa.objects.filter(
-            etapa=solicitud.etapa_actual,
-            grupo__in=grupos_usuario,
-            puede_autoasignar=True
-        ).exists()
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden tomar cualquier solicitud
+        if request.user.is_staff:
+            # Super staff tiene permisos completos
+            tiene_permiso = True
+        else:
+            # Verificar permisos regulares para usuarios normales
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_autoasignar=True
+            ).exists()
         
         if not tiene_permiso:
             return JsonResponse({
@@ -2363,8 +2369,21 @@ def api_devolver_solicitud(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar que el usuario puede devolver la solicitud
-        if solicitud.asignada_a != request.user and not request.user.is_superuser:
+        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # Los usuarios super staff (is_staff=True) pueden devolver cualquier solicitud
+        if request.user.is_staff:
+            # Super staff tiene permisos completos
+            puede_devolver = True
+        elif request.user.is_superuser:
+            # Superuser también puede devolver cualquier solicitud
+            puede_devolver = True
+        elif solicitud.asignada_a == request.user:
+            # Usuario regular solo puede devolver sus propias solicitudes
+            puede_devolver = True
+        else:
+            puede_devolver = False
+        
+        if not puede_devolver:
             return JsonResponse({
                 'success': False,
                 'error': 'No puedes devolver esta solicitud.'

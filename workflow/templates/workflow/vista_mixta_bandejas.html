@@ -479,6 +479,100 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación Personalizado -->
+<div class="modal fade" id="modalConfirmacionEtapa" tabindex="-1" aria-labelledby="modalConfirmacionEtapaLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <!-- Header con gradiente verde -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 24px 32px 20px 32px; position: relative; overflow: hidden;">
+                <div class="d-flex align-items-center w-100">
+                    <div class="me-3">
+                        <div style="width: 50px; height: 50px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                            <i class="fas fa-exchange-alt text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="modal-title text-white fw-bold mb-1" id="modalConfirmacionTitulo">Confirmar Acción</h4>
+                        <p class="text-white-50 mb-0" style="font-size: 0.9rem;">Sistema de Workflow</p>
+                    </div>
+                </div>
+                <!-- Patrón decorativo -->
+                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; transform: rotate(45deg);"></div>
+            </div>
+            
+            <!-- Body con contenido estructurado -->
+            <div class="modal-body" style="padding: 32px; background: linear-gradient(to bottom, #f8f9fa, #ffffff);">
+                <!-- Pregunta principal -->
+                <div class="text-center mb-4">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #e8f5e8, #d4edda); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                        <i class="fas fa-arrow-right text-success" style="font-size: 2rem;"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2" id="modalConfirmacionPregunta">¿Está seguro de la acción?</h5>
+                    <p class="text-muted mb-0" id="modalConfirmacionSubtitulo">Esta acción afectará el estado de la solicitud</p>
+                </div>
+                
+                <!-- Información destacada -->
+                <div class="alert alert-success border-0 mb-4" style="background: linear-gradient(135deg, #d4edda, #c3e6cb); border-radius: 12px;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle text-success me-2" style="font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>Detalles:</strong> <span id="modalConfirmacionDetalle">Se procesará la solicitud</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información del proceso -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="fas fa-cogs text-primary me-2"></i>
+                        Proceso automático que se ejecutará:
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-lg">
+                                <i class="fas fa-database text-info me-2"></i>
+                                <small class="text-muted">Se actualizará el estado de la solicitud</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-lg">
+                                <i class="fas fa-history text-warning me-2"></i>
+                                <small class="text-muted">Se registrará en el historial del sistema</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-lg">
+                                <i class="fas fa-bell text-success me-2"></i>
+                                <small class="text-muted">Se notificará a los usuarios correspondientes</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-lg">
+                                <i class="fas fa-sync text-secondary me-2"></i>
+                                <small class="text-muted">Se sincronizará en tiempo real</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer con botones -->
+            <div class="modal-footer border-0" style="padding: 20px 32px 32px; background: #ffffff;">
+                <div class="w-100 d-flex gap-3">
+                    <button type="button" class="btn btn-outline-secondary flex-fill py-2 fw-medium" id="modalConfirmacionCancelar" style="border-radius: 10px;">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success flex-fill py-2 fw-medium" id="modalConfirmacionAceptar" style="border-radius: 10px; background: linear-gradient(135deg, #28a745, #20c997); border: none;">
+                        <i class="fas fa-check me-2"></i>
+                        Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal para Ver Detalle -->
 <div class="modal fade" id="detalleModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -513,6 +607,9 @@
     </div>
 </div>
 
+<!-- Asegurar que jQuery esté disponible -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Función para obtener token CSRF de las cookies
@@ -529,6 +626,167 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         return cookieValue;
+    }
+    
+    // =====================================
+    // MODAL DE CONFIRMACIÓN PERSONALIZADO
+    // =====================================
+    
+    // Variables para manejar callbacks del modal
+    let modalConfirmCallback = null;
+    let modalCancelCallback = null;
+    
+    // Función para mostrar modal de confirmación
+    window.mostrarModalConfirmacion = function(accion, onConfirm, onCancel, opciones) {
+        // Opciones por defecto
+        var configuracion = {
+            titulo: 'Confirmar Acción',
+            subtitulo: 'Sistema de Workflow',
+            pregunta: '¿Está seguro de la acción?',
+            descripcion: 'Esta acción afectará el estado de la solicitud',
+            detalle: 'Se procesará la solicitud',
+            iconoHeader: 'fas fa-exchange-alt',
+            iconoCentral: 'fas fa-arrow-right'
+        };
+        
+        // Personalizar según la acción
+        if (accion === 'tomar') {
+            configuracion.titulo = 'Tomar Solicitud';
+            configuracion.pregunta = '¿Confirma que desea tomar esta solicitud?';
+            configuracion.descripcion = 'La solicitud se asignará a su usuario';
+            configuracion.detalle = 'Se asignará la solicitud a su usuario';
+            configuracion.iconoHeader = 'fas fa-hand-paper';
+            configuracion.iconoCentral = 'fas fa-user-check';
+        } else if (accion === 'devolver') {
+            configuracion.titulo = 'Devolver Solicitud';
+            configuracion.pregunta = '¿Confirma que desea devolver esta solicitud?';
+            configuracion.descripcion = 'La solicitud volverá a bandeja grupal';
+            configuracion.detalle = 'Se devolverá la solicitud a bandeja grupal';
+            configuracion.iconoHeader = 'fas fa-undo';
+            configuracion.iconoCentral = 'fas fa-reply';
+        }
+        
+        // Aplicar opciones personalizadas
+        if (opciones) {
+            Object.assign(configuracion, opciones);
+        }
+        
+        // Actualizar el contenido del modal
+        $('#modalConfirmacionTitulo').text(configuracion.titulo);
+        $('#modalConfirmacionPregunta').text(configuracion.pregunta);
+        $('#modalConfirmacionSubtitulo').text(configuracion.descripcion);
+        $('#modalConfirmacionDetalle').text(configuracion.detalle);
+        
+        // Actualizar iconos
+        $('#modalConfirmacionEtapa .modal-header i').removeClass().addClass(configuracion.iconoHeader + ' text-white');
+        $('#modalConfirmacionEtapa .modal-body .text-center i').removeClass().addClass(configuracion.iconoCentral + ' text-success');
+        
+        // Guardar callbacks
+        modalConfirmCallback = onConfirm;
+        modalCancelCallback = onCancel || function() {};
+        
+        // Mostrar el modal
+        var modal = new bootstrap.Modal(document.getElementById('modalConfirmacionEtapa'));
+        modal.show();
+    };
+    
+    // Event listeners para los botones del modal
+    $('#modalConfirmacionAceptar').on('click', function() {
+        if (modalConfirmCallback) {
+            modalConfirmCallback();
+        }
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
+    });
+    
+    $('#modalConfirmacionCancelar').on('click', function() {
+        if (modalCancelCallback) {
+            modalCancelCallback();
+        }
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
+    });
+    
+    // =====================================
+    // NOTIFICACIONES TOAST PERSONALIZADAS
+    // =====================================
+    
+    function mostrarNotificacionExito(mensaje) {
+        console.log('✅ Mostrando notificación de éxito:', mensaje);
+        
+        // Crear toast personalizado
+        var toastHTML = `
+            <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 12px;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor
+        var toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        // Mostrar toast
+        var toastElement = toastContainer.lastElementChild;
+        var toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
+        });
+        toast.show();
+        
+        // Remover elemento después de que se oculte
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
+    }
+    
+    function mostrarNotificacionError(mensaje) {
+        console.log('🚨 Mostrando notificación de error:', mensaje);
+        
+        // Crear toast personalizado
+        var toastHTML = `
+            <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 12px;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor
+        var toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        // Mostrar toast
+        var toastElement = toastContainer.lastElementChild;
+        var toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+        
+        // Remover elemento después de que se oculte
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
     }
     
     // Función para cambiar tipo de bandeja
@@ -651,60 +909,79 @@ document.addEventListener('DOMContentLoaded', function() {
         bsToast.show();
     }
     
-    // BOTONES TOMAR SOLICITUD - COPIADO EXACTO DE CAPACITACIONES
+    // BOTONES TOMAR SOLICITUD - CON MODAL PERSONALIZADO
     document.querySelectorAll('.tomar-solicitud').forEach(button => {
         button.addEventListener('click', function() {
             const solicitudId = this.getAttribute('data-solicitud-id');
             const codigo = this.getAttribute('data-codigo');
+            const botonOriginal = this;
             
             console.log('🔵 Tomando solicitud:', solicitudId, codigo);
             
-            // Deshabilitar botón
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Tomando...';
-            
-            fetch(`/workflow/api/solicitudes/${solicitudId}/tomar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // COPIADO EXACTO DE CAPACITACIONES
-                    alert("Solicitud tomada correctamente.");
-                    location.reload();
-                } else {
-                    alert("Error: " + (data.error || 'Error desconocido'));
+            // Mostrar modal personalizado
+            mostrarModalConfirmacion('tomar', function() {
+                // CALLBACK DE CONFIRMACIÓN
+                console.log('✅ Confirmado - Tomando solicitud:', solicitudId);
+                
+                // Deshabilitar botón
+                botonOriginal.disabled = true;
+                botonOriginal.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Tomando...';
+                
+                fetch(`/workflow/api/solicitudes/${solicitudId}/tomar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Notificación de éxito personalizada
+                        mostrarNotificacionExito(`Solicitud ${codigo} tomada correctamente`);
+                        
+                        // Recargar la página después de 1 segundo
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        mostrarNotificacionError("Error: " + (data.error || 'Error desconocido'));
+                        // Rehabilitar botón
+                        botonOriginal.disabled = false;
+                        botonOriginal.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacionError("Error de red al tomar la solicitud");
                     // Rehabilitar botón
-                    this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert("Error de red al tomar la solicitud.");
-                // Rehabilitar botón
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
+                    botonOriginal.disabled = false;
+                    botonOriginal.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Tomar';
+                });
+            }, function() {
+                // CALLBACK DE CANCELACIÓN
+                console.log('❌ Cancelado - Tomar solicitud');
             });
         });
     });
     
-    // BOTONES DEVOLVER SOLICITUD - COPIADO EXACTO DE CAPACITACIONES
+    // BOTONES DEVOLVER SOLICITUD - CON MODAL PERSONALIZADO
     document.querySelectorAll('.devolver-solicitud').forEach(button => {
         button.addEventListener('click', function() {
             const solicitudId = this.getAttribute('data-solicitud-id');
             const codigo = this.getAttribute('data-codigo');
+            const botonOriginal = this;
             
             console.log('🔴 Devolviendo solicitud:', solicitudId, codigo);
             
-            if (confirm(`¿Estás seguro de devolver la solicitud ${codigo} a bandeja grupal?`)) {
+            // Mostrar modal personalizado
+            mostrarModalConfirmacion('devolver', function() {
+                // CALLBACK DE CONFIRMACIÓN
+                console.log('✅ Confirmado - Devolviendo solicitud:', solicitudId);
+                
                 // Deshabilitar botón
-                this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Devolviendo...';
+                botonOriginal.disabled = true;
+                botonOriginal.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Devolviendo...';
                 
                 fetch(`/workflow/api/solicitudes/${solicitudId}/devolver/`, {
                     method: 'POST',
@@ -716,24 +993,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // COPIADO EXACTO DE CAPACITACIONES
-                        alert("Solicitud devuelta correctamente.");
-                        location.reload();
+                        // Notificación de éxito personalizada
+                        mostrarNotificacionExito(`Solicitud ${codigo} devuelta correctamente`);
+                        
+                        // Recargar la página después de 1 segundo
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
                     } else {
-                        alert("Error: " + (data.error || 'Error desconocido'));
+                        mostrarNotificacionError("Error: " + (data.error || 'Error desconocido'));
                         // Rehabilitar botón
-                        this.disabled = false;
-                        this.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
+                        botonOriginal.disabled = false;
+                        botonOriginal.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert("Error de red al devolver la solicitud.");
+                    mostrarNotificacionError("Error de red al devolver la solicitud");
                     // Rehabilitar botón
-                    this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
+                    botonOriginal.disabled = false;
+                    botonOriginal.innerHTML = '<i class="fas fa-undo me-1"></i>Devolver';
                 });
-            }
+            }, function() {
+                // CALLBACK DE CANCELACIÓN
+                console.log('❌ Cancelado - Devolver solicitud');
+            });
         });
     });
     
