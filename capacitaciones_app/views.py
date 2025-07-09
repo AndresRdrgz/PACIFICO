@@ -48,7 +48,7 @@ def custom_logout(request):
     logout(request)
     
     # Redirigir al login
-    return redirect('/accounts/login/')
+    return redirect('/login/')
 
 @login_required
 def perfil_usuario(request):

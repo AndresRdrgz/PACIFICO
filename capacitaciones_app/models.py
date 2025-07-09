@@ -57,6 +57,24 @@ class Curso(models.Model):
 # 🧑‍🤝‍🧑 GRUPOS
 class GrupoAsignacion(models.Model):
     nombre = models.CharField(max_length=100)
+    # Supervisor principal asignado al grupo (solo usuarios con rol Supervisor)
+    supervisor_principal = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='grupos_supervisados_principal',
+        limit_choices_to={'userprofile__rol': 'Supervisor'},
+        verbose_name='Supervisor Principal'
+    )
+    # Supervisores adicionales para cobertura (vacaciones, ausencias, etc.)
+    supervisores_adicionales = models.ManyToManyField(
+        User,
+        related_name='grupos_supervisados_adicional',
+        limit_choices_to={'userprofile__rol': 'Supervisor'},
+        blank=True,
+        verbose_name='Supervisores Adicionales'
+    )
     # Solo usuarios cuyo perfil es "alumno"
     usuarios_asignados = models.ManyToManyField(
         User,
@@ -66,6 +84,15 @@ class GrupoAsignacion(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+    @property
+    def todos_supervisores(self):
+        """Retorna todos los supervisores (principal + adicionales)"""
+        supervisores = []
+        if self.supervisor_principal:
+            supervisores.append(self.supervisor_principal)
+        supervisores.extend(self.supervisores_adicionales.all())
+        return supervisores
 
 
 # ✅ HISTORIAL DE ASIGNACIONES

@@ -13,7 +13,7 @@ STATIC_URL = '/static/'
 
 DEBUG = True
 if DEBUG:
-      DATABASES = {
+     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
@@ -186,7 +186,7 @@ LOGGING = {
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'main_menu'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGOUT_REDIRECT_URL = 'login'
 
 # Application definition
 CSRF_TRUSTED_ORIGINS = [

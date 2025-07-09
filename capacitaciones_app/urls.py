@@ -24,6 +24,7 @@ from .views_asignacion import (
     exportar_asignaciones_excel,
     historial_asignaciones_ajax,
     historial_usuario,
+    historial_asignaciones_view,
     usuarios_disponibles_grupo,    agregar_miembros_grupo,    remover_miembro_grupo,
 )
 
@@ -35,10 +36,10 @@ urlpatterns = [
     # 🔐 Admin & Auth
     # path('nested_admin/', include('nested_admin.urls')),    
     
-    # � Logout personalizado
+    # 🔐 Logout personalizado
     path('logout/', custom_logout, name='custom_logout'),
     
-    # �📚 Courses
+    # 📚 Courses
     path('cursos/', lista_cursos, name='lista_cursos'),
     path('cursos/<int:curso_id>/', detalle_curso, name='detalle_curso'),    
     
@@ -63,6 +64,9 @@ urlpatterns = [
     
     # 📊 Dashboard
     path('capacitaciones/dashboard/', dashboard_view, name='dashboard'),
+    
+    # 📋 Historial de Asignaciones (Nueva vista independiente)
+    path('capacitaciones/historial/', historial_asignaciones_view, name='historial_asignaciones'),
     
     # AJAX endpoints para asignación
     path('asignar-curso/', asignar_curso_ajax, name='asignar_curso_ajax'),
