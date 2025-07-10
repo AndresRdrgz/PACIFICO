@@ -20,6 +20,7 @@ import threading
 import queue
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.models import model_to_dict
+import os
 
 # ==========================================
 # VISTAS PRINCIPALES DEL WORKFLOW
@@ -3728,3 +3729,687 @@ def api_eliminar_requisito_transicion(request, requisito_transicion_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ==========================================
+# VISTA PROFESIONAL DE DETALLE DE SOLICITUD
+# ==========================================
+
+@login_required
+def detalle_solicitud_profesional(request, solicitud_id):
+    """Vista profesional completa de detalle de solicitud - Centro de decisiones del analista"""
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar permisos
+    if solicitud.asignada_a and solicitud.asignada_a != request.user:
+        grupos_usuario = request.user.groups.all()
+        tiene_permiso = PermisoEtapa.objects.filter(
+            etapa=solicitud.etapa_actual,
+            grupo__in=grupos_usuario,
+            puede_ver=True
+        ).exists()
+        
+        if not tiene_permiso:
+            messages.error(request, 'No tienes permisos para ver esta solicitud.')
+            return redirect('workflow:bandeja_trabajo')
+    
+    # ================================
+    # A) INFORMACIÓN DE LA SOLICITUD Y COTIZACIÓN
+    # ================================
+    
+    # Datos básicos de la solicitud
+    datos_solicitud = {
+        'codigo': solicitud.codigo,
+        'fecha_creacion': solicitud.fecha_creacion,
+        'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion,
+        'creada_por': solicitud.creada_por,
+        'asignada_a': solicitud.asignada_a,
+        'etapa_actual': solicitud.etapa_actual,
+        'subestado_actual': solicitud.subestado_actual,
+        'pipeline': solicitud.pipeline,
+        'prioridad': solicitud.prioridad,
+        'etiquetas_oficial': solicitud.etiquetas_oficial,
+    }
+    
+    # Datos de cotización (si existe)
+    datos_cotizacion = {}
+    try:
+        from pacifico.models import Cotizacion
+        cotizacion = Cotizacion.objects.filter(
+            solicitud_workflow=solicitud
+        ).select_related('cliente').first()
+        
+        if cotizacion:
+            datos_cotizacion = {
+                'id': cotizacion.id,
+                'cliente_nombre': cotizacion.nombreCliente or 'Sin cliente',
+                'cliente_cedula': cotizacion.cedulaCliente or 'Sin cédula',
+                'monto_prestamo': cotizacion.montoPrestamo or 0,
+                'prima': cotizacion.prima or 0,
+                'cuota_mensual': cotizacion.cuotaMensual or 0,
+                'tasa_interes': cotizacion.tasaInteres or 0,
+                'plazo_anos': cotizacion.plazoAnos or 0,
+                'tipo_prestamo': cotizacion.tipoPrestamo or 'personal',
+                'score': getattr(cotizacion, 'score', 'N/A'),
+                'tc_manejo': getattr(cotizacion, 'tcManejo', 'N/A'),
+                'rop_manejo': getattr(cotizacion, 'ropManejo', 'N/A'),
+                'ocupacion': getattr(cotizacion, 'ocupacion', 'N/A'),
+                'ingreso': getattr(cotizacion, 'ingreso', 0),
+                'tiempo_laboral': getattr(cotizacion, 'tiempoLaboral', 'N/A'),
+                'nivel_cumplimiento': getattr(cotizacion, 'nivelCumplimiento', 'N/A'),
+                'vehiculo_marca': getattr(cotizacion, 'vehiculoMarca', 'N/A'),
+                'vehiculo_modelo': getattr(cotizacion, 'vehiculoModelo', 'N/A'),
+                'vehiculo_ano': getattr(cotizacion, 'vehiculoAno', 'N/A'),
+                'vehiculo_precio': getattr(cotizacion, 'vehiculoPrecio', 0),
+            }
+        else:
+            # Si no hay cotización, intentar obtener datos del cliente directamente
+            if solicitud.cliente:
+                datos_cotizacion = {
+                    'cliente_nombre': solicitud.cliente.nombreCliente or 'Sin cliente',
+                    'cliente_cedula': solicitud.cliente.cedulaCliente or 'Sin cédula',
+                    'monto_prestamo': 0,
+                    'prima': 0,
+                    'cuota_mensual': 0,
+                    'tasa_interes': 0,
+                    'tipo_prestamo': 'N/A',
+                }
+    except Exception as e:
+        print(f"Error obteniendo datos de cotización: {e}")
+        datos_cotizacion = {
+            'cliente_nombre': 'Error al cargar',
+            'cliente_cedula': 'Error al cargar',
+        }
+    
+    # ================================
+    # B) TRANSICIONES Y ACCIONES DISPONIBLES
+    # ================================
+    
+    transiciones_disponibles = []
+    acciones_disponibles = []
+    
+    if solicitud.etapa_actual:
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        ).select_related('etapa_destino')
+        
+        for transicion in transiciones:
+            # Verificar permisos
+            tiene_permiso_transicion = True
+            if transicion.requiere_permiso:
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso_transicion = PermisoEtapa.objects.filter(
+                    etapa=transicion.etapa_destino,
+                    grupo__in=grupos_usuario
+                ).exists()
+            
+            if tiene_permiso_transicion:
+                transiciones_disponibles.append(transicion)
+                
+                # Mapear transiciones a acciones estándar
+                nombre_transicion = transicion.nombre.lower()
+                if 'aprobar' in nombre_transicion or 'aprobar' in transicion.etapa_destino.nombre.lower():
+                    acciones_disponibles.append({
+                        'tipo': 'aprobar',
+                        'nombre': 'Aprobar',
+                        'color': 'success',
+                        'icono': 'check',
+                        'transicion': transicion
+                    })
+                elif 'rechazar' in nombre_transicion or 'rechazar' in transicion.etapa_destino.nombre.lower():
+                    acciones_disponibles.append({
+                        'tipo': 'rechazar',
+                        'nombre': 'Rechazar',
+                        'color': 'danger',
+                        'icono': 'times',
+                        'transicion': transicion
+                    })
+                elif 'devolver' in nombre_transicion or 'devolver' in transicion.etapa_destino.nombre.lower():
+                    acciones_disponibles.append({
+                        'tipo': 'devolver',
+                        'nombre': 'Devolver',
+                        'color': 'warning',
+                        'icono': 'arrow-left',
+                        'transicion': transicion
+                    })
+                elif 'comité' in nombre_transicion or 'comité' in transicion.etapa_destino.nombre.lower() or 'comite' in transicion.etapa_destino.nombre.lower():
+                    acciones_disponibles.append({
+                        'tipo': 'comite',
+                        'nombre': 'Elevar a Comité',
+                        'color': 'primary',
+                        'icono': 'arrow-up',
+                        'transicion': transicion
+                    })
+                else:
+                    acciones_disponibles.append({
+                        'tipo': 'otro',
+                        'nombre': transicion.nombre,
+                        'color': 'secondary',
+                        'icono': 'arrow-right',
+                        'transicion': transicion
+                    })
+    
+    # ================================
+    # C) RUTA COMPLETA DEL PIPELINE
+    # ================================
+    
+    todas_las_etapas = solicitud.pipeline.etapas.all().order_by('orden')
+    etapas_pipeline = []
+    
+    for etapa in todas_las_etapas:
+        # Buscar historial para esta etapa
+        historial_etapa = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            etapa=etapa
+        ).first()
+        
+        estado_etapa = 'pendiente'  # por defecto
+        if historial_etapa:
+            if historial_etapa.fecha_fin:
+                estado_etapa = 'completada'
+            else:
+                estado_etapa = 'actual'
+        
+        etapas_pipeline.append({
+            'etapa': etapa,
+            'estado': estado_etapa,
+            'es_actual': etapa == solicitud.etapa_actual,
+            'historial': historial_etapa,
+            'fecha_inicio': historial_etapa.fecha_inicio if historial_etapa else None,
+            'fecha_fin': historial_etapa.fecha_fin if historial_etapa else None,
+            'responsable': historial_etapa.usuario_responsable if historial_etapa else None,
+        })
+    
+    # ================================
+    # D) HISTORIAL COMPLETO DE ACTIVIDADES
+    # ================================
+    
+    historial_completo = HistorialSolicitud.objects.filter(
+        solicitud=solicitud
+    ).select_related('etapa', 'usuario_responsable').order_by('-fecha_inicio')
+    
+    # ================================
+    # E) COMENTARIOS Y DOCUMENTOS
+    # ================================
+    
+    # Comentarios de todos los usuarios
+    comentarios = solicitud.comentarios.all().select_related('usuario').order_by('-fecha_creacion')
+    
+    # Requisitos/Documentos
+    requisitos = solicitud.requisitos.all().select_related('requisito')
+    documentos_procesados = []
+    
+    for req_solicitud in requisitos:
+        documento = {
+            'id': req_solicitud.id,
+            'requisito': req_solicitud.requisito,
+            'archivo': req_solicitud.archivo,
+            'cumplido': req_solicitud.cumplido,
+            'observaciones': req_solicitud.observaciones,
+            'estado_revision': 'pendiente',  # por defecto
+            'numero_revision': 1,  # por defecto
+            'nombre_archivo': os.path.basename(req_solicitud.archivo.name) if req_solicitud.archivo else '',
+        }
+        
+        # Determinar estado de revisión basado en observaciones
+        if req_solicitud.observaciones:
+            observaciones_lower = req_solicitud.observaciones.lower()
+            if req_solicitud.cumplido:
+                documento['estado_revision'] = 'aprobado'
+            elif 'rechazado' in observaciones_lower or 'devuelto' in observaciones_lower:
+                documento['estado_revision'] = 'rechazado'
+            
+            # Contar número de revisiones
+            revisiones = observaciones_lower.count('revisado') + observaciones_lower.count('actualizado')
+            if revisiones > 0:
+                documento['numero_revision'] = revisiones + 1
+        
+        documentos_procesados.append(documento)
+    
+    # ================================
+    # F) SOLICITUDES ANTERIORES DEL CLIENTE
+    # ================================
+    
+    solicitudes_anteriores = []
+    if datos_cotizacion.get('cliente_cedula') and datos_cotizacion['cliente_cedula'] != 'Sin cédula':
+        try:
+            from pacifico.models import Cotizacion
+            # Buscar otras cotizaciones del mismo cliente
+            otras_cotizaciones = Cotizacion.objects.filter(
+                cedulaCliente=datos_cotizacion['cliente_cedula']
+            ).exclude(solicitud_workflow=solicitud).select_related('solicitud_workflow')
+            
+            for cot in otras_cotizaciones:
+                if cot.solicitud_workflow:
+                    solicitud_anterior = cot.solicitud_workflow
+                    # Obtener última etapa del historial
+                    ultimo_historial = HistorialSolicitud.objects.filter(
+                        solicitud=solicitud_anterior
+                    ).order_by('-fecha_inicio').first()
+                    
+                    solicitudes_anteriores.append({
+                        'solicitud': solicitud_anterior,
+                        'cotizacion': cot,
+                        'ultima_etapa': ultimo_historial.etapa if ultimo_historial else None,
+                        'estado_final': 'Completada' if not solicitud_anterior.etapa_actual else solicitud_anterior.etapa_actual.nombre,
+                        'oficial_responsable': solicitud_anterior.creada_por,
+                        'fecha_creacion': solicitud_anterior.fecha_creacion,
+                    })
+        except Exception as e:
+            print(f"Error obteniendo solicitudes anteriores: {e}")
+    
+    # ================================
+    # CALCULAR SLA Y TIEMPO TRANSCURRIDO
+    # ================================
+    
+    sla_info = {
+        'tiempo_restante': 'N/A',
+        'porcentaje_usado': 0,
+        'estado': 'sin_sla',  # sin_sla, en_tiempo, por_vencer, vencido
+        'color_clase': 'text-secondary'
+    }
+    
+    if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+        fecha_inicio = solicitud.fecha_ultima_actualizacion
+        sla_duracion = solicitud.etapa_actual.sla
+        fecha_vencimiento = fecha_inicio + sla_duracion
+        ahora = timezone.now()
+        
+        tiempo_transcurrido = ahora - fecha_inicio
+        tiempo_restante = fecha_vencimiento - ahora
+        
+        # Calcular porcentaje usado
+        porcentaje_usado = (tiempo_transcurrido.total_seconds() / sla_duracion.total_seconds()) * 100
+        porcentaje_usado = min(100, max(0, porcentaje_usado))  # Entre 0 y 100
+        
+        # Determinar estado
+        if tiempo_restante.total_seconds() < 0:
+            sla_info['estado'] = 'vencido'
+            sla_info['color_clase'] = 'text-danger'
+            sla_info['tiempo_restante'] = f"Vencido hace {abs(tiempo_restante.days)} días" if abs(tiempo_restante.days) > 0 else "Vencido hoy"
+        elif porcentaje_usado > 80:
+            sla_info['estado'] = 'por_vencer'
+            sla_info['color_clase'] = 'text-warning'
+            dias_restantes = tiempo_restante.days
+            horas_restantes = tiempo_restante.seconds // 3600
+            sla_info['tiempo_restante'] = f"{dias_restantes}d {horas_restantes}h" if dias_restantes > 0 else f"{horas_restantes}h"
+        else:
+            sla_info['estado'] = 'en_tiempo'
+            sla_info['color_clase'] = 'text-success'
+            dias_restantes = tiempo_restante.days
+            horas_restantes = tiempo_restante.seconds // 3600
+            sla_info['tiempo_restante'] = f"{dias_restantes}d {horas_restantes}h" if dias_restantes > 0 else f"{horas_restantes}h"
+        
+        sla_info['porcentaje_usado'] = porcentaje_usado
+        sla_info['badge_clase'] = sla_info['color_clase'].replace('text-', 'bg-')
+    
+    # ================================
+    # CONTEXTO FINAL
+    # ================================
+    
+    context = {
+        # Datos principales
+        'solicitud': solicitud,
+        'datos_solicitud': datos_solicitud,
+        'datos_cotizacion': datos_cotizacion,
+        'sla_info': sla_info,
+        
+        # Acciones y transiciones
+        'transiciones_disponibles': transiciones_disponibles,
+        'acciones_disponibles': acciones_disponibles,
+        
+        # Pipeline y flujo
+        'etapas_pipeline': etapas_pipeline,
+        'historial_completo': historial_completo,
+        
+        # Comentarios y documentos
+        'comentarios': comentarios,
+        'documentos': documentos_procesados,
+        'total_documentos': len(documentos_procesados),
+        'documentos_aprobados': len([d for d in documentos_procesados if d['estado_revision'] == 'aprobado']),
+        'documentos_pendientes': len([d for d in documentos_procesados if d['estado_revision'] == 'pendiente']),
+        'documentos_rechazados': len([d for d in documentos_procesados if d['estado_revision'] == 'rechazado']),
+        
+        # Solicitudes anteriores
+        'solicitudes_anteriores': solicitudes_anteriores,
+        'total_solicitudes_anteriores': len(solicitudes_anteriores),
+        
+        # Campos personalizados (manteniendo compatibilidad)
+        'campos_personalizados': CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline),
+        'valores_campos': solicitud.valores_personalizados.all(),
+        
+        # Usuario actual
+        'usuario_actual': request.user,
+        'puede_comentar': True,  # Se puede refinar con lógica específica
+        'puede_decidir': solicitud.asignada_a == request.user or request.user.is_superuser,
+    }
+    
+    return render(request, 'workflow/detalle_solicitud_profesional.html', context)
+
+
+@login_required
+def transicion_solicitud_profesional(request, solicitud_id):
+    """Procesar decisión profesional del analista con comentario obligatorio y notificación"""
+    
+    if request.method == 'POST':
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion_id = request.POST.get('transicion_id')
+        comentario_texto = request.POST.get('comentario', '').strip()
+        archivo_adjunto = request.FILES.get('archivo')
+        
+        # Validar que hay comentario
+        if not comentario_texto:
+            messages.error(request, 'El comentario es obligatorio para tomar una decisión.')
+            return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+        
+        # Validar transición
+        if not transicion_id:
+            messages.error(request, 'Debe seleccionar una acción válida.')
+            return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+            
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        
+        # Verificar que la transición es válida para esta solicitud
+        if transicion.pipeline != solicitud.pipeline or transicion.etapa_origen != solicitud.etapa_actual:
+            messages.error(request, 'Transición no válida para esta solicitud.')
+            return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+        
+        # Verificar permisos
+        if transicion.requiere_permiso:
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=transicion.etapa_destino,
+                grupo__in=grupos_usuario
+            ).exists()
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para realizar esta transición.')
+                return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+        
+        # Verificar que el usuario puede tomar decisiones
+        if solicitud.asignada_a and solicitud.asignada_a != request.user and not request.user.is_superuser:
+            messages.error(request, 'Solo el analista asignado puede tomar decisiones sobre esta solicitud.')
+            return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+        
+        try:
+            # Crear comentario con la decisión
+            comentario_completo = f"[DECISIÓN: {transicion.nombre.upper()}]\n\n{comentario_texto}"
+            
+            comentario = SolicitudComentario.objects.create(
+                solicitud=solicitud,
+                usuario=request.user,
+                comentario=comentario_completo
+            )
+            
+            # Si hay archivo adjunto, guardarlo (se podría implementar un sistema de archivos para comentarios)
+            # Por ahora, mencionarlo en el comentario
+            if archivo_adjunto:
+                comentario.comentario += f"\n\n[Archivo adjunto: {archivo_adjunto.name}]"
+                comentario.save()
+            
+            # Cerrar historial actual
+            historial_actual = solicitud.historial.filter(fecha_fin__isnull=True).first()
+            if historial_actual:
+                historial_actual.fecha_fin = timezone.now()
+                historial_actual.save()
+            
+            # Determinar nueva asignación basada en el tipo de etapa de destino
+            nueva_asignacion = None
+            if not transicion.etapa_destino.es_bandeja_grupal:
+                # Mantener asignación actual si va a bandeja personal
+                nueva_asignacion = request.user
+            # Si va a bandeja grupal, se queda sin asignar (None)
+            
+            # Actualizar solicitud
+            etapa_anterior = solicitud.etapa_actual
+            solicitud.etapa_actual = transicion.etapa_destino
+            solicitud.subestado_actual = None  # Resetear subestado
+            solicitud.asignada_a = nueva_asignacion
+            solicitud.save()
+            
+            # Crear nuevo historial
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=transicion.etapa_destino,
+                usuario_responsable=nueva_asignacion,
+                fecha_inicio=timezone.now()
+            )
+            
+            # Enviar correo de notificación a la oficial responsable
+            try:
+                enviar_correo_decision_analista(
+                    solicitud=solicitud,
+                    accion_tomada=transicion.nombre,
+                    comentario_analista=comentario_texto,
+                    analista=request.user,
+                    etapa_anterior=etapa_anterior,
+                    etapa_nueva=transicion.etapa_destino
+                )
+            except Exception as e:
+                print(f"Error enviando correo de notificación: {e}")
+                # No fallar la transición por error de correo
+            
+            # Notificar cambio en tiempo real
+            notify_solicitud_change(solicitud, 'decision_tomada', request.user)
+            
+            # Mensaje de éxito
+            messages.success(
+                request, 
+                f'Decisión "{transicion.nombre}" procesada exitosamente. '
+                f'La solicitud ha pasado a la etapa: {transicion.etapa_destino.nombre}'
+            )
+            
+            # Redirigir a bandeja (solicitud sale de la bandeja del analista)
+            return redirect('workflow:bandeja_trabajo')
+            
+        except Exception as e:
+            print(f"Error procesando decisión: {e}")
+            messages.error(request, 'Error al procesar la decisión. Intenta nuevamente.')
+            return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+    
+    # Si no es POST, redirigir al detalle
+    return redirect('workflow:detalle_solicitud_profesional', solicitud_id=solicitud_id)
+
+
+def enviar_correo_decision_analista(solicitud, accion_tomada, comentario_analista, analista, etapa_anterior, etapa_nueva):
+    """Enviar correo a la oficial responsable cuando el analista toma una decisión"""
+    
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+    from django.conf import settings
+    
+    # Obtener información del cliente
+    cliente_nombre = 'Sin cliente'
+    cliente_cedula = 'Sin cédula'
+    monto_prestamo = 'N/A'
+    
+    try:
+        from pacifico.models import Cotizacion
+        cotizacion = Cotizacion.objects.filter(solicitud_workflow=solicitud).first()
+        if cotizacion:
+            cliente_nombre = cotizacion.nombreCliente or 'Sin cliente'
+            cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
+            if cotizacion.montoPrestamo:
+                monto_prestamo = f"${cotizacion.montoPrestamo:,.0f}"
+    except:
+        pass
+    
+    # Determinar color y mensaje según la acción
+    accion_info = {
+        'color': '#009c3c',  # Verde Pacífico por defecto
+        'icono': '✅',
+        'titulo': f'Decisión: {accion_tomada}'
+    }
+    
+    accion_lower = accion_tomada.lower()
+    if 'aprobar' in accion_lower:
+        accion_info.update({
+            'color': '#28a745',
+            'icono': '✅',
+            'titulo': f'✅ Solicitud Aprobada'
+        })
+    elif 'rechazar' in accion_lower:
+        accion_info.update({
+            'color': '#dc3545',
+            'icono': '❌',
+            'titulo': f'❌ Solicitud Rechazada'
+        })
+    elif 'devolver' in accion_lower:
+        accion_info.update({
+            'color': '#ffc107',
+            'icono': '↩️',
+            'titulo': f'↩️ Solicitud Devuelta'
+        })
+    elif 'comité' in accion_lower or 'comite' in accion_lower:
+        accion_info.update({
+            'color': '#007bff',
+            'icono': '⬆️',
+            'titulo': f'⬆️ Enviada a Comité'
+        })
+    
+    # Contexto para el template
+    context = {
+        'solicitud': solicitud,
+        'accion_tomada': accion_tomada,
+        'comentario_analista': comentario_analista,
+        'analista': analista,
+        'etapa_anterior': etapa_anterior,
+        'etapa_nueva': etapa_nueva,
+        'cliente_nombre': cliente_nombre,
+        'cliente_cedula': cliente_cedula,
+        'monto_prestamo': monto_prestamo,
+        'accion_info': accion_info,
+        'fecha_decision': timezone.now(),
+    }
+    
+    # Renderizar template HTML
+    html_message = render_to_string('workflow/emails/decision_analista.html', context)
+    plain_message = strip_tags(html_message)
+    
+    # Determinar destinatarios
+    destinatarios = []
+    
+    # Oficial que creó la solicitud
+    if solicitud.creada_por and solicitud.creada_por.email:
+        destinatarios.append(solicitud.creada_por.email)
+    
+    # Supervisor (usuarios con permisos especiales)
+    try:
+        from django.contrib.auth.models import Group
+        supervisor_group = Group.objects.filter(name__icontains='supervisor').first()
+        if supervisor_group:
+            supervisores = supervisor_group.user_set.filter(email__isnull=False)
+            destinatarios.extend([user.email for user in supervisores if user.email])
+    except:
+        pass
+    
+    # Eliminar duplicados
+    destinatarios = list(set(destinatarios))
+    
+    if destinatarios:
+        # Enviar correo
+        subject = f"[Workflow Pacífico] {accion_info['titulo']} - {solicitud.codigo}"
+        
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'sistema@pacifico.com'),
+            recipient_list=destinatarios,
+            html_message=html_message,
+            fail_silently=False,
+        )
+        
+        print(f"Correo de decisión enviado a: {', '.join(destinatarios)}")
+    else:
+        print("No se encontraron destinatarios para el correo de decisión")
+
+
+@login_required  
+def api_aprobar_documento(request, solicitud_id, documento_id):
+    """API para aprobar un documento específico"""
+    
+    if request.method == 'POST':
+        try:
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=documento_id, solicitud=solicitud)
+            
+            # Verificar permisos
+            if solicitud.asignada_a != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'No tienes permisos para revisar documentos de esta solicitud'}, status=403)
+            
+            # Marcar como aprobado
+            requisito_solicitud.cumplido = True
+            
+            # Actualizar observaciones con la aprobación
+            fecha_revision = timezone.now().strftime("%d/%m/%Y %H:%M")
+            observacion_aprobacion = f"✅ APROBADO por {request.user.get_full_name() or request.user.username} el {fecha_revision}"
+            
+            if requisito_solicitud.observaciones:
+                requisito_solicitud.observaciones += f"\n{observacion_aprobacion}"
+            else:
+                requisito_solicitud.observaciones = observacion_aprobacion
+            
+            requisito_solicitud.save()
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'documento_aprobado', request.user)
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Documento "{requisito_solicitud.requisito.nombre}" aprobado exitosamente',
+                'estado': 'aprobado'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_rechazar_documento(request, solicitud_id, documento_id):
+    """API para rechazar un documento específico"""
+    
+    if request.method == 'POST':
+        try:
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=documento_id, solicitud=solicitud)
+            
+            # Verificar permisos
+            if solicitud.asignada_a != request.user and not request.user.is_superuser:
+                return JsonResponse({'error': 'No tienes permisos para revisar documentos de esta solicitud'}, status=403)
+            
+            # Obtener motivo del rechazo
+            data = request.POST
+            motivo = data.get('motivo', 'Documento no cumple con los requisitos').strip()
+            
+            # Marcar como rechazado
+            requisito_solicitud.cumplido = False
+            
+            # Actualizar observaciones con el rechazo
+            fecha_revision = timezone.now().strftime("%d/%m/%Y %H:%M")
+            observacion_rechazo = f"❌ RECHAZADO por {request.user.get_full_name() or request.user.username} el {fecha_revision}\nMotivo: {motivo}"
+            
+            if requisito_solicitud.observaciones:
+                requisito_solicitud.observaciones += f"\n{observacion_rechazo}"
+            else:
+                requisito_solicitud.observaciones = observacion_rechazo
+            
+            requisito_solicitud.save()
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'documento_rechazado', request.user)
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Documento "{requisito_solicitud.requisito.nombre}" rechazado',
+                'estado': 'rechazado',
+                'motivo': motivo
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)

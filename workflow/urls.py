@@ -3,6 +3,8 @@ from . import views
 from . import api
 from . import views_workflow
 
+app_name = 'workflow'
+
 urlpatterns = [
     # URLs existentes del formulario de entrevista
     path('entrevista/', views.entrevista_cliente_view, name='entrevista_cliente'),
@@ -18,7 +20,11 @@ urlpatterns = [
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
+    path('solicitudes/<int:solicitud_id>/detalle-profesional/', views_workflow.detalle_solicitud_profesional, name='detalle_solicitud_profesional'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
+    path('solicitudes/<int:solicitud_id>/transicion-profesional/', views_workflow.transicion_solicitud_profesional, name='transicion_solicitud_profesional'),
+    path('solicitudes/<int:solicitud_id>/documentos/<int:documento_id>/aprobar/', views_workflow.api_aprobar_documento, name='api_aprobar_documento'),
+    path('solicitudes/<int:solicitud_id>/documentos/<int:documento_id>/rechazar/', views_workflow.api_rechazar_documento, name='api_rechazar_documento'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
     path('solicitudes/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campo_personalizado'),

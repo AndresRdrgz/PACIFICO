@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ accion_info.titulo }} - {{ solicitud.codigo }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            color: #333333;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #009c3c 0%, #00b945 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .decision-badge {
+            background: {{ accion_info.color }};
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        
+        .content {
+            padding: 30px 25px;
+        }
+        
+        .solicitud-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #009c3c;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            font-weight: 700;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .decision-section {
+            background: #ffffff;
+            border: 2px solid {{ accion_info.color }};
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .decision-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .decision-title {
+            color: {{ accion_info.color }};
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .analista-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .comentario-box {
+            background: #f5f5f5;
+            border-left: 4px solid {{ accion_info.color }};
+            padding: 20px;
+            border-radius: 0 6px 6px 0;
+            font-style: italic;
+            margin: 15px 0;
+        }
+        
+        .etapas-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .etapa-box {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 2px solid #dee2e6;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .etapa-anterior {
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .etapa-nueva {
+            border-color: {{ accion_info.color }};
+            color: {{ accion_info.color }};
+        }
+        
+        .arrow {
+            margin: 0 15px;
+            font-size: 20px;
+            color: {{ accion_info.color }};
+            font-weight: bold;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 25px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .footer p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #009c3c;
+        }
+        
+        .btn-action {
+            display: inline-block;
+            background: #009c3c;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .btn-action:hover {
+            background: #007d30;
+            color: white;
+        }
+        
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px 15px;
+            }
+            
+            .etapas-flow {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+                margin: 0;
+            }
+            
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏦 Financiera Pacífico</h1>
+            <p>Sistema de Workflow - Notificación de Decisión</p>
+        </div>
+        
+        <!-- Decision Badge -->
+        <div class="decision-badge">
+            {{ accion_info.icono }} {{ accion_info.titulo }}
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Información de la Solicitud -->
+            <div class="solicitud-info">
+                <h3 style="color: #009c3c; margin-bottom: 15px; font-size: 18px;">
+                    📋 Información de la Solicitud
+                </h3>
+                
+                <div class="info-row">
+                    <span class="info-label">Código:</span>
+                    <span class="info-value">{{ solicitud.codigo }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Cliente:</span>
+                    <span class="info-value">{{ cliente_nombre }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Cédula:</span>
+                    <span class="info-value">{{ cliente_cedula }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Monto:</span>
+                    <span class="info-value">{{ monto_prestamo }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Pipeline:</span>
+                    <span class="info-value">{{ solicitud.pipeline.nombre }}</span>
+                </div>
+            </div>
+            
+            <!-- Sección de Decisión -->
+            <div class="decision-section">
+                <div class="decision-header">
+                    <div class="decision-title">{{ accion_tomada }}</div>
+                    <div class="timestamp">{{ fecha_decision|date:"d/m/Y H:i" }}</div>
+                </div>
+                
+                <div class="analista-info">
+                    <strong>🔍 Analista Responsable:</strong><br>
+                    {{ analista.get_full_name|default:analista.username }}<br>
+                    <small>{{ analista.email }}</small>
+                </div>
+                
+                <div>
+                    <strong>💬 Comentario del Analista:</strong>
+                    <div class="comentario-box">
+                        "{{ comentario_analista }}"
+                    </div>
+                </div>
+                
+                <!-- Flujo de Etapas -->
+                <div>
+                    <strong>🔄 Movimiento de Etapa:</strong>
+                    <div class="etapas-flow">
+                        <div class="etapa-box etapa-anterior">
+                            {{ etapa_anterior.nombre }}
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="etapa-box etapa-nueva">
+                            {{ etapa_nueva.nombre }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Próximos Pasos -->
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #856404; margin-bottom: 10px;">⚡ Próximos Pasos</h4>
+                <p style="color: #856404; margin-bottom: 15px;">
+                    {% if 'aprobar' in accion_tomada.lower %}
+                        La solicitud ha sido aprobada y está lista para continuar el proceso.
+                    {% elif 'rechazar' in accion_tomada.lower %}
+                        La solicitud ha sido rechazada. Revisa los comentarios del analista para conocer los motivos.
+                    {% elif 'devolver' in accion_tomada.lower %}
+                        La solicitud ha sido devuelta para correcciones. Revisa los comentarios y realiza los ajustes necesarios.
+                    {% elif 'comité' in accion_tomada.lower or 'comite' in accion_tomada.lower %}
+                        La solicitud ha sido enviada al comité para evaluación adicional.
+                    {% else %}
+                        Se ha tomado una decisión sobre la solicitud. Revisa los detalles arriba.
+                    {% endif %}
+                </p>
+                
+                <div style="text-align: center;">
+                    <a href="#" class="btn-action">Ver Detalle Completo</a>
+                    <a href="#" class="btn-action" style="background: #6c757d;">Ver Bandeja de Trabajo</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="logo">🏦 Financiera Pacífico</div>
+            <p>Sistema de Gestión de Workflow</p>
+            <p>Este es un correo automático generado por el sistema. No responder a este mensaje.</p>
+            <div class="timestamp">
+                Enviado el {{ fecha_decision|date:"d/m/Y" }} a las {{ fecha_decision|time:"H:i" }}
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

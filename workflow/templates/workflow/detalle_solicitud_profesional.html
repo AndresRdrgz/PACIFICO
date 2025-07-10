@@ -1,0 +1,1061 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}{{ solicitud.codigo }} - Detalle Profesional - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<!-- Estilos profesionales personalizados -->
+<style>
+:root {
+    --pacifico-green: #009c3c;
+    --pacifico-green-light: #00b945;
+    --pacifico-green-dark: #007d30;
+    --pacifico-gray-100: #f8f9fa;
+    --pacifico-gray-200: #e9ecef;
+    --pacifico-gray-300: #dee2e6;
+    --pacifico-gray-600: #6c757d;
+    --pacifico-gray-800: #343a40;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+.detalle-profesional {
+    background-color: var(--pacifico-gray-100);
+    min-height: 100vh;
+}
+
+.header-profesional {
+    background: linear-gradient(135deg, var(--pacifico-green) 0%, var(--pacifico-green-light) 100%);
+    color: white;
+    padding: 2rem 0;
+    box-shadow: var(--shadow);
+}
+
+.card-profesional {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--pacifico-gray-200);
+    transition: all 0.3s ease;
+}
+
+.card-profesional:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.card-header-profesional {
+    background: var(--pacifico-gray-100);
+    border-radius: 12px 12px 0 0;
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--pacifico-gray-200);
+    font-weight: 600;
+    color: var(--pacifico-gray-800);
+}
+
+.sla-bar {
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--pacifico-gray-200);
+    overflow: hidden;
+}
+
+.sla-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.sla-en-tiempo { background-color: #28a745; }
+.sla-por-vencer { background-color: #ffc107; }
+.sla-vencido { background-color: #dc3545; }
+
+.btn-accion {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border: none;
+    min-width: 140px;
+}
+
+.btn-accion:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.btn-aprobar {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.btn-rechazar {
+    background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+    color: white;
+}
+
+.btn-devolver {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+.btn-comite {
+    background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+    color: white;
+}
+
+.pipeline-etapa {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pipeline-etapa.completada {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.pipeline-etapa.actual {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    box-shadow: var(--shadow-sm);
+}
+
+.pipeline-etapa.pendiente {
+    background-color: var(--pacifico-gray-100);
+    border: 1px solid var(--pacifico-gray-300);
+}
+
+.etapa-numero {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.etapa-numero.completada {
+    background-color: var(--pacifico-green);
+    color: white;
+}
+
+.etapa-numero.actual {
+    background-color: #2196f3;
+    color: white;
+}
+
+.etapa-numero.pendiente {
+    background-color: var(--pacifico-gray-300);
+    color: var(--pacifico-gray-600);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    padding-bottom: 1.5rem;
+    border-left: 2px solid var(--pacifico-gray-300);
+}
+
+.timeline-item:last-child {
+    border-left: none;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -8px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--pacifico-green);
+}
+
+.documento-item {
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.documento-item:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.documento-aprobado {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.documento-pendiente {
+    border-color: #ffc107;
+    background-color: #fffbf0;
+}
+
+.documento-rechazado {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.badge-estado {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.comentario-box {
+    background: white;
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.sticky-header {
+    position: sticky;
+    top: 70px;
+    z-index: 1020;
+    background: white;
+    border-bottom: 1px solid var(--pacifico-gray-200);
+    padding: 1rem 0;
+}
+
+.scroll-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.valor-destacado {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--pacifico-green);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-profesional {
+        padding: 1rem 0;
+    }
+    
+    .btn-accion {
+        min-width: auto;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .pipeline-etapa {
+        padding: 0.75rem;
+    }
+    
+    .etapa-numero {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detalle-profesional">
+    <!-- Header Profesional -->
+    <div class="header-profesional">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center">
+                        <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-light btn-sm me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Volver a Bandeja
+                        </a>
+                        <div>
+                            <h1 class="h3 mb-1 fw-bold">
+                                <i class="fas fa-file-contract me-2"></i>
+                                {{ solicitud.codigo }}
+                            </h1>
+                            <p class="mb-0 opacity-75">
+                                {{ datos_cotizacion.cliente_nombre|default:"Sin cliente" }} • 
+                                {{ datos_cotizacion.cliente_cedula|default:"Sin cédula" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <div class="d-flex flex-column align-items-lg-end">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-light text-dark me-2">{{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</span>
+                            {% if sla_info.estado != 'sin_sla' %}
+                            <span class="badge {{ sla_info.badge_clase }}">{{ sla_info.tiempo_restante }}</span>
+                            {% endif %}
+                        </div>
+                        {% if sla_info.estado != 'sin_sla' %}
+                        <div class="w-100" style="max-width: 200px;">
+                            <div class="sla-bar">
+                                <div class="sla-bar-fill sla-{{ sla_info.estado }}" style="width: {{ sla_info.porcentaje_usado }}%"></div>
+                            </div>
+                            <small class="text-light opacity-75">SLA: {{ sla_info.porcentaje_usado|floatformat:0 }}% usado</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Columna Izquierda: Información Principal -->
+            <div class="col-lg-8 col-xl-9">
+                <!-- A) Información de la Solicitud -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Información de la Solicitud
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <!-- Datos del Cliente y Préstamo -->
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Cliente</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Cliente</label>
+                                            <div class="valor-destacado">{{ datos_cotizacion.cliente_nombre|default:"Sin cliente" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Cédula</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.cliente_cedula|default:"Sin cédula" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Ocupación</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.ocupacion|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Ingreso</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.ingreso %}
+                                                    ${{ datos_cotizacion.ingreso|floatformat:0 }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Tiempo Laboral</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.tiempo_laboral|default:"N/A" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos del Préstamo -->
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Préstamo</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Monto Solicitado</label>
+                                            <div class="valor-destacado">
+                                                {% if datos_cotizacion.monto_prestamo %}
+                                                    ${{ datos_cotizacion.monto_prestamo|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Prima</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.prima %}
+                                                    ${{ datos_cotizacion.prima|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Cuota Mensual</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.cuota_mensual %}
+                                                    ${{ datos_cotizacion.cuota_mensual|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Tasa de Interés</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.tasa_interes %}
+                                                    {{ datos_cotizacion.tasa_interes }}%
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Plazo</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.plazo_anos %}
+                                                    {{ datos_cotizacion.plazo_anos }} años
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos de Análisis -->
+                            {% if datos_cotizacion.tipo_prestamo == 'auto' %}
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Vehículo</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Vehículo</label>
+                                            <div class="fw-semibold">
+                                                {{ datos_cotizacion.vehiculo_marca|default:"N/A" }} 
+                                                {{ datos_cotizacion.vehiculo_modelo|default:"" }}
+                                                {{ datos_cotizacion.vehiculo_ano|default:"" }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="text-muted small">Precio del Vehículo</label>
+                                            <div class="valor-destacado">
+                                                {% if datos_cotizacion.vehiculo_precio %}
+                                                    ${{ datos_cotizacion.vehiculo_precio|floatformat:0 }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Análisis Crediticio</h6>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <label class="text-muted small">Score</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.score|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">TC Manejo</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.tc_manejo|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">ROP Manejo</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.rop_manejo|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Nivel Cumplimiento</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.nivel_cumplimiento|default:"N/A" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- C) Ruta del Flujo del Proceso -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-route me-2"></i>
+                            Ruta del Proceso
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="pipeline-flow">
+                            {% for etapa_info in etapas_pipeline %}
+                            <div class="pipeline-etapa {{ etapa_info.estado }}">
+                                <div class="etapa-numero {{ etapa_info.estado }}">
+                                    {% if etapa_info.estado == 'completada' %}
+                                        <i class="fas fa-check"></i>
+                                    {% elif etapa_info.estado == 'actual' %}
+                                        {{ etapa_info.etapa.orden }}
+                                    {% else %}
+                                        {{ etapa_info.etapa.orden }}
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">{{ etapa_info.etapa.nombre }}</h6>
+                                            {% if etapa_info.estado == 'actual' %}
+                                                <span class="badge bg-primary">Etapa Actual</span>
+                                            {% elif etapa_info.estado == 'completada' %}
+                                                <span class="badge bg-success">Completada</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Pendiente</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end">
+                                            {% if etapa_info.fecha_inicio %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ etapa_info.fecha_inicio|date:"d/m/Y H:i" }}
+                                                </small>
+                                            {% endif %}
+                                            {% if etapa_info.responsable %}
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    {{ etapa_info.responsable.get_full_name|default:etapa_info.responsable.username }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if etapa_info.etapa.sla %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            SLA: {{ etapa_info.etapa.sla }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- D) Historial de Actividades -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Historial de Actividades
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="scroll-container">
+                            {% if historial_completo %}
+                                {% for entrada in historial_completo %}
+                                <div class="timeline-item">
+                                    <div class="timeline-icon"></div>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0">{{ entrada.etapa.nombre }}</h6>
+                                        <small class="text-muted">{{ entrada.fecha_inicio|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    {% if entrada.subestado %}
+                                        <p class="text-muted mb-1 small">{{ entrada.subestado.nombre }}</p>
+                                    {% endif %}
+                                    {% if entrada.usuario_responsable %}
+                                        <p class="text-muted mb-1 small">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ entrada.usuario_responsable.get_full_name|default:entrada.usuario_responsable.username }}
+                                        </p>
+                                    {% endif %}
+                                    {% if entrada.fecha_fin %}
+                                        <small class="text-success">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Duración: {{ entrada.fecha_inicio|timesince:entrada.fecha_fin }}
+                                        </small>
+                                    {% else %}
+                                        <small class="text-primary">
+                                            <i class="fas fa-play-circle me-1"></i>
+                                            En progreso desde {{ entrada.fecha_inicio|timesince }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No hay historial disponible</h6>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E) Detalle Completo: Comentarios y Documentos -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Comentarios del Proceso
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="scroll-container" id="comentariosContainer">
+                            {% if comentarios %}
+                                {% for comentario in comentarios %}
+                                <div class="comentario-item mb-3 p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                                <i class="fas fa-user text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</h6>
+                                                <small class="text-muted">{{ comentario.usuario.groups.first.name|default:"Usuario" }}</small>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    <p class="mb-0">{{ comentario.comentario }}</p>
+                                    {% if comentario.es_editado %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Editado
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No hay comentarios aún</h6>
+                                    <p class="text-muted small">Los comentarios aparecerán aquí conforme se agreguen</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E.2) Documentos -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-folder-open me-2"></i>
+                                Documentos
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-success">{{ documentos_aprobados }} Aprobados</span>
+                                <span class="badge bg-warning">{{ documentos_pendientes }} Pendientes</span>
+                                <span class="badge bg-danger">{{ documentos_rechazados }} Rechazados</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if documentos %}
+                            {% for documento in documentos %}
+                            <div class="documento-item documento-{{ documento.estado_revision }}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="fw-bold mb-1">{{ documento.requisito.nombre }}</h6>
+                                        {% if documento.numero_revision > 1 %}
+                                            <span class="badge badge-estado bg-info">
+                                                {{ documento.numero_revision }}ª Revisión
+                                            </span>
+                                        {% endif %}
+                                        <span class="badge badge-estado bg-{{ documento.estado_revision|yesno:'success,warning,danger' }}">
+                                            {% if documento.estado_revision == 'aprobado' %}
+                                                <i class="fas fa-check me-1"></i>Aprobado
+                                            {% elif documento.estado_revision == 'rechazado' %}
+                                                <i class="fas fa-times me-1"></i>Rechazado
+                                            {% else %}
+                                                <i class="fas fa-clock me-1"></i>Pendiente
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        {% if puede_decidir %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="aprobarDocumento({{ documento.id }})">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="rechazarDocumento({{ documento.id }})">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if documento.archivo %}
+                                        <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ documento.archivo.url }}" download class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if documento.archivo %}
+                                    <p class="mb-1 small text-muted">
+                                        <i class="fas fa-file me-1"></i>
+                                        {{ documento.nombre_archivo }}
+                                    </p>
+                                {% endif %}
+                                {% if documento.observaciones %}
+                                    <p class="mb-0 small">
+                                        <strong>Observaciones:</strong> {{ documento.observaciones }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">No hay documentos configurados</h6>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- F) Solicitudes Anteriores del Cliente -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-clock me-2"></i>
+                            Solicitudes Anteriores
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if solicitudes_anteriores %}
+                            <div class="mb-3">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Se encontraron <strong>{{ total_solicitudes_anteriores }}</strong> solicitud{{ total_solicitudes_anteriores|pluralize:"es" }} anterior{{ total_solicitudes_anteriores|pluralize:"es" }} para este cliente
+                                </div>
+                            </div>
+                            
+                            <div class="scroll-container">
+                                {% for solicitud_anterior in solicitudes_anteriores %}
+                                <div class="border rounded p-3 mb-3 hover-shadow">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">
+                                                <a href="{% url 'workflow:detalle_solicitud_profesional' solicitud_anterior.solicitud.id %}" 
+                                                   class="text-decoration-none">
+                                                    {{ solicitud_anterior.solicitud.codigo }}
+                                                </a>
+                                            </h6>
+                                            <span class="badge bg-{{ solicitud_anterior.estado_final|default:'secondary' }}">
+                                                {{ solicitud_anterior.estado_final }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">{{ solicitud_anterior.fecha_creacion|date:"d/m/Y" }}</small>
+                                    </div>
+                                    
+                                    <div class="row text-center mt-2">
+                                        {% if solicitud_anterior.cotizacion.montoPrestamo %}
+                                        <div class="col-6">
+                                            <div class="fw-semibold text-primary">${{ solicitud_anterior.cotizacion.montoPrestamo|floatformat:0 }}</div>
+                                            <small class="text-muted">Monto</small>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-6">
+                                            <div class="fw-semibold">{{ solicitud_anterior.oficial_responsable.get_full_name|default:solicitud_anterior.oficial_responsable.username }}</div>
+                                            <small class="text-muted">Oficial</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center mt-2">
+                                        <a href="{% url 'workflow:detalle_solicitud_profesional' solicitud_anterior.solicitud.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            Ver Detalle
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-user-check fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">Cliente Nuevo</h6>
+                                <p class="text-muted small">Este cliente no tiene solicitudes anteriores en el sistema</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Comentarios y Decisión -->
+            <div class="col-lg-4 col-xl-3">
+                <!-- B) Sección de Comentarios y Decisión -->
+                {% include 'workflow/partials/decision_panel.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals y JavaScript serán agregados en los siguientes pasos -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+const solicitudId = {{ solicitud.id }};
+
+// Funciones para revisión de documentos
+function aprobarDocumento(documentoId) {
+    if (confirm('¿Estás seguro de que deseas aprobar este documento?')) {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        mostrarLoading(true);
+        
+        fetch(`{% url 'workflow:api_aprobar_documento' solicitud.id 0 %}`.replace('0', documentoId), {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.mensaje, 'success');
+                // Recargar la página para actualizar el estado
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error al aprobar documento: ' + error.message, 'error');
+        })
+        .finally(() => {
+            mostrarLoading(false);
+        });
+    }
+}
+
+function rechazarDocumento(documentoId) {
+    const motivo = prompt('Ingresa el motivo del rechazo:', 'El documento no cumple con los requisitos necesarios');
+    
+    if (motivo && motivo.trim()) {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('motivo', motivo.trim());
+        
+        mostrarLoading(true);
+        
+        fetch(`{% url 'workflow:api_rechazar_documento' solicitud.id 0 %}`.replace('0', documentoId), {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.mensaje, 'success');
+                // Recargar la página para actualizar el estado
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('Error al rechazar documento: ' + error.message, 'error');
+        })
+        .finally(() => {
+            mostrarLoading(false);
+        });
+    }
+}
+
+// Función para cargar comentarios dinámicamente
+function cargarComentarios() {
+    fetch(`{% url 'workflow:api_obtener_comentarios' solicitud.id %}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                actualizarComentarios(data.comentarios);
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando comentarios:', error);
+        });
+}
+
+function actualizarComentarios(comentarios) {
+    const container = document.getElementById('comentariosContainer');
+    if (!container) return;
+    
+    if (comentarios.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No hay comentarios aún</h6>
+                <p class="text-muted small">Los comentarios aparecerán aquí conforme se agreguen</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = comentarios.map(comentario => `
+        <div class="comentario-item mb-3 p-3 border rounded">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                        <i class="fas fa-user text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">${comentario.usuario.nombre_completo}</h6>
+                        <small class="text-muted">Usuario</small>
+                    </div>
+                </div>
+                <small class="text-muted">${new Date(comentario.fecha_creacion).toLocaleDateString('es-ES')} ${new Date(comentario.fecha_creacion).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</small>
+            </div>
+            <p class="mb-0">${comentario.comentario}</p>
+            ${comentario.es_editado ? '<small class="text-muted"><i class="fas fa-edit me-1"></i>Editado</small>' : ''}
+        </div>
+    `).join('');
+}
+
+// Función para mostrar alertas
+function mostrarAlerta(mensaje, tipo) {
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info'
+    }[tipo] || 'alert-info';
+    
+    const icon = {
+        'success': 'check-circle',
+        'error': 'exclamation-triangle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    }[tipo] || 'info-circle';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
+function mostrarLoading(show) {
+    const existingLoader = document.getElementById('globalLoader');
+    
+    if (show) {
+        if (!existingLoader) {
+            const loader = document.createElement('div');
+            loader.id = 'globalLoader';
+            loader.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+            loader.style.cssText = 'background: rgba(0,0,0,0.5); z-index: 9999;';
+            loader.innerHTML = `
+                <div class="text-center text-white">
+                    <div class="spinner-border text-light mb-2" role="status"></div>
+                    <div>Procesando...</div>
+                </div>
+            `;
+            document.body.appendChild(loader);
+        }
+    } else {
+        if (existingLoader) {
+            existingLoader.remove();
+        }
+    }
+}
+
+// Efectos visuales y animaciones
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación de entrada para las cards
+    const cards = document.querySelectorAll('.fade-in');
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, index * 100);
+    });
+    
+    // Hover effects para documentos
+    const documentos = document.querySelectorAll('.documento-item');
+    documentos.forEach(doc => {
+        doc.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+        });
+        
+        doc.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+    
+    // Tooltip para etapas del pipeline
+    const etapas = document.querySelectorAll('.pipeline-etapa');
+    etapas.forEach(etapa => {
+        etapa.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = this.classList.contains('actual') ? '#e3f2fd' : 
+                                         this.classList.contains('completada') ? '#e8f5e8' : '#f5f5f5';
+        });
+        
+        etapa.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    // Auto-scroll suave para contenedores con scroll
+    const scrollContainers = document.querySelectorAll('.scroll-container');
+    scrollContainers.forEach(container => {
+        let isScrolling = false;
+        
+        container.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+                requestAnimationFrame(() => {
+                    // Efecto suave de scroll
+                    isScrolling = false;
+                });
+            }
+        });
+    });
+});
+
+console.log('Detalle Solicitud Profesional cargado ✅');
+console.log('Solicitud ID:', solicitudId);
+</script>
+{% endblock %} 

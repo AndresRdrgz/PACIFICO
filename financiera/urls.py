@@ -21,7 +21,7 @@ urlpatterns = [
     path('', include('tombola.urls')),  # Include the tombola app's URLs
     path('', include('capacitaciones_app.urls')),  # Include the capacitaciones_app app's URLs
     path('', include('workflow.urls')),  # Include the workflow interview URLs (no prefix)
-    path('workflow/', include('workflow.urls_workflow', namespace='workflow')),  # Include the workflow app's URLs with namespace
+    path('workflow/', include('workflow.urls', namespace='workflow')),  # Include the workflow app's URLs with namespace
     path('mantenimiento/', include('mantenimiento.urls')),  # Include the mantenimiento app's URLs
 ]
 

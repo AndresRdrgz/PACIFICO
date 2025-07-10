@@ -1,0 +1,474 @@
+<!-- Panel de Decisión y Comentarios (Sección B) -->
+<div class="card-profesional fade-in sticky-header">
+    <div class="card-header-profesional">
+        <h5 class="mb-0">
+            <i class="fas fa-gavel me-2"></i>
+            Centro de Decisión
+        </h5>
+    </div>
+    <div class="card-body p-4">
+        {% if puede_decidir %}
+        <!-- Comentario Obligatorio -->
+        <form id="decisionForm" method="POST">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="comentarioDecision" class="form-label fw-semibold">
+                    Comentario de Decisión <span class="text-danger">*</span>
+                </label>
+                <textarea 
+                    class="form-control" 
+                    id="comentarioDecision" 
+                    name="comentario" 
+                    rows="4" 
+                    placeholder="Ingresa tu análisis y justificación de la decisión..."
+                    required
+                ></textarea>
+                <div class="form-text">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Este comentario será enviado a la oficial responsable
+                </div>
+            </div>
+
+            <!-- Adjuntar Archivo -->
+            <div class="mb-4">
+                <label for="archivoDecision" class="form-label fw-semibold">
+                    Adjuntar Archivo (Opcional)
+                </label>
+                <input 
+                    class="form-control" 
+                    type="file" 
+                    id="archivoDecision" 
+                    name="archivo"
+                    accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
+                >
+                <div class="form-text">
+                    <i class="fas fa-paperclip me-1"></i>
+                    Formatos permitidos: PDF, DOC, DOCX, JPG, PNG
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="d-grid gap-2 mb-4">
+                <h6 class="fw-semibold text-uppercase text-muted mb-3">
+                    <i class="fas fa-hand-point-right me-2"></i>
+                    Selecciona tu Decisión
+                </h6>
+                
+                {% for accion in acciones_disponibles %}
+                <button 
+                    type="button" 
+                    class="btn btn-accion btn-{{ accion.color }} btn-decision" 
+                    data-accion="{{ accion.tipo }}"
+                    data-transicion-id="{{ accion.transicion.id }}"
+                    data-transicion-nombre="{{ accion.transicion.nombre }}"
+                    data-etapa-destino="{{ accion.transicion.etapa_destino.nombre }}"
+                >
+                    <i class="fas fa-{{ accion.icono }} me-2"></i>
+                    {{ accion.nombre }}
+                </button>
+                {% empty %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No hay acciones disponibles para esta etapa
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Botón de Envío Comentario -->
+            <div class="d-grid">
+                <button type="button" class="btn btn-outline-primary" id="btnEnviarComentario">
+                    <i class="fas fa-comment me-2"></i>
+                    Enviar Solo Comentario
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <!-- Vista para usuarios sin permisos de decisión -->
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Solo el analista asignado puede tomar decisiones sobre esta solicitud
+        </div>
+        
+        <!-- Permitir comentarios aunque no pueda decidir -->
+        <div class="mb-4">
+            <label for="comentarioGeneral" class="form-label fw-semibold">
+                Agregar Comentario
+            </label>
+            <textarea 
+                class="form-control" 
+                id="comentarioGeneral" 
+                rows="3" 
+                placeholder="Ingresa tu comentario..."
+            ></textarea>
+        </div>
+        <div class="d-grid">
+            <button type="button" class="btn btn-outline-primary" id="btnComentarioGeneral">
+                <i class="fas fa-comment me-2"></i>
+                Enviar Comentario
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Información de Asignación -->
+<div class="card-profesional mt-4 fade-in">
+    <div class="card-header-profesional">
+        <h6 class="mb-0">
+            <i class="fas fa-user-tie me-2"></i>
+            Información de Asignación
+        </h6>
+    </div>
+    <div class="card-body p-3">
+        {% if solicitud.asignada_a %}
+        <div class="d-flex align-items-center">
+            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                <i class="fas fa-user text-primary"></i>
+            </div>
+            <div>
+                <div class="fw-semibold">{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}</div>
+                <small class="text-muted">{{ solicitud.asignada_a.email }}</small>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center">
+            <i class="fas fa-users fa-2x text-muted mb-2"></i>
+            <p class="text-muted mb-0">Bandeja Grupal</p>
+            <small class="text-muted">No asignada</small>
+        </div>
+        {% endif %}
+        
+        <hr class="my-3">
+        
+        <div class="row text-center">
+            <div class="col-6">
+                <div class="fw-semibold text-primary">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</div>
+                <small class="text-muted">Creada</small>
+            </div>
+            <div class="col-6">
+                <div class="fw-semibold text-success">{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y" }}</div>
+                <small class="text-muted">Actualizada</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acciones Rápidas -->
+<div class="card-profesional mt-4 fade-in">
+    <div class="card-header-profesional">
+        <h6 class="mb-0">
+            <i class="fas fa-bolt me-2"></i>
+            Acciones Rápidas
+        </h6>
+    </div>
+    <div class="card-body p-3">
+        <div class="d-grid gap-2">
+            {% if not solicitud.asignada_a and solicitud.etapa_actual.es_bandeja_grupal %}
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="tomarSolicitud()">
+                <i class="fas fa-hand-paper me-2"></i>
+                Tomar Solicitud
+            </button>
+            {% endif %}
+            
+            <button type="button" class="btn btn-outline-info btn-sm" onclick="verHistorialCompleto()">
+                <i class="fas fa-history me-2"></i>
+                Ver Historial
+            </button>
+            
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportarSolicitud()">
+                <i class="fas fa-download me-2"></i>
+                Exportar PDF
+            </button>
+            
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="compartirSolicitud()">
+                <i class="fas fa-share me-2"></i>
+                Compartir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Decisión -->
+<div class="modal fade" id="confirmacionDecisionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                    Confirmar Decisión
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>¿Estás seguro de tu decisión?</strong> Esta acción no se puede deshacer.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold">Solicitud:</h6>
+                        <p class="mb-2">{{ solicitud.codigo }}</p>
+                        
+                        <h6 class="fw-semibold">Cliente:</h6>
+                        <p class="mb-2">{{ datos_cotizacion.cliente_nombre|default:"Sin cliente" }}</p>
+                        
+                        <h6 class="fw-semibold">Monto:</h6>
+                        <p class="mb-0">
+                            {% if datos_cotizacion.monto_prestamo %}
+                                ${{ datos_cotizacion.monto_prestamo|floatformat:0 }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold">Acción a realizar:</h6>
+                        <p id="accionSeleccionada" class="mb-2 fw-bold"></p>
+                        
+                        <h6 class="fw-semibold">Nueva etapa:</h6>
+                        <p id="nuevaEtapa" class="mb-2"></p>
+                        
+                        <h6 class="fw-semibold">Tu comentario:</h6>
+                        <div id="comentarioResumen" class="bg-light p-2 rounded small"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDecision">
+                    <i class="fas fa-check me-2"></i>
+                    Confirmar Decisión
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript para el panel de decisión
+document.addEventListener('DOMContentLoaded', function() {
+    const botonesDecision = document.querySelectorAll('.btn-decision');
+    const comentarioInput = document.getElementById('comentarioDecision');
+    const modal = new bootstrap.Modal(document.getElementById('confirmacionDecisionModal'));
+    
+    let accionSeleccionada = null;
+    let transicionSeleccionada = null;
+    
+    // Manejar clicks en botones de decisión
+    botonesDecision.forEach(button => {
+        button.addEventListener('click', function() {
+            const comentario = comentarioInput.value.trim();
+            
+            if (!comentario) {
+                mostrarAlerta('Por favor ingresa un comentario antes de tomar una decisión', 'warning');
+                comentarioInput.focus();
+                return;
+            }
+            
+            accionSeleccionada = this.dataset.accion;
+            transicionSeleccionada = this.dataset.transicionId;
+            
+            // Actualizar modal de confirmación
+            document.getElementById('accionSeleccionada').textContent = this.textContent.trim();
+            document.getElementById('nuevaEtapa').textContent = this.dataset.etapaDestino;
+            document.getElementById('comentarioResumen').textContent = comentario;
+            
+            // Mostrar modal
+            modal.show();
+        });
+    });
+    
+    // Confirmar decisión
+    document.getElementById('btnConfirmarDecision').addEventListener('click', function() {
+        if (accionSeleccionada && transicionSeleccionada) {
+            enviarDecision(transicionSeleccionada, comentarioInput.value);
+            modal.hide();
+        }
+    });
+    
+    // Enviar solo comentario
+    document.getElementById('btnEnviarComentario').addEventListener('click', function() {
+        const comentario = comentarioInput.value.trim();
+        
+        if (!comentario) {
+            mostrarAlerta('Por favor ingresa un comentario', 'warning');
+            comentarioInput.focus();
+            return;
+        }
+        
+        enviarComentario(comentario);
+    });
+    
+    // Comentario general (para usuarios sin permisos de decisión)
+    const btnComentarioGeneral = document.getElementById('btnComentarioGeneral');
+    if (btnComentarioGeneral) {
+        btnComentarioGeneral.addEventListener('click', function() {
+            const comentario = document.getElementById('comentarioGeneral').value.trim();
+            
+            if (!comentario) {
+                mostrarAlerta('Por favor ingresa un comentario', 'warning');
+                return;
+            }
+            
+            enviarComentario(comentario);
+        });
+    }
+});
+
+function enviarDecision(transicionId, comentario) {
+    const formData = new FormData(document.getElementById('decisionForm'));
+    formData.append('transicion_id', transicionId);
+    formData.append('comentario', comentario);
+    
+    // Mostrar loading
+    mostrarLoading(true);
+    
+    fetch(`{% url 'workflow:transicion_solicitud_profesional' solicitud.id %}`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            mostrarAlerta('Decisión procesada exitosamente. Redirigiendo...', 'success');
+            setTimeout(() => {
+                window.location.href = '{% url "workflow:bandeja_trabajo" %}';
+            }, 2000);
+        } else {
+            throw new Error('Error en la respuesta');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('Error al procesar la decisión. Intenta nuevamente.', 'error');
+    })
+    .finally(() => {
+        mostrarLoading(false);
+    });
+}
+
+function enviarComentario(comentario) {
+    const data = {
+        comentario: comentario
+    };
+    
+    mostrarLoading(true);
+    
+    fetch(`{% url 'workflow:api_crear_comentario' solicitud.id %}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('Comentario enviado exitosamente', 'success');
+            // Limpiar campos
+            const comentarioInput = document.getElementById('comentarioDecision') || document.getElementById('comentarioGeneral');
+            if (comentarioInput) {
+                comentarioInput.value = '';
+            }
+            // Recargar comentarios si hay una sección de comentarios
+            if (typeof cargarComentarios === 'function') {
+                cargarComentarios();
+            }
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('Error al enviar comentario: ' + error.message, 'error');
+    })
+    .finally(() => {
+        mostrarLoading(false);
+    });
+}
+
+function tomarSolicitud() {
+    if (confirm('¿Deseas tomar esta solicitud?')) {
+        window.location.href = `{% url 'workflow:auto_asignar_solicitud' solicitud.id %}`;
+    }
+}
+
+function verHistorialCompleto() {
+    // Esta función será implementada cuando creemos la sección de historial
+    mostrarAlerta('Función en desarrollo', 'info');
+}
+
+function exportarSolicitud() {
+    mostrarAlerta('Función de exportación en desarrollo', 'info');
+}
+
+function compartirSolicitud() {
+    navigator.clipboard.writeText(window.location.href)
+        .then(() => mostrarAlerta('Enlace copiado al portapapeles', 'success'))
+        .catch(() => mostrarAlerta('Error al copiar enlace', 'error'));
+}
+
+function mostrarAlerta(mensaje, tipo) {
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info'
+    }[tipo] || 'alert-info';
+    
+    const icon = {
+        'success': 'check-circle',
+        'error': 'exclamation-triangle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    }[tipo] || 'info-circle';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
+function mostrarLoading(show) {
+    const existingLoader = document.getElementById('globalLoader');
+    
+    if (show) {
+        if (!existingLoader) {
+            const loader = document.createElement('div');
+            loader.id = 'globalLoader';
+            loader.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+            loader.style.cssText = 'background: rgba(0,0,0,0.5); z-index: 9999;';
+            loader.innerHTML = `
+                <div class="text-center text-white">
+                    <div class="spinner-border text-light mb-2" role="status"></div>
+                    <div>Procesando...</div>
+                </div>
+            `;
+            document.body.appendChild(loader);
+        }
+    } else {
+        if (existingLoader) {
+            existingLoader.remove();
+        }
+    }
+}
+</script> 
