@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -22,6 +22,14 @@ class RequisitoPipelineInline(admin.TabularInline):
 
 class CampoPersonalizadoInline(admin.TabularInline):
     model = CampoPersonalizado
+    extra = 1
+
+class PermisoPipelineInline(admin.TabularInline):
+    model = PermisoPipeline
+    extra = 1
+
+class PermisoBandejaInline(admin.TabularInline):
+    model = PermisoBandeja
     extra = 1
 
 @admin.register(ClienteEntrevista)
@@ -167,3 +175,19 @@ class RequisitoTransicionAdmin(admin.ModelAdmin):
     list_display = ('transicion', 'requisito', 'obligatorio', 'mensaje_personalizado')
     list_filter = ('transicion', 'obligatorio')
     search_fields = ('transicion__nombre', 'requisito__nombre', 'mensaje_personalizado')
+
+
+@admin.register(PermisoPipeline)
+class PermisoPipelineAdmin(admin.ModelAdmin):
+    list_display = ('pipeline', 'grupo', 'usuario', 'puede_ver', 'puede_crear', 'puede_editar', 'puede_eliminar', 'puede_admin')
+    list_filter = ('pipeline', 'grupo', 'puede_ver', 'puede_crear', 'puede_editar', 'puede_eliminar', 'puede_admin')
+    search_fields = ('pipeline__nombre', 'grupo__name', 'usuario__username')
+    list_editable = ('puede_ver', 'puede_crear', 'puede_editar', 'puede_eliminar', 'puede_admin')
+
+
+@admin.register(PermisoBandeja)
+class PermisoBandejaAdmin(admin.ModelAdmin):
+    list_display = ('etapa', 'grupo', 'usuario', 'puede_ver', 'puede_tomar', 'puede_devolver', 'puede_transicionar', 'puede_editar')
+    list_filter = ('etapa', 'grupo', 'puede_ver', 'puede_tomar', 'puede_devolver', 'puede_transicionar', 'puede_editar')
+    search_fields = ('etapa__nombre', 'grupo__name', 'usuario__username')
+    list_editable = ('puede_ver', 'puede_tomar', 'puede_devolver', 'puede_transicionar', 'puede_editar')

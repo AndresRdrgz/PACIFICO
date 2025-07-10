@@ -102,4 +102,20 @@ urlpatterns += [
     path('api/requisitos-transicion/crear/', views_workflow.api_crear_requisito_transicion, name='api_crear_requisito_transicion'),
     path('api/requisitos-transicion/<int:requisito_transicion_id>/actualizar/', views_workflow.api_actualizar_requisito_transicion, name='api_actualizar_requisito_transicion'),
     path('api/requisitos-transicion/<int:requisito_transicion_id>/eliminar/', views_workflow.api_eliminar_requisito_transicion, name='api_eliminar_requisito_transicion'),
+    
+    # APIs para gestión de permisos de pipeline
+    path('api/pipelines/<int:pipeline_id>/permisos/', views_workflow.api_obtener_permisos_pipeline, name='api_obtener_permisos_pipeline'),
+    path('api/pipelines/<int:pipeline_id>/permisos/crear/', views_workflow.api_crear_permiso_pipeline, name='api_crear_permiso_pipeline'),
+    path('api/pipelines/<int:pipeline_id>/permisos/<int:permiso_id>/actualizar/', views_workflow.api_actualizar_permiso_pipeline, name='api_actualizar_permiso_pipeline'),
+    path('api/pipelines/<int:pipeline_id>/permisos/<int:permiso_id>/eliminar/', views_workflow.api_eliminar_permiso_pipeline, name='api_eliminar_permiso_pipeline'),
+    
+    # APIs para gestión de permisos de bandeja
+    path('api/etapas/<int:etapa_id>/permisos/', views_workflow.api_obtener_permisos_bandeja, name='api_obtener_permisos_bandeja'),
+    path('api/etapas/<int:etapa_id>/permisos/crear/', views_workflow.api_crear_permiso_bandeja, name='api_crear_permiso_bandeja'),
+    path('api/etapas/<int:etapa_id>/permisos/<int:permiso_id>/actualizar/', views_workflow.api_actualizar_permiso_bandeja, name='api_actualizar_permiso_bandeja'),
+    path('api/etapas/<int:etapa_id>/permisos/<int:permiso_id>/eliminar/', views_workflow.api_eliminar_permiso_bandeja, name='api_eliminar_permiso_bandeja'),
+    
+    # APIs para obtener usuarios y grupos
+    path('api/usuarios/', views_workflow.api_obtener_usuarios, name='api_obtener_usuarios'),
+    path('api/grupos/', views_workflow.api_obtener_grupos, name='api_obtener_grupos'),
 ]

@@ -271,6 +271,76 @@ class SolicitudComentario(models.Model):
 
 
 # --------------------------------------
+# GESTIÓN DE ACCESO A PIPELINES Y BANDEJAS
+# --------------------------------------
+
+class PermisoPipeline(models.Model):
+    """
+    Modelo para definir qué usuarios/grupos pueden acceder a un pipeline completo
+    """
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='permisos_pipeline')
+    grupo = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='pipelines_permitidos', null=True, blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pipelines_permitidos', null=True, blank=True)
+    puede_ver = models.BooleanField(default=True, help_text="Puede ver el pipeline y sus solicitudes")
+    puede_crear = models.BooleanField(default=False, help_text="Puede crear nuevas solicitudes en este pipeline")
+    puede_editar = models.BooleanField(default=False, help_text="Puede editar solicitudes en este pipeline")
+    puede_eliminar = models.BooleanField(default=False, help_text="Puede eliminar solicitudes en este pipeline")
+    puede_admin = models.BooleanField(default=False, help_text="Puede administrar la configuración del pipeline")
+
+    class Meta:
+        unique_together = ('pipeline', 'grupo', 'usuario')
+        verbose_name = "Permiso de Pipeline"
+        verbose_name_plural = "Permisos de Pipeline"
+
+    def __str__(self):
+        if self.grupo:
+            return f"{self.pipeline.nombre} - Grupo: {self.grupo.name}"
+        elif self.usuario:
+            return f"{self.pipeline.nombre} - Usuario: {self.usuario.username}"
+        return f"{self.pipeline.nombre} - Sin asignar"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not self.grupo and not self.usuario:
+            raise ValidationError("Debe especificar un grupo o un usuario")
+        if self.grupo and self.usuario:
+            raise ValidationError("No puede especificar tanto un grupo como un usuario")
+
+
+class PermisoBandeja(models.Model):
+    """
+    Modelo para definir qué usuarios/grupos pueden acceder a bandejas específicas
+    """
+    etapa = models.ForeignKey(Etapa, on_delete=models.CASCADE, related_name='permisos_bandeja')
+    grupo = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='bandejas_permitidas', null=True, blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bandejas_permitidas', null=True, blank=True)
+    puede_ver = models.BooleanField(default=True, help_text="Puede ver las solicitudes en esta bandeja")
+    puede_tomar = models.BooleanField(default=True, help_text="Puede tomar solicitudes de esta bandeja")
+    puede_devolver = models.BooleanField(default=True, help_text="Puede devolver solicitudes a esta bandeja")
+    puede_transicionar = models.BooleanField(default=True, help_text="Puede realizar transiciones desde esta bandeja")
+    puede_editar = models.BooleanField(default=False, help_text="Puede editar solicitudes en esta bandeja")
+
+    class Meta:
+        unique_together = ('etapa', 'grupo', 'usuario')
+        verbose_name = "Permiso de Bandeja"
+        verbose_name_plural = "Permisos de Bandeja"
+
+    def __str__(self):
+        if self.grupo:
+            return f"{self.etapa.nombre} - Grupo: {self.grupo.name}"
+        elif self.usuario:
+            return f"{self.etapa.nombre} - Usuario: {self.usuario.username}"
+        return f"{self.etapa.nombre} - Sin asignar"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not self.grupo and not self.usuario:
+            raise ValidationError("Debe especificar un grupo o un usuario")
+        if self.grupo and self.usuario:
+            raise ValidationError("No puede especificar tanto un grupo como un usuario")
+
+
+# --------------------------------------
 # REQUISITOS POR TRANSICIÓN
 # --------------------------------------
 
