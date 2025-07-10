@@ -36,11 +36,12 @@ urlpatterns += [
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('negocios/', views_workflow.negocios_view, name='negocios'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
-    path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
+    path('solicitud/<int:solicitud_id>/v2/', views_workflow.detalle_solicitud_v2, name='detalle_solicitud_v2'),
     path('solicitud/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitud/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitud/<int:solicitud_id>/requisito/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
     path('solicitud/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campos_personalizados'),
+    path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
     
     # APIs para bandeja mixta
     path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),
@@ -50,6 +51,15 @@ urlpatterns += [
     path('api/notifications/stream/', views_workflow.api_notifications_stream, name='api_notifications_stream'),
     path('api/check-updates/', views_workflow.api_check_updates, name='api_check_updates'),
     path('api/get-updated-solicitudes/', views_workflow.api_get_updated_solicitudes, name='api_get_updated_solicitudes'),
+    
+    # Comments API URLs
+    path('api/solicitudes/<int:solicitud_id>/comentarios/', views_workflow.api_obtener_comentarios, name='api_obtener_comentarios'),
+    path('api/solicitudes/<int:solicitud_id>/comentarios/crear/', views_workflow.api_crear_comentario, name='api_crear_comentario'),
+    path('api/comentarios/<int:comentario_id>/editar/', views_workflow.api_editar_comentario, name='api_editar_comentario'),
+    path('api/comentarios/<int:comentario_id>/eliminar/', views_workflow.api_eliminar_comentario, name='api_eliminar_comentario'),
+    
+    # Solicitud brief API
+    path('api/solicitud_brief/<int:solicitud_id>/', views_workflow.api_solicitud_brief, name='api_solicitud_brief'),
     
     # Vistas de administración
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
@@ -109,4 +119,10 @@ urlpatterns += [
     # APIs para modal de requisitos faltantes
     path('api/solicitudes/<int:solicitud_id>/requisitos-faltantes-detallado/', views_workflow.api_obtener_requisitos_faltantes_detallado, name='api_obtener_requisitos_faltantes_detallado'),
     path('api/solicitudes/<int:solicitud_id>/subir-requisito-modal/', views_workflow.api_subir_requisito_modal, name='api_subir_requisito_modal'),
+    
+    # URLs de testing para correos (eliminar en producción)
+    path('test-correo-bandeja/', views_workflow.test_envio_correo_bandeja, name='test_correo_bandeja'),
+    path('test-correo-asignacion/', views_workflow.test_envio_correo_asignacion, name='test_correo_asignacion'),
 ]
+
+

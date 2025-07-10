@@ -207,6 +207,10 @@
                                     <i class="fas fa-comments"></i>
                                     <span>Comentarios</span>
                                 </button>
+                                <button class="action-btn info" id="modalBtnVerDetalle" data-solicitud-id="">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Ver Detalle</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1193,6 +1197,12 @@
 window.mostrarModalSolicitud = function(solicitudId) {
     console.log('Opening modal for solicitud:', solicitudId);
     
+    // Store the solicitudId globally for use in the modal
+    window.currentSolicitudId = solicitudId;
+    
+    // Set the solicitudId on the Ver Detalle button
+    $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
+    
     // Show loading state
     showLoadingState();
     
@@ -1353,6 +1363,13 @@ function populateModalData(data) {
         if (!data || typeof data !== 'object') {
             throw new Error('Invalid data structure');
         }
+        
+        // Get solicitudId from the current modal context
+        const solicitudId = window.currentSolicitudId;
+        console.log('Current solicitudId:', solicitudId);
+        
+        // Set the solicitudId on the Ver Detalle button
+        $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
         
         // General info with fallbacks
         const general = data.general || {};
@@ -1602,6 +1619,17 @@ function initializeModalLayout() {
     $('#modalBtnComentarios').on('click', function() {
         console.log('Comentarios clicked');
         // Add your comments logic here
+    });
+
+    // Add click handler for 'Ver Detalle' button
+    $('#modalBtnVerDetalle').on('click', function() {
+        let solicitudId = $(this).attr('data-solicitud-id');
+        console.log('Ver Detalle clicked, solicitudId:', solicitudId);
+        if (solicitudId && solicitudId !== 'null' && solicitudId !== 'undefined') {
+            window.location.href = `/workflow/solicitud/${solicitudId}/v2/`;
+        } else {
+            alert('No se pudo determinar el ID de la solicitud.');
+        }
     });
 }
 

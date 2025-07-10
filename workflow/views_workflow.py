@@ -13,7 +13,7 @@ from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
-    RequisitoTransicion
+    RequisitoTransicion, SolicitudComentario
 )
 from .models import ClienteEntrevista
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -386,8 +386,11 @@ def negocios_view(request):
                 'producto': producto,
                 'monto': monto_formateado,
                 'propietario': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+                'propietario_user': solicitud.creada_por,  # Pasar el objeto usuario completo
                 'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
+                'asignado_a_user': solicitud.asignada_a,  # Pasar el objeto usuario completo
                 'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
+                'etapa_actual': solicitud.etapa_actual,  # Pasar el objeto completo para acceder a es_bandeja_grupal
                 'estado_actual': estado_actual,
                 'estado_color': estado_color,
                 'fecha_inicio': fecha_inicio,
@@ -2154,14 +2157,131 @@ def enviar_correo_bandeja_grupal(solicitud, etapa):
         # Agregar el contenido HTML
         email.attach_alternative(html_content, "text/html")
         
-        # Enviar el correo
-        email.send()
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
         
         print(f"✅ Correo enviado correctamente para solicitud {solicitud.codigo} - Etapa: {etapa.nombre}")
         
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
+    """
+    Función para enviar correo automático cuando una solicitud es asignada a un usuario.
+    Notifica al creador de la solicitud que su solicitud ha sido tomada.
+    """
+    try:
+        # Verificar que la solicitud tiene un creador
+        if not solicitud.creada_por or not solicitud.creada_por.email:
+            print(f"⚠️ No se puede enviar correo: solicitud {solicitud.codigo} sin creador o email")
+            return
+        
+        # Obtener información del cliente
+        cliente_nombre = ""
+        try:
+            if hasattr(solicitud, 'cliente') and solicitud.cliente:
+                cliente_nombre = getattr(solicitud.cliente, 'nombreCliente', 'Sin nombre')
+            elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion and solicitud.cotizacion.cliente:
+                cliente_nombre = getattr(solicitud.cotizacion.cliente, 'nombreCliente', 'Sin nombre')
+            else:
+                cliente_nombre = "Cliente no asignado"
+        except Exception as e:
+            print(f"⚠️ Error obteniendo nombre del cliente: {e}")
+            cliente_nombre = "Error al obtener cliente"
+        
+        # Construir la URL de la solicitud
+        solicitud_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/solicitud/{solicitud.id}/"
+        
+        # Contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'usuario_asignado': usuario_asignado,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/solicitud_asignada_notification.html', context)
+        
+        # Crear el asunto
+        subject = f"✅ Tu solicitud ha sido asignada - {solicitud.codigo}"
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+        Tu Solicitud Ha Sido Asignada
+        
+        Hola {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+        
+        Tu solicitud ha sido asignada a un usuario y está siendo procesada:
+        
+        • Código: {solicitud.codigo}
+        • Cliente: {cliente_nombre or 'Sin asignar'}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Etapa: {solicitud.etapa_actual.nombre}
+        • Asignada a: {usuario_asignado.get_full_name() or usuario_asignado.username}
+        • Fecha de asignación: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        
+        Para ver el estado de tu solicitud, haz clic en el siguiente enlace:
+        {solicitud_url}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=[solicitud.creada_por.email],
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        print(f"✅ Correo de asignación enviado correctamente para solicitud {solicitud.codigo} - Asignada a: {usuario_asignado.username}, correo enviado a: {solicitud.creada_por.email}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de asignación para solicitud {solicitud.codigo}: {str(e)}")
 
 
 @login_required
@@ -2595,6 +2715,10 @@ def api_tomar_solicitud(request, solicitud_id):
         # CRÍTICO: Notificar cambio en tiempo real
         notify_solicitud_change(solicitud, 'solicitud_tomada', request.user)
         
+        # 📧 NUEVO: Enviar correo de notificación al creador de la solicitud
+        print(f"📧 ACTIVANDO envío de correo de asignación para solicitud {solicitud.codigo}")
+        enviar_correo_solicitud_asignada(solicitud, request.user)
+        
         return JsonResponse({
             'success': True,
             'mensaje': f'Solicitud {solicitud.codigo} asignada exitosamente.',
@@ -2945,6 +3069,48 @@ def test_envio_correo_bandeja(request):
 
 
 @login_required
+def test_envio_correo_asignacion(request):
+    """
+    Vista temporal para probar el envío de correos de asignación.
+    Usar solo para testing - eliminar después.
+    """
+    if request.method == 'POST':
+        solicitud_id = request.POST.get('solicitud_id')
+        if solicitud_id:
+            try:
+                solicitud = Solicitud.objects.get(id=solicitud_id)
+                
+                if solicitud.asignada_a:
+                    enviar_correo_solicitud_asignada(solicitud, solicitud.asignada_a)
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Correo de asignación enviado para solicitud {solicitud.codigo}'
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La solicitud no está asignada'
+                    })
+            except Solicitud.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Solicitud no encontrada'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error: {str(e)}'
+                })
+    
+    # Listar solicitudes asignadas para testing
+    solicitudes = Solicitud.objects.filter(asignada_a__isnull=False)[:10]
+    
+    return render(request, 'workflow/test_correo_asignacion.html', {
+        'solicitudes': solicitudes
+    })
+
+
+@login_required
 def api_get_updated_solicitudes(request):
     """API para obtener solo las solicitudes que han sido actualizadas"""
     try:
@@ -3131,6 +3297,65 @@ def api_solicitud_brief(request, solicitud_id):
                 for c in solicitud.comentarios.all().order_by('-fecha_creacion')
             ]
 
+        # Datos personales
+        datos_personales = {}
+        if cliente:
+            datos_personales = {
+                'Nombre Completo': cliente.nombreCliente or '-',
+                'Cédula de Identidad': cliente.cedulaCliente or '-',
+                'Teléfono': getattr(cliente, 'telefono', '-') or '-',
+                'Dirección': getattr(cliente, 'direccion', '-') or '-',
+                'Email': getattr(cliente, 'email', '-') or '-',
+            }
+        elif solicitud.cotizacion:
+            datos_personales = {
+                'Nombre Completo': solicitud.cotizacion.nombreCliente or '-',
+                'Cédula de Identidad': solicitud.cotizacion.cedulaCliente or '-',
+                'Teléfono': getattr(solicitud.cotizacion, 'telefono', '-') or '-',
+                'Dirección': getattr(solicitud.cotizacion, 'direccion', '-') or '-',
+                'Email': getattr(solicitud.cotizacion, 'email', '-') or '-',
+            }
+
+        # Información financiera
+        info_financiera = {}
+        cotizacion = solicitud.cotizacion
+        if cotizacion:
+            info_financiera = {
+                'Ingresos': str(cotizacion.ingresos) if cotizacion.ingresos is not None else '-',
+                'Empresa': cotizacion.nombreEmpresa or '-',
+                'Cargo': cotizacion.posicion or '-',
+                'Salario Base Mensual': str(getattr(cotizacion, 'salarioBaseMensual', '-')),
+                'Cartera': cotizacion.cartera or '-',
+                'Referencias APC': cotizacion.referenciasAPC or '-',
+            }
+
+        # Referencias (pueden venir de cotizacion o modelos relacionados)
+        referencias = []
+        # Si hay referencias en cotizacion, agregarlas
+        if cotizacion and hasattr(cotizacion, 'referenciasAPC') and cotizacion.referenciasAPC:
+            referencias.append({'nombre': 'APC', 'tipo': 'APC', 'relacion': '', 'telefono': '', 'descripcion': cotizacion.referenciasAPC})
+        # TODO: Agregar referencias personales/comerciales si existen modelos relacionados
+
+        # Documentos (de requisitos)
+        documentos = []
+        for req in solicitud.requisitos.all():
+            documentos.append({
+                'nombre': req.requisito.nombre,
+                'url': req.archivo.url if req.archivo else '',
+                'cumplido': req.cumplido,
+                'observaciones': req.observaciones or ''
+            })
+
+        # Cotización info
+        cotizacion_info = {}
+        if cotizacion:
+            cotizacion_info = {
+                'monto': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
+                'plazo': cotizacion.plazoPago or '-',
+                'tasa': float(cotizacion.tasaInteres) if cotizacion.tasaInteres else '-',
+                'cuota': float(getattr(cotizacion, 'wrkMontoLetra', 0)) if hasattr(cotizacion, 'wrkMontoLetra') and cotizacion.wrkMontoLetra else '-',
+            }
+
         return JsonResponse({
             'general': general,
             'cliente': cliente_info,
@@ -3138,6 +3363,11 @@ def api_solicitud_brief(request, solicitud_id):
             'workflow': workflow,
             'historial': historial,
             'comentarios': comentarios,
+            'datos_personales': datos_personales,
+            'info_financiera': info_financiera,
+            'referencias': referencias,
+            'documentos': documentos,
+            'cotizacion': cotizacion_info,
         }, encoder=DjangoJSONEncoder)
         
     except Exception as e:
@@ -4031,3 +4261,35 @@ def debug_session(request):
         'session_info': session_info,
         'timestamp': timezone.now().isoformat()
     })
+
+
+@login_required
+def detalle_solicitud_v2(request, solicitud_id):
+    """Detalle de una solicitud específica (V2 UI)"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar permisos (igual que en detalle_solicitud)
+    if solicitud.asignada_a and solicitud.asignada_a != request.user:
+        if not (request.user.is_superuser or request.user.is_staff):
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_ver=True
+            ).exists()
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para ver esta solicitud.')
+                return redirect('workflow:bandeja_trabajo')
+    
+    # Obtener datos adicionales para el contexto
+    context = {
+        'solicitud': solicitud,
+        'solicitud_id': solicitud.id,
+        'pipeline': solicitud.pipeline,
+        'etapa_actual': solicitud.etapa_actual,
+        'cliente': solicitud.cliente if hasattr(solicitud, 'cliente') else None,
+        'cotizacion': solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None,
+        'timestamp': timezone.now().timestamp(),  # Force cache refresh
+    }
+    
+    return render(request, 'workflow/detalleSolicitud_V2.html', context)

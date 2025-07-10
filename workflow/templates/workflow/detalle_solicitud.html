@@ -1,5 +1,6 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
+{% load workflow_filters %}
 
 {% block title %}Detalle de Solicitud {{ solicitud.codigo }} - Sistema de Workflow{% endblock %}
 
@@ -149,7 +150,7 @@
                                             <div class="d-flex align-items-center">
                                                 <i class="fas fa-file me-2 text-success"></i>
                                                 <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="text-decoration-none">
-                                                    {{ requisito_solicitud.archivo.name|split:"/"|last }}
+                                                    {{ requisito_solicitud.archivo.name|basename }}
                                                 </a>
                                                 <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
                                                         onclick="eliminarArchivo({{ requisito_solicitud.id }})">
@@ -270,7 +271,26 @@
                         <p class="mb-1"><strong>Código:</strong> {{ solicitud.codigo }}</p>
                         <p class="mb-1"><strong>Tipo:</strong> {{ solicitud.tipo_solicitud.nombre }}</p>
                         <p class="mb-1"><strong>Pipeline:</strong> {{ solicitud.pipeline.nombre }}</p>
-                        <p class="mb-1"><strong>Creada por:</strong> {{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</p>
+                        <div class="mb-3">
+                            <h6 class="fw-bold">Creada por:</h6>
+                            <div class="d-flex align-items-center">
+                                {% if solicitud.creada_por.userprofile.profile_picture %}
+                                    <img src="{{ solicitud.creada_por.userprofile.profile_picture.url }}" 
+                                         alt="{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}"
+                                         class="w-8 h-8 rounded-full object-cover me-2 border">
+                                {% else %}
+                                    <div class="w-8 h-8 bg-success bg-opacity-10 rounded-full flex items-center justify-center me-2">
+                                        <span class="text-success font-semibold">
+                                            {{ solicitud.creada_por.first_name|first|default:solicitud.creada_por.username|first|upper }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <p class="mb-0 fw-semibold">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</p>
+                                    <small class="text-muted">{{ solicitud.creada_por.email }}</small>
+                                </div>
+                            </div>
+                        </div>
                         <p class="mb-1"><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
                         <p class="mb-0"><strong>Última actualización:</strong> {{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</p>
                     </div>
@@ -279,9 +299,17 @@
                     <div class="mb-3">
                         <h6 class="fw-bold">Asignada a:</h6>
                         <div class="d-flex align-items-center">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
-                                <i class="fas fa-user text-primary"></i>
-                            </div>
+                            {% if solicitud.asignada_a.userprofile.profile_picture %}
+                                <img src="{{ solicitud.asignada_a.userprofile.profile_picture.url }}" 
+                                     alt="{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}"
+                                     class="w-8 h-8 rounded-full object-cover me-2 border">
+                            {% else %}
+                                <div class="w-8 h-8 bg-primary bg-opacity-10 rounded-full flex items-center justify-center me-2">
+                                    <span class="text-primary font-semibold">
+                                        {{ solicitud.asignada_a.first_name|first|default:solicitud.asignada_a.username|first|upper }}
+                                    </span>
+                                </div>
+                            {% endif %}
                             <div>
                                 <p class="mb-0 fw-semibold">{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}</p>
                                 <small class="text-muted">{{ solicitud.asignada_a.email }}</small>

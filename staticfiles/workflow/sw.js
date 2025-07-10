@@ -2,6 +2,9 @@ const CACHE_NAME = 'pacifico-workflow-v1.0.1';
 const STATIC_CACHE = 'pacifico-static-v1.0.1';
 const DYNAMIC_CACHE = 'pacifico-dynamic-v1.0.1';
 
+console.log('Service Worker script loaded successfully');
+console.log('Cache names:', { CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE });
+
 const urlsToCache = [
   '/workflow/',
   '/workflow/dashboard/',
@@ -71,8 +74,28 @@ self.addEventListener('activate', event => {
     }).then(() => {
       // Take control of all clients immediately
       return self.clients.claim();
+    }).then(() => {
+      // Notify clients that cache has been updated
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'CACHE_UPDATED',
+            message: 'Content cached and available offline'
+          });
+        });
+      });
     })
   );
+});
+
+// Message event - Handle messages from clients
+self.addEventListener('message', event => {
+  console.log('Service Worker received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    // Skip waiting and become active immediately
+    self.skipWaiting();
+  }
 });
 
 // Fetch event - Cache first for static assets, network first for dynamic content

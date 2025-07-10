@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud Asignada - Sistema de Workflow</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .status-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 12px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 120px;
+        }
+        .info-value {
+            color: #212529;
+            flex: 1;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                box-shadow: none;
+            }
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .info-label {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>✅ Tu Solicitud Ha Sido Asignada</h1>
+            <p>Sistema de Workflow - Financiera Pacífico</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <div class="status-badge">
+                <i class="fas fa-check-circle"></i> Asignada y en Proceso
+            </div>
+            
+            <h2>Hola {{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }},</h2>
+            
+            <p>Nos complace informarte que tu solicitud ha sido asignada a un usuario y está siendo procesada activamente en nuestro sistema.</p>
+            
+            <!-- Información de la solicitud -->
+            <div class="info-card">
+                <h3 style="margin-top: 0; color: #28a745;">
+                    <i class="fas fa-file-alt"></i> Detalles de la Solicitud
+                </h3>
+                
+                <div class="info-item">
+                    <div class="info-icon">📋</div>
+                    <div class="info-label">Código:</div>
+                    <div class="info-value"><strong>{{ solicitud.codigo }}</strong></div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">👤</div>
+                    <div class="info-label">Cliente:</div>
+                    <div class="info-value">{{ cliente_nombre|default:"Sin asignar" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">🔄</div>
+                    <div class="info-label">Pipeline:</div>
+                    <div class="info-value">{{ solicitud.pipeline.nombre }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">📍</div>
+                    <div class="info-label">Etapa Actual:</div>
+                    <div class="info-value">{{ solicitud.etapa_actual.nombre }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">👨‍💼</div>
+                    <div class="info-label">Asignada a:</div>
+                    <div class="info-value">
+                        <strong>{{ usuario_asignado.get_full_name|default:usuario_asignado.username }}</strong>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-icon">📅</div>
+                    <div class="info-label">Fecha de Asignación:</div>
+                    <div class="info-value">{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</div>
+                </div>
+            </div>
+            
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ solicitud_url }}" class="cta-button">
+                    <i class="fas fa-eye"></i> Ver Estado de Mi Solicitud
+                </a>
+            </div>
+            
+            <!-- Información adicional -->
+            <div style="background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #2e7d32;">
+                    <i class="fas fa-info-circle"></i> ¿Qué significa esto?
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #2e7d32;">
+                    <li>Tu solicitud está siendo procesada por un especialista</li>
+                    <li>Puedes hacer seguimiento del progreso en cualquier momento</li>
+                    <li>Recibirás notificaciones sobre cambios importantes</li>
+                    <li>El tiempo de procesamiento dependerá de la complejidad</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="logo">🏦 Financiera Pacífico</div>
+            <p><strong>Sistema de Workflow</strong></p>
+            <p>Este es un correo automático, por favor no responder a esta dirección.</p>
+            <p>Si tienes preguntas, contacta a tu supervisor o administrador del sistema.</p>
+            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 15px 0;">
+            <p style="font-size: 12px; color: #adb5bd;">
+                © 2024 Financiera Pacífico. Todos los derechos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

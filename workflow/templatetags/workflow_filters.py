@@ -1,9 +1,15 @@
+import os
 from django import template
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
 
 register = template.Library()
+
+@register.filter
+def basename(value):
+    """Returns the base name of a file path."""
+    return os.path.basename(value)
 
 @register.filter
 def get_etapa_count(solicitudes_por_etapa, etapa):
