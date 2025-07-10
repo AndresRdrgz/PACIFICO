@@ -102,4 +102,11 @@ urlpatterns += [
     path('api/requisitos-transicion/crear/', views_workflow.api_crear_requisito_transicion, name='api_crear_requisito_transicion'),
     path('api/requisitos-transicion/<int:requisito_transicion_id>/actualizar/', views_workflow.api_actualizar_requisito_transicion, name='api_actualizar_requisito_transicion'),
     path('api/requisitos-transicion/<int:requisito_transicion_id>/eliminar/', views_workflow.api_eliminar_requisito_transicion, name='api_eliminar_requisito_transicion'),
+    
+    # API para obtener transiciones válidas
+    path('api/solicitudes/<int:solicitud_id>/transiciones-validas/', views_workflow.api_obtener_transiciones_validas, name='api_obtener_transiciones_validas'),
+    
+    # APIs para modal de requisitos faltantes
+    path('api/solicitudes/<int:solicitud_id>/requisitos-faltantes-detallado/', views_workflow.api_obtener_requisitos_faltantes_detallado, name='api_obtener_requisitos_faltantes_detallado'),
+    path('api/solicitudes/<int:solicitud_id>/subir-requisito-modal/', views_workflow.api_subir_requisito_modal, name='api_subir_requisito_modal'),
 ]

@@ -188,6 +188,8 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'main_menu'
 LOGOUT_REDIRECT_URL = 'login'
 
+
+
 # Application definition
 CSRF_TRUSTED_ORIGINS = [
     'https://cotfid.fpacifico.com',
@@ -220,6 +222,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "workflow.middleware.APIResponseMiddleware",  # Ensure API endpoints return JSON
     # Middleware personalizado para redirección de usuarios con rol "Usuario"
     "capacitaciones_app.middleware.user_redirect.UserRoleRedirectMiddleware",
     "workflow.middleware.PWAMiddleware",  # PWA-specific headers

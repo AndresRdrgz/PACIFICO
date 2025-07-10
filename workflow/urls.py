@@ -76,4 +76,7 @@ urlpatterns = [
     
     # Test temporal - eliminar después
     path('test-correo-bandeja/', views_workflow.test_envio_correo_bandeja, name='test_envio_correo_bandeja'),
+    
+    # Debug URLs
+    path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
 ]

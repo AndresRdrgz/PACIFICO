@@ -1244,6 +1244,108 @@ $(document).ready(function() {
         }
     });
     
+    // Función para cargar transiciones válidas y actualizar dropdown
+    function cargarTransicionesValidas(solicitudId, $select) {
+        console.log('🔍 DEBUG: cargarTransicionesValidas llamado con solicitudId:', solicitudId);
+        console.log('🔍 DEBUG: URL a llamar:', `/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
+        .then(response => {
+            console.log('🔍 DEBUG cargarTransicionesValidas: Response status:', response.status);
+            console.log('🔍 DEBUG cargarTransicionesValidas: Response ok:', response.ok);
+            console.log('🔍 DEBUG cargarTransicionesValidas: Content-Type:', response.headers.get('content-type'));
+            
+            // Verificar si la respuesta es exitosa
+            if (!response.ok) {
+                console.error('❌ ERROR cargarTransicionesValidas: Response not ok, status:', response.status);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // Verificar si el contenido es JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('❌ ERROR cargarTransicionesValidas: Content-Type no es JSON:', contentType);
+                throw new Error('La respuesta no es JSON válido');
+            }
+            console.log('✅ DEBUG cargarTransicionesValidas: Content-Type es JSON, procediendo a parsear');
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔍 DEBUG cargarTransicionesValidas: Data recibida:', data);
+            if (data.success) {
+                // Guardar la opción actualmente seleccionada
+                var etapaActual = $select.data('etapa-actual');
+                var opcionSeleccionada = $select.val();
+                
+                // Limpiar el select
+                $select.empty();
+                
+                // Agregar opción por defecto
+                $select.append('<option value="">Sin etapa</option>');
+                
+                // Agregar solo las etapas válidas según las transiciones
+                data.transiciones.forEach(function(transicion) {
+                    var warningClass = !transicion.puede_realizar ? 'text-warning' : '';
+                    var requisitosInfo = transicion.total_requisitos_faltantes > 0 ? 
+                        ` (${transicion.total_requisitos_faltantes} requisitos faltantes)` : '';
+                    
+                    $select.append(`<option value="${transicion.etapa_destino.id}" 
+                                            class="${warningClass}"
+                                            data-puede-realizar="${transicion.puede_realizar}"
+                                            data-requisitos-faltantes="${transicion.total_requisitos_faltantes}">
+                        ${transicion.etapa_destino.nombre}${requisitosInfo}
+                    </option>`);
+                });
+                
+                // Restaurar selección si es válida
+                if (opcionSeleccionada && $select.find(`option[value="${opcionSeleccionada}"]`).length > 0) {
+                    $select.val(opcionSeleccionada);
+                } else {
+                    $select.val(etapaActual || '');
+                }
+                
+                // Actualizar data attribute
+                $select.data('etapa-actual', etapaActual);
+                
+                console.log('✅ Transiciones válidas cargadas:', data.transiciones);
+            } else {
+                console.error('❌ Error al cargar transiciones válidas:', data.error);
+                // Mostrar notificación de error
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Error al cargar transiciones: ' + (data.error || 'Error desconocido'));
+                } else {
+                    mostrarNotificacionError('Error al cargar transiciones: ' + (data.error || 'Error desconocido'));
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en la petición de transiciones válidas:', error);
+            // Mostrar notificación de error más específica
+            let mensajeError = 'Error al cargar transiciones válidas';
+            if (error.message.includes('404')) {
+                mensajeError = 'No se encontró la solicitud o no tienes permisos';
+            } else if (error.message.includes('403')) {
+                mensajeError = 'No tienes permisos para ver esta solicitud';
+            } else if (error.message.includes('500')) {
+                mensajeError = 'Error interno del servidor';
+            } else if (error.message.includes('JSON')) {
+                mensajeError = 'Error en el formato de respuesta del servidor';
+            }
+            
+            if (typeof toastr !== 'undefined') {
+                toastr.error(mensajeError);
+            } else {
+                mostrarNotificacionError(mensajeError);
+            }
+        });
+    }
+    
+    // Cargar transiciones válidas cuando se hace focus en el select
+    $(document).on('focus', '.etapa-select', function() {
+        var $select = $(this);
+        var solicitudId = $select.data('solicitud-id');
+        cargarTransicionesValidas(solicitudId, $select);
+    });
+    
     // Manejar cambio de etapa con modal personalizado
     $(document).on('change', '.etapa-select', function() {
         var $select = $(this);
@@ -1258,71 +1360,35 @@ $(document).ready(function() {
         console.log('- Nueva Etapa ID:', nuevaEtapaId);
         console.log('- Nombre Etapa:', nombreEtapa);
         
-        if (nuevaEtapaId === etapaActual.toString()) {
-            console.log('❌ No hay cambio de etapa - valores iguales');
+        if (nuevaEtapaId === etapaActual.toString() || !nuevaEtapaId) {
+            console.log('❌ No hay cambio de etapa - valores iguales o sin selección');
             return; // No hay cambio
+        }
+        
+        // Verificar si hay requisitos faltantes
+        var $opcionSeleccionada = $select.find('option:selected');
+        var puedeRealizar = $opcionSeleccionada.data('puede-realizar');
+        var requisitosFaltantes = $opcionSeleccionada.data('requisitos-faltantes');
+        
+        if (puedeRealizar === false || requisitosFaltantes > 0) {
+            console.log('🔍 Requisitos faltantes detectados, mostrando modal');
+            window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nombreEtapa, function() {
+                // Callback de éxito - proceder con el cambio
+                console.log('✅ Requisitos completados, procediendo con cambio de etapa');
+                window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
+            }, function() {
+                // Callback de cancelación
+                console.log('❌ Cambio de etapa cancelado');
+                $select.val(etapaActual); // Revertir selección
+            });
+            return;
         }
         
         // Mostrar modal de confirmación personalizado
         mostrarModalConfirmacion(nombreEtapa, function() {
             // CALLBACK DE CONFIRMACIÓN
             console.log('✅ Confirmado desde modal personalizado, ejecutando cambio de etapa');
-            
-            // Deshabilitar select mientras se procesa
-            $select.prop('disabled', true);
-            
-            // Realizar petición AJAX
-            fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                },
-                body: JSON.stringify({
-                    etapa_id: nuevaEtapaId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Respuesta del servidor:', data);
-                if (data.success) {
-                    // Actualizar data attribute
-                    $select.data('etapa-actual', nuevaEtapaId);
-                    
-                    // Mostrar mensaje de éxito con toastr si está disponible
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(data.mensaje || 'Etapa cambiada exitosamente');
-                    } else {
-                        // Usar notificación personalizada en lugar de alert
-                        mostrarNotificacionExito(data.mensaje || 'Etapa cambiada exitosamente');
-                    }
-                    
-                    // Recargar página
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error('Error: ' + data.error);
-                    } else {
-                        mostrarNotificacionError('Error: ' + data.error);
-                    }
-                    $select.val(etapaActual); // Revertir selección
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('Error al cambiar etapa');
-                } else {
-                    mostrarNotificacionError('Error al cambiar etapa');
-                }
-                $select.val(etapaActual); // Revertir selección
-            })
-            .finally(() => {
-                $select.prop('disabled', false);
-            });
-            
+            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
         }, function() {
             // CALLBACK DE CANCELACIÓN
             console.log('❌ Cancelado desde modal personalizado');
@@ -1645,6 +1711,18 @@ $(document).ready(function() {
 .kanban-card {
     cursor: grab;
     transition: all 0.3s ease;
+}
+
+/* Estilos para zonas de drop válidas e inválidas */
+.kanban-column-body.drop-zone-valid {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    border: 2px dashed #198754 !important;
+}
+
+.kanban-column-body.drop-zone-invalid {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    border: 2px dashed #dc3545 !important;
+    cursor: not-allowed;
 }
 
 .kanban-card:hover {
@@ -4084,11 +4162,32 @@ document.addEventListener('DOMContentLoaded', function() {
         // Configurar eventos de drop para las columnas
         $('.kanban-column-body').on('dragover', function(e) {
             e.preventDefault();
-            $(this).addClass('drop-zone-hover');
+            
+            // Obtener información de la tarjeta que se está arrastrando
+            var dragData = null;
+            try {
+                dragData = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
+            } catch (e) {
+                // Si no hay datos, permitir hover normal
+                $(this).addClass('drop-zone-hover');
+                return;
+            }
+            
+            var solicitudId = dragData.solicitudId;
+            var nuevaEtapaId = $(this).attr('data-etapa-id');
+            
+            // Validar si esta es una zona de drop válida
+            validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje) {
+                if (esValida) {
+                    $(this).addClass('drop-zone-hover drop-zone-valid');
+                } else {
+                    $(this).addClass('drop-zone-hover drop-zone-invalid');
+                }
+            }.bind(this));
         });
         
         $('.kanban-column-body').on('dragleave', function(e) {
-            $(this).removeClass('drop-zone-hover');
+            $(this).removeClass('drop-zone-hover drop-zone-valid drop-zone-invalid');
         });
         
         $('.kanban-column-body').on('drop', function(e) {
@@ -4112,89 +4211,113 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Obtener nombre de la nueva etapa
-                var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
-                nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
-                
-                // Confirmar movimiento con modal personalizado
-                mostrarModalConfirmacion(nuevaEtapaNombre, function() {
-                    // Función que se ejecuta al confirmar - AJAX directo para Drag & Drop
-                    console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
-                    
-                    // Realizar petición AJAX para cambiar etapa
-                    $.ajax({
-                        url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-                        type: 'POST',
-                        headers: {
-                            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                        },
-                        data: JSON.stringify({
-                            etapa_id: nuevaEtapaId
-                        }),
-                        contentType: 'application/json',
-                        success: function(response) {
-                            console.log('✅ DRAG & DROP: Respuesta exitosa del servidor', response);
-                            if (response.success) {
-                                // Mostrar toast de éxito con configuración específica
-                                if (typeof toastr !== 'undefined') {
-                                    toastr.success(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`, 'Movimiento Completado', {
-                                        positionClass: 'toast-top-right',
-                                        timeOut: 3000,
-                                        showMethod: 'fadeIn',
-                                        hideMethod: 'fadeOut',
-                                        iconClass: 'toast-success-custom'
-                                    });
-                                } else {
-                                    mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`);
-                                }
-                                
-                                console.log('🔄 DRAG & DROP: Actualizando kanban sin recargar página completa...');
-                                
-                                // Actualizar la vista kanban dinámicamente sin recargar
-                                actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
-                                
-                            } else {
-                                console.error('❌ DRAG & DROP: Error en respuesta', response.error);
-                                
-                                // Mostrar toast de error
-                                if (typeof toastr !== 'undefined') {
-                                    toastr.error(response.error || 'No se pudo cambiar la etapa', 'Error en Movimiento', {
-                                        positionClass: 'toast-top-right',
-                                        timeOut: 5000
-                                    });
-                                } else {
-                                    mostrarNotificacionError(response.error || 'No se pudo cambiar la etapa');
-                                }
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('❌ DRAG & DROP: Error AJAX', {
-                                status: status,
-                                error: error,
-                                response: xhr.responseText,
-                                solicitudId: solicitudId,
-                                nuevaEtapaId: nuevaEtapaId
+                // NUEVO: Validar transición antes de permitir el drop
+                validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje, requisitosFaltantes) {
+                    if (!esValida) {
+                        // Mostrar error y cancelar movimiento
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(mensaje, 'Transición No Válida', {
+                                positionClass: 'toast-top-right',
+                                timeOut: 5000
                             });
-                            
-                            var errorMsg = 'Error al cambiar etapa';
-                            try {
-                                var response = JSON.parse(xhr.responseText);
-                                errorMsg = response.error || errorMsg;
-                            } catch(e) {
-                                errorMsg = 'Error de conexión con el servidor';
-                            }
-                            
-                            // Mostrar toast de error con más detalles
-                            if (typeof toastr !== 'undefined') {
-                                toastr.error(errorMsg, 'Error de Conexión', {
-                                    positionClass: 'toast-top-right',
-                                    timeOut: 6000,
-                                    extendedTimeOut: 2000
-                                });
-                            } else {
-                                mostrarNotificacionError(errorMsg);
-                            }
+                        } else {
+                            mostrarNotificacionError(mensaje);
                         }
+                        return;
+                    }
+                    
+                    // Obtener nombre de la nueva etapa
+                    var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
+                    nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
+                    
+                    // Confirmar movimiento con modal personalizado
+                    mostrarModalConfirmacion(nuevaEtapaNombre, function() {
+                        // Función que se ejecuta al confirmar - AJAX directo para Drag & Drop
+                        console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
+                        
+                        // Realizar petición AJAX para cambiar etapa
+                        $.ajax({
+                            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
+                            type: 'POST',
+                            headers: {
+                                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                            },
+                            data: JSON.stringify({
+                                etapa_id: nuevaEtapaId
+                            }),
+                            contentType: 'application/json',
+                            success: function(response) {
+                                console.log('✅ DRAG & DROP: Respuesta exitosa del servidor', response);
+                                if (response.success) {
+                                    // Mostrar toast de éxito con configuración específica
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.success(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`, 'Movimiento Completado', {
+                                            positionClass: 'toast-top-right',
+                                            timeOut: 3000,
+                                            showMethod: 'fadeIn',
+                                            hideMethod: 'fadeOut',
+                                            iconClass: 'toast-success-custom'
+                                        });
+                                    } else {
+                                        mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`);
+                                    }
+                                    
+                                    console.log('🔄 DRAG & DROP: Actualizando kanban sin recargar página completa...');
+                                    
+                                    // Actualizar la vista kanban dinámicamente sin recargar
+                                    actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
+                                    
+                                } else {
+                                    console.error('❌ DRAG & DROP: Error en respuesta', response.error);
+                                    
+                                    // Manejar errores específicos
+                                    var errorMsg = response.error;
+                                    if (response.tipo_error === 'transicion_invalida') {
+                                        errorMsg = 'Transición no válida: ' + response.mensaje;
+                                    } else if (response.tipo_error === 'requisitos_faltantes') {
+                                        errorMsg = 'Requisitos faltantes: ' + response.mensaje;
+                                    }
+                                    
+                                    // Mostrar toast de error
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(errorMsg, 'Error en Movimiento', {
+                                            positionClass: 'toast-top-right',
+                                            timeOut: 5000
+                                        });
+                                    } else {
+                                        mostrarNotificacionError(errorMsg);
+                                    }
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error('❌ DRAG & DROP: Error AJAX', {
+                                    status: status,
+                                    error: error,
+                                    response: xhr.responseText,
+                                    solicitudId: solicitudId,
+                                    nuevaEtapaId: nuevaEtapaId
+                                });
+                                
+                                var errorMsg = 'Error al cambiar etapa';
+                                try {
+                                    var response = JSON.parse(xhr.responseText);
+                                    errorMsg = response.error || errorMsg;
+                                } catch(e) {
+                                    errorMsg = 'Error de conexión con el servidor';
+                                }
+                                
+                                // Mostrar toast de error con más detalles
+                                if (typeof toastr !== 'undefined') {
+                                    toastr.error(errorMsg, 'Error de Conexión', {
+                                        positionClass: 'toast-top-right',
+                                        timeOut: 6000,
+                                        extendedTimeOut: 2000
+                                    });
+                                } else {
+                                    mostrarNotificacionError(errorMsg);
+                                }
+                            }
+                        });
                     });
                 });
                 return;
@@ -4202,6 +4325,60 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error al procesar drop:', error);
             }
+        });
+    }
+    
+    // Función para validar transiciones en Kanban
+    function validarTransicionKanban(solicitudId, nuevaEtapaId, callback) {
+        console.log('🔍 Validando transición Kanban:', solicitudId, nuevaEtapaId);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
+        .then(response => {
+            // Verificar si la respuesta es exitosa
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // Verificar si el contenido es JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('La respuesta no es JSON válido');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Buscar si la transición es válida
+                var transicionValida = data.transiciones.find(function(t) {
+                    return t.etapa_destino.id == nuevaEtapaId;
+                });
+                
+                if (transicionValida) {
+                    if (transicionValida.puede_realizar) {
+                        callback(true, 'Transición válida', []);
+                    } else {
+                        var mensaje = `No puedes mover a "${transicionValida.etapa_destino.nombre}" porque faltan ${transicionValida.total_requisitos_faltantes} requisito(s) obligatorio(s)`;
+                        callback(false, mensaje, transicionValida.requisitos_faltantes);
+                    }
+                } else {
+                    callback(false, 'No existe una transición válida hacia esta etapa', []);
+                }
+            } else {
+                callback(false, 'Error al validar transición: ' + (data.error || 'Error desconocido'), []);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error validando transición Kanban:', error);
+            let mensajeError = 'Error de conexión al validar transición';
+            if (error.message.includes('404')) {
+                mensajeError = 'No se encontró la solicitud';
+            } else if (error.message.includes('403')) {
+                mensajeError = 'No tienes permisos para esta solicitud';
+            } else if (error.message.includes('500')) {
+                mensajeError = 'Error interno del servidor';
+            } else if (error.message.includes('JSON')) {
+                mensajeError = 'Error en el formato de respuesta';
+            }
+            callback(false, mensajeError, []);
         });
     }
     
@@ -4424,182 +4601,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
          // 🚀 SISTEMA DE POLLING PARA TABLA/KANBAN
-     let lastUpdateCheckTabla = new Date().toISOString();
-     let isPollingActiveTabla = true;
-     
-     function iniciarPollingTablaKanban() {
-         console.log('🔄 Iniciando polling para tabla/kanban cada 30 segundos');
-         
-         setInterval(function() {
-             if (isPollingActiveTabla && !document.hidden) {
-                 verificarActualizacionesTablaKanban();
-             }
-         }, 30000); // 30 segundos
-     }
-     
-     function verificarActualizacionesTablaKanban() {
-         const currentView = $('.workflow-table').length > 0 ? 'tabla' : 'kanban';
-         
-         fetch(`/workflow/api/check-updates/?last_check=${lastUpdateCheckTabla}&view=${currentView}`, {
-             method: 'GET',
-             headers: {
-                 'Content-Type': 'application/json',
-                 'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-             }
-         })
-         .then(response => response.json())
-         .then(data => {
-             if (data.success && data.has_updates) {
-                 console.log('📡 Cambios detectados en tabla/kanban:', data.cambios_detectados);
-                 
-                 // Actualizar vista suavemente SIN recargar página
-                 if (data.total_cambios > 0) {
-                     // Mostrar notificación discreta
-                     mostrarNotificacionTablaKanban(data.total_cambios);
-                     
-                     // Actualizar contenido específico según la vista
-                     setTimeout(() => {
-                         actualizarContenidoSinRecargar(data);
-                     }, 1000);
-                 }
-                 
-                 lastUpdateCheckTabla = data.timestamp;
-             }
-         })
-         .catch(error => {
-             console.error('❌ Error en polling tabla/kanban:', error);
-         });
-     }
-     
-     function mostrarNotificacionTablaKanban(totalCambios) {
-         // Crear notificación discreta
-         const $notification = $(`
-             <div style="
-                 position: fixed;
-                 top: 20px;
-                 right: 20px;
-                 background: #28a745;
-                 color: white;
-                 padding: 8px 12px;
-                 border-radius: 4px;
-                 font-size: 0.8rem;
-                 z-index: 9999;
-                 opacity: 0;
-                 transition: opacity 0.3s ease;
-                 box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-             ">
-                 <i class="fas fa-sync-alt me-1"></i>${totalCambios} actualización(es) - Actualizando...
-             </div>
-         `);
-         
-         $('body').append($notification);
-         
-         // Animar entrada
-         setTimeout(() => $notification.css('opacity', '1'), 100);
-         
-         // Remover después
-         setTimeout(() => {
-             $notification.css('opacity', '0');
-             setTimeout(() => $notification.remove(), 300);
-         }, 1800);
-     }
-     
-     function actualizarContenidoSinRecargar(data) {
-         console.log('🔄 Actualizando contenido sin recargar página');
-         
-         // Detectar qué vista está activa
-         const esTabla = $('.workflow-table').length > 0;
-         const esKanban = $('.kanban-column').length > 0;
-         
-         if (esTabla) {
-             console.log('📊 Actualizando vista tabla');
-             actualizarVistaTabla(data);
-         }
-         
-         if (esKanban) {
-             console.log('📋 Actualizando vista kanban');
-             actualizarVistaKanban(data);
-         }
-     }
-     
-     function actualizarVistaTabla(data) {
-         // Para tabla, necesitamos recargar los datos específicos
-         // Por ahora, hacer una actualización suave de la tabla
-         const $tabla = $('.workflow-table tbody');
-         if ($tabla.length > 0) {
-             $tabla.css('opacity', '0.7');
-             
-             // Simular actualización - en producción aquí iría una llamada AJAX
-             // para obtener solo las filas actualizadas
-             setTimeout(() => {
-                 $tabla.css('opacity', '1');
-                 console.log('✅ Tabla actualizada');
-             }, 500);
-         }
-     }
-     
-     function actualizarVistaKanban(data) {
-         // Para kanban, actualizar contadores y verificar cambios
-         if (typeof actualizarContadoresKanban === 'function') {
-             actualizarContadoresKanban();
-         }
-         
-         // Efecto visual para indicar actualización
-         $('.kanban-column').each(function() {
-             const $column = $(this);
-             $column.css('opacity', '0.9');
-             setTimeout(() => {
-                 $column.css('opacity', '1');
-             }, 300);
-         });
-         
-         console.log('✅ Kanban actualizado');
-     }
-     
-     // Pausar polling cuando no está activo
-     document.addEventListener('visibilitychange', function() {
-         isPollingActiveTabla = !document.hidden;
-     });
-     
-     // Iniciar polling
-     iniciarPollingTablaKanban();
-     
-     // Escuchar cambios de otras pestañas/vistas
-     if ('BroadcastChannel' in window) {
-         window.workflowChannel = new BroadcastChannel('workflow-sync');
-         
-         window.workflowChannel.addEventListener('message', function(event) {
-             const message = event.data;
-             
-             if (message.type === 'sync_solicitud' && message.source !== 'tabla-kanban') {
-                 console.log('Sincronizando desde otra vista:', message.source);
-                 
-                 const notification = message.notification;
-                 const data = notification.data;
-                 
-                 if (notification.type === 'solicitud_cambio_etapa') {
-                     // Actualizar tabla si existe
-                     const $filaTabla = $(`.workflow-table tbody tr[data-solicitud-id="${data.solicitud_id}"]`);
-                     if ($filaTabla.length > 0) {
-                         // Recargar la fila de la tabla o toda la tabla
-                         location.reload();
-                     }
-                     
-                     // Actualizar kanban si existe
-                     const $cardKanban = $(`.kanban-card[data-solicitud-id="${data.solicitud_id}"]`);
-                     if ($cardKanban.length > 0) {
-                         // Mover tarjeta a nueva columna
-                         const $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${data.etapa_actual.id}"]`);
-                         if ($nuevaColumna.length > 0) {
-                             $cardKanban.attr('data-etapa-id', data.etapa_actual.id);
-                             $cardKanban.appendTo($nuevaColumna);
-                             actualizarContadoresKanban();
-                         }
-                     }
-                 }
-             }
-         });
-     }
+     // [REMOVED: Polling and timer system for tabla/kanban updates]
+     // ... existing code ...
 });
 </script>
 
@@ -5617,7 +5620,407 @@ window.clearCliente = function() {
         clientePlaceholder.style.display = 'block';
     }
 };
+
+// Función para cerrar el modal de requisitos
+window.cerrarModalRequisitos = function() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+// Función para mostrar modal de requisitos faltantes (global)
+window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
+    console.log('🔍 Mostrando modal de requisitos faltantes');
+    
+    // Actualizar título del modal
+    document.getElementById('etapaDestinoNombre').textContent = nombreEtapa;
+    
+    // Cargar requisitos faltantes
+    fetch(`/workflow/api/solicitudes/${solicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${nuevaEtapaId}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📋 Requisitos faltantes recibidos:', data);
+        
+        if (data.success) {
+            // Llenar la lista de requisitos faltantes
+            window.llenarListaRequisitosFaltantes(data.requisitos_faltantes);
+            
+            // Mostrar/ocultar botón de continuar sin requisitos
+            const btnContinuarSinRequisitos = document.getElementById('btnContinuarSinRequisitos');
+            if (data.puede_continuar_sin_requisitos) {
+                btnContinuarSinRequisitos.style.display = 'inline-block';
+            } else {
+                btnContinuarSinRequisitos.style.display = 'none';
+            }
+            
+            // Configurar event listeners del modal
+            window.configurarEventListenersModal(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion);
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalRequisitosFaltantes'));
+            modal.show();
+        } else {
+            console.error('❌ Error al cargar requisitos faltantes:', data.error);
+            alert('Error al cargar requisitos faltantes: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error en petición de requisitos faltantes:', error);
+        alert('Error al cargar requisitos faltantes');
+    });
+}
+
+// Función para llenar la lista de requisitos faltantes en el modal
+window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
+    const listaContainer = document.getElementById('listaRequisitosFaltantes');
+    listaContainer.innerHTML = '';
+    
+    if (requisitosFaltantes.length === 0) {
+        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
+        return;
+    }
+    
+    requisitosFaltantes.forEach(requisito => {
+        const requisitoHtml = `
+            <div class="card mb-3 requisito-card" data-requisito-id="${requisito.id}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="card-title text-danger mb-1">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${requisito.nombre}
+                            </h6>
+                            ${requisito.descripcion ? `<p class="text-muted small mb-2">${requisito.descripcion}</p>` : ''}
+                            ${requisito.mensaje_personalizado ? `<p class="text-info small mb-2"><i class="fas fa-info-circle me-1"></i>${requisito.mensaje_personalizado}</p>` : ''}
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-danger">Faltante</span>
+                        </div>
+                    </div>
+                    
+                    ${requisito.archivo_actual ? `
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-file me-2"></i>
+                            Archivo actual: <a href="${requisito.archivo_actual.url}" target="_blank">${requisito.archivo_actual.nombre}</a>
+                            <br><small>Puedes reemplazarlo subiendo un nuevo archivo</small>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="upload-section">
+                        <div class="mb-3">
+                            <label class="form-label">Subir archivo <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control requisito-file-input" 
+                                   data-requisito-id="${requisito.id}" 
+                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control requisito-observaciones" 
+                                      data-requisito-id="${requisito.id}" 
+                                      rows="2" 
+                                      placeholder="Observaciones adicionales (opcional)">${requisito.observaciones}</textarea>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="button" class="btn btn-sm btn-success btn-subir-requisito" 
+                                    data-requisito-id="${requisito.id}" disabled>
+                                <i class="fas fa-upload me-1"></i>Subir
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="success-section" style="display: none;">
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Requisito subido exitosamente
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        listaContainer.insertAdjacentHTML('beforeend', requisitoHtml);
+    });
+    
+    // Configurar event listeners para los inputs de archivo
+    window.configurarEventListenersArchivos();
+}
+
+// Función para configurar event listeners de archivos
+window.configurarEventListenersArchivos = function() {
+    // Habilitar botón de subir cuando se selecciona un archivo
+    document.querySelectorAll('.requisito-file-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const requisitoId = this.dataset.requisitoId;
+            const btnSubir = document.querySelector(`.btn-subir-requisito[data-requisito-id="${requisitoId}"]`);
+            btnSubir.disabled = !this.files.length;
+        });
+    });
+    
+    // Manejar subida de archivos
+    document.querySelectorAll('.btn-subir-requisito').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const requisitoId = this.dataset.requisitoId;
+            window.subirRequisitoModal(requisitoId);
+        });
+    });
+}
+
+// Función para subir requisito desde el modal
+window.subirRequisitoModal = function(requisitoId) {
+    const fileInput = document.querySelector(`.requisito-file-input[data-requisito-id="${requisitoId}"]`);
+    const observacionesInput = document.querySelector(`.requisito-observaciones[data-requisito-id="${requisitoId}"]`);
+    const btnSubir = document.querySelector(`.btn-subir-requisito[data-requisito-id="${requisitoId}"]`);
+    const requisitoCard = document.querySelector(`.requisito-card[data-requisito-id="${requisitoId}"]`);
+    
+    if (!fileInput.files.length) {
+        alert('Por favor selecciona un archivo');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('requisito_id', requisitoId);
+    formData.append('archivo', fileInput.files[0]);
+    formData.append('observaciones', observacionesInput.value);
+    
+    // Mostrar estado de carga
+    const originalText = btnSubir.innerHTML;
+    btnSubir.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Subiendo...';
+    btnSubir.disabled = true;
+    
+    // Obtener solicitud ID del modal (se puede pasar como parámetro global)
+    const solicitudId = window.currentSolicitudId;
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/subir-requisito-modal/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Ocultar sección de upload y mostrar éxito
+            const uploadSection = requisitoCard.querySelector('.upload-section');
+            const successSection = requisitoCard.querySelector('.success-section');
+            
+            uploadSection.style.display = 'none';
+            successSection.style.display = 'block';
+            
+            // Actualizar badge
+            const badge = requisitoCard.querySelector('.badge');
+            badge.className = 'badge bg-success';
+            badge.textContent = 'Completo';
+            
+            // Mostrar mensaje de éxito
+            if (typeof toastr !== 'undefined') {
+                toastr.success(data.mensaje);
+            }
+            
+            // Verificar si todos los requisitos están completos
+            window.verificarTodosRequisitosCompletos();
+            
+        } else {
+            alert('Error al subir requisito: ' + data.error);
+            btnSubir.innerHTML = originalText;
+            btnSubir.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al subir requisito');
+        btnSubir.innerHTML = originalText;
+        btnSubir.disabled = false;
+    });
+}
+
+// Función para verificar si todos los requisitos están completos
+window.verificarTodosRequisitosCompletos = function() {
+    const totalRequisitos = document.querySelectorAll('.requisito-card').length;
+    const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
+    
+    const btnValidar = document.getElementById('btnValidarYContinuar');
+    if (totalRequisitos === requisitosCompletos) {
+        btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
+        btnValidar.className = 'btn btn-success';
+    } else {
+        btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+        btnValidar.className = 'btn btn-primary';
+    }
+}
+
+// Función para configurar event listeners del modal
+window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion) {
+    // Guardar para uso global
+    window.currentSolicitudId = solicitudId;
+    window.currentNuevaEtapaId = nuevaEtapaId;
+    
+    // Botón de validar y continuar
+    const btnValidar = document.getElementById('btnValidarYContinuar');
+    btnValidar.onclick = function() {
+        // Verificar requisitos nuevamente
+        const totalRequisitos = document.querySelectorAll('.requisito-card').length;
+        const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
+        
+        if (totalRequisitos === requisitosCompletos) {
+            // Todos completos, proceder
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
+            modal.hide();
+            callbackExito();
+        } else {
+            // Aún faltan requisitos
+            if (typeof toastr !== 'undefined') {
+                toastr.warning(`Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`);
+            } else {
+                alert(`Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`);
+            }
+        }
+    };
+    
+    // Botón de continuar sin requisitos (solo para superusuarios)
+    const btnContinuarSinRequisitos = document.getElementById('btnContinuarSinRequisitos');
+    btnContinuarSinRequisitos.onclick = function() {
+        if (confirm('¿Estás seguro de que quieres continuar sin completar todos los requisitos?')) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
+            modal.hide();
+            callbackExito();
+        }
+    };
+    
+    // Configurar evento de cierre del modal
+    const modal = document.getElementById('modalRequisitosFaltantes');
+    modal.addEventListener('hidden.bs.modal', function() {
+        if (callbackCancelacion) {
+            callbackCancelacion();
+        }
+    });
+}
+
+// Función para ejecutar el cambio de etapa (extraída del código original)
+window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select) {
+    // Deshabilitar select mientras se procesa
+    $select.prop('disabled', true);
+    
+    // Realizar petición AJAX
+    fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        body: JSON.stringify({
+            etapa_id: nuevaEtapaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Respuesta del servidor:', data);
+        if (data.success) {
+            // Actualizar data attribute
+            $select.data('etapa-actual', nuevaEtapaId);
+            
+            // Mostrar mensaje de éxito con toastr si está disponible
+            if (typeof toastr !== 'undefined') {
+                toastr.success(data.mensaje || 'Etapa cambiada exitosamente');
+            } else {
+                // Usar notificación personalizada en lugar de alert
+                mostrarNotificacionExito(data.mensaje || 'Etapa cambiada exitosamente');
+            }
+            
+            // Recargar página
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+        } else {
+            // Manejar errores específicos
+            if (data.tipo_error === 'transicion_invalida') {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Transición no válida: ' + data.mensaje);
+                } else {
+                    mostrarNotificacionError('Transición no válida: ' + data.mensaje);
+                }
+            } else if (data.tipo_error === 'requisitos_faltantes') {
+                if (typeof toastr !== 'undefined') {
+                    toastr.warning('Requisitos faltantes: ' + data.mensaje);
+                } else {
+                    mostrarNotificacionError('Requisitos faltantes: ' + data.mensaje);
+                }
+            } else {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('Error: ' + data.error);
+                } else {
+                    mostrarNotificacionError('Error: ' + data.error);
+                }
+            }
+            $select.val(etapaActual); // Revertir selección
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (typeof toastr !== 'undefined') {
+            toastr.error('Error al cambiar etapa');
+        } else {
+            mostrarNotificacionError('Error al cambiar etapa');
+        }
+        $select.val(etapaActual); // Revertir selección
+    })
+    .finally(() => {
+        $select.prop('disabled', false);
+    });
+}
+
 })(); // Close IIFE
 </script>
+
+<!-- Modal para Requisitos Faltantes -->
+<div class="modal fade" id="modalRequisitosFaltantes" tabindex="-1" aria-labelledby="modalRequisitosFaltantesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalRequisitosFaltantesLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Requisitos Faltantes para Transición
+                </h5>
+                <button type="button" class="btn-close" onclick="cerrarModalRequisitos()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Para continuar a <strong id="etapaDestinoNombre"></strong>, necesitas completar los siguientes requisitos obligatorios:
+                </div>
+                
+                <!-- Lista de requisitos faltantes -->
+                <div id="listaRequisitosFaltantes">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-between mt-4">
+                    <div>
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModalRequisitos()">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-success" id="btnContinuarSinRequisitos" style="display: none;">
+                            <i class="fas fa-arrow-right me-2"></i>Continuar de Todas Formas
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btnValidarYContinuar">
+                            <i class="fas fa-check me-2"></i>Validar y Continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %} 

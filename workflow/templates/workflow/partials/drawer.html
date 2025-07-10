@@ -579,6 +579,33 @@
 .toast-notification.show {
     transform: translateX(0);
 }
+
+/* Session Warning Banner */
+.session-warning-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #ffc107;
+    color: #212529;
+    padding: 10px 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.session-warning-content {
+    display: flex;
+    align-items: center;
+}
+
+.session-warning-content .btn {
+    padding: 4px 10px;
+    font-size: 0.875rem;
+}
+
 </style>
 
 <script>
@@ -586,6 +613,11 @@
 window.openSolicitudDrawer = function(pipelineId = null) {
     document.getElementById('solicitudDrawer').classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    // Trigger session check when drawer opens
+    setTimeout(() => {
+        checkDrawerSession();
+    }, 1000);
     
     // If pipelineId is provided, lock the pipeline selection
     if (pipelineId) {
@@ -707,29 +739,143 @@ window.setupSearch = function() {
 }
 
 function searchCotizaciones(query) {
-    fetch(`/workflow/api/buscar-cotizaciones-drawer/?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showSearchResults('cotizacion', data.cotizaciones);
+    fetch(`/workflow/api/buscar-cotizaciones-drawer/?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // Check if response is successful
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Authentication required');
             }
-        })
-        .catch(error => {
-            console.error('Error searching cotizaciones:', error);
-        });
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON - possible session timeout');
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showSearchResults('cotizacion', data.cotizaciones);
+        } else {
+            console.error('API error:', data.error);
+            showSearchResults('cotizacion', []);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error searching cotizaciones:', error);
+        
+        // Handle authentication errors
+        if (error.message.includes('Authentication required') || 
+            error.message.includes('session timeout') ||
+            error.message.includes('not JSON')) {
+            
+            // Show user-friendly message
+            const resultsContainer = document.getElementById('cotizacionResults');
+            resultsContainer.innerHTML = `
+                <div class="search-result-item" style="color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Sesión expirada. Por favor, recarga la página.
+                </div>
+            `;
+            resultsContainer.classList.add('show');
+            
+            // Optionally redirect to login after a delay
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 3000);
+        } else {
+            // Show generic error
+            const resultsContainer = document.getElementById('cotizacionResults');
+            resultsContainer.innerHTML = `
+                <div class="search-result-item" style="color: #6c757d;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Error al buscar. Intenta de nuevo.
+                </div>
+            `;
+            resultsContainer.classList.add('show');
+        }
+    });
 }
 
 function searchClientes(query) {
-    fetch(`/workflow/api/buscar-clientes-drawer/?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showSearchResults('cliente', data.clientes);
+    fetch(`/workflow/api/buscar-clientes-drawer/?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // Check if response is successful
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Authentication required');
             }
-        })
-        .catch(error => {
-            console.error('Error searching clientes:', error);
-        });
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON - possible session timeout');
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showSearchResults('cliente', data.clientes);
+        } else {
+            console.error('API error:', data.error);
+            showSearchResults('cliente', []);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error searching clientes:', error);
+        
+        // Handle authentication errors
+        if (error.message.includes('Authentication required') || 
+            error.message.includes('session timeout') ||
+            error.message.includes('not JSON')) {
+            
+            // Show user-friendly message
+            const resultsContainer = document.getElementById('clienteResults');
+            resultsContainer.innerHTML = `
+                <div class="search-result-item" style="color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Sesión expirada. Por favor, recarga la página.
+                </div>
+            `;
+            resultsContainer.classList.add('show');
+            
+            // Optionally redirect to login after a delay
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 3000);
+        } else {
+            // Show generic error
+            const resultsContainer = document.getElementById('clienteResults');
+            resultsContainer.innerHTML = `
+                <div class="search-result-item" style="color: #6c757d;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Error al buscar. Intenta de nuevo.
+                </div>
+            `;
+            resultsContainer.classList.add('show');
+        }
+    });
 }
 
 function showSearchResults(type, results) {
@@ -842,17 +988,94 @@ window.hideSearchResults = function(type) {
 
 // Load form data based on pipeline
 window.loadFormularioData = function(pipelineId) {
-    fetch(`/workflow/api/formulario-datos/?pipeline_id=${pipelineId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                renderCamposPersonalizados(data.campos_personalizados);
-                renderRequisitos(data.requisitos);
+    fetch(`/workflow/api/formulario-datos/?pipeline_id=${pipelineId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // Check if response is successful
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Authentication required');
             }
-        })
-        .catch(error => {
-            console.error('Error loading form data:', error);
-        });
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON - possible session timeout');
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            renderCamposPersonalizados(data.campos_personalizados);
+            renderRequisitos(data.requisitos);
+        } else {
+            console.error('API error:', data.error);
+            // Show error in the containers
+            document.getElementById('camposContainer').innerHTML = `
+                <div class="text-danger text-center py-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar campos personalizados
+                </div>
+            `;
+            document.getElementById('requisitosContainer').innerHTML = `
+                <div class="text-danger text-center py-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar requisitos
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error loading form data:', error);
+        
+        // Handle authentication errors
+        if (error.message.includes('Authentication required') || 
+            error.message.includes('session timeout') ||
+            error.message.includes('not JSON')) {
+            
+            // Show session error
+            document.getElementById('camposContainer').innerHTML = `
+                <div class="text-danger text-center py-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Sesión expirada. Por favor, recarga la página.
+                </div>
+            `;
+            document.getElementById('requisitosContainer').innerHTML = `
+                <div class="text-danger text-center py-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Sesión expirada. Por favor, recarga la página.
+                </div>
+            `;
+            
+            // Redirect to login after a delay
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 3000);
+        } else {
+            // Show generic error
+            document.getElementById('camposContainer').innerHTML = `
+                <div class="text-muted text-center py-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Error al cargar datos. Intenta de nuevo.
+                </div>
+            `;
+            document.getElementById('requisitosContainer').innerHTML = `
+                <div class="text-muted text-center py-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Error al cargar datos. Intenta de nuevo.
+                </div>
+            `;
+        }
+    });
 }
 
 function renderCamposPersonalizados(campos) {
@@ -1092,6 +1315,7 @@ window.showSuccessMessage = function(message) {
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     setupSearch();
+    setupSessionMonitoring();
     
     // Close drawer when clicking outside
     document.getElementById('solicitudDrawer').addEventListener('click', function(e) {
@@ -1100,6 +1324,116 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Session monitoring for drawer
+function setupSessionMonitoring() {
+    // Check session every 5 minutes
+    setInterval(checkDrawerSession, 5 * 60 * 1000);
+    
+    // Check session when drawer opens
+    document.addEventListener('drawerOpened', checkDrawerSession);
+}
+
+function checkDrawerSession() {
+    // Only check if drawer is open
+    const drawer = document.getElementById('solicitudDrawer');
+    if (!drawer || !drawer.classList.contains('active')) {
+        return;
+    }
+    
+    fetch('/workflow/api/debug-session/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Session expired');
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON - session timeout');
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Session check passed for drawer');
+        } else {
+            throw new Error('Session check failed');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Session check failed for drawer:', error);
+        
+        // Show session warning in drawer
+        showSessionWarning();
+    });
+}
+
+function showSessionWarning() {
+    // Create warning banner
+    const warningBanner = document.createElement('div');
+    warningBanner.className = 'session-warning-banner';
+    warningBanner.innerHTML = `
+        <div class="session-warning-content">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span>Tu sesión está por expirar. Guarda tu trabajo.</span>
+            <button type="button" class="btn btn-sm btn-outline-light ms-3" onclick="extendSession()">
+                <i class="fas fa-sync-alt me-1"></i>Extender Sesión
+            </button>
+        </div>
+    `;
+    
+    // Add to drawer
+    const drawerContent = document.querySelector('.drawer-content');
+    drawerContent.insertBefore(warningBanner, drawerContent.firstChild);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (warningBanner.parentNode) {
+            warningBanner.remove();
+        }
+    }, 10000);
+}
+
+function extendSession() {
+    // Make a request to extend the session
+    fetch('/workflow/api/debug-session/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Remove warning banner
+            const warningBanner = document.querySelector('.session-warning-banner');
+            if (warningBanner) {
+                warningBanner.remove();
+            }
+            
+            // Show success message
+            showSuccessMessage('Sesión extendida exitosamente');
+        } else {
+            throw new Error('Failed to extend session');
+        }
+    })
+    .catch(error => {
+        console.error('Error extending session:', error);
+        showSuccessMessage('Error al extender sesión. Guarda tu trabajo.');
+    });
+}
 
 // Global function to open drawer with context - defined in negocios.html to avoid conflicts
 </script>

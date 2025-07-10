@@ -9,7 +9,12 @@ from django.contrib.auth.models import Group, User
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
-from .modelsWorkflow import *
+from .modelsWorkflow import (
+    Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
+    Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
+    RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
+    RequisitoTransicion
+)
 from .models import ClienteEntrevista
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
@@ -20,6 +25,29 @@ import threading
 import queue
 from django.core.serializers.json import DjangoJSONEncoder
 from django.forms.models import model_to_dict
+from functools import wraps
+
+# ==========================================
+# DECORADORES PERSONALIZADOS
+# ==========================================
+
+def superuser_permission_required(permission):
+    """
+    Decorator that bypasses permission checks for superusers.
+    For superusers, it only requires login. For regular users, it requires the specified permission.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            # Superusers bypass all permission checks
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+            else:
+                # For regular users, use the standard permission_required decorator
+                from django.contrib.auth.decorators import permission_required
+                return permission_required(permission)(view_func)(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
 
 # ==========================================
 # VISTAS PRINCIPALES DEL WORKFLOW
@@ -35,17 +63,26 @@ def dashboard_workflow(request):
     ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Obtener bandejas grupales a las que tiene acceso
-    grupos_usuario = request.user.groups.all()
-    etapas_grupales = Etapa.objects.filter(
-        es_bandeja_grupal=True,
-        permisos__grupo__in=grupos_usuario,
-        permisos__puede_ver=True
-    )
-    
-    solicitudes_grupales = Solicitud.objects.filter(
-        etapa_actual__in=etapas_grupales,
-        asignada_a__isnull=True
-    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    if request.user.is_superuser or request.user.is_staff:
+        # Superuser y super staff ven TODAS las bandejas grupales
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    else:
+        # Usuarios regulares - permisos normales
+        grupos_usuario = request.user.groups.all()
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_ver=True
+        )
+        
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
     
     # Estadísticas
     total_solicitudes = solicitudes_asignadas.count() + solicitudes_grupales.count()
@@ -107,10 +144,10 @@ def negocios_view(request):
                 # Si no tiene UserProfile, mantener rol por defecto
                 pass
         
-        # === SISTEMA DE PERMISOS SUPER STAFF ===
-        # Los usuarios super staff (is_staff=True) pueden ver TODO
-        if request.user.is_staff:
-            # Super staff ve TODAS las solicitudes del pipeline
+        # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
+        # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
+        if request.user.is_superuser or request.user.is_staff:
+            # Superuser y super staff ven TODAS las solicitudes del pipeline
             solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
                 'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
                 'creada_por', 'asignada_a'
@@ -455,10 +492,10 @@ def negocios_view(request):
 def bandeja_trabajo(request):
     """Bandeja de trabajo del usuario"""
     
-    # === SISTEMA DE PERMISOS SUPER STAFF ===
-    # Los usuarios super staff (is_staff=True) pueden ver TODO
-    if request.user.is_staff:
-        # Super staff ve TODAS las solicitudes asignadas
+    # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
+    # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
+    if request.user.is_superuser or request.user.is_staff:
+        # Superuser y super staff ven TODAS las solicitudes asignadas
         solicitudes_asignadas = Solicitud.objects.filter(
             asignada_a__isnull=False
         ).select_related(
@@ -466,7 +503,7 @@ def bandeja_trabajo(request):
             'creada_por', 'asignada_a'
         )
         
-        # Super staff ve TODAS las bandejas grupales
+        # Superuser y super staff ven TODAS las bandejas grupales
         etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
@@ -673,16 +710,18 @@ def detalle_solicitud(request, solicitud_id):
     
     # Verificar permisos
     if solicitud.asignada_a and solicitud.asignada_a != request.user:
-        grupos_usuario = request.user.groups.all()
-        tiene_permiso = PermisoEtapa.objects.filter(
-            etapa=solicitud.etapa_actual,
-            grupo__in=grupos_usuario,
-            puede_ver=True
-        ).exists()
-        
-        if not tiene_permiso:
-            messages.error(request, 'No tienes permisos para ver esta solicitud.')
-            return redirect('bandeja_trabajo')
+        # Superusers bypass permission checks
+        if not (request.user.is_superuser or request.user.is_staff):
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_ver=True
+            ).exists()
+            
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para ver esta solicitud.')
+                return redirect('bandeja_trabajo')
     
     # Obtener transiciones disponibles
     transiciones_disponibles = []
@@ -801,16 +840,18 @@ def auto_asignar_solicitud(request, solicitud_id):
         return redirect('bandeja_trabajo')
     
     # Verificar permisos
-    grupos_usuario = request.user.groups.all()
-    tiene_permiso = PermisoEtapa.objects.filter(
-        etapa=solicitud.etapa_actual,
-        grupo__in=grupos_usuario,
-        puede_autoasignar=True
-    ).exists()
-    
-    if not tiene_permiso:
-        messages.error(request, 'No tienes permisos para auto-asignar solicitudes en esta etapa.')
-        return redirect('bandeja_trabajo')
+    # Superusers bypass permission checks
+    if not (request.user.is_superuser or request.user.is_staff):
+        grupos_usuario = request.user.groups.all()
+        tiene_permiso = PermisoEtapa.objects.filter(
+            etapa=solicitud.etapa_actual,
+            grupo__in=grupos_usuario,
+            puede_autoasignar=True
+        ).exists()
+        
+        if not tiene_permiso:
+            messages.error(request, 'No tienes permisos para auto-asignar solicitudes en esta etapa.')
+            return redirect('bandeja_trabajo')
     
     # Asignar solicitud
     solicitud.asignada_a = request.user
@@ -830,15 +871,17 @@ def actualizar_requisito(request, solicitud_id, requisito_id):
         
         # Verificar permisos
         if solicitud.asignada_a and solicitud.asignada_a != request.user:
-            grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_ver=True
-            ).exists()
-            
-            if not tiene_permiso:
-                return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
+            # Superusers bypass permission checks
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         # Actualizar requisito
         cumplido = request.POST.get('cumplido') == 'true'
@@ -871,15 +914,17 @@ def actualizar_campo_personalizado(request, solicitud_id):
         
         # Verificar permisos
         if solicitud.asignada_a and solicitud.asignada_a != request.user:
-            grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_ver=True
-            ).exists()
-            
-            if not tiene_permiso:
-                return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
+            # Superusers bypass permission checks
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
         
         campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
         
@@ -915,7 +960,7 @@ def actualizar_campo_personalizado(request, solicitud_id):
 # ==========================================
 
 @login_required
-@permission_required('workflow.add_pipeline')
+@superuser_permission_required('workflow.add_pipeline')
 def administrar_pipelines(request):
     """Administración de pipelines"""
     
@@ -929,7 +974,7 @@ def administrar_pipelines(request):
 
 
 @login_required
-@permission_required('workflow.add_requisito')
+@superuser_permission_required('workflow.add_requisito')
 def administrar_requisitos(request):
     """Administración de requisitos"""
     
@@ -945,7 +990,7 @@ def administrar_requisitos(request):
 
 
 @login_required
-@permission_required('workflow.add_campopersonalizado')
+@superuser_permission_required('workflow.add_campopersonalizado')
 def administrar_campos_personalizados(request):
     """Administración de campos personalizados"""
     
@@ -1009,7 +1054,7 @@ def reportes_workflow(request):
 # ==========================================
 
 @login_required
-@permission_required('workflow.add_pipeline')
+@superuser_permission_required('workflow.add_pipeline')
 def api_crear_pipeline(request):
     """API para crear un nuevo pipeline"""
     if request.method == 'POST':
@@ -1040,7 +1085,7 @@ def api_crear_pipeline(request):
 
 
 @login_required
-@permission_required('workflow.change_pipeline')
+@superuser_permission_required('workflow.change_pipeline')
 def api_editar_pipeline(request, pipeline_id):
     """API para editar un pipeline"""
     if request.method == 'POST':
@@ -1071,7 +1116,7 @@ def api_editar_pipeline(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.delete_pipeline')
+@superuser_permission_required('workflow.delete_pipeline')
 def api_eliminar_pipeline(request, pipeline_id):
     """API para eliminar un pipeline"""
     if request.method == 'POST':
@@ -1094,7 +1139,7 @@ def api_eliminar_pipeline(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.add_etapa')
+@superuser_permission_required('workflow.add_etapa')
 def api_obtener_etapas(request, pipeline_id):
     """API para obtener etapas de un pipeline"""
     try:
@@ -1123,7 +1168,7 @@ def api_obtener_etapas(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.add_etapa')
+@superuser_permission_required('workflow.add_etapa')
 def api_crear_etapa(request, pipeline_id):
     """API para crear una nueva etapa"""
     if request.method == 'POST':
@@ -1166,7 +1211,7 @@ def api_crear_etapa(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.change_etapa')
+@superuser_permission_required('workflow.change_etapa')
 def api_editar_etapa(request, etapa_id):
     """API para editar una etapa"""
     if request.method == 'POST':
@@ -1207,7 +1252,7 @@ def api_editar_etapa(request, etapa_id):
 
 
 @login_required
-@permission_required('workflow.delete_etapa')
+@superuser_permission_required('workflow.delete_etapa')
 def api_eliminar_etapa(request, etapa_id):
     """API para eliminar una etapa"""
     if request.method == 'POST':
@@ -1230,7 +1275,7 @@ def api_eliminar_etapa(request, etapa_id):
 
 
 @login_required
-@permission_required('workflow.add_subestado')
+@superuser_permission_required('workflow.add_subestado')
 def api_crear_subestado(request, etapa_id):
     """API para crear un subestado"""
     if request.method == 'POST':
@@ -1265,7 +1310,7 @@ def api_crear_subestado(request, etapa_id):
 
 
 @login_required
-@permission_required('workflow.add_transicionetapa')
+@superuser_permission_required('workflow.add_transicionetapa')
 def api_crear_transicion(request, pipeline_id):
     """API para crear una transición"""
     if request.method == 'POST':
@@ -1308,7 +1353,7 @@ def api_crear_transicion(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.add_requisito')
+@superuser_permission_required('workflow.add_requisito')
 def api_crear_requisito(request):
     """API para crear un requisito"""
     if request.method == 'POST':
@@ -1339,7 +1384,7 @@ def api_crear_requisito(request):
 
 
 @login_required
-@permission_required('workflow.add_requisitopipeline')
+@superuser_permission_required('workflow.add_requisitopipeline')
 def api_asignar_requisito_pipeline(request, pipeline_id):
     """API para asignar un requisito a un pipeline"""
     if request.method == 'POST':
@@ -1379,7 +1424,7 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.add_campopersonalizado')
+@superuser_permission_required('workflow.add_campopersonalizado')
 def api_crear_campo_personalizado(request, pipeline_id):
     """API para crear un campo personalizado"""
     if request.method == 'POST':
@@ -1881,6 +1926,10 @@ def api_notifications_stream(request):
 @login_required
 def api_check_updates(request):
     """API mejorada para verificar actualizaciones con detección inteligente"""
+    print(f"🔍 DEBUG: api_check_updates llamado por usuario: {request.user.username}")
+    print(f"🔍 DEBUG: Método: {request.method}")
+    print(f"🔍 DEBUG: Parámetros: {request.GET}")
+    
     try:
         # Obtener timestamp de la última actualización del usuario
         last_check = request.GET.get('last_check')
@@ -2146,23 +2195,29 @@ def api_cambiar_etapa(request, solicitud_id):
         if solicitud.etapa_actual == nueva_etapa:
             return JsonResponse({'error': 'La solicitud ya está en esta etapa'}, status=400)
         
-        # NUEVO: Verificar si existe una transición definida y validar requisitos
+        # NUEVO: Verificar que existe una transición válida definida
         transicion = TransicionEtapa.objects.filter(
             pipeline=solicitud.pipeline,
             etapa_origen=solicitud.etapa_actual,
             etapa_destino=nueva_etapa
         ).first()
         
-        if transicion:
-            # Verificar requisitos obligatorios para esta transición
-            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
-            if requisitos_faltantes:
-                return JsonResponse({
-                    'error': 'Requisitos faltantes',
-                    'tipo_error': 'requisitos_faltantes',
-                    'requisitos_faltantes': requisitos_faltantes,
-                    'mensaje': f'Faltan {len(requisitos_faltantes)} requisito(s) obligatorio(s) para continuar a "{nueva_etapa.nombre}"'
-                }, status=400)
+        if not transicion:
+            return JsonResponse({
+                'error': 'Transición no válida',
+                'tipo_error': 'transicion_invalida',
+                'mensaje': f'No existe una transición válida de "{solicitud.etapa_actual.nombre}" a "{nueva_etapa.nombre}". Solo se permiten transiciones definidas en el pipeline.'
+            }, status=400)
+        
+        # Verificar requisitos obligatorios para esta transición
+        requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+        if requisitos_faltantes:
+            return JsonResponse({
+                'error': 'Requisitos faltantes',
+                'tipo_error': 'requisitos_faltantes',
+                'requisitos_faltantes': requisitos_faltantes,
+                'mensaje': f'Faltan {len(requisitos_faltantes)} requisito(s) obligatorio(s) para continuar a "{nueva_etapa.nombre}"'
+            }, status=400)
         
         # Cerrar el historial actual si existe
         if solicitud.etapa_actual:
@@ -2230,8 +2285,6 @@ def verificar_requisitos_transicion(solicitud, transicion):
     """
     Verificar si faltan requisitos obligatorios para una transición específica
     """
-    from .modelsWorkflow import RequisitoTransicion
-    
     # Obtener requisitos obligatorios para esta transición
     requisitos_transicion = RequisitoTransicion.objects.filter(
         transicion=transicion,
@@ -2270,10 +2323,10 @@ def vista_mixta_bandejas(request):
     from datetime import timedelta
     from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
     
-    # === SISTEMA DE PERMISOS SUPER STAFF ===
-    # Los usuarios super staff (is_staff=True) pueden ver TODO
-    if request.user.is_staff:
-        # Super staff ve TODAS las solicitudes en ambas bandejas
+    # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
+    # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
+    if request.user.is_superuser or request.user.is_staff:
+        # Superuser y super staff ven TODAS las solicitudes en ambas bandejas
         etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
@@ -2283,7 +2336,7 @@ def vista_mixta_bandejas(request):
             'creada_por', 'asignada_a'
         ).order_by('-fecha_creacion')
         
-        # Super staff ve TODAS las solicitudes personales
+        # Superuser y super staff ven TODAS las solicitudes personales
         solicitudes_personales = Solicitud.objects.filter(
             asignada_a__isnull=False
         ).select_related(
@@ -3555,12 +3608,96 @@ def api_validar_requisitos_antes_transicion(request, solicitud_id):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
+@login_required
+def api_obtener_transiciones_validas(request, solicitud_id):
+    """API para obtener las transiciones válidas para una solicitud"""
+    print(f"🔍 DEBUG: api_obtener_transiciones_validas llamado con solicitud_id={solicitud_id}")
+    print(f"🔍 DEBUG: Usuario actual: {request.user.username}")
+    print(f"🔍 DEBUG: Es superuser: {request.user.is_superuser}")
+    print(f"🔍 DEBUG: Es staff: {request.user.is_staff}")
+    
+    try:
+        # Verificar que el ID sea válido
+        if not solicitud_id or not str(solicitud_id).isdigit():
+            print(f"❌ ERROR: ID de solicitud inválido: {solicitud_id}")
+            return JsonResponse({
+                'success': False, 
+                'error': 'ID de solicitud inválido'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"✅ DEBUG: Solicitud encontrada: {solicitud.codigo}")
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para ver esta solicitud'
+            }, status=403)
+        
+        # Obtener transiciones válidas desde la etapa actual
+        transiciones_validas = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        ).select_related('etapa_destino')
+        
+        transiciones_data = []
+        for transicion in transiciones_validas:
+            try:
+                # Verificar requisitos para esta transición
+                requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+                
+                transiciones_data.append({
+                    'id': transicion.id,
+                    'nombre': transicion.nombre,
+                    'etapa_destino': {
+                        'id': transicion.etapa_destino.id,
+                        'nombre': transicion.etapa_destino.nombre,
+                        'orden': transicion.etapa_destino.orden
+                    },
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'puede_realizar': len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': requisitos_faltantes,
+                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                })
+            except Exception as transicion_error:
+                # Si hay error en una transición específica, continuar con las demás
+                print(f"Error procesando transición {transicion.id}: {transicion_error}")
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones': transiciones_data,
+            'etapa_actual': {
+                'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'orden': solicitud.etapa_actual.orden if solicitud.etapa_actual else None
+            },
+            'total_transiciones': len(transiciones_data)
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': 'La solicitud no existe'
+        }, status=404)
+    except Exception as e:
+        print(f"Error en api_obtener_transiciones_validas: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
+
+
 # ==========================================
 # VISTAS DE API PARA REQUISITOS DE TRANSICIÓN
 # ==========================================
 
 @login_required
-@permission_required('workflow.add_requisitotransicion')
+@superuser_permission_required('workflow.add_requisitotransicion')
 def api_obtener_requisitos_transicion_pipeline(request, pipeline_id):
     """API para obtener todos los requisitos de transición de un pipeline"""
     try:
@@ -3620,7 +3757,7 @@ def api_obtener_requisitos_transicion_pipeline(request, pipeline_id):
 
 
 @login_required
-@permission_required('workflow.add_requisitotransicion')
+@superuser_permission_required('workflow.add_requisitotransicion')
 def api_crear_requisito_transicion(request):
     """API para crear un requisito de transición"""
     if request.method != 'POST':
@@ -3672,7 +3809,7 @@ def api_crear_requisito_transicion(request):
 
 
 @login_required
-@permission_required('workflow.change_requisitotransicion')
+@superuser_permission_required('workflow.change_requisitotransicion')
 def api_actualizar_requisito_transicion(request, requisito_transicion_id):
     """API para actualizar un requisito de transición"""
     if request.method != 'POST':
@@ -3707,7 +3844,7 @@ def api_actualizar_requisito_transicion(request, requisito_transicion_id):
 
 
 @login_required
-@permission_required('workflow.delete_requisitotransicion')
+@superuser_permission_required('workflow.delete_requisitotransicion')
 def api_eliminar_requisito_transicion(request, requisito_transicion_id):
     """API para eliminar un requisito de transición"""
     if request.method != 'POST':
@@ -3728,3 +3865,169 @@ def api_eliminar_requisito_transicion(request, requisito_transicion_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
+    """API para obtener requisitos faltantes con detalles completos para el modal"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nueva_etapa_id = request.GET.get('nueva_etapa_id')
+        
+        if not nueva_etapa_id:
+            return JsonResponse({'error': 'ID de nueva etapa requerido'}, status=400)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
+        
+        nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
+        
+        # Buscar transición
+        transicion = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual,
+            etapa_destino=nueva_etapa
+        ).first()
+        
+        if not transicion:
+            return JsonResponse({
+                'success': False,
+                'error': 'No existe una transición válida hacia esta etapa'
+            }, status=400)
+        
+        # Obtener requisitos obligatorios para esta transición
+        requisitos_transicion = RequisitoTransicion.objects.filter(
+            transicion=transicion,
+            obligatorio=True
+        ).select_related('requisito')
+        
+        requisitos_faltantes_detallados = []
+        
+        for req_transicion in requisitos_transicion:
+            # Verificar si el requisito existe para esta solicitud
+            requisito_solicitud = RequisitoSolicitud.objects.filter(
+                solicitud=solicitud,
+                requisito=req_transicion.requisito
+            ).first()
+            
+            # Si no existe o no está cumplido o no tiene archivo
+            if not requisito_solicitud or not requisito_solicitud.cumplido or not requisito_solicitud.archivo:
+                requisitos_faltantes_detallados.append({
+                    'id': req_transicion.requisito.id,
+                    'nombre': req_transicion.requisito.nombre,
+                    'descripcion': req_transicion.requisito.descripcion,
+                    'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                    'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
+                    'esta_cumplido': bool(requisito_solicitud and requisito_solicitud.cumplido),
+                    'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None,
+                    'archivo_actual': {
+                        'nombre': requisito_solicitud.archivo.name.split('/')[-1] if requisito_solicitud and requisito_solicitud.archivo else None,
+                        'url': requisito_solicitud.archivo.url if requisito_solicitud and requisito_solicitud.archivo else None
+                    } if requisito_solicitud and requisito_solicitud.archivo else None,
+                    'observaciones': requisito_solicitud.observaciones if requisito_solicitud else ''
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'transicion': {
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'etapa_destino': nueva_etapa.nombre
+            },
+            'requisitos_faltantes': requisitos_faltantes_detallados,
+            'total_faltantes': len(requisitos_faltantes_detallados),
+            'puede_continuar_sin_requisitos': request.user.is_superuser or request.user.is_staff
+        })
+        
+    except Exception as e:
+        print(f"Error en api_obtener_requisitos_faltantes_detallado: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def api_subir_requisito_modal(request, solicitud_id):
+    """API para subir un requisito desde el modal de requisitos faltantes"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({'error': 'No tienes permisos para modificar esta solicitud'}, status=403)
+        
+        requisito_id = request.POST.get('requisito_id')
+        archivo = request.FILES.get('archivo')
+        observaciones = request.POST.get('observaciones', '')
+        
+        if not requisito_id:
+            return JsonResponse({'error': 'ID de requisito requerido'}, status=400)
+        
+        if not archivo:
+            return JsonResponse({'error': 'Archivo requerido'}, status=400)
+        
+        requisito = get_object_or_404(Requisito, id=requisito_id)
+        
+        # Crear o actualizar el requisito de solicitud
+        requisito_solicitud, created = RequisitoSolicitud.objects.get_or_create(
+            solicitud=solicitud,
+            requisito=requisito,
+            defaults={
+                'archivo': archivo,
+                'cumplido': True,
+                'observaciones': observaciones
+            }
+        )
+        
+        if not created:
+            # Actualizar existente
+            requisito_solicitud.archivo = archivo
+            requisito_solicitud.cumplido = True
+            requisito_solicitud.observaciones = observaciones
+            requisito_solicitud.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Requisito "{requisito.nombre}" subido exitosamente',
+            'requisito': {
+                'id': requisito.id,
+                'nombre': requisito.nombre,
+                'archivo_nombre': archivo.name,
+                'cumplido': True
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error en api_subir_requisito_modal: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def debug_session(request):
+    """Debug view to check session status"""
+    session_info = {
+        'user': request.user.username,
+        'session_key': request.session.session_key,
+        'session_expiry': request.session.get_expiry_date(),
+        'session_age': request.session.get_expiry_age(),
+        'session_modified': request.session.modified,
+        'session_accessed': request.session.accessed,
+        'is_authenticated': request.user.is_authenticated,
+        'user_id': request.user.id,
+        'session_data': dict(request.session.items()),
+    }
+    
+    return JsonResponse({
+        'success': True,
+        'session_info': session_info,
+        'timestamp': timezone.now().isoformat()
+    })
