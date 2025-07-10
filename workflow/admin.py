@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -160,3 +160,10 @@ class ValorCampoSolicitudAdmin(admin.ModelAdmin):
     list_display = ('id', 'solicitud', 'campo', 'valor')
     search_fields = ('solicitud__codigo', 'campo__nombre')
     list_filter = ('solicitud', 'campo')
+
+
+@admin.register(RequisitoTransicion)
+class RequisitoTransicionAdmin(admin.ModelAdmin):
+    list_display = ('transicion', 'requisito', 'obligatorio', 'mensaje_personalizado')
+    list_filter = ('transicion', 'obligatorio')
+    search_fields = ('transicion__nombre', 'requisito__nombre', 'mensaje_personalizado')

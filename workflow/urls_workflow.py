@@ -28,8 +28,9 @@ if settings.DEBUG:
             'path': 'sw.js'
         }, name='service_worker_static'),
     ]
-    
-    # Vistas principales
+
+# Vistas principales
+urlpatterns += [
     path('', views_workflow.dashboard_workflow, name='dashboard'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
@@ -90,4 +91,15 @@ if settings.DEBUG:
     # API para cambio de etapa
     path('api/solicitudes/<int:solicitud_id>/cambiar-etapa/', views_workflow.api_cambiar_etapa, name='api_cambiar_etapa'),
     path('api/solicitud_brief/<int:solicitud_id>/', views_workflow.api_solicitud_brief, name='api_solicitud_brief'),
+    
+    # APIs para validación de requisitos en transiciones
+    path('api/solicitudes/<int:solicitud_id>/requisitos-transicion/', views_workflow.api_obtener_requisitos_transicion, name='api_obtener_requisitos_transicion'),
+    path('api/solicitudes/<int:solicitud_id>/subir-requisito/', views_workflow.api_subir_requisito_transicion, name='api_subir_requisito_transicion'),
+    path('api/solicitudes/<int:solicitud_id>/validar-requisitos/', views_workflow.api_validar_requisitos_antes_transicion, name='api_validar_requisitos_antes_transicion'),
+    
+    # APIs para gestión de requisitos de transición
+    path('api/pipelines/<int:pipeline_id>/requisitos-transicion/', views_workflow.api_obtener_requisitos_transicion_pipeline, name='api_obtener_requisitos_transicion_pipeline'),
+    path('api/requisitos-transicion/crear/', views_workflow.api_crear_requisito_transicion, name='api_crear_requisito_transicion'),
+    path('api/requisitos-transicion/<int:requisito_transicion_id>/actualizar/', views_workflow.api_actualizar_requisito_transicion, name='api_actualizar_requisito_transicion'),
+    path('api/requisitos-transicion/<int:requisito_transicion_id>/eliminar/', views_workflow.api_eliminar_requisito_transicion, name='api_eliminar_requisito_transicion'),
 ]

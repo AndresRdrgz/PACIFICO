@@ -1,0 +1,203 @@
+<!-- Modal para Requisitos Faltantes en Transiciones -->
+<div class="modal fade" id="modalRequisitosFaltantes" tabindex="-1" aria-labelledby="modalRequisitosFaltantesLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border: none; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <!-- Header con gradiente rojo/warning -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); border: none; padding: 24px 32px 20px 32px; position: relative; overflow: hidden;">
+                <!-- Decoración de fondo -->
+                <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; opacity: 0.6;"></div>
+                <div style="position: absolute; top: 40px; right: 60px; width: 60px; height: 60px; background: rgba(255, 255, 255, 0.08); border-radius: 50%;"></div>
+                
+                <div class="w-100 text-center position-relative">
+                    <h4 class="modal-title text-white fw-bold mb-1" id="modalRequisitosFaltantesLabel" style="font-size: 1.4rem; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-exclamation-triangle me-2" style="font-size: 1.2rem;"></i>
+                        Requisitos Faltantes
+                    </h4>
+                    <p class="text-white-50 mb-0" style="font-size: 0.9rem; font-weight: 500;">Completar para continuar</p>
+                </div>
+                
+                <button type="button" class="btn-close btn-close-white position-absolute" style="top: 15px; right: 15px;" aria-label="Close" onclick="cerrarModalRequisitos()"></button>
+            </div>
+            
+            <div class="modal-body" style="padding: 32px;">
+                <!-- Mensaje de información -->
+                <div class="alert alert-warning" role="alert" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(253, 126, 20, 0.15));">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle text-warning me-3" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1" style="color: #856404;">Documentos Requeridos</h6>
+                            <p class="mb-0" style="color: #856404; font-size: 0.9rem;">
+                                Antes de continuar a la siguiente etapa, debes completar los siguientes requisitos obligatorios:
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de la transición -->
+                <div class="mb-4 p-3 bg-light rounded-3" style="border-left: 4px solid #007bff;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-route text-primary me-2"></i>
+                        <div>
+                            <h6 class="mb-1 text-primary fw-bold">Transición</h6>
+                            <p class="mb-0 small text-muted">
+                                <span id="etapaOrigenNombre">Etapa Actual</span>
+                                <i class="fas fa-arrow-right mx-2 text-primary"></i>
+                                <span id="etapaDestinoNombre">Nueva Etapa</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de requisitos faltantes -->
+                <div id="listaRequisitosFaltantes">
+                    <!-- Se carga dinámicamente -->
+                </div>
+                
+                <!-- Loading state -->
+                <div id="loadingRequisitos" class="text-center py-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Cargando requisitos...</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+                <button type="button" class="btn btn-outline-secondary" onclick="cerrarModalRequisitos()" style="font-weight: 600; padding: 12px 24px; border-radius: 8px; border-width: 2px;">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnValidarYContinuar" onclick="validarYContinuarTransicion()" style="font-weight: 600; padding: 12px 24px; border-radius: 8px; background: linear-gradient(135deg, #007bff, #0056b3); border: none; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);" disabled>
+                    <i class="fas fa-check me-2"></i>Validar y Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos específicos para el modal de requisitos -->
+<style>
+.requisito-item {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.requisito-item.completado {
+    border-color: #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(32, 201, 151, 0.1));
+}
+
+.requisito-item.faltante {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.05), rgba(253, 126, 20, 0.1));
+}
+
+.requisito-header {
+    display: flex;
+    align-items: center;
+    justify-content: between;
+    margin-bottom: 15px;
+}
+
+.requisito-status {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.requisito-status.pendiente {
+    background: linear-gradient(135deg, #dc3545, #fd7e14);
+    color: white;
+}
+
+.requisito-status.completado {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.requisito-info h6 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.requisito-info p {
+    margin: 5px 0 0 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.file-upload-area {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.file-upload-area:hover {
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.file-upload-area.dragover {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.file-selected-info {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    display: none;
+}
+
+.file-selected-info.show {
+    display: block;
+}
+
+.upload-progress {
+    margin-top: 15px;
+    display: none;
+}
+
+.upload-progress.show {
+    display: block;
+}
+
+.btn-upload {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-upload:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-upload:disabled {
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+</style> 

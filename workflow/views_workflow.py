@@ -2146,6 +2146,24 @@ def api_cambiar_etapa(request, solicitud_id):
         if solicitud.etapa_actual == nueva_etapa:
             return JsonResponse({'error': 'La solicitud ya está en esta etapa'}, status=400)
         
+        # NUEVO: Verificar si existe una transición definida y validar requisitos
+        transicion = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual,
+            etapa_destino=nueva_etapa
+        ).first()
+        
+        if transicion:
+            # Verificar requisitos obligatorios para esta transición
+            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+            if requisitos_faltantes:
+                return JsonResponse({
+                    'error': 'Requisitos faltantes',
+                    'tipo_error': 'requisitos_faltantes',
+                    'requisitos_faltantes': requisitos_faltantes,
+                    'mensaje': f'Faltan {len(requisitos_faltantes)} requisito(s) obligatorio(s) para continuar a "{nueva_etapa.nombre}"'
+                }, status=400)
+        
         # Cerrar el historial actual si existe
         if solicitud.etapa_actual:
             historial_actual = HistorialSolicitud.objects.filter(
@@ -2206,6 +2224,42 @@ def api_cambiar_etapa(request, solicitud_id):
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def verificar_requisitos_transicion(solicitud, transicion):
+    """
+    Verificar si faltan requisitos obligatorios para una transición específica
+    """
+    from .modelsWorkflow import RequisitoTransicion
+    
+    # Obtener requisitos obligatorios para esta transición
+    requisitos_transicion = RequisitoTransicion.objects.filter(
+        transicion=transicion,
+        obligatorio=True
+    ).select_related('requisito')
+    
+    requisitos_faltantes = []
+    
+    for req_transicion in requisitos_transicion:
+        # Verificar si el requisito existe para esta solicitud
+        requisito_solicitud = RequisitoSolicitud.objects.filter(
+            solicitud=solicitud,
+            requisito=req_transicion.requisito
+        ).first()
+        
+        # Si no existe o no está cumplido o no tiene archivo
+        if not requisito_solicitud or not requisito_solicitud.cumplido or not requisito_solicitud.archivo:
+            requisitos_faltantes.append({
+                'id': req_transicion.requisito.id,
+                'nombre': req_transicion.requisito.nombre,
+                'descripcion': req_transicion.requisito.descripcion,
+                'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
+                'esta_cumplido': bool(requisito_solicitud and requisito_solicitud.cumplido),
+                'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None
+            })
+    
+    return requisitos_faltantes
 
 
 @login_required
@@ -2951,78 +3005,726 @@ def api_get_updated_solicitudes(request):
 @login_required
 def api_solicitud_brief(request, solicitud_id):
     """API: Briefing de una solicitud para el modal"""
-    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
 
-    # General info
-    general = {
-        'codigo': solicitud.codigo,
-        'estado': solicitud.subestado_actual.nombre if solicitud.subestado_actual else (solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-'),
-        'tipo': solicitud.pipeline.nombre if solicitud.pipeline else '-',
-        'fecha_inicio': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else '-',
-        'vencimiento': solicitud.historial.last().fecha_fin.strftime('%d/%m/%Y') if solicitud.historial.last() and solicitud.historial.last().fecha_fin else '-',
-        'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-',
-        'area': getattr(solicitud.etapa_actual, 'area_responsable', '-') if solicitud.etapa_actual else '-',
-    }
-
-    # Cliente info
-    cliente = solicitud.cliente
-    cliente_info = {
-        'nombre': cliente.nombreCliente if cliente else '-',
-        'cedula': cliente.cedulaCliente if cliente else '-',
-        'canal': getattr(cliente, 'canal_origen', '-') if cliente else '-',
-    }
-
-    # Acciones (permisos y flags)
-    acciones = {
-        'puede_procesar': True,  # TODO: lógica de permisos
-        'puede_devolver': True,
-        'puede_anular': True,
-        'puede_comentar': True,
-    }
-
-    # Workflow progress (etapas)
-    workflow = []
-    if solicitud.pipeline:
-        etapas = solicitud.pipeline.etapas.order_by('orden')
-        for etapa in etapas:
-            etapa_dict = {
-                'nombre': etapa.nombre,
-                'completada': solicitud.historial.filter(etapa=etapa, fecha_fin__isnull=False).exists(),
-                'actual': solicitud.etapa_actual_id == etapa.id,
-                'responsable': getattr(etapa, 'area_responsable', '-'),
-                'sla': getattr(etapa, 'sla_dias', None) and f"{etapa.sla_dias} días" or None
-            }
-            workflow.append(etapa_dict)
-
-    # Historial
-    historial = [
-        {
-            'etapa': h.etapa.nombre if h.etapa else '-',
-            'subestado': h.subestado.nombre if h.subestado else '-',
-            'usuario': h.usuario_responsable.get_full_name() if h.usuario_responsable else '-',
-            'fecha_inicio': h.fecha_inicio.strftime('%d/%m/%Y %H:%M') if h.fecha_inicio else '-',
-            'fecha_fin': h.fecha_fin.strftime('%d/%m/%Y %H:%M') if h.fecha_fin else None,
+        # General info
+        general = {
+            'codigo': solicitud.codigo,
+            'estado': solicitud.subestado_actual.nombre if solicitud.subestado_actual else (solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-'),
+            'tipo': solicitud.pipeline.nombre if solicitud.pipeline else '-',
+            'fecha_inicio': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else '-',
+            'vencimiento': solicitud.historial.last().fecha_fin.strftime('%d/%m/%Y') if solicitud.historial.last() and solicitud.historial.last().fecha_fin else '-',
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-',
+            'area': '-',  # Campo no existe en el modelo, usar valor por defecto
         }
-        for h in solicitud.historial.all().order_by('fecha_inicio')
-    ]
 
-    # Comentarios (si tienes modelo de comentarios relacionado)
-    comentarios = []
-    if hasattr(solicitud, 'comentarios'):
-        comentarios = [
+        # Cliente info
+        cliente = solicitud.cliente
+        cliente_info = {
+            'nombre': cliente.nombreCliente if cliente else '-',
+            'cedula': cliente.cedulaCliente if cliente else '-',
+            'canal': '-',  # Campo no existe en el modelo, usar valor por defecto
+        }
+
+        # Acciones (permisos y flags)
+        acciones = {
+            'puede_procesar': True,  # TODO: lógica de permisos
+            'puede_devolver': True,
+            'puede_anular': True,
+            'puede_comentar': True,
+        }
+
+        # Workflow progress (etapas)
+        workflow = []
+        if solicitud.pipeline:
+            etapas = solicitud.pipeline.etapas.order_by('orden')
+            for etapa in etapas:
+                # Calcular SLA en días desde el campo sla (DurationField)
+                sla_dias = None
+                if etapa.sla:
+                    sla_dias = etapa.sla.days
+                
+                etapa_dict = {
+                    'nombre': etapa.nombre,
+                    'completada': solicitud.historial.filter(etapa=etapa, fecha_fin__isnull=False).exists(),
+                    'actual': solicitud.etapa_actual_id == etapa.id,
+                    'responsable': '-',  # Campo no existe en el modelo
+                    'sla': f"{sla_dias} días" if sla_dias else None
+                }
+                workflow.append(etapa_dict)
+
+        # Historial
+        historial = [
             {
-                'usuario': c.usuario.get_full_name() if c.usuario else '-',
-                'texto': c.texto,
-                'fecha': c.fecha.strftime('%d/%m/%Y %H:%M') if c.fecha else '-',
+                'etapa': h.etapa.nombre if h.etapa else '-',
+                'subestado': h.subestado.nombre if h.subestado else '-',
+                'usuario': h.usuario_responsable.get_full_name() if h.usuario_responsable else '-',
+                'fecha_inicio': h.fecha_inicio.strftime('%d/%m/%Y %H:%M') if h.fecha_inicio else '-',
+                'fecha_fin': h.fecha_fin.strftime('%d/%m/%Y %H:%M') if h.fecha_fin else None,
             }
-            for c in solicitud.comentarios.all().order_by('-fecha')
+            for h in solicitud.historial.all().order_by('fecha_inicio')
         ]
 
-    return JsonResponse({
-        'general': general,
-        'cliente': cliente_info,
-        'acciones': acciones,
-        'workflow': workflow,
-        'historial': historial,
-        'comentarios': comentarios,
-    }, encoder=DjangoJSONEncoder)
+        # Comentarios
+        comentarios = []
+        if hasattr(solicitud, 'comentarios'):
+            comentarios = [
+                {
+                    'usuario': c.usuario.get_full_name() if c.usuario else '-',
+                    'texto': c.comentario,  # Campo correcto del modelo
+                    'fecha': c.fecha_creacion.strftime('%d/%m/%Y %H:%M') if c.fecha_creacion else '-',
+                }
+                for c in solicitud.comentarios.all().order_by('-fecha_creacion')
+            ]
+
+        return JsonResponse({
+            'general': general,
+            'cliente': cliente_info,
+            'acciones': acciones,
+            'workflow': workflow,
+            'historial': historial,
+            'comentarios': comentarios,
+        }, encoder=DjangoJSONEncoder)
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al obtener datos de la solicitud: {str(e)}'
+        }, status=500)
+
+
+# ==========================================
+# VISTAS DE API PARA COMENTARIOS
+# ==========================================
+
+@login_required
+def api_obtener_comentarios(request, solicitud_id):
+    """API para obtener comentarios de una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos para ver la solicitud
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
+        
+        comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
+        
+        datos_comentarios = []
+        for comentario in comentarios:
+            datos_comentarios.append({
+                'id': comentario.id,
+                'usuario': {
+                    'id': comentario.usuario.id,
+                    'username': comentario.usuario.username,
+                    'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
+                },
+                'comentario': comentario.comentario,
+                'fecha_creacion': comentario.fecha_creacion.isoformat(),
+                'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
+                'es_editado': comentario.es_editado,
+                'tiempo_transcurrido': comentario.get_tiempo_transcurrido(),
+                'puede_editar': comentario.usuario == request.user or request.user.is_superuser,
+                'puede_eliminar': comentario.usuario == request.user or request.user.is_superuser
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'comentarios': datos_comentarios,
+            'total': len(datos_comentarios)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_crear_comentario(request, solicitud_id):
+    """API para crear un nuevo comentario"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos para comentar en la solicitud
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({'error': 'No tienes permisos para comentar en esta solicitud'}, status=403)
+        
+        data = json.loads(request.body)
+        comentario_texto = data.get('comentario', '').strip()
+        
+        if not comentario_texto:
+            return JsonResponse({'error': 'El comentario no puede estar vacío'}, status=400)
+        
+        # Crear el comentario
+        comentario = SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=comentario_texto
+        )
+        
+        # Notificar cambio en tiempo real
+        notify_solicitud_change(solicitud, 'nuevo_comentario', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'comentario': {
+                'id': comentario.id,
+                'usuario': {
+                    'id': comentario.usuario.id,
+                    'username': comentario.usuario.username,
+                    'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
+                },
+                'comentario': comentario.comentario,
+                'fecha_creacion': comentario.fecha_creacion.isoformat(),
+                'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
+                'es_editado': comentario.es_editado,
+                'tiempo_transcurrido': comentario.get_tiempo_transcurrido(),
+                'puede_editar': True,
+                'puede_eliminar': True
+            },
+            'mensaje': 'Comentario creado exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_editar_comentario(request, comentario_id):
+    """API para editar un comentario existente"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        comentario = get_object_or_404(SolicitudComentario, id=comentario_id)
+        
+        # Verificar permisos para editar el comentario
+        if not (comentario.usuario == request.user or request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para editar este comentario'}, status=403)
+        
+        data = json.loads(request.body)
+        nuevo_comentario = data.get('comentario', '').strip()
+        
+        if not nuevo_comentario:
+            return JsonResponse({'error': 'El comentario no puede estar vacío'}, status=400)
+        
+        # Actualizar el comentario
+        comentario.comentario = nuevo_comentario
+        comentario.save()
+        
+        # Notificar cambio en tiempo real
+        notify_solicitud_change(comentario.solicitud, 'comentario_editado', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'comentario': {
+                'id': comentario.id,
+                'usuario': {
+                    'id': comentario.usuario.id,
+                    'username': comentario.usuario.username,
+                    'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
+                },
+                'comentario': comentario.comentario,
+                'fecha_creacion': comentario.fecha_creacion.isoformat(),
+                'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
+                'es_editado': comentario.es_editado,
+                'tiempo_transcurrido': comentario.get_tiempo_transcurrido(),
+                'puede_editar': True,
+                'puede_eliminar': True
+            },
+            'mensaje': 'Comentario actualizado exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def api_eliminar_comentario(request, comentario_id):
+    """API para eliminar un comentario"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        comentario = get_object_or_404(SolicitudComentario, id=comentario_id)
+        
+        # Verificar permisos para eliminar el comentario
+        if not (comentario.usuario == request.user or request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para eliminar este comentario'}, status=403)
+        
+        solicitud = comentario.solicitud
+        comentario.delete()
+        
+        # Notificar cambio en tiempo real
+        notify_solicitud_change(solicitud, 'comentario_eliminado', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Comentario eliminado exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# ==========================================
+# VISTAS DE API PARA SOLICITUDES ACTUALIZADAS
+# ==========================================
+
+@login_required
+def api_get_updated_solicitudes(request):
+    """API para obtener solo las solicitudes que han sido actualizadas"""
+    try:
+        # Obtener timestamp de la última consulta
+        last_check = request.GET.get('last_check')
+        if last_check:
+            try:
+                last_check_time = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+            except:
+                last_check_time = timezone.now() - timedelta(minutes=5)
+        else:
+            last_check_time = timezone.now() - timedelta(minutes=5)
+        
+        view_type = request.GET.get('view', 'bandejas')
+        
+        # Obtener solicitudes actualizadas
+        solicitudes_base = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all(),
+            fecha_ultima_actualizacion__gt=last_check_time
+        ).select_related('etapa_actual', 'asignada_a', 'pipeline')
+        
+        # Formatear datos según la vista
+        solicitudes_data = []
+        
+        for solicitud in solicitudes_base:
+            # Información de cliente
+            cliente_nombre = 'Sin cliente'
+            cliente_cedula = 'Sin cédula'
+            
+            try:
+                from pacifico.models import Cotizacion
+                cotizacion = Cotizacion.objects.filter(
+                    solicitud_workflow=solicitud
+                ).first()
+                
+                if cotizacion:
+                    cliente_nombre = cotizacion.cliente or 'Sin cliente'
+                    cliente_cedula = cotizacion.cedulaCliente or 'Sin cédula'
+            except:
+                pass
+            
+            # Calcular SLA
+            sla_info = {
+                'color': 'text-secondary',
+                'tiempo_restante': 'N/A'
+            }
+            
+            if solicitud.etapa_actual and solicitud.etapa_actual.sla_horas:
+                fecha_inicio = solicitud.fecha_creacion
+                sla_horas = solicitud.etapa_actual.sla_horas
+                fecha_vencimiento = fecha_inicio + timedelta(hours=sla_horas)
+                ahora = timezone.now()
+                
+                segundos_restantes = (fecha_vencimiento - ahora).total_seconds()
+                porcentaje_restante = (segundos_restantes / (sla_horas * 3600)) * 100
+                abs_segundos = abs(segundos_restantes)
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                
+                if segundos_restantes < 0:
+                    sla_info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    sla_info['color'] = 'text-danger'
+                elif porcentaje_restante > 40:
+                    sla_info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    sla_info['color'] = 'text-success'
+                elif porcentaje_restante > 0:
+                    sla_info['tiempo_restante'] = f"{int(horas)}h {int(minutos)}m" if horas > 0 else f"{int(minutos)}m"
+                    sla_info['color'] = 'text-warning'
+                else:
+                    sla_info['tiempo_restante'] = f"-{int(horas)}h {int(minutos)}m" if horas > 0 else f"-{int(minutos)}m"
+                    sla_info['color'] = 'text-danger'
+            
+            solicitudes_data.append({
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente_nombre,
+                'cliente_cedula': cliente_cedula,
+                'etapa': {
+                    'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                    'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                    'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False
+                },
+                'asignada_a': {
+                    'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                    'username': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                    'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else None
+                },
+                'estado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else "En Proceso",
+                'sla': sla_info,
+                'fecha_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+                'fecha_creacion': solicitud.fecha_creacion.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes': solicitudes_data,
+            'total': len(solicitudes_data),
+            'timestamp': timezone.now().isoformat(),
+            'last_check': last_check_time.isoformat(),
+            'view': view_type
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        })
+
+
+@login_required
+def api_obtener_requisitos_transicion(request, solicitud_id):
+    """API para obtener requisitos faltantes de una transición específica"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nueva_etapa_id = request.GET.get('nueva_etapa_id')
+        
+        if not nueva_etapa_id:
+            return JsonResponse({'error': 'ID de nueva etapa requerido'}, status=400)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
+        
+        nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
+        
+        # Buscar transición
+        transicion = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual,
+            etapa_destino=nueva_etapa
+        ).first()
+        
+        if not transicion:
+            return JsonResponse({
+                'success': True,
+                'requisitos_faltantes': [],
+                'mensaje': 'No hay requisitos especiales para esta transición'
+            })
+        
+        # Obtener requisitos faltantes
+        requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+        
+        return JsonResponse({
+            'success': True,
+            'requisitos_faltantes': requisitos_faltantes,
+            'transicion': {
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': transicion.etapa_origen.nombre,
+                'etapa_destino': transicion.etapa_destino.nombre
+            },
+            'total_faltantes': len(requisitos_faltantes)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_subir_requisito_transicion(request, solicitud_id):
+    """API para subir un archivo de requisito faltante"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        requisito_id = request.POST.get('requisito_id')
+        
+        if not requisito_id:
+            return JsonResponse({'error': 'ID de requisito requerido'}, status=400)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para modificar esta solicitud'}, status=403)
+        
+        requisito = get_object_or_404(Requisito, id=requisito_id)
+        
+        # Verificar que hay un archivo
+        if 'archivo' not in request.FILES:
+            return JsonResponse({'error': 'No se proporcionó ningún archivo'}, status=400)
+        
+        archivo = request.FILES['archivo']
+        
+        # Obtener o crear RequisitoSolicitud
+        requisito_solicitud, created = RequisitoSolicitud.objects.get_or_create(
+            solicitud=solicitud,
+            requisito=requisito,
+            defaults={
+                'cumplido': True,
+                'observaciones': f'Archivo subido por {request.user.get_full_name() or request.user.username} el {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+            }
+        )
+        
+        # Actualizar archivo y marcar como cumplido
+        requisito_solicitud.archivo = archivo
+        requisito_solicitud.cumplido = True
+        if not created:
+            # Actualizar observaciones si ya existía
+            requisito_solicitud.observaciones += f'\nActualizado por {request.user.get_full_name() or request.user.username} el {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        
+        requisito_solicitud.save()
+        
+        # Notificar cambio
+        notify_solicitud_change(solicitud, 'requisito_actualizado', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Archivo para "{requisito.nombre}" subido exitosamente',
+            'requisito': {
+                'id': requisito.id,
+                'nombre': requisito.nombre,
+                'archivo_url': requisito_solicitud.archivo.url if requisito_solicitud.archivo else None,
+                'cumplido': requisito_solicitud.cumplido
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_validar_requisitos_antes_transicion(request, solicitud_id):
+    """API para validar requisitos antes de realizar una transición"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nueva_etapa_id = request.GET.get('nueva_etapa_id')
+        
+        if not nueva_etapa_id:
+            return JsonResponse({'error': 'ID de nueva etapa requerido'}, status=400)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser):
+            return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
+        
+        nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
+        
+        # Buscar transición
+        transicion = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual,
+            etapa_destino=nueva_etapa
+        ).first()
+        
+        if not transicion:
+            return JsonResponse({
+                'success': True,
+                'puede_continuar': True,
+                'mensaje': 'No hay requisitos especiales para esta transición'
+            })
+        
+        # Verificar requisitos
+        requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+        
+        return JsonResponse({
+            'success': True,
+            'puede_continuar': len(requisitos_faltantes) == 0,
+            'requisitos_faltantes': requisitos_faltantes,
+            'total_faltantes': len(requisitos_faltantes),
+            'mensaje': 'Todos los requisitos están completos' if len(requisitos_faltantes) == 0 else f'Faltan {len(requisitos_faltantes)} requisito(s)'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==========================================
+# VISTAS DE API PARA REQUISITOS DE TRANSICIÓN
+# ==========================================
+
+@login_required
+@permission_required('workflow.add_requisitotransicion')
+def api_obtener_requisitos_transicion_pipeline(request, pipeline_id):
+    """API para obtener todos los requisitos de transición de un pipeline"""
+    try:
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        
+        # Obtener todas las transiciones del pipeline
+        transiciones = TransicionEtapa.objects.filter(pipeline=pipeline).select_related(
+            'etapa_origen', 'etapa_destino'
+        )
+        
+        # Obtener requisitos de transición
+        requisitos_transicion = RequisitoTransicion.objects.filter(
+            transicion__pipeline=pipeline
+        ).select_related('transicion', 'requisito', 'transicion__etapa_origen', 'transicion__etapa_destino')
+        
+        # Formatear datos para el frontend
+        datos_transiciones = []
+        for transicion in transiciones:
+            requisitos_de_transicion = [
+                {
+                    'id': rt.id,
+                    'requisito_id': rt.requisito.id,
+                    'requisito_nombre': rt.requisito.nombre,
+                    'obligatorio': rt.obligatorio,
+                    'mensaje_personalizado': rt.mensaje_personalizado or ''
+                }
+                for rt in requisitos_transicion if rt.transicion_id == transicion.id
+            ]
+            
+            datos_transiciones.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': {
+                    'id': transicion.etapa_origen.id,
+                    'nombre': transicion.etapa_origen.nombre
+                },
+                'etapa_destino': {
+                    'id': transicion.etapa_destino.id,
+                    'nombre': transicion.etapa_destino.nombre
+                },
+                'requisitos': requisitos_de_transicion
+            })
+        
+        # Obtener solo los requisitos asignados a este pipeline
+        requisitos_disponibles = Requisito.objects.filter(
+            requisitopipeline__pipeline=pipeline
+        ).values('id', 'nombre', 'descripcion').distinct()
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones': datos_transiciones,
+            'requisitos_disponibles': list(requisitos_disponibles)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@permission_required('workflow.add_requisitotransicion')
+def api_crear_requisito_transicion(request):
+    """API para crear un requisito de transición"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        transicion_id = data.get('transicion_id')
+        requisito_id = data.get('requisito_id')
+        obligatorio = data.get('obligatorio', True)
+        mensaje_personalizado = data.get('mensaje_personalizado', '')
+        
+        if not all([transicion_id, requisito_id]):
+            return JsonResponse({'error': 'Transición y requisito son obligatorios'}, status=400)
+        
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        requisito = get_object_or_404(Requisito, id=requisito_id)
+        
+        # Verificar que no existe ya esta combinación
+        if RequisitoTransicion.objects.filter(transicion=transicion, requisito=requisito).exists():
+            return JsonResponse({'error': 'Este requisito ya está asignado a esta transición'}, status=400)
+        
+        # Crear el requisito de transición
+        requisito_transicion = RequisitoTransicion.objects.create(
+            transicion=transicion,
+            requisito=requisito,
+            obligatorio=obligatorio,
+            mensaje_personalizado=mensaje_personalizado
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'requisito_transicion': {
+                'id': requisito_transicion.id,
+                'transicion_id': transicion.id,
+                'transicion_nombre': transicion.nombre,
+                'requisito_id': requisito.id,
+                'requisito_nombre': requisito.nombre,
+                'obligatorio': requisito_transicion.obligatorio,
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+            },
+            'mensaje': f'Requisito "{requisito.nombre}" asignado a la transición "{transicion.nombre}"'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@permission_required('workflow.change_requisitotransicion')
+def api_actualizar_requisito_transicion(request, requisito_transicion_id):
+    """API para actualizar un requisito de transición"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        requisito_transicion = get_object_or_404(RequisitoTransicion, id=requisito_transicion_id)
+        
+        data = json.loads(request.body)
+        obligatorio = data.get('obligatorio', requisito_transicion.obligatorio)
+        mensaje_personalizado = data.get('mensaje_personalizado', requisito_transicion.mensaje_personalizado)
+        
+        # Actualizar campos
+        requisito_transicion.obligatorio = obligatorio
+        requisito_transicion.mensaje_personalizado = mensaje_personalizado
+        requisito_transicion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'requisito_transicion': {
+                'id': requisito_transicion.id,
+                'obligatorio': requisito_transicion.obligatorio,
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+            },
+            'mensaje': 'Requisito de transición actualizado exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@permission_required('workflow.delete_requisitotransicion')
+def api_eliminar_requisito_transicion(request, requisito_transicion_id):
+    """API para eliminar un requisito de transición"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        requisito_transicion = get_object_or_404(RequisitoTransicion, id=requisito_transicion_id)
+        
+        transicion_nombre = requisito_transicion.transicion.nombre
+        requisito_nombre = requisito_transicion.requisito.nombre
+        
+        requisito_transicion.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Requisito "{requisito_nombre}" removido de la transición "{transicion_nombre}"'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

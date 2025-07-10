@@ -426,14 +426,16 @@
                             </thead>
                             <tbody>
                                 {% for s in solicitudes_tabla %}
-                                <tr class="align-middle table-row-hover {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
+                                <tr class="align-middle table-row-hover clickable-row {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
                                     data-solicitud-id="{{ s.id }}"
                                     data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
                                     data-producto="{{ s.producto_descripcion|default:'Sin producto' }}"
                                     data-estado="{{ s.estado_actual|default:'Sin estado' }}"
                                     data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
                                     data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
-                                    data-prioridad="{{ s.prioridad|default:'Sin prioridad' }}">
+                                    data-prioridad="{{ s.prioridad|default:'Sin prioridad' }}"
+                                    onclick="handleRowClick(event, {{ s.id }})"
+                                    style="cursor: pointer;">
                                     <td class="text-dark">
                                         <div class="d-flex align-items-center">
                                             <!-- Iconos de alerta -->
@@ -441,11 +443,10 @@
                                             <i class="fas {{ alerta.icon }} text-{{ alerta.color }} me-1" title="{{ alerta.tooltip }}" style="font-size: 0.8rem;"></i>
                                             {% endfor %}
                                             <!-- Número clickeable -->
-                                            <a href="#" class="text-decoration-none fw-bold solicitud-link" 
-                                               onclick="mostrarModalSolicitud({{ s.id }})" 
-                                               title="Ver detalles">
+                                            <span class="text-decoration-none fw-bold solicitud-link" 
+                                                  title="Ver detalles">
                                                 {{ s.codigo }}
-                                            </a>
+                                            </span>
                                         </div>
                                     </td>
                                     <td class="text-dark">
@@ -839,6 +840,8 @@
 </div>
 
 {% include 'workflow/partials/modalSolicitud.html' %}
+
+{% include 'workflow/partials/modalRequisitos.html' %}
 
 <!-- Modal de Confirmación Personalizado -->
 <div class="modal fade" id="modalConfirmacionEtapa" tabindex="-1" aria-labelledby="modalConfirmacionEtapaLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -1452,11 +1455,9 @@ $(document).ready(function() {
             etapas.forEach(function(etapa, idx) {
                 let stepClass = etapa.actual ? 'workflow-step current' : (etapa.completada ? 'workflow-step completed' : 'workflow-step pending');
                 let icon = etapa.completada ? '<i class="fas fa-check"></i>' : (etapa.actual ? '<i class="fas fa-bolt"></i>' : (idx+1));
-                let sla = etapa.sla ? `<div class='sla-label'>SLA: ${etapa.sla}</div>` : '';
                 roadmapHtml += `<div class="${stepClass}">
                     <div class="circle">${icon}</div>
                     <div class="step-label">${etapa.nombre}</div>
-                    ${sla}
                 </div>`;
                 if (idx < etapas.length - 1) {
                     roadmapHtml += '<div class="workflow-connector"></div>';
@@ -1500,6 +1501,24 @@ $(document).ready(function() {
         var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
         modal.show();
     };
+    
+    // Función para manejar clicks en filas de la tabla
+    function handleRowClick(event, solicitudId) {
+        // Prevenir el click si el usuario está interactuando con elementos de formulario
+        if (event.target.tagName === 'SELECT' || 
+            event.target.tagName === 'BUTTON' || 
+            event.target.tagName === 'INPUT' ||
+            event.target.closest('select') ||
+            event.target.closest('button') ||
+            event.target.closest('input') ||
+            event.target.closest('.dropdown') ||
+            event.target.closest('.menu-dropdown')) {
+            return;
+        }
+        
+        // Si no es un elemento de formulario, mostrar el modal
+        mostrarModalSolicitud(solicitudId);
+    }
     
 
 
@@ -1588,6 +1607,22 @@ $(document).ready(function() {
         flex-direction: column;
         gap: 8px !important;
     }
+}
+
+/* Estilos para filas clickeables */
+.clickable-row {
+    transition: all 0.2s ease;
+}
+
+.clickable-row:hover {
+    background-color: rgba(0, 156, 60, 0.1) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-row:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Mejorar paginación de DataTables */

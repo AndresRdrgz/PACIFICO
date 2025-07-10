@@ -268,3 +268,25 @@ class SolicitudComentario(models.Model):
             return f"hace {minutes} minuto{'s' if minutes > 1 else ''}"
         else:
             return "hace unos segundos"
+
+
+# --------------------------------------
+# REQUISITOS POR TRANSICIÓN
+# --------------------------------------
+
+class RequisitoTransicion(models.Model):
+    """
+    Modelo para definir qué requisitos son obligatorios para transiciones específicas
+    """
+    transicion = models.ForeignKey(TransicionEtapa, on_delete=models.CASCADE, related_name='requisitos_obligatorios')
+    requisito = models.ForeignKey(Requisito, on_delete=models.CASCADE)
+    obligatorio = models.BooleanField(default=True, help_text="Si es obligatorio para esta transición")
+    mensaje_personalizado = models.TextField(blank=True, null=True, help_text="Mensaje personalizado para este requisito")
+
+    class Meta:
+        unique_together = ('transicion', 'requisito')
+        verbose_name = "Requisito de Transición"
+        verbose_name_plural = "Requisitos de Transición"
+
+    def __str__(self):
+        return f"{self.transicion} - {self.requisito.nombre} ({'Obligatorio' if self.obligatorio else 'Opcional'})"
