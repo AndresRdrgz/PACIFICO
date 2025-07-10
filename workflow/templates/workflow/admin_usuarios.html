@@ -1,0 +1,976 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Administración de Usuarios - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Administración de Usuarios</h1>
+            <p class="text-muted">Gestiona el acceso de usuarios a pipelines y bandejas de trabajo</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-pacifico" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-2"></i>Actualizar
+            </button>
+            <button type="button" class="btn btn-pacifico" onclick="crearBandejaTrabajo()">
+                <i class="fas fa-plus me-2"></i>Nueva Bandeja
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="usuarios-tab" data-bs-toggle="tab" data-bs-target="#usuarios" type="button" role="tab">
+                <i class="fas fa-users me-2"></i>Usuarios
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pipelines-tab" data-bs-toggle="tab" data-bs-target="#pipelines" type="button" role="tab">
+                <i class="fas fa-project-diagram me-2"></i>Acceso a Pipelines
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="bandejas-tab" data-bs-toggle="tab" data-bs-target="#bandejas" type="button" role="tab">
+                <i class="fas fa-inbox me-2"></i>Bandejas de Trabajo
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="adminTabsContent">
+        <!-- Tab Usuarios -->
+        <div class="tab-pane fade show active" id="usuarios" role="tabpanel">
+            <div class="card card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Gestión de Usuarios
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Filtros -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="filtroUsuarios" placeholder="Buscar usuarios...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control" id="filtroEstado">
+                                <option value="">Todos los estados</option>
+                                <option value="activo">Activos</option>
+                                <option value="inactivo">Inactivos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control" id="filtroPipeline">
+                                <option value="">Todos los pipelines</option>
+                                {% for pipeline in pipelines %}
+                                <option value="{{ pipeline.id }}">{{ pipeline.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Lista de usuarios -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="tablaUsuarios">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Estado</th>
+                                    <th>Pipelines</th>
+                                    <th>Bandejas</th>
+                                    <th>Último acceso</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usuariosTableBody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Acceso a Pipelines -->
+        <div class="tab-pane fade" id="pipelines" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-project-diagram me-2"></i>
+                                Pipelines Disponibles
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="pipelinesList">
+                                {% for pipeline in pipelines %}
+                                <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-2 pipeline-item" data-pipeline-id="{{ pipeline.id }}">
+                                    <div>
+                                        <h6 class="mb-1">{{ pipeline.nombre }}</h6>
+                                        <small class="text-muted">{{ pipeline.descripcion|default:"Sin descripción" }}</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-pacifico" onclick="gestionarAccesoPipeline({{ pipeline.id }}, '{{ pipeline.nombre }}')">
+                                        <i class="fas fa-users-cog"></i>
+                                    </button>
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No hay pipelines configurados</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user-check me-2"></i>
+                                Usuarios con Acceso
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="usuariosConAcceso">
+                                <div class="text-center py-4">
+                                    <i class="fas fa-mouse-pointer fa-2x text-muted mb-3"></i>
+                                    <p class="text-muted">Selecciona un pipeline para ver usuarios con acceso</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Bandejas de Trabajo -->
+        <div class="tab-pane fade" id="bandejas" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-inbox me-2"></i>
+                                Bandejas de Trabajo
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="bandejasList">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card card-custom">
+                        <div class="card-header-custom">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users me-2"></i>
+                                Miembros de Bandeja
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="miembrosBandeja">
+                                <div class="text-center py-4">
+                                    <i class="fas fa-mouse-pointer fa-2x text-muted mb-3"></i>
+                                    <p class="text-muted">Selecciona una bandeja para ver sus miembros</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gestionar Usuario -->
+<div class="modal fade" id="gestionarUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gestionar Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Acceso a Pipelines</h6>
+                        <div id="pipelinesUsuario">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Bandejas de Trabajo</h6>
+                        <div id="bandejasUsuario">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-pacifico" onclick="guardarCambiosUsuario()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Acceso Pipeline -->
+<div class="modal fade" id="asignarAccesoPipelineModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asignar Acceso a Pipeline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="asignarAccesoPipelineForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="usuarioSelect" class="form-label">Usuario</label>
+                        <select class="form-control" id="usuarioSelect" name="usuario_id" required>
+                            <option value="">Seleccionar usuario...</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }} ({{ usuario.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nivelAcceso" class="form-label">Nivel de Acceso</label>
+                        <select class="form-control" id="nivelAcceso" name="nivel_acceso" required>
+                            <option value="lectura">Solo Lectura</option>
+                            <option value="escritura">Lectura y Escritura</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="pipelineIdAcceso" name="pipeline_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Asignar Acceso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Miembro Bandeja -->
+<div class="modal fade" id="asignarMiembroBandejaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asignar Usuario a Bandeja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="asignarMiembroBandejaForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="usuarioSelectBandeja" class="form-label">Usuario</label>
+                        <select class="form-control" id="usuarioSelectBandeja" name="usuario_id" required>
+                            <option value="">Seleccionar usuario...</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }} ({{ usuario.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rolBandeja" class="form-label">Rol</label>
+                        <select class="form-control" id="rolBandeja" name="rol" required>
+                            <option value="miembro">Miembro</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="administrador">Administrador</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="bandejaIdMiembro" name="bandeja_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Asignar Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Bandeja -->
+<div class="modal fade" id="nuevaBandejaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Bandeja de Trabajo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevaBandejaForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nombreBandeja" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="nombreBandeja" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descripcionBandeja" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcionBandeja" name="descripcion" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pipelineBandeja" class="form-label">Pipeline</label>
+                        <select class="form-control" id="pipelineBandeja" name="pipeline_id" required>
+                            <option value="">Seleccionar pipeline...</option>
+                            {% for pipeline in pipelines %}
+                            <option value="{{ pipeline.id }}">{{ pipeline.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="etapaBandeja" class="form-label">Etapa (opcional)</label>
+                        <select class="form-control" id="etapaBandeja" name="etapa_id">
+                            <option value="">Todas las etapas</option>
+                            <!-- Se llena dinámicamente según el pipeline -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="colorBandeja" class="form-label">Color</label>
+                        <input type="color" class="form-control" id="colorBandeja" name="color" value="#009c3c">
+                    </div>
+                    <div class="mb-3">
+                        <label for="ordenBandeja" class="form-label">Orden</label>
+                        <input type="number" class="form-control" id="ordenBandeja" name="orden" value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Bandeja</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+let usuariosData = [];
+let pipelinesData = {{ pipelines|safe }};
+let bandejasData = [];
+let usuarioActual = null;
+let pipelineActual = null;
+let bandejaActual = null;
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+    cargarUsuarios();
+    cargarBandejasTrabajo();
+    
+    // Event listeners para filtros
+    document.getElementById('filtroUsuarios').addEventListener('input', filtrarUsuarios);
+    document.getElementById('filtroEstado').addEventListener('change', filtrarUsuarios);
+    document.getElementById('filtroPipeline').addEventListener('change', filtrarUsuarios);
+    
+    // Event listeners para formularios
+    document.getElementById('asignarAccesoPipelineForm').addEventListener('submit', asignarAccesoPipeline);
+    document.getElementById('asignarMiembroBandejaForm').addEventListener('submit', asignarMiembroBandeja);
+    document.getElementById('nuevaBandejaForm').addEventListener('submit', crearNuevaBandeja);
+    
+    // Listener para cambio de pipeline en nueva bandeja
+    document.getElementById('pipelineBandeja').addEventListener('change', cargarEtapasPipeline);
+});
+
+// Función para cargar usuarios
+function cargarUsuarios() {
+    fetch('{% url "workflow:api_usuarios" %}')
+    .then(response => response.json())
+    .then(data => {
+        usuariosData = data.usuarios;
+        mostrarUsuarios(usuariosData);
+    })
+    .catch(error => {
+        console.error('Error cargando usuarios:', error);
+        mostrarNotificacion('Error al cargar usuarios', 'error');
+    });
+}
+
+// Función para mostrar usuarios en la tabla
+function mostrarUsuarios(usuarios) {
+    const tbody = document.getElementById('usuariosTableBody');
+    tbody.innerHTML = '';
+    
+    usuarios.forEach(usuario => {
+        const estadoBadge = usuario.is_active ? 
+            '<span class="badge bg-success">Activo</span>' : 
+            '<span class="badge bg-danger">Inactivo</span>';
+        
+        const pipelinesBadges = usuario.pipelines_acceso.length > 0 ?
+            usuario.pipelines_acceso.map(p => `<span class="badge bg-info me-1">${p.nombre}</span>`).join('') :
+            '<span class="text-muted">Sin acceso</span>';
+        
+        const bandejasBadges = usuario.bandejas_trabajo.length > 0 ?
+            usuario.bandejas_trabajo.map(b => `<span class="badge bg-warning me-1">${b.nombre}</span>`).join('') :
+            '<span class="text-muted">Sin asignación</span>';
+        
+        const row = `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar me-2">
+                            ${usuario.first_name ? usuario.first_name.charAt(0) + (usuario.last_name ? usuario.last_name.charAt(0) : '') : usuario.username.charAt(0)}
+                        </div>
+                        <div>
+                            <div class="fw-semibold">${usuario.first_name || usuario.username} ${usuario.last_name || ''}</div>
+                            <small class="text-muted">${usuario.username}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>${estadoBadge}</td>
+                <td>${pipelinesBadges}</td>
+                <td>${bandejasBadges}</td>
+                <td>${usuario.last_login || '<span class="text-muted">Nunca</span>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-pacifico" onclick="gestionarUsuario(${usuario.id})">
+                        <i class="fas fa-cog"></i> Gestionar
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+}
+
+// Función para filtrar usuarios
+function filtrarUsuarios() {
+    const filtroTexto = document.getElementById('filtroUsuarios').value.toLowerCase();
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const filtroPipelineId = document.getElementById('filtroPipeline').value;
+    
+    const usuariosFiltrados = usuariosData.filter(usuario => {
+        const textoMatch = usuario.username.toLowerCase().includes(filtroTexto) ||
+                         (usuario.first_name && usuario.first_name.toLowerCase().includes(filtroTexto)) ||
+                         (usuario.last_name && usuario.last_name.toLowerCase().includes(filtroTexto));
+        
+        const estadoMatch = !filtroEstado || 
+                          (filtroEstado === 'activo' && usuario.is_active) ||
+                          (filtroEstado === 'inactivo' && !usuario.is_active);
+        
+        const pipelineMatch = !filtroPipelineId || 
+                            usuario.pipelines_acceso.some(p => p.id == filtroPipelineId);
+        
+        return textoMatch && estadoMatch && pipelineMatch;
+    });
+    
+    mostrarUsuarios(usuariosFiltrados);
+}
+
+// Función para gestionar un usuario específico
+function gestionarUsuario(usuarioId) {
+    usuarioActual = usuariosData.find(u => u.id === usuarioId);
+    if (!usuarioActual) return;
+    
+    // Cargar datos del usuario en el modal
+    document.querySelector('#gestionarUsuarioModal .modal-title').textContent = 
+        `Gestionar Usuario: ${usuarioActual.first_name || usuarioActual.username} ${usuarioActual.last_name || ''}`;
+    
+    // Mostrar pipelines del usuario
+    mostrarPipelinesUsuario(usuarioActual);
+    
+    // Mostrar bandejas del usuario
+    mostrarBandejasUsuario(usuarioActual);
+    
+    // Mostrar modal
+    new bootstrap.Modal(document.getElementById('gestionarUsuarioModal')).show();
+}
+
+// Función para mostrar pipelines de un usuario
+function mostrarPipelinesUsuario(usuario) {
+    const container = document.getElementById('pipelinesUsuario');
+    container.innerHTML = '';
+    
+    // Agregar pipelines existentes
+    usuario.pipelines_acceso.forEach(acceso => {
+        const item = `
+            <div class="d-flex justify-content-between align-items-center p-2 border rounded mb-2">
+                <div>
+                    <strong>${acceso.nombre}</strong>
+                    <br><small class="text-muted">${acceso.nivel_acceso}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removerAccesoPipeline(${usuario.id}, ${acceso.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.innerHTML += item;
+    });
+    
+    // Botón para agregar nuevo acceso
+    container.innerHTML += `
+        <button class="btn btn-sm btn-outline-pacifico" onclick="agregarAccesoPipeline(${usuario.id})">
+            <i class="fas fa-plus me-1"></i>Agregar Pipeline
+        </button>
+    `;
+}
+
+// Función para mostrar bandejas de un usuario
+function mostrarBandejasUsuario(usuario) {
+    const container = document.getElementById('bandejasUsuario');
+    container.innerHTML = '';
+    
+    // Agregar bandejas existentes
+    usuario.bandejas_trabajo.forEach(bandeja => {
+        const item = `
+            <div class="d-flex justify-content-between align-items-center p-2 border rounded mb-2">
+                <div>
+                    <strong>${bandeja.nombre}</strong>
+                    <br><small class="text-muted">${bandeja.rol} - ${bandeja.pipeline}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removerMiembroBandeja(${usuario.id}, ${bandeja.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.innerHTML += item;
+    });
+    
+    // Botón para agregar nueva bandeja
+    container.innerHTML += `
+        <button class="btn btn-sm btn-outline-pacifico" onclick="agregarMiembroBandeja(${usuario.id})">
+            <i class="fas fa-plus me-1"></i>Agregar Bandeja
+        </button>
+    `;
+}
+
+// Función para gestionar acceso a pipeline
+function gestionarAccesoPipeline(pipelineId, pipelineNombre) {
+    pipelineActual = pipelineId;
+    
+    // Cargar usuarios con acceso a este pipeline
+    const usuariosConAcceso = usuariosData.filter(u => 
+        u.pipelines_acceso.some(p => p.id === pipelineId)
+    );
+    
+    const container = document.getElementById('usuariosConAcceso');
+    container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6>Pipeline: ${pipelineNombre}</h6>
+            <button class="btn btn-sm btn-pacifico" onclick="abrirAsignarAccesoPipeline(${pipelineId})">
+                <i class="fas fa-plus me-1"></i>Asignar Usuario
+            </button>
+        </div>
+    `;
+    
+    if (usuariosConAcceso.length === 0) {
+        container.innerHTML += `
+            <div class="text-center py-3">
+                <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No hay usuarios con acceso a este pipeline</p>
+            </div>
+        `;
+    } else {
+        usuariosConAcceso.forEach(usuario => {
+            const acceso = usuario.pipelines_acceso.find(p => p.id === pipelineId);
+            const item = `
+                <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-2">
+                    <div>
+                        <strong>${usuario.first_name || usuario.username} ${usuario.last_name || ''}</strong>
+                        <br><small class="text-muted">${acceso.nivel_acceso} - Desde: ${acceso.fecha_asignacion}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removerAccesoPipeline(${usuario.id}, ${pipelineId})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            container.innerHTML += item;
+        });
+    }
+}
+
+// Función para cargar bandejas de trabajo
+function cargarBandejasTrabajo() {
+    fetch('{% url "workflow:api_bandejas_trabajo" %}')
+    .then(response => response.json())
+    .then(data => {
+        bandejasData = data.bandejas;
+        mostrarBandejasTrabajo(bandejasData);
+    })
+    .catch(error => {
+        console.error('Error cargando bandejas:', error);
+        mostrarNotificacion('Error al cargar bandejas de trabajo', 'error');
+    });
+}
+
+// Función para mostrar bandejas de trabajo
+function mostrarBandejasTrabajo(bandejas) {
+    const container = document.getElementById('bandejasList');
+    container.innerHTML = '';
+    
+    if (bandejas.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No hay bandejas de trabajo configuradas</p>
+            </div>
+        `;
+        return;
+    }
+    
+    bandejas.forEach(bandeja => {
+        const item = `
+            <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-2 bandeja-item" 
+                 data-bandeja-id="${bandeja.id}" 
+                 onclick="seleccionarBandeja(${bandeja.id})"
+                 style="cursor: pointer; border-left: 4px solid ${bandeja.color};">
+                <div>
+                    <h6 class="mb-1">${bandeja.nombre}</h6>
+                    <small class="text-muted">${bandeja.pipeline} - ${bandeja.miembros_count} miembros</small>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        `;
+        container.innerHTML += item;
+    });
+}
+
+// Función para seleccionar una bandeja
+function seleccionarBandeja(bandejaId) {
+    bandejaActual = bandejaId;
+    const bandeja = bandejasData.find(b => b.id === bandejaId);
+    
+    // Highlight selected bandeja
+    document.querySelectorAll('.bandeja-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    document.querySelector(`[data-bandeja-id="${bandejaId}"]`).classList.add('selected');
+    
+    // Cargar miembros de la bandeja
+    cargarMiembrosBandeja(bandejaId, bandeja.nombre);
+}
+
+// Función para cargar miembros de una bandeja
+function cargarMiembrosBandeja(bandejaId, bandejaNombre) {
+    fetch(`{% url "workflow:api_miembros_bandeja" 0 %}`.replace('0', bandejaId))
+    .then(response => response.json())
+    .then(data => {
+        mostrarMiembrosBandeja(data.miembros, bandejaNombre);
+    })
+    .catch(error => {
+        console.error('Error cargando miembros:', error);
+        mostrarNotificacion('Error al cargar miembros de la bandeja', 'error');
+    });
+}
+
+// Función para mostrar miembros de una bandeja
+function mostrarMiembrosBandeja(miembros, bandejaNombre) {
+    const container = document.getElementById('miembrosBandeja');
+    container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6>Bandeja: ${bandejaNombre}</h6>
+            <button class="btn btn-sm btn-pacifico" onclick="abrirAsignarMiembroBandeja(${bandejaActual})">
+                <i class="fas fa-plus me-1"></i>Asignar Usuario
+            </button>
+        </div>
+    `;
+    
+    if (miembros.length === 0) {
+        container.innerHTML += `
+            <div class="text-center py-3">
+                <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No hay miembros asignados a esta bandeja</p>
+            </div>
+        `;
+    } else {
+        miembros.forEach(miembro => {
+            const rolBadge = miembro.rol === 'supervisor' ? 'bg-warning' : 
+                           miembro.rol === 'administrador' ? 'bg-danger' : 'bg-info';
+            
+            const item = `
+                <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-2">
+                    <div>
+                        <strong>${miembro.first_name || miembro.username} ${miembro.last_name || ''}</strong>
+                        <br>
+                        <span class="badge ${rolBadge}">${miembro.rol}</span>
+                        <small class="text-muted ms-2">Desde: ${miembro.fecha_asignacion}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removerMiembroBandeja(${miembro.usuario_id}, ${bandejaActual})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            container.innerHTML += item;
+        });
+    }
+}
+
+// Funciones para modals
+function abrirAsignarAccesoPipeline(pipelineId) {
+    document.getElementById('pipelineIdAcceso').value = pipelineId;
+    new bootstrap.Modal(document.getElementById('asignarAccesoPipelineModal')).show();
+}
+
+function abrirAsignarMiembroBandeja(bandejaId) {
+    document.getElementById('bandejaIdMiembro').value = bandejaId;
+    new bootstrap.Modal(document.getElementById('asignarMiembroBandejaModal')).show();
+}
+
+function crearBandejaTrabajo() {
+    new bootstrap.Modal(document.getElementById('nuevaBandejaModal')).show();
+}
+
+// Event handlers para formularios
+function asignarAccesoPipeline(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    fetch('{% url "workflow:api_asignar_acceso_pipeline" %}', {
+        method: 'POST',
+        body: JSON.stringify({
+            usuario_id: parseInt(formData.get('usuario_id')),
+            pipeline_id: parseInt(formData.get('pipeline_id')),
+            nivel_acceso: formData.get('nivel_acceso')
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('asignarAccesoPipelineModal')).hide();
+            cargarUsuarios();
+            if (pipelineActual) {
+                const pipeline = pipelinesData.find(p => p.id === pipelineActual);
+                gestionarAccesoPipeline(pipelineActual, pipeline.nombre);
+            }
+        } else {
+            mostrarNotificacion(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al asignar acceso', 'error');
+    });
+}
+
+function asignarMiembroBandeja(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    fetch('{% url "workflow:api_asignar_miembro_bandeja" %}', {
+        method: 'POST',
+        body: JSON.stringify({
+            usuario_id: parseInt(formData.get('usuario_id')),
+            bandeja_id: parseInt(formData.get('bandeja_id')),
+            rol: formData.get('rol')
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('asignarMiembroBandejaModal')).hide();
+            cargarUsuarios();
+            if (bandejaActual) {
+                const bandeja = bandejasData.find(b => b.id === bandejaActual);
+                cargarMiembrosBandeja(bandejaActual, bandeja.nombre);
+            }
+        } else {
+            mostrarNotificacion(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al asignar usuario', 'error');
+    });
+}
+
+function crearNuevaBandeja(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    fetch('{% url "workflow:api_crear_bandeja_trabajo" %}', {
+        method: 'POST',
+        body: JSON.stringify({
+            nombre: formData.get('nombre'),
+            descripcion: formData.get('descripcion'),
+            pipeline_id: parseInt(formData.get('pipeline_id')),
+            etapa_id: formData.get('etapa_id') ? parseInt(formData.get('etapa_id')) : null,
+            color: formData.get('color'),
+            orden: parseInt(formData.get('orden'))
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Bandeja creada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevaBandejaModal')).hide();
+            e.target.reset();
+            cargarBandejasTrabajo();
+        } else {
+            mostrarNotificacion(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear bandeja', 'error');
+    });
+}
+
+// Funciones para remover accesos
+function removerAccesoPipeline(usuarioId, pipelineId) {
+    if (!confirm('¿Estás seguro de que deseas remover este acceso?')) return;
+    
+    fetch('{% url "workflow:api_remover_acceso_pipeline" %}', {
+        method: 'POST',
+        body: JSON.stringify({
+            usuario_id: usuarioId,
+            pipeline_id: pipelineId
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.message, 'success');
+            cargarUsuarios();
+            if (pipelineActual === pipelineId) {
+                const pipeline = pipelinesData.find(p => p.id === pipelineId);
+                gestionarAccesoPipeline(pipelineId, pipeline.nombre);
+            }
+        } else {
+            mostrarNotificacion(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al remover acceso', 'error');
+    });
+}
+
+function removerMiembroBandeja(usuarioId, bandejaId) {
+    if (!confirm('¿Estás seguro de que deseas remover este usuario de la bandeja?')) return;
+    
+    fetch('{% url "workflow:api_remover_miembro_bandeja" %}', {
+        method: 'POST',
+        body: JSON.stringify({
+            usuario_id: usuarioId,
+            bandeja_id: bandejaId
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.message, 'success');
+            cargarUsuarios();
+            if (bandejaActual === bandejaId) {
+                const bandeja = bandejasData.find(b => b.id === bandejaId);
+                cargarMiembrosBandeja(bandejaId, bandeja.nombre);
+            }
+        } else {
+            mostrarNotificacion(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al remover usuario', 'error');
+    });
+}
+
+// Función para cargar etapas cuando se selecciona un pipeline
+function cargarEtapasPipeline() {
+    const pipelineId = document.getElementById('pipelineBandeja').value;
+    const etapaSelect = document.getElementById('etapaBandeja');
+    
+    etapaSelect.innerHTML = '<option value="">Todas las etapas</option>';
+    
+    if (!pipelineId) return;
+    
+    fetch(`{% url "workflow:api_obtener_etapas" 0 %}`.replace('0', pipelineId))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            data.etapas.forEach(etapa => {
+                etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error cargando etapas:', error);
+    });
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo) {
+    const alertClass = tipo === 'success' ? 'alert-success-custom' : 'alert-danger-custom';
+    const icon = tipo === 'success' ? 'check-circle' : 'exclamation-triangle';
+    
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-custom alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+// Estilos adicionales
+const additionalStyles = `
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .bandeja-item.selected {
+        background-color: rgba(0, 156, 60, 0.1);
+        border-color: var(--verde-pacifico) !important;
+    }
+    
+    .bandeja-item:hover {
+        background-color: rgba(0, 156, 60, 0.05);
+    }
+`;
+
+// Agregar estilos
+const styleSheet = document.createElement("style");
+styleSheet.innerText = additionalStyles;
+document.head.appendChild(styleSheet);
+</script>
+{% endblock %}

@@ -222,6 +222,16 @@
                             <i class="fas fa-shield-alt me-2"></i>Requisitos de Transición
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="permisos-pipeline-tab" data-bs-toggle="tab" data-bs-target="#permisos-pipeline" type="button" role="tab">
+                            <i class="fas fa-users me-2"></i>Acceso al Pipeline
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="permisos-bandejas-tab" data-bs-toggle="tab" data-bs-target="#permisos-bandejas" type="button" role="tab">
+                            <i class="fas fa-inbox me-2"></i>Acceso a Bandejas
+                        </button>
+                    </li>
                 </ul>
                 
                 <div class="tab-content mt-3" id="configTabsContent">
@@ -282,6 +292,36 @@
                             <strong>Información:</strong> Los requisitos de transición permiten definir qué documentos o requisitos son obligatorios para que una solicitud pueda pasar de una etapa a otra.
                         </div>
                         <div id="requisitosTransicionList"></div>
+                    </div>
+                    
+                    <!-- Tab Permisos de Pipeline -->
+                    <div class="tab-pane fade" id="permisos-pipeline" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Acceso al Pipeline</h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevoPermisoPipeline()">
+                                <i class="fas fa-plus me-1"></i>Nuevo Permiso
+                            </button>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información:</strong> Define qué usuarios o grupos pueden acceder a este pipeline y qué acciones pueden realizar.
+                        </div>
+                        <div id="permisosPipelineList"></div>
+                    </div>
+                    
+                    <!-- Tab Permisos de Bandejas -->
+                    <div class="tab-pane fade" id="permisos-bandejas" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6>Acceso a Bandejas de Trabajo</h6>
+                            <button type="button" class="btn btn-sm btn-pacifico" onclick="nuevoPermisoBandeja()">
+                                <i class="fas fa-plus me-1"></i>Nuevo Permiso
+                            </button>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información:</strong> Define qué usuarios o grupos pueden acceder a cada bandeja (etapa) y qué acciones pueden realizar en ellas.
+                        </div>
+                        <div id="permisosBandejasList"></div>
                     </div>
                 </div>
             </div>
@@ -552,6 +592,210 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Nuevo Permiso de Pipeline -->
+<div class="modal fade" id="nuevoPermisoPipelineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Permiso de Pipeline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoPermisoPipelineForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Tipo de Asignación *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo_asignacion" id="tipoGrupo" value="grupo" checked>
+                                <label class="form-check-label" for="tipoGrupo">
+                                    Asignar a Grupo
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo_asignacion" id="tipoUsuario" value="usuario">
+                                <label class="form-check-label" for="tipoUsuario">
+                                    Asignar a Usuario
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12" id="grupoSelectContainer">
+                            <label for="grupoSelect" class="form-label fw-semibold">Grupo *</label>
+                            <select class="form-control form-control-custom" id="grupoSelect" name="grupo_id">
+                                <option value="">Seleccionar grupo...</option>
+                            </select>
+                        </div>
+                        <div class="col-12" id="usuarioSelectContainer" style="display: none;">
+                            <label for="usuarioSelect" class="form-label fw-semibold">Usuario *</label>
+                            <select class="form-control form-control-custom" id="usuarioSelect" name="usuario_id">
+                                <option value="">Seleccionar usuario...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="fw-semibold mb-3">Permisos</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeVer" name="puede_ver" checked>
+                                        <label class="form-check-label" for="puedeVer">
+                                            <strong>Puede ver</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede ver el pipeline y sus solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeCrear" name="puede_crear">
+                                        <label class="form-check-label" for="puedeCrear">
+                                            <strong>Puede crear</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede crear nuevas solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeEditar" name="puede_editar">
+                                        <label class="form-check-label" for="puedeEditar">
+                                            <strong>Puede editar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede editar solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeEliminar" name="puede_eliminar">
+                                        <label class="form-check-label" for="puedeEliminar">
+                                            <strong>Puede eliminar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede eliminar solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeAdmin" name="puede_admin">
+                                        <label class="form-check-label" for="puedeAdmin">
+                                            <strong>Puede administrar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede administrar la configuración</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Permiso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Permiso de Bandeja -->
+<div class="modal fade" id="nuevoPermisoBandejaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Permiso de Bandeja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoPermisoBandejaForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="etapaSelect" class="form-label fw-semibold">Etapa *</label>
+                            <select class="form-control form-control-custom" id="etapaSelect" name="etapa_id" required>
+                                <option value="">Seleccionar etapa...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Tipo de Asignación *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo_asignacion_bandeja" id="tipoGrupoBandeja" value="grupo" checked>
+                                <label class="form-check-label" for="tipoGrupoBandeja">
+                                    Asignar a Grupo
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo_asignacion_bandeja" id="tipoUsuarioBandeja" value="usuario">
+                                <label class="form-check-label" for="tipoUsuarioBandeja">
+                                    Asignar a Usuario
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12" id="grupoSelectBandejaContainer">
+                            <label for="grupoSelectBandeja" class="form-label fw-semibold">Grupo *</label>
+                            <select class="form-control form-control-custom" id="grupoSelectBandeja" name="grupo_id">
+                                <option value="">Seleccionar grupo...</option>
+                            </select>
+                        </div>
+                        <div class="col-12" id="usuarioSelectBandejaContainer" style="display: none;">
+                            <label for="usuarioSelectBandeja" class="form-label fw-semibold">Usuario *</label>
+                            <select class="form-control form-control-custom" id="usuarioSelectBandeja" name="usuario_id">
+                                <option value="">Seleccionar usuario...</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="fw-semibold mb-3">Permisos</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeVerBandeja" name="puede_ver" checked>
+                                        <label class="form-check-label" for="puedeVerBandeja">
+                                            <strong>Puede ver</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede ver las solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeTomarBandeja" name="puede_tomar" checked>
+                                        <label class="form-check-label" for="puedeTomarBandeja">
+                                            <strong>Puede tomar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede tomar solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeDevolverBandeja" name="puede_devolver" checked>
+                                        <label class="form-check-label" for="puedeDevolverBandeja">
+                                            <strong>Puede devolver</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede devolver solicitudes</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeTransicionarBandeja" name="puede_transicionar" checked>
+                                        <label class="form-check-label" for="puedeTransicionarBandeja">
+                                            <strong>Puede transicionar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede realizar transiciones</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="puedeEditarBandeja" name="puede_editar">
+                                        <label class="form-check-label" for="puedeEditarBandeja">
+                                            <strong>Puede editar</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Puede editar solicitudes</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Permiso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -637,6 +881,12 @@ function configurarPipeline(pipelineId) {
             
             // Cargar requisitos de transición
             cargarRequisitosTransicion();
+            
+            // Cargar permisos de pipeline
+            cargarPermisosPipeline();
+            
+            // Cargar permisos de bandejas
+            cargarPermisosBandejas();
             
             const modal = new bootstrap.Modal(document.getElementById('configuracionPipelineModal'));
             modal.show();
@@ -1251,6 +1501,159 @@ document.getElementById('editarRequisitoTransicionForm').addEventListener('submi
     });
 });
 
+// Event listeners para formularios de permisos de pipeline
+document.getElementById('nuevoPermisoPipelineForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const tipoAsignacion = formData.get('tipo_asignacion');
+    
+    const data = {
+        grupo_id: tipoAsignacion === 'grupo' ? formData.get('grupo_id') : null,
+        usuario_id: tipoAsignacion === 'usuario' ? formData.get('usuario_id') : null,
+        puede_ver: formData.get('puede_ver') === 'on',
+        puede_crear: formData.get('puede_crear') === 'on',
+        puede_editar: formData.get('puede_editar') === 'on',
+        puede_eliminar: formData.get('puede_eliminar') === 'on',
+        puede_admin: formData.get('puede_admin') === 'on'
+    };
+    
+    fetch(`{% url "workflow:api_crear_permiso_pipeline" 0 %}`.replace('0', pipelineActual), {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.mensaje, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevoPermisoPipelineModal')).hide();
+            this.reset();
+            cargarPermisosPipeline(); // Recargar lista
+        } else {
+            mostrarNotificacion('Error al crear permiso: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear permiso', 'error');
+    });
+});
+
+// Event listeners para formularios de permisos de bandeja
+document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const tipoAsignacion = formData.get('tipo_asignacion_bandeja');
+    
+    // Get etapa_id from the select, even if it's disabled
+    const etapaSelect = document.getElementById('etapaSelect');
+    const etapaId = etapaSelect.value;
+    
+    // Debug logging
+    console.log('Form submission - etapaId:', etapaId);
+    console.log('etapaSelect element:', etapaSelect);
+    console.log('etapaSelect options:', etapaSelect.options);
+    
+    // Validate that etapa_id is selected
+    if (!etapaId) {
+        mostrarNotificacion('Debe seleccionar una etapa', 'error');
+        return;
+    }
+    
+    // Validate that either grupo_id or usuario_id is selected
+    const grupoId = tipoAsignacion === 'grupo' ? formData.get('grupo_id') : null;
+    const usuarioId = tipoAsignacion === 'usuario' ? formData.get('usuario_id') : null;
+    
+    if (!grupoId && !usuarioId) {
+        mostrarNotificacion('Debe seleccionar un grupo o usuario', 'error');
+        return;
+    }
+    
+    const data = {
+        grupo_id: grupoId,
+        usuario_id: usuarioId,
+        puede_ver: formData.get('puede_ver') === 'on',
+        puede_tomar: formData.get('puede_tomar') === 'on',
+        puede_devolver: formData.get('puede_devolver') === 'on',
+        puede_transicionar: formData.get('puede_transicionar') === 'on',
+        puede_editar: formData.get('puede_editar') === 'on'
+    };
+    
+    console.log('Submitting data:', data);
+    console.log('URL:', `{% url "workflow:api_crear_permiso_bandeja" 0 %}`.replace('0', etapaId));
+    
+    fetch(`{% url "workflow:api_crear_permiso_bandeja" 0 %}`.replace('0', etapaId), {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion(data.mensaje, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevoPermisoBandejaModal')).hide();
+            this.reset();
+            document.getElementById('etapaSelect').disabled = false; // Re-habilitar select
+            cargarPermisosBandeja(etapaId); // Recargar permisos de esta etapa
+        } else {
+            mostrarNotificacion('Error al crear permiso: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear permiso: ' + error.message, 'error');
+    });
+});
+
+// Event listeners para cambios de tipo de asignación
+document.querySelectorAll('input[name="tipo_asignacion"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const grupoContainer = document.getElementById('grupoSelectContainer');
+        const usuarioContainer = document.getElementById('usuarioSelectContainer');
+        
+        if (this.value === 'grupo') {
+            grupoContainer.style.display = 'block';
+            usuarioContainer.style.display = 'none';
+            document.getElementById('usuarioSelect').value = '';
+        } else {
+            grupoContainer.style.display = 'none';
+            usuarioContainer.style.display = 'block';
+            document.getElementById('grupoSelect').value = '';
+        }
+    });
+});
+
+document.querySelectorAll('input[name="tipo_asignacion_bandeja"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const grupoContainer = document.getElementById('grupoSelectBandejaContainer');
+        const usuarioContainer = document.getElementById('usuarioSelectBandejaContainer');
+        
+        if (this.value === 'grupo') {
+            grupoContainer.style.display = 'block';
+            usuarioContainer.style.display = 'none';
+            document.getElementById('usuarioSelectBandeja').value = '';
+        } else {
+            grupoContainer.style.display = 'none';
+            usuarioContainer.style.display = 'block';
+            document.getElementById('grupoSelectBandeja').value = '';
+        }
+    });
+});
+
 // Función para eliminar pipeline
 function eliminarPipeline(pipelineId) {
     if (confirm('¿Estás seguro de que deseas eliminar este pipeline? Esta acción no se puede deshacer.')) {
@@ -1298,6 +1701,448 @@ function mostrarNotificacion(mensaje, tipo) {
         }
     }, 5000);
 }
+
+// ==========================================
+// FUNCIONES PARA GESTIÓN DE PERMISOS DE PIPELINE
+// ==========================================
+
+// Función para cargar permisos de pipeline
+function cargarPermisosPipeline() {
+    fetch(`{% url "workflow:api_obtener_permisos_pipeline" 0 %}`.replace('0', pipelineActual))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarPermisosPipeline(data.permisos);
+        } else {
+            mostrarNotificacion('Error al cargar permisos de pipeline', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al cargar permisos de pipeline', 'error');
+    });
+}
+
+// Función para mostrar permisos de pipeline
+function mostrarPermisosPipeline(permisos) {
+    const container = document.getElementById('permisosPipelineList');
+    container.innerHTML = '';
+    
+    if (permisos.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay permisos configurados</h5>
+                <p class="text-muted">Agrega permisos para controlar el acceso al pipeline</p>
+            </div>
+        `;
+        return;
+    }
+    
+    permisos.forEach(permiso => {
+        const permisoHtml = `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-2">
+                                ${permiso.grupo ? `Grupo: ${permiso.grupo.name}` : `Usuario: ${permiso.usuario.full_name || permiso.usuario.username}`}
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <small class="text-muted">Ver</small>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${permiso.puede_ver ? 'checked' : ''} onchange="actualizarPermisoPipeline(${permiso.id}, 'puede_ver', this.checked)">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Crear</small>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${permiso.puede_crear ? 'checked' : ''} onchange="actualizarPermisoPipeline(${permiso.id}, 'puede_crear', this.checked)">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Editar</small>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${permiso.puede_editar ? 'checked' : ''} onchange="actualizarPermisoPipeline(${permiso.id}, 'puede_editar', this.checked)">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Eliminar</small>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${permiso.puede_eliminar ? 'checked' : ''} onchange="actualizarPermisoPipeline(${permiso.id}, 'puede_eliminar', this.checked)">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Admin</small>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${permiso.puede_admin ? 'checked' : ''} onchange="actualizarPermisoPipeline(${permiso.id}, 'puede_admin', this.checked)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarPermisoPipeline(${permiso.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += permisoHtml;
+    });
+}
+
+// Función para nuevo permiso de pipeline
+function nuevoPermisoPipeline() {
+    // Cargar grupos y usuarios
+    cargarGruposYUsuarios();
+    
+    const modal = new bootstrap.Modal(document.getElementById('nuevoPermisoPipelineModal'));
+    modal.show();
+}
+
+// Función para cargar grupos y usuarios
+function cargarGruposYUsuarios() {
+    // Cargar grupos
+    fetch('{% url "workflow:api_obtener_grupos" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const grupoSelect = document.getElementById('grupoSelect');
+            grupoSelect.innerHTML = '<option value="">Seleccionar grupo...</option>';
+            data.grupos.forEach(grupo => {
+                grupoSelect.innerHTML += `<option value="${grupo.id}">${grupo.name} (${grupo.user_count} usuarios)</option>`;
+            });
+        }
+    });
+    
+    // Cargar usuarios
+    fetch('{% url "workflow:api_obtener_usuarios" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const usuarioSelect = document.getElementById('usuarioSelect');
+            usuarioSelect.innerHTML = '<option value="">Seleccionar usuario...</option>';
+            data.usuarios.forEach(usuario => {
+                usuarioSelect.innerHTML += `<option value="${usuario.id}">${usuario.full_name} (${usuario.username})</option>`;
+            });
+        }
+    });
+}
+
+// Función para actualizar permiso de pipeline
+function actualizarPermisoPipeline(permisoId, campo, valor) {
+    const data = { [campo]: valor };
+    
+    fetch(`{% url "workflow:api_actualizar_permiso_pipeline" 0 0 %}`.replace('0/0', `${pipelineActual}/${permisoId}`), {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Permiso actualizado exitosamente', 'success');
+        } else {
+            mostrarNotificacion('Error al actualizar permiso: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar permiso', 'error');
+    });
+}
+
+// Función para eliminar permiso de pipeline
+function eliminarPermisoPipeline(permisoId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este permiso?')) {
+        fetch(`{% url "workflow:api_eliminar_permiso_pipeline" 0 0 %}`.replace('0/0', `${pipelineActual}/${permisoId}`), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Permiso eliminado exitosamente', 'success');
+                cargarPermisosPipeline(); // Recargar lista
+            } else {
+                mostrarNotificacion('Error al eliminar permiso: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al eliminar permiso', 'error');
+        });
+    }
+}
+
+// ==========================================
+// FUNCIONES PARA GESTIÓN DE PERMISOS DE BANDEJA
+// ==========================================
+
+// Función para cargar permisos de bandejas
+function cargarPermisosBandejas() {
+    // Cargar solo etapas que son bandeja grupal
+    const etapasContainer = document.getElementById('permisosBandejasList');
+    etapasContainer.innerHTML = '';
+    
+    // Filtrar solo etapas que son bandeja grupal
+    const etapasBandeja = etapasPipeline.filter(etapa => etapa.es_bandeja_grupal);
+    
+    if (etapasBandeja.length === 0) {
+        etapasContainer.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay bandejas grupales configuradas</h5>
+                <p class="text-muted">Primero debes crear etapas marcadas como "bandeja grupal" en la pestaña "Etapas"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    etapasBandeja.forEach(etapa => {
+        const etapaHtml = `
+            <div class="card mb-3">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${etapa.nombre}</h6>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="nuevoPermisoBandeja(${etapa.id})">
+                            <i class="fas fa-plus me-1"></i>Agregar Permiso
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="permisosBandeja_${etapa.id}">
+                        <div class="text-center py-3">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p class="text-muted mb-0">Cargando permisos...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        etapasContainer.innerHTML += etapaHtml;
+        // Cargar permisos de esta etapa
+        cargarPermisosBandeja(etapa.id);
+    });
+}
+
+// Función para nuevo permiso de bandeja
+function nuevoPermisoBandeja(etapaId = null) {
+    // Ensure etapasPipeline is available
+    if (!etapasPipeline || etapasPipeline.length === 0) {
+        mostrarNotificacion('Error: No se pudieron cargar las etapas del pipeline', 'error');
+        return;
+    }
+    
+    // Cargar solo etapas que son bandeja grupal
+    const etapasBandeja = etapasPipeline.filter(etapa => etapa.es_bandeja_grupal);
+    
+    if (etapasBandeja.length === 0) {
+        mostrarNotificacion('No hay etapas configuradas como bandeja grupal', 'error');
+        return;
+    }
+    
+    const etapaSelect = document.getElementById('etapaSelect');
+    etapaSelect.innerHTML = '<option value="">Seleccionar etapa...</option>';
+    etapasBandeja.forEach(etapa => {
+        etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+    });
+    
+    if (etapaId) {
+        // Pre-seleccionar la etapa
+        etapaSelect.value = etapaId;
+        etapaSelect.disabled = true;
+    } else {
+        etapaSelect.disabled = false;
+    }
+    
+    // Cargar grupos y usuarios
+    cargarGruposYUsuariosBandeja();
+    const modal = new bootstrap.Modal(document.getElementById('nuevoPermisoBandejaModal'));
+    modal.show();
+}
+
+// Función para cargar grupos y usuarios para bandejas
+function cargarGruposYUsuariosBandeja() {
+    // Cargar grupos
+    fetch('{% url "workflow:api_obtener_grupos" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const grupoSelect = document.getElementById('grupoSelectBandeja');
+            grupoSelect.innerHTML = '<option value="">Seleccionar grupo...</option>';
+            data.grupos.forEach(grupo => {
+                grupoSelect.innerHTML += `<option value="${grupo.id}">${grupo.name} (${grupo.user_count} usuarios)</option>`;
+            });
+        }
+    });
+    
+    // Cargar usuarios
+    fetch('{% url "workflow:api_obtener_usuarios" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const usuarioSelect = document.getElementById('usuarioSelectBandeja');
+            usuarioSelect.innerHTML = '<option value="">Seleccionar usuario...</option>';
+            data.usuarios.forEach(usuario => {
+                usuarioSelect.innerHTML += `<option value="${usuario.id}">${usuario.first_name} ${usuario.last_name} (${usuario.username})</option>`;
+            });
+        }
+    });
+}
+
+// Función para actualizar permiso de bandeja
+function actualizarPermisoBandeja(permisoId, campo, valor) {
+    const data = { [campo]: valor };
+    
+    // Necesitamos obtener el etapa_id del permiso
+    fetch(`{% url "workflow:api_actualizar_permiso_bandeja" 0 0 %}`.replace('0/0', `etapa_id/${permisoId}`), {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Permiso actualizado exitosamente', 'success');
+        } else {
+            mostrarNotificacion('Error al actualizar permiso: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar permiso', 'error');
+    });
+}
+
+// Función para eliminar permiso de bandeja
+function eliminarPermisoBandeja(permisoId, etapaId) {
+    if (confirm('¿Estás seguro de que deseas eliminar este permiso?')) {
+        fetch(`{% url "workflow:api_eliminar_permiso_bandeja" 0 0 %}`.replace('0/0', `${etapaId}/${permisoId}`), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Permiso eliminado exitosamente', 'success');
+                cargarPermisosBandeja(etapaId); // Recargar permisos de esta etapa
+            } else {
+                mostrarNotificacion('Error al eliminar permiso: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al eliminar permiso', 'error');
+        });
+    }
+}
+
+// Función para cargar permisos de una bandeja específica
+function cargarPermisosBandeja(etapaId) {
+    fetch(`{% url "workflow:api_obtener_permisos_bandeja" 0 %}`.replace('0', etapaId))
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById(`permisosBandeja_${etapaId}`);
+        
+        if (data.success) {
+            mostrarPermisosBandeja(container, data.permisos, etapaId);
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <p class="text-muted mb-0">Error al cargar permisos</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const container = document.getElementById(`permisosBandeja_${etapaId}`);
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                <p class="text-muted mb-0">Error al cargar permisos</p>
+            </div>
+        `;
+    });
+}
+
+// Función para mostrar permisos de una bandeja
+function mostrarPermisosBandeja(container, permisos, etapaId) {
+    if (permisos.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                <p class="text-muted mb-0">No hay permisos configurados</p>
+                <small class="text-muted">Los usuarios podrán acceder sin restricciones</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let permisosHtml = '';
+    permisos.forEach(permiso => {
+        permisosHtml += `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                <div class="flex-grow-1">
+                    <strong>${permiso.grupo ? `Grupo: ${permiso.grupo.name}` : `Usuario: ${permiso.usuario.first_name} ${permiso.usuario.last_name}`}</strong>
+                    <div class="row mt-1">
+                        <div class="col-md-2">
+                            <small class="text-muted">Ver</small>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${permiso.puede_ver ? 'checked' : ''} onchange="actualizarPermisoBandeja(${permiso.id}, 'puede_ver', this.checked)">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Tomar</small>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${permiso.puede_tomar ? 'checked' : ''} onchange="actualizarPermisoBandeja(${permiso.id}, 'puede_tomar', this.checked)">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Devolver</small>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${permiso.puede_devolver ? 'checked' : ''} onchange="actualizarPermisoBandeja(${permiso.id}, 'puede_devolver', this.checked)">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Transicionar</small>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${permiso.puede_transicionar ? 'checked' : ''} onchange="actualizarPermisoBandeja(${permiso.id}, 'puede_transicionar', this.checked)">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Editar</small>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" ${permiso.puede_editar ? 'checked' : ''} onchange="actualizarPermisoBandeja(${permiso.id}, 'puede_editar', this.checked)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarPermisoBandeja(${permiso.id}, ${etapaId})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = permisosHtml;
+}
+
+// Función para nuevo permiso de bandeja
+// ... existing code ...
 </script>
 
 <style>

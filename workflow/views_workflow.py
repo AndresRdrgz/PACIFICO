@@ -1006,6 +1006,47 @@ def administrar_campos_personalizados(request):
     return render(request, 'workflow/admin/campos_personalizados.html', context)
 
 
+@login_required
+def administrar_usuarios(request):
+    """Vista para administrar usuarios y grupos - Solo para administradores"""
+    
+    # Verificar permisos de administrador
+    if not request.user.is_superuser and not request.user.is_staff:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('workflow:dashboard')
+    
+    # Obtener usuarios y grupos
+    usuarios = User.objects.select_related('userprofile').all().order_by('username')
+    grupos = Group.objects.all().order_by('name')
+    
+    # Estadísticas
+    total_usuarios = usuarios.count()
+    usuarios_activos = usuarios.filter(is_active=True).count()
+    usuarios_inactivos = total_usuarios - usuarios_activos
+    total_grupos = grupos.count()
+    
+    # Usuarios por grupo
+    usuarios_por_grupo = {}
+    for grupo in grupos:
+        usuarios_por_grupo[grupo.name] = grupo.user_set.count()
+    
+    # Usuarios sin grupos
+    usuarios_sin_grupos = usuarios.filter(groups__isnull=True).count()
+    
+    context = {
+        'usuarios': usuarios,
+        'grupos': grupos,
+        'total_usuarios': total_usuarios,
+        'usuarios_activos': usuarios_activos,
+        'usuarios_inactivos': usuarios_inactivos,
+        'total_grupos': total_grupos,
+        'usuarios_por_grupo': usuarios_por_grupo,
+        'usuarios_sin_grupos': usuarios_sin_grupos,
+    }
+    
+    return render(request, 'workflow/admin/usuarios.html', context)
+
+
 # ==========================================
 # VISTAS DE REPORTES
 # ==========================================
@@ -4293,3 +4334,409 @@ def detalle_solicitud_v2(request, solicitud_id):
     }
     
     return render(request, 'workflow/detalleSolicitud_V2.html', context)
+# ==========================================
+# APIs PARA GESTIÓN DE PERMISOS DE PIPELINE
+# ==========================================
+
+@login_required
+@permission_required('workflow.add_permisopipeline')
+def api_obtener_permisos_pipeline(request, pipeline_id):
+    """API para obtener permisos de un pipeline"""
+    try:
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        permisos = PermisoPipeline.objects.filter(pipeline=pipeline).select_related('grupo', 'usuario')
+        
+        permisos_data = []
+        for permiso in permisos:
+            permisos_data.append({
+                'id': permiso.id,
+                'grupo': {
+                    'id': permiso.grupo.id,
+                    'name': permiso.grupo.name
+                } if permiso.grupo else None,
+                'usuario': {
+                    'id': permiso.usuario.id,
+                    'username': permiso.usuario.username,
+                    'first_name': permiso.usuario.first_name,
+                    'last_name': permiso.usuario.last_name
+                } if permiso.usuario else None,
+                'puede_ver': permiso.puede_ver,
+                'puede_crear': permiso.puede_crear,
+                'puede_editar': permiso.puede_editar,
+                'puede_eliminar': permiso.puede_eliminar,
+                'puede_admin': permiso.puede_admin
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'permisos': permisos_data
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@permission_required('workflow.add_permisopipeline')
+def api_crear_permiso_pipeline(request, pipeline_id):
+    """API para crear un permiso de pipeline"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            data = json.loads(request.body)
+            
+            grupo_id = data.get('grupo_id')
+            usuario_id = data.get('usuario_id')
+            
+            if not grupo_id and not usuario_id:
+                return JsonResponse({'success': False, 'error': 'Debe especificar un grupo o un usuario'})
+            
+            if grupo_id and usuario_id:
+                return JsonResponse({'success': False, 'error': 'No puede especificar tanto un grupo como un usuario'})
+            
+            # Verificar si ya existe el permiso
+            if grupo_id:
+                grupo = get_object_or_404(Group, id=grupo_id)
+                permiso, created = PermisoPipeline.objects.get_or_create(
+                    pipeline=pipeline,
+                    grupo=grupo,
+                    defaults={
+                        'puede_ver': data.get('puede_ver', True),
+                        'puede_crear': data.get('puede_crear', False),
+                        'puede_editar': data.get('puede_editar', False),
+                        'puede_eliminar': data.get('puede_eliminar', False),
+                        'puede_admin': data.get('puede_admin', False)
+                    }
+                )
+                if not created:
+                    # Actualizar permisos existentes
+                    permiso.puede_ver = data.get('puede_ver', True)
+                    permiso.puede_crear = data.get('puede_crear', False)
+                    permiso.puede_editar = data.get('puede_editar', False)
+                    permiso.puede_eliminar = data.get('puede_eliminar', False)
+                    permiso.puede_admin = data.get('puede_admin', False)
+                    permiso.save()
+            else:
+                usuario = get_object_or_404(User, id=usuario_id)
+                permiso, created = PermisoPipeline.objects.get_or_create(
+                    pipeline=pipeline,
+                    usuario=usuario,
+                    defaults={
+                        'puede_ver': data.get('puede_ver', True),
+                        'puede_crear': data.get('puede_crear', False),
+                        'puede_editar': data.get('puede_editar', False),
+                        'puede_eliminar': data.get('puede_eliminar', False),
+                        'puede_admin': data.get('puede_admin', False)
+                    }
+                )
+                if not created:
+                    # Actualizar permisos existentes
+                    permiso.puede_ver = data.get('puede_ver', True)
+                    permiso.puede_crear = data.get('puede_crear', False)
+                    permiso.puede_editar = data.get('puede_editar', False)
+                    permiso.puede_eliminar = data.get('puede_eliminar', False)
+                    permiso.puede_admin = data.get('puede_admin', False)
+                    permiso.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso creado/actualizado exitosamente',
+                'permiso': {
+                    'id': permiso.id,
+                    'grupo': {
+                        'id': permiso.grupo.id,
+                        'name': permiso.grupo.name
+                    } if permiso.grupo else None,
+                    'usuario': {
+                        'id': permiso.usuario.id,
+                        'username': permiso.usuario.username,
+                        'first_name': permiso.usuario.first_name,
+                        'last_name': permiso.usuario.last_name
+                    } if permiso.usuario else None,
+                    'puede_ver': permiso.puede_ver,
+                    'puede_crear': permiso.puede_crear,
+                    'puede_editar': permiso.puede_editar,
+                    'puede_eliminar': permiso.puede_eliminar,
+                    'puede_admin': permiso.puede_admin
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@permission_required('workflow.change_permisopipeline')
+def api_actualizar_permiso_pipeline(request, pipeline_id, permiso_id):
+    """API para actualizar un permiso de pipeline"""
+    if request.method == 'POST':
+        try:
+            permiso = get_object_or_404(PermisoPipeline, id=permiso_id, pipeline_id=pipeline_id)
+            data = json.loads(request.body)
+            
+            permiso.puede_ver = data.get('puede_ver', True)
+            permiso.puede_crear = data.get('puede_crear', False)
+            permiso.puede_editar = data.get('puede_editar', False)
+            permiso.puede_eliminar = data.get('puede_eliminar', False)
+            permiso.puede_admin = data.get('puede_admin', False)
+            permiso.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso actualizado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@permission_required('workflow.delete_permisopipeline')
+def api_eliminar_permiso_pipeline(request, pipeline_id, permiso_id):
+    """API para eliminar un permiso de pipeline"""
+    if request.method == 'POST':
+        try:
+            permiso = get_object_or_404(PermisoPipeline, id=permiso_id, pipeline_id=pipeline_id)
+            permiso.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso eliminado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+# ==========================================
+# APIs PARA GESTIÓN DE PERMISOS DE BANDEJA
+# ==========================================
+
+@login_required
+@permission_required('workflow.add_permisobandeja')
+def api_obtener_permisos_bandeja(request, etapa_id):
+    """API para obtener permisos de una bandeja (etapa)"""
+    try:
+        etapa = get_object_or_404(Etapa, id=etapa_id)
+        permisos = PermisoBandeja.objects.filter(etapa=etapa).select_related('grupo', 'usuario')
+        
+        permisos_data = []
+        for permiso in permisos:
+            permisos_data.append({
+                'id': permiso.id,
+                'grupo': {
+                    'id': permiso.grupo.id,
+                    'name': permiso.grupo.name
+                } if permiso.grupo else None,
+                'usuario': {
+                    'id': permiso.usuario.id,
+                    'username': permiso.usuario.username,
+                    'first_name': permiso.usuario.first_name,
+                    'last_name': permiso.usuario.last_name
+                } if permiso.usuario else None,
+                'puede_ver': permiso.puede_ver,
+                'puede_tomar': permiso.puede_tomar,
+                'puede_devolver': permiso.puede_devolver,
+                'puede_transicionar': permiso.puede_transicionar,
+                'puede_editar': permiso.puede_editar
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'permisos': permisos_data
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@permission_required('workflow.add_permisobandeja')
+def api_crear_permiso_bandeja(request, etapa_id):
+    """API para crear un permiso de bandeja"""
+    if request.method == 'POST':
+        try:
+            etapa = get_object_or_404(Etapa, id=etapa_id)
+            data = json.loads(request.body)
+            
+            grupo_id = data.get('grupo_id')
+            usuario_id = data.get('usuario_id')
+            
+            if not grupo_id and not usuario_id:
+                return JsonResponse({'success': False, 'error': 'Debe especificar un grupo o un usuario'})
+            
+            if grupo_id and usuario_id:
+                return JsonResponse({'success': False, 'error': 'No puede especificar tanto un grupo como un usuario'})
+            
+            # Verificar si ya existe el permiso
+            if grupo_id:
+                grupo = get_object_or_404(Group, id=grupo_id)
+                permiso, created = PermisoBandeja.objects.get_or_create(
+                    etapa=etapa,
+                    grupo=grupo,
+                    defaults={
+                        'puede_ver': data.get('puede_ver', True),
+                        'puede_tomar': data.get('puede_tomar', True),
+                        'puede_devolver': data.get('puede_devolver', True),
+                        'puede_transicionar': data.get('puede_transicionar', True),
+                        'puede_editar': data.get('puede_editar', False)
+                    }
+                )
+                if not created:
+                    # Actualizar permisos existentes
+                    permiso.puede_ver = data.get('puede_ver', True)
+                    permiso.puede_tomar = data.get('puede_tomar', True)
+                    permiso.puede_devolver = data.get('puede_devolver', True)
+                    permiso.puede_transicionar = data.get('puede_transicionar', True)
+                    permiso.puede_editar = data.get('puede_editar', False)
+                    permiso.save()
+            else:
+                usuario = get_object_or_404(User, id=usuario_id)
+                permiso, created = PermisoBandeja.objects.get_or_create(
+                    etapa=etapa,
+                    usuario=usuario,
+                    defaults={
+                        'puede_ver': data.get('puede_ver', True),
+                        'puede_tomar': data.get('puede_tomar', True),
+                        'puede_devolver': data.get('puede_devolver', True),
+                        'puede_transicionar': data.get('puede_transicionar', True),
+                        'puede_editar': data.get('puede_editar', False)
+                    }
+                )
+                if not created:
+                    # Actualizar permisos existentes
+                    permiso.puede_ver = data.get('puede_ver', True)
+                    permiso.puede_tomar = data.get('puede_tomar', True)
+                    permiso.puede_devolver = data.get('puede_devolver', True)
+                    permiso.puede_transicionar = data.get('puede_transicionar', True)
+                    permiso.puede_editar = data.get('puede_editar', False)
+                    permiso.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso creado/actualizado exitosamente',
+                'permiso': {
+                    'id': permiso.id,
+                    'grupo': {
+                        'id': permiso.grupo.id,
+                        'name': permiso.grupo.name
+                    } if permiso.grupo else None,
+                    'usuario': {
+                        'id': permiso.usuario.id,
+                        'username': permiso.usuario.username,
+                        'first_name': permiso.usuario.first_name,
+                        'last_name': permiso.usuario.last_name
+                    } if permiso.usuario else None,
+                    'puede_ver': permiso.puede_ver,
+                    'puede_tomar': permiso.puede_tomar,
+                    'puede_devolver': permiso.puede_devolver,
+                    'puede_transicionar': permiso.puede_transicionar,
+                    'puede_editar': permiso.puede_editar
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@permission_required('workflow.change_permisobandeja')
+def api_actualizar_permiso_bandeja(request, etapa_id, permiso_id):
+    """API para actualizar un permiso de bandeja"""
+    if request.method == 'POST':
+        try:
+            permiso = get_object_or_404(PermisoBandeja, id=permiso_id, etapa_id=etapa_id)
+            data = json.loads(request.body)
+            
+            permiso.puede_ver = data.get('puede_ver', True)
+            permiso.puede_tomar = data.get('puede_tomar', True)
+            permiso.puede_devolver = data.get('puede_devolver', True)
+            permiso.puede_transicionar = data.get('puede_transicionar', True)
+            permiso.puede_editar = data.get('puede_editar', False)
+            permiso.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso actualizado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@permission_required('workflow.delete_permisobandeja')
+def api_eliminar_permiso_bandeja(request, etapa_id, permiso_id):
+    """API para eliminar un permiso de bandeja"""
+    if request.method == 'POST':
+        try:
+            permiso = get_object_or_404(PermisoBandeja, id=permiso_id, etapa_id=etapa_id)
+            permiso.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': 'Permiso eliminado exitosamente'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+# ==========================================
+# APIs PARA OBTENER USUARIOS Y GRUPOS
+# ==========================================
+
+@login_required
+def api_obtener_usuarios(request):
+    """API para obtener lista de usuarios activos"""
+    try:
+        usuarios = User.objects.filter(is_active=True).order_by('username')
+        usuarios_data = []
+        
+        for usuario in usuarios:
+            usuarios_data.append({
+                'id': usuario.id,
+                'username': usuario.username,
+                'first_name': usuario.first_name,
+                'last_name': usuario.last_name,
+                'email': usuario.email,
+                'full_name': f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'usuarios': usuarios_data
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_obtener_grupos(request):
+    """API para obtener lista de grupos"""
+    try:
+        grupos = Group.objects.all().order_by('name')
+        grupos_data = []
+        
+        for grupo in grupos:
+            grupos_data.append({
+                'id': grupo.id,
+                'name': grupo.name,
+                'user_count': grupo.user_set.count()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'grupos': grupos_data
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==========================================
+# FUNCIONES PARA REQUISITOS DE TRANSICIÓN
+# ==========================================
