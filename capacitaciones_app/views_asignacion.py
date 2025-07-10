@@ -484,9 +484,9 @@ def usuarios_disponibles_grupo(request, grupo_id):
     try:
         grupo = GrupoAsignacion.objects.get(id=grupo_id)
         
-        # Obtener usuarios que NO están en el grupo
+        # Obtener usuarios que NO están en el grupo y que están activos
         usuarios_en_grupo = grupo.usuarios_asignados.all()
-        usuarios_disponibles = User.objects.exclude(id__in=usuarios_en_grupo).order_by('username')
+        usuarios_disponibles = User.objects.filter(is_active=True).exclude(id__in=usuarios_en_grupo).order_by('username')
         
         usuarios_data = []
         for usuario in usuarios_disponibles:

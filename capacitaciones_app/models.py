@@ -75,11 +75,12 @@ class GrupoAsignacion(models.Model):
         blank=True,
         verbose_name='Supervisores Adicionales'
     )
-    # Solo usuarios cuyo perfil es "alumno"
+    # Solo usuarios activos (se removió el filtro por tipo de perfil)
     usuarios_asignados = models.ManyToManyField(
         User,
         related_name='grupos_asignados',
-        limit_choices_to={'perfil__tipo': 'alumno'}
+        limit_choices_to={'is_active': True},
+        blank=True
     )
 
     def __str__(self):
