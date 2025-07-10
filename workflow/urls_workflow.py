@@ -55,6 +55,7 @@ urlpatterns += [
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
     path('admin/requisitos/', views_workflow.administrar_requisitos, name='admin_requisitos'),
     path('admin/campos-personalizados/', views_workflow.administrar_campos_personalizados, name='admin_campos_personalizados'),
+    path('admin/usuarios/', views_workflow.administrar_usuarios, name='admin_usuarios'),
     
     # Vistas de reportes
     path('reportes/', views_workflow.reportes_workflow, name='reportes'),

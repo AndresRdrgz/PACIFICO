@@ -958,6 +958,47 @@ def administrar_campos_personalizados(request):
     return render(request, 'workflow/admin/campos_personalizados.html', context)
 
 
+@login_required
+def administrar_usuarios(request):
+    """Vista para administrar usuarios y grupos - Solo para administradores"""
+    
+    # Verificar permisos de administrador
+    if not request.user.is_superuser and not request.user.is_staff:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('workflow:dashboard')
+    
+    # Obtener usuarios y grupos
+    usuarios = User.objects.select_related('userprofile').all().order_by('username')
+    grupos = Group.objects.all().order_by('name')
+    
+    # Estadísticas
+    total_usuarios = usuarios.count()
+    usuarios_activos = usuarios.filter(is_active=True).count()
+    usuarios_inactivos = total_usuarios - usuarios_activos
+    total_grupos = grupos.count()
+    
+    # Usuarios por grupo
+    usuarios_por_grupo = {}
+    for grupo in grupos:
+        usuarios_por_grupo[grupo.name] = grupo.user_set.count()
+    
+    # Usuarios sin grupos
+    usuarios_sin_grupos = usuarios.filter(groups__isnull=True).count()
+    
+    context = {
+        'usuarios': usuarios,
+        'grupos': grupos,
+        'total_usuarios': total_usuarios,
+        'usuarios_activos': usuarios_activos,
+        'usuarios_inactivos': usuarios_inactivos,
+        'total_grupos': total_grupos,
+        'usuarios_por_grupo': usuarios_por_grupo,
+        'usuarios_sin_grupos': usuarios_sin_grupos,
+    }
+    
+    return render(request, 'workflow/admin/usuarios.html', context)
+
+
 # ==========================================
 # VISTAS DE REPORTES
 # ==========================================
