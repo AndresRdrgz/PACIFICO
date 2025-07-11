@@ -232,9 +232,15 @@ class ValorCampoSolicitud(models.Model):
 # --------------------------------------
 
 class SolicitudComentario(models.Model):
+    TIPO_CHOICES = [
+        ('general', 'General'),
+        ('analista', 'Analista'),
+    ]
+    
     solicitud = models.ForeignKey('Solicitud', on_delete=models.CASCADE, related_name='comentarios')
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     comentario = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='general')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
     es_editado = models.BooleanField(default=False)

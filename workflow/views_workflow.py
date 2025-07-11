@@ -3434,7 +3434,14 @@ def api_obtener_comentarios(request, solicitud_id):
                 request.user.is_staff):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
-        comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
+        # Obtener tipo de comentario del query parameter (opcional)
+        tipo_filtro = request.GET.get('tipo')
+        
+        # Filtrar comentarios por tipo si se especifica
+        if tipo_filtro and tipo_filtro in ['general', 'analista']:
+            comentarios = solicitud.comentarios.filter(tipo=tipo_filtro).order_by('-fecha_creacion')
+        else:
+            comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
         
         datos_comentarios = []
         for comentario in comentarios:
@@ -3446,6 +3453,7 @@ def api_obtener_comentarios(request, solicitud_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -3486,11 +3494,19 @@ def api_crear_comentario(request, solicitud_id):
         if not comentario_texto:
             return JsonResponse({'error': 'El comentario no puede estar vacío'}, status=400)
         
+        # Obtener tipo de comentario (por defecto 'general')
+        tipo_comentario = data.get('tipo', 'general')
+        
+        # Validar tipo de comentario
+        if tipo_comentario not in ['general', 'analista']:
+            return JsonResponse({'error': 'Tipo de comentario inválido'}, status=400)
+        
         # Crear el comentario
         comentario = SolicitudComentario.objects.create(
             solicitud=solicitud,
             usuario=request.user,
-            comentario=comentario_texto
+            comentario=comentario_texto,
+            tipo=tipo_comentario
         )
         
         # Notificar cambio en tiempo real
@@ -3506,6 +3522,7 @@ def api_crear_comentario(request, solicitud_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -3558,6 +3575,7 @@ def api_editar_comentario(request, comentario_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -4778,7 +4796,7 @@ def detalle_solicitud_analisis(request, solicitud_id):
     # Obtener requisitos con sus archivos
     requisitos = solicitud.requisitos.all().select_related('requisito')
     
-    # Obtener comentarios
+    # Obtener comentarios - Se cargan dinámicamente vía AJAX
     comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
     
     # Obtener todas las etapas del pipeline para mostrar el flujo

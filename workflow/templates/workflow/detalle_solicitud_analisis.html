@@ -12,23 +12,34 @@
             <div class="card shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h2 class="mb-1">
-                                <i class="fas fa-microscope me-2"></i>
-                                Análisis de Solicitud: {{ solicitud.codigo }}
-                            </h2>
-                            <p class="mb-0 opacity-75">
-                                <i class="fas fa-user me-1"></i>
-                                {{ solicitud.cliente_nombre|default:"Sin cliente" }} 
-                                {% if solicitud.cliente_cedula %}
-                                    - {{ solicitud.cliente_cedula }}
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="text-end">
+                        <div class="d-flex align-items-center gap-3">
                             <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-light btn-sm">
                                 <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
                             </a>
+                            <div>
+                                <h2 class="mb-1">
+                                    <i class="fas fa-microscope me-2"></i>
+                                    Análisis de Solicitud: {{ solicitud.codigo }}
+                                </h2>
+                                <p class="mb-0 opacity-75">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ solicitud.cliente_nombre|default:"Sin cliente" }} 
+                                    {% if solicitud.cliente_cedula %}
+                                        - {{ solicitud.cliente_cedula }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="aprobarSolicitud()">
+                                <i class="fas fa-check me-1"></i>Aprobar
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="solicitarMasInformacion()">
+                                <i class="fas fa-question-circle me-1"></i>Solicitar Info
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="rechazarSolicitud()">
+                                <i class="fas fa-times me-1"></i>Rechazar
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -36,9 +47,9 @@
         </div>
     </div>
 
-    <!-- TARJETA UNIFICADA SUPERIOR -->
+    <!-- TARJETA UNIFICADA SUPERIOR Y COMENTARIOS ANALISTA -->
     <div class="row mb-4">
-        <div class="col-12">
+        <div class="col-8">
             <div class="unified-info-card">
                 <div class="unified-header">
                     <div class="unified-icon">
@@ -46,7 +57,6 @@
                     </div>
                     <div class="unified-title">
                         <h3>Resumen Completo de la Solicitud</h3>
-                        <p>Información integral del préstamo y análisis</p>
                     </div>
                     <div class="unified-sla">
                         <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
@@ -56,13 +66,13 @@
                                 <i class="fas fa-hourglass-half me-1"></i>Por Vencer
                             {% elif sla_info.estado == 'en_tiempo' %}
                                 <i class="fas fa-check-circle me-1"></i>En Tiempo
+                                {% if sla_info.tiempo_restante_formateado %}
+                                    - {{ sla_info.tiempo_restante_formateado }}
+                                {% endif %}
                             {% else %}
                                 <i class="fas fa-question-circle me-1"></i>Sin SLA
                             {% endif %}
                         </div>
-                        {% if sla_info.tiempo_restante_formateado %}
-                        <small class="sla-time">{{ sla_info.tiempo_restante_formateado }}</small>
-                        {% endif %}
                     </div>
                 </div>
                 
@@ -151,126 +161,174 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- TIMELINE COMPACTO -->
-    <div class="compact-timeline-section mb-4">
-        <div class="timeline-header">
-            <h5><i class="fas fa-route me-2"></i>Flujo del Proceso</h5>
-        </div>
-        <div class="compact-timeline">
-            {% for etapa in etapas_pipeline %}
-            <div class="timeline-item {% if etapa.orden < solicitud.etapa_actual.orden %}completed{% elif etapa == solicitud.etapa_actual %}active{% else %}pending{% endif %}">
-                <div class="timeline-dot">
-                    {% if etapa.orden < solicitud.etapa_actual.orden %}
-                        <i class="fas fa-check"></i>
-                    {% elif etapa == solicitud.etapa_actual %}
-                        <i class="fas fa-clock"></i>
-                    {% else %}
-                        <i class="fas fa-circle"></i>
-                    {% endif %}
+        
+        <!-- COMENTARIOS DE ANALISTA (1/3 del ancho) -->
+        <div class="col-4">
+            <div class="chat-container-analista">
+                <!-- Header del Chat -->
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <i class="fas fa-user-tie text-primary me-2"></i>
+                        <span>Análisis y observaciones del préstamo</span>
+                    </div>
+                    <div class="chat-status">
+                        <span class="status-dot online"></span>
+                        <small>En línea</small>
+                    </div>
                 </div>
-                <div class="timeline-content">
-                    <span class="timeline-title">{{ etapa.nombre }}</span>
-                    {% if etapa.sla %}
-                        <small class="timeline-sla">SLA: {{ etapa.sla }}</small>
-                    {% endif %}
+                
+                <!-- Área de Mensajes (con scroll) -->
+                <div class="chat-messages" id="lista-comentarios-analista">
+                    <!-- Los mensajes se cargan dinámicamente via AJAX -->
+
+                </div>
+                
+                <!-- Input de Mensaje (fijo abajo) -->
+                <div class="chat-input-container">
+                    <form id="form-comentario-analista" method="post" class="chat-form">
+                        {% csrf_token %}
+                        <div class="input-group-chat">
+                            <div class="user-avatar-chat">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="input-wrapper">
+                                <textarea class="chat-input" 
+                                          placeholder="Escribe tu análisis técnico..."
+                                          rows="1" 
+                                          id="comentario-analista-text"
+                                          maxlength="1000"></textarea>
+                                <div class="input-actions">
+                                    <span class="char-counter">
+                                        <span id="char-count-analista">0</span>/1000
+                                    </span>
+                                    <button type="submit" class="send-button" id="btn-enviar-analista">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <div class="loading-spinner-chat" style="display: none;">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
 
-    <!-- SISTEMA DE PESTAÑAS -->
+    <!-- FLUJO DEL PROCESO - Ancho completo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="compact-timeline-section">
+                <div class="timeline-header">
+                    <h5><i class="fas fa-route me-2"></i>Flujo del Proceso</h5>
+                </div>
+                <div class="slim-timeline">
+                    {% for etapa in etapas_pipeline %}
+                    <div class="timeline-step {% if etapa.orden < solicitud.etapa_actual.orden %}completed{% elif etapa == solicitud.etapa_actual %}active{% else %}pending{% endif %}">
+                        <div class="step-dot">
+                            {% if etapa.orden < solicitud.etapa_actual.orden %}
+                                <i class="fas fa-check"></i>
+                            {% elif etapa == solicitud.etapa_actual %}
+                                <i class="fas fa-clock"></i>
+                            {% else %}
+                                <i class="fas fa-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div class="step-label">
+                            <span class="step-name">{{ etapa.nombre }}</span>
+                            <span class="step-sla">
+                                {% if etapa.sla %}{{ etapa.sla }}{% else %}1 day{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL: PESTAÑAS + COMENTARIOS ANALISTA -->
+    <div class="row">
+        <!-- SISTEMA DE PESTAÑAS (2/3 del ancho) -->
+        <div class="col-lg-8">
+            <!-- SISTEMA DE PESTAÑAS -->
     <div class="tabs-section">
         <div class="tabs-header">
-            <button class="tab-button active" data-tab="historial">
-                <i class="fas fa-history me-2"></i>Historial
-            </button>
-            <button class="tab-button" data-tab="comentarios">
-                <i class="fas fa-comments me-2"></i>Comentarios
+            <button class="tab-button active" data-tab="comentarios">
+                <i class="fas fa-comments me-2"></i>Comentarios Generales
             </button>
             <button class="tab-button" data-tab="documentos">
                 <i class="fas fa-file-alt me-2"></i>Documentos
             </button>
+            <button class="tab-button" data-tab="historial">
+                <i class="fas fa-history me-2"></i>Historial
+            </button>
         </div>
         
         <div class="tabs-content">
-            <!-- Tab Historial -->
-            <div class="tab-pane active" id="tab-historial">
-                <div class="historial-content">
-                    {% for evento in historial %}
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>{{ evento.etapa.nombre }}</strong>
-                                <span class="historial-date">{{ evento.fecha_inicio|date:"d/m/Y H:i" }}</span>
-                            </div>
-                            <div class="historial-info">
-                                {% if evento.usuario_responsable %}
-                                    Por {{ evento.usuario_responsable.get_full_name|default:evento.usuario_responsable.username }}
-                                {% endif %}
-                                {% if evento.fecha_fin %}
-                                    <br><span class="text-success">Completado: {{ evento.fecha_fin|date:"d/m/Y H:i" }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-history fa-3x"></i>
-                        <p>No hay historial disponible</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            
             <!-- Tab Comentarios -->
-            <div class="tab-pane" id="tab-comentarios">
-                <div class="comentarios-content">
-                    <!-- Comentarios existentes -->
-                    {% for comentario in comentarios %}
-                    <div class="comentario-item">
-                        <div class="comentario-avatar">
-                            <i class="fas fa-user-circle"></i>
+            <div class="tab-pane active" id="tab-comentarios">
+                <div class="chat-container-general">
+                    <!-- Header del Chat General -->
+                    <div class="chat-header-general">
+                        <div class="chat-title-general">
+                            <i class="fas fa-comments text-primary me-2"></i>
+                            <span>Comentarios Generales</span>
                         </div>
-                        <div class="comentario-details">
-                            <div class="comentario-header">
-                                <strong>{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</strong>
-                                <span class="comentario-date">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
-                            </div>
-                            <div class="comentario-text">
-                                {{ comentario.comentario }}
-                            </div>
+                        <div class="chat-info">
+                            <span class="badge bg-primary" id="contador-comentarios-generales">0 comentarios</span>
+                            <span class="status-dot online"></span>
+                            <small>En línea</small>
                         </div>
                     </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-comments fa-3x"></i>
-                        <p>No hay comentarios aún</p>
-                    </div>
-                    {% endfor %}
                     
-                    <!-- Formulario para nuevo comentario -->
-                    <div class="comentario-form">
-                        <form id="form-comentario" method="post">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <textarea class="form-control" 
-                                          placeholder="Escriba un comentario..." 
-                                          rows="3" 
-                                          id="comentario-text"></textarea>
+                    <!-- Área de Mensajes Generales (con scroll) -->
+                    <div class="chat-messages-general" id="lista-comentarios">
+                        <!-- Los mensajes se cargan dinámicamente via AJAX -->
+                        <div class="chat-welcome-general">
+                            <div class="welcome-avatar-general">
+                                <i class="fas fa-users"></i>
                             </div>
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-outline-secondary">
-                                    <i class="fas fa-paperclip me-1"></i>Adjuntar
-                                </button>
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-paper-plane me-1"></i>Enviar
-                                </button>
+                            <div class="welcome-message-general">
+                                <p><strong>Chat General</strong></p>
+                                <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Input de Mensaje General (fijo abajo) -->
+                    <div class="chat-input-container-general">
+                        <form id="form-comentario-moderno" method="post" class="chat-form-general">
+                            {% csrf_token %}
+                            <div class="input-group-chat-general">
+                                <div class="user-avatar-chat-general">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="input-wrapper-general">
+                                    <textarea class="chat-input-general" 
+                                              placeholder="Escribe tu comentario general..."
+                                              rows="1" 
+                                              id="comentario-text-modern"
+                                              maxlength="1000"></textarea>
+                                    <div class="input-actions-general">
+                                        <button type="button" class="attachment-button" title="Adjuntar archivo">
+                                            <i class="fas fa-paperclip"></i>
+                                        </button>
+                                        <button type="button" class="mention-button" title="Mencionar usuario">
+                                            <i class="fas fa-at"></i>
+                                        </button>
+                                        <span class="char-counter-general">
+                                            <span id="char-count">0</span>/1000
+                                        </span>
+                                        <button type="submit" class="send-button-general" id="btn-enviar-comentario">
+                                            <i class="fas fa-paper-plane"></i>
+                                            <div class="loading-spinner-chat-general" style="display: none;">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -325,29 +383,44 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Tab Historial -->
+            <div class="tab-pane" id="tab-historial">
+                <div class="historial-content">
+                    {% for evento in historial %}
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>{{ evento.etapa.nombre }}</strong>
+                                <span class="historial-date">{{ evento.fecha_inicio|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div class="historial-info">
+                                {% if evento.usuario_responsable %}
+                                    Por {{ evento.usuario_responsable.get_full_name|default:evento.usuario_responsable.username }}
+                                {% endif %}
+                                {% if evento.fecha_fin %}
+                                    <br><span class="text-success">Completado: {{ evento.fecha_fin|date:"d/m/Y H:i" }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-history fa-3x"></i>
+                        <p>No hay historial disponible</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 
-    <!-- BOTONES DE ACCIÓN -->
-    <div class="action-buttons-section mt-4">
-        <div class="action-grid">
-            <button class="action-btn btn-success" onclick="aprobarSolicitud()">
-                <i class="fas fa-check me-2"></i>Aprobar Solicitud
-            </button>
-            <button class="action-btn btn-outline-primary" onclick="solicitarMasInformacion()">
-                Solicitar Más Información
-            </button>
-            <button class="action-btn btn-danger" onclick="rechazarSolicitud()">
-                <i class="fas fa-times me-2"></i>Rechazar Solicitud
-            </button>
-        </div>
-    </div>
 
-    <div class="row">
-        <div class="col-lg-12">
-            <!-- Contenido movido a las pestañas -->
-        </div>
-    </div>
 
 </div>
 
@@ -401,16 +474,209 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Formulario comentario en pestañas
-    const formComentario = document.getElementById('form-comentario');
-    if (formComentario) {
-        formComentario.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const comentario = document.getElementById('comentario-text').value;
+    // Formulario comentario moderno con AJAX
+    const formComentarioModerno = document.getElementById('form-comentario-moderno');
+    const comentarioTextModerno = document.getElementById('comentario-text-modern');
+    const charCountSpan = document.getElementById('char-count');
+    const btnEnviar = document.getElementById('btn-enviar-comentario');
+    const btnCancelar = document.getElementById('btn-cancelar-comentario');
+    
+    // Contador de caracteres
+    if (comentarioTextModerno && charCountSpan) {
+        comentarioTextModerno.addEventListener('input', function() {
+            const count = this.value.length;
+            charCountSpan.textContent = count;
             
-            if (comentario.trim()) {
-                guardarComentario('general', comentario);
+            // Cambiar color según límite
+            if (count > 900) {
+                charCountSpan.parentElement.className = 'text-danger';
+            } else if (count > 700) {
+                charCountSpan.parentElement.className = 'text-warning';
+            } else {
+                charCountSpan.parentElement.className = 'text-muted';
             }
+        });
+    }
+    
+    // Manejar envío de comentario moderno
+    if (formComentarioModerno) {
+        formComentarioModerno.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const comentarioTexto = comentarioTextModerno.value.trim();
+            if (!comentarioTexto) {
+                alert('Por favor escribe un comentario antes de enviar.');
+                return;
+            }
+            
+            // Deshabilitar botón y mostrar loading
+            btnEnviar.disabled = true;
+            btnEnviar.querySelector('span').style.display = 'none';
+            btnEnviar.querySelector('.loading-spinner').style.display = 'inline-block';
+            
+            // Enviar comentario via AJAX
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/comentarios/crear/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    comentario: comentarioTexto,
+                    tipo: 'analisis'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Agregar comentario a la lista sin recargar
+                    agregarComentarioALista(data.comentario);
+                    
+                    // Limpiar formulario
+                    comentarioTextModerno.value = '';
+                    charCountSpan.textContent = '0';
+                    charCountSpan.parentElement.className = 'text-muted';
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarNotificacionExito('Comentario agregado correctamente');
+                    
+                    // Actualizar contador de comentarios
+                    actualizarContadorComentarios();
+                } else {
+                    mostrarNotificacionError('Error al guardar comentario: ' + (data.error || 'Error desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarNotificacionError('Error de red al enviar el comentario');
+            })
+            .finally(() => {
+                // Rehabilitar botón
+                btnEnviar.disabled = false;
+                btnEnviar.querySelector('span').style.display = 'inline-block';
+                btnEnviar.querySelector('.loading-spinner').style.display = 'none';
+            });
+        });
+    }
+    
+    // Función para agregar comentario a la lista
+    function agregarComentarioALista(comentario) {
+        const listaComentarios = document.getElementById('lista-comentarios');
+        const emptyState = listaComentarios.querySelector('.empty-state-modern');
+        
+        // Remover estado vacío si existe
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Crear HTML del nuevo comentario
+        const comentarioHTML = `
+            <div class="comentario-item-modern">
+                <div class="comentario-avatar-modern">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="comentario-content-modern">
+                    <div class="comentario-header-modern">
+                        <div class="author-info">
+                            <strong class="author-name">${comentario.usuario_nombre}</strong>
+                            <span class="author-role">Analista</span>
+                            <span class="comentario-date-modern">Hace un momento</span>
+                        </div>
+                        <div class="comentario-actions">
+                            <button class="btn-action-mini" title="Editar comentario">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action-mini text-danger" title="Eliminar comentario">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="comentario-text-modern">
+                        ${comentario.texto.replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="comentario-footer-modern">
+                        <button class="btn-reaction">
+                            <i class="fas fa-thumbs-up me-1"></i>
+                            <span>0</span>
+                        </button>
+                        <button class="btn-reaction">
+                            <i class="fas fa-reply me-1"></i>
+                            Responder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insertar al inicio de la lista
+        listaComentarios.insertAdjacentHTML('afterbegin', comentarioHTML);
+        
+        // Animar el nuevo comentario
+        const nuevoComentario = listaComentarios.firstElementChild;
+        nuevoComentario.style.opacity = '0';
+        nuevoComentario.style.transform = 'translateY(-20px)';
+        
+        setTimeout(() => {
+            nuevoComentario.style.transition = 'all 0.3s ease';
+            nuevoComentario.style.opacity = '1';
+            nuevoComentario.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    // Función para actualizar contador de comentarios
+    function actualizarContadorComentarios() {
+        const badge = document.querySelector('.comentarios-count .badge');
+        if (badge) {
+            const count = document.querySelectorAll('.comentario-item-modern').length;
+            badge.textContent = `${count} comentario${count !== 1 ? 's' : ''}`;
+        }
+    }
+    
+    // Funciones de notificación mejoradas
+    function mostrarNotificacionExito(mensaje) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-success';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-check-circle me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    function mostrarNotificacionError(mensaje) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-error';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+    
+    // Cancelar comentario
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', function() {
+            comentarioTextModerno.value = '';
+            charCountSpan.textContent = '0';
+            charCountSpan.parentElement.className = 'text-muted';
         });
     }
 
@@ -460,6 +726,650 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Eliminando comentario:', comentarioId);
         }
     };
+    
+    // ==========================================
+    // SISTEMA DE COMENTARIOS COMPLETO
+    // ==========================================
+    
+    // Variables globales
+    const solicitudId = parseInt('{{ solicitud.id }}');
+    const usuarioActualId = parseInt('{{ request.user.id }}');
+    
+    // Función para obtener token CSRF
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    // Función para mostrar notificaciones toast
+    function mostrarToast(mensaje, tipo = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${tipo}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${tipo === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Mostrar toast
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Ocultar toast después de 3 segundos
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Función para formatear fecha
+    function formatearFecha(fecha) {
+        const now = new Date();
+        const diff = now - new Date(fecha);
+        const seconds = Math.floor(diff / 1000);
+        
+        if (seconds < 60) return 'hace unos segundos';
+        if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} minutos`;
+        if (seconds < 86400) return `hace ${Math.floor(seconds / 3600)} horas`;
+        return `hace ${Math.floor(seconds / 86400)} días`;
+    }
+    
+    // Función para auto-expandir textarea
+    function autoExpandTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+    
+    // Función para enviar mensaje con Enter
+    function handleKeyDown(event, submitFunction) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            submitFunction(event);
+        }
+    }
+    
+    // Función para scroll automático al final del chat
+    function scrollToBottom(container) {
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+    
+    // Función para configurar chat
+    function configurarChat() {
+        // Configurar textarea de analista
+        const textareaAnalista = document.getElementById('comentario-analista-text');
+        if (textareaAnalista) {
+            textareaAnalista.addEventListener('input', function() {
+                autoExpandTextarea(this);
+                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+            });
+            
+            textareaAnalista.addEventListener('keydown', function(event) {
+                handleKeyDown(event, enviarComentarioAnalista);
+            });
+        }
+        
+        // Configurar textarea general
+        const textareaGeneral = document.getElementById('comentario-text-modern');
+        if (textareaGeneral) {
+            textareaGeneral.addEventListener('input', function() {
+                autoExpandTextarea(this);
+                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+            });
+            
+            textareaGeneral.addEventListener('keydown', function(event) {
+                handleKeyDown(event, enviarComentarioGeneral);
+            });
+        }
+    }
+    
+    // FUNCIONES PARA COMENTARIOS DE ANALISTA
+    
+    // Cargar comentarios de analista
+    function cargarComentariosAnalista() {
+        console.log('🔄 Cargando comentarios de analista...');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Comentarios analista recibidos:', data);
+                
+                if (data.success) {
+                    const container = document.getElementById('lista-comentarios-analista');
+                    
+                    if (data.comentarios.length === 0) {
+                        container.innerHTML = '';
+                    } else {
+                        // Mostrar solo comentarios sin mensaje de bienvenida
+                        const welcomeMessage = ``;
+                        
+                        const messages = data.comentarios.map(comentario => {
+                            const esPropio = comentario.usuario.id === usuarioActualId;
+                            return `
+                                <div class="message-bubble ${esPropio ? 'own' : 'other'}" data-comentario-id="${comentario.id}">
+                                    <div class="message-content">
+                                        ${comentario.comentario}
+                                    </div>
+                                    <div class="message-meta">
+                                        <span class="message-author">${comentario.usuario.nombre_completo}</span>
+                                        <span class="message-time">${formatearFecha(comentario.fecha_creacion)}</span>
+                                        ${comentario.puede_editar ? `
+                                            <div class="message-actions">
+                                                <button class="action-btn" onclick="editarComentarioAnalista(${comentario.id})" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="action-btn" onclick="eliminarComentarioAnalista(${comentario.id})" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        container.innerHTML = welcomeMessage + messages;
+                        
+                        // Scroll automático al final
+                        setTimeout(() => {
+                            container.scrollTop = container.scrollHeight;
+                        }, 100);
+                    }
+                } else {
+                    console.error('❌ Error al cargar comentarios:', data.error);
+                    mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error de red:', error);
+                mostrarToast('Error de red al cargar comentarios', 'error');
+            });
+    }
+    
+    // Función para enviar comentario de analista
+    function enviarComentarioAnalista(evento) {
+        evento.preventDefault();
+        
+        const textarea = document.getElementById('comentario-analista-text');
+        const comentarioTexto = textarea.value.trim();
+        
+        if (!comentarioTexto) {
+            mostrarToast('Por favor ingresa un comentario', 'error');
+            return;
+        }
+        
+        const botonEnviar = document.getElementById('btn-enviar-analista');
+        const spinner = botonEnviar.querySelector('.loading-spinner-chat');
+        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat i)');
+        
+        // Deshabilitar botón y mostrar spinner
+        botonEnviar.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+            iconoBoton.style.display = 'none';
+        }
+        
+        console.log('📤 Enviando comentario de analista:', comentarioTexto);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                comentario: comentarioTexto,
+                tipo: 'analista'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarToast('Comentario de analista enviado exitosamente');
+                textarea.value = '';
+                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al enviar comentario', 'error');
+        })
+        .finally(() => {
+            // Rehabilitar botón y ocultar spinner
+            botonEnviar.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+                iconoBoton.style.display = 'inline-block';
+            }
+        });
+    }
+    
+    // Función para editar comentario de analista
+    window.editarComentarioAnalista = function(comentarioId) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textoElement = comentarioElement.querySelector('.comentario-text-sidebar');
+        const textoOriginal = textoElement.textContent.trim();
+        
+        // Crear campo de edición
+        const textarea = document.createElement('textarea');
+        textarea.className = 'form-control-sidebar';
+        textarea.value = textoOriginal;
+        textarea.style.minHeight = '60px';
+        
+        // Crear botones
+        const botonesContainer = document.createElement('div');
+        botonesContainer.className = 'comentario-actions-sidebar mt-2';
+        botonesContainer.innerHTML = `
+            <button class="btn-action-sidebar" onclick="guardarEdicionAnalista(${comentarioId}, this)">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+            <button class="btn-action-sidebar" onclick="cancelarEdicionAnalista(${comentarioId})">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        `;
+        
+        // Reemplazar contenido
+        textoElement.innerHTML = '';
+        textoElement.appendChild(textarea);
+        textoElement.appendChild(botonesContainer);
+        
+        // Ocultar botones originales
+        const accionesOriginales = comentarioElement.querySelector('.comentario-actions-sidebar:not(.mt-2)');
+        if (accionesOriginales) {
+            accionesOriginales.style.display = 'none';
+        }
+        
+        // Enfocar textarea
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    };
+    
+    // Función para guardar edición de comentario analista
+    window.guardarEdicionAnalista = function(comentarioId, botonElement) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textarea = comentarioElement.querySelector('textarea');
+        const nuevoTexto = textarea.value.trim();
+        
+        if (!nuevoTexto) {
+            mostrarToast('El comentario no puede estar vacío', 'error');
+            return;
+        }
+        
+        console.log('💾 Guardando edición comentario analista:', comentarioId, nuevoTexto);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/editar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ comentario: nuevoTexto })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario actualizado exitosamente');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al actualizar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al actualizar comentario', 'error');
+        });
+    };
+    
+    // Función para cancelar edición de comentario analista
+    window.cancelarEdicionAnalista = function(comentarioId) {
+        cargarComentariosAnalista();
+    };
+    
+    // Función para eliminar comentario de analista
+    window.eliminarComentarioAnalista = function(comentarioId) {
+        if (!confirm('¿Estás seguro de eliminar este comentario de analista?')) {
+            return;
+        }
+        
+        console.log('🗑️ Eliminando comentario analista:', comentarioId);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario eliminado exitosamente');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al eliminar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al eliminar comentario', 'error');
+        });
+    };
+    
+    // FUNCIONES PARA COMENTARIOS GENERALES
+    
+    // Cargar comentarios generales
+    function cargarComentariosGenerales() {
+        console.log('🔄 Cargando comentarios generales...');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=general`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Comentarios generales recibidos:', data);
+                
+                if (data.success) {
+                    const container = document.getElementById('lista-comentarios');
+                    
+                                         // Actualizar contador
+                     const contadorGenerales = document.getElementById('contador-comentarios-generales');
+                     if (contadorGenerales) {
+                         contadorGenerales.textContent = `${data.comentarios.length} comentario${data.comentarios.length !== 1 ? 's' : ''}`;
+                     }
+                     
+                     if (data.comentarios.length === 0) {
+                         container.innerHTML = `
+                             <div class="chat-welcome-general">
+                                 <div class="welcome-avatar-general">
+                                     <i class="fas fa-users"></i>
+                                 </div>
+                                 <div class="welcome-message-general">
+                                     <p><strong>Chat General</strong></p>
+                                     <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
+                                 </div>
+                             </div>
+                         `;
+                     } else {
+                         // Mostrar mensaje de bienvenida + comentarios
+                         const welcomeMessage = `
+                             <div class="chat-welcome-general">
+                                 <div class="welcome-avatar-general">
+                                     <i class="fas fa-users"></i>
+                                 </div>
+                                 <div class="welcome-message-general">
+                                     <p><strong>Chat General</strong></p>
+                                     <p>Historial de conversaciones sobre esta solicitud.</p>
+                                 </div>
+                             </div>
+                         `;
+                         
+                                                   const messages = data.comentarios.map(comentario => {
+                              const esPropio = comentario.usuario.id === usuarioActualId;
+                              return `
+                                  <div class="message-bubble ${esPropio ? 'own' : 'other'}" data-comentario-id="${comentario.id}">
+                                      <div class="message-content">
+                                          ${comentario.comentario}
+                                      </div>
+                                      <div class="message-meta">
+                                          <span class="message-author">${comentario.usuario.nombre_completo}</span>
+                                          <span class="message-time">${formatearFecha(comentario.fecha_creacion)}</span>
+                                          ${comentario.puede_editar ? `
+                                              <div class="message-actions">
+                                                  <button class="action-btn" onclick="editarComentarioGeneral(${comentario.id})" title="Editar">
+                                                      <i class="fas fa-edit"></i>
+                                                  </button>
+                                                  <button class="action-btn" onclick="eliminarComentarioGeneral(${comentario.id})" title="Eliminar">
+                                                      <i class="fas fa-trash"></i>
+                                                  </button>
+                                              </div>
+                                          ` : ''}
+                                      </div>
+                                  </div>
+                              `;
+                          }).join('');
+                          
+                          container.innerHTML = welcomeMessage + messages;
+                          
+                          // Scroll automático al final
+                          setTimeout(() => {
+                              container.scrollTop = container.scrollHeight;
+                          }, 100);
+                    }
+                } else {
+                    console.error('❌ Error al cargar comentarios generales:', data.error);
+                    mostrarToast('Error al cargar comentarios generales: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error de red:', error);
+                mostrarToast('Error de red al cargar comentarios generales', 'error');
+            });
+    }
+    
+    // Función para enviar comentario general
+    function enviarComentarioGeneral(evento) {
+        evento.preventDefault();
+        
+        const textarea = document.getElementById('comentario-text-modern');
+        const comentarioTexto = textarea.value.trim();
+        
+        if (!comentarioTexto) {
+            mostrarToast('Por favor ingresa un comentario', 'error');
+            return;
+        }
+        
+        const botonEnviar = document.getElementById('btn-enviar-comentario');
+        const spinner = botonEnviar.querySelector('.loading-spinner-chat-general');
+        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat-general i)');
+        
+        // Deshabilitar botón y mostrar spinner
+        botonEnviar.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+            iconoBoton.style.display = 'none';
+        }
+        
+        console.log('📤 Enviando comentario general:', comentarioTexto);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                comentario: comentarioTexto,
+                tipo: 'general'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarToast('Comentario enviado exitosamente');
+                textarea.value = '';
+                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al enviar comentario', 'error');
+        })
+        .finally(() => {
+            // Rehabilitar botón y ocultar spinner
+            botonEnviar.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+                iconoBoton.style.display = 'inline-block';
+            }
+        });
+    }
+    
+    // Función para editar comentario general
+    window.editarComentarioGeneral = function(comentarioId) {
+        // Similar a la función de analista pero para comentarios generales
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textoElement = comentarioElement.querySelector('.comentario-text-modern');
+        const textoOriginal = textoElement.textContent.trim();
+        
+        // Crear campo de edición
+        const textarea = document.createElement('textarea');
+        textarea.className = 'form-control-modern';
+        textarea.value = textoOriginal;
+        textarea.style.minHeight = '80px';
+        
+        // Crear botones
+        const botonesContainer = document.createElement('div');
+        botonesContainer.className = 'comentario-actions mt-2';
+        botonesContainer.innerHTML = `
+            <button class="btn-action-mini" onclick="guardarEdicionGeneral(${comentarioId}, this)">
+                <i class="fas fa-save"></i>
+            </button>
+            <button class="btn-action-mini" onclick="cancelarEdicionGeneral(${comentarioId})">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Reemplazar contenido
+        textoElement.innerHTML = '';
+        textoElement.appendChild(textarea);
+        textoElement.appendChild(botonesContainer);
+        
+        // Ocultar botones originales
+        const accionesOriginales = comentarioElement.querySelector('.comentario-actions:not(.mt-2)');
+        if (accionesOriginales) {
+            accionesOriginales.style.display = 'none';
+        }
+        
+        // Enfocar textarea
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    };
+    
+    // Función para guardar edición de comentario general
+    window.guardarEdicionGeneral = function(comentarioId, botonElement) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textarea = comentarioElement.querySelector('textarea');
+        const nuevoTexto = textarea.value.trim();
+        
+        if (!nuevoTexto) {
+            mostrarToast('El comentario no puede estar vacío', 'error');
+            return;
+        }
+        
+        console.log('💾 Guardando edición comentario general:', comentarioId, nuevoTexto);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/editar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ comentario: nuevoTexto })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario actualizado exitosamente');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al actualizar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al actualizar comentario', 'error');
+        });
+    };
+    
+    // Función para cancelar edición de comentario general
+    window.cancelarEdicionGeneral = function(comentarioId) {
+        cargarComentariosGenerales();
+    };
+    
+    // Función para eliminar comentario general
+    window.eliminarComentarioGeneral = function(comentarioId) {
+        if (!confirm('¿Estás seguro de eliminar este comentario?')) {
+            return;
+        }
+        
+        console.log('🗑️ Eliminando comentario general:', comentarioId);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario eliminado exitosamente');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al eliminar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al eliminar comentario', 'error');
+        });
+    };
+    
+    // FUNCIONES AUXILIARES
+    
+    // Función para actualizar contador de caracteres
+    function actualizarContadorCaracteres(textareaId, counterId) {
+        const textarea = document.getElementById(textareaId);
+        const counter = document.getElementById(counterId);
+        
+        if (textarea && counter) {
+            counter.textContent = textarea.value.length;
+        }
+    }
+    
+    // EVENT LISTENERS
+    
+    // Formulario de comentarios de analista
+    document.getElementById('form-comentario-analista').addEventListener('submit', enviarComentarioAnalista);
+    
+    // Formulario de comentarios generales
+    document.getElementById('form-comentario-moderno').addEventListener('submit', enviarComentarioGeneral);
+    
+    // Contador de caracteres para comentarios de analista
+    document.getElementById('comentario-analista-text').addEventListener('input', function() {
+        actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+    });
+    
+    // Contador de caracteres para comentarios generales
+    document.getElementById('comentario-text-modern').addEventListener('input', function() {
+        actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+    });
+    
+    // INICIALIZACIÓN
+    console.log('🚀 Inicializando sistema de comentarios completo...');
+    
+    // Configurar funcionalidades de chat
+    configurarChat();
+    
+    // Cargar comentarios al cargar la página
+    cargarComentariosAnalista();
+    cargarComentariosGenerales();
+    
+    // Actualizar comentarios cada 30 segundos
+    setInterval(function() {
+        cargarComentariosAnalista();
+        cargarComentariosGenerales();
+    }, 30000);
+    
+    console.log('✅ Sistema de comentarios inicializado correctamente');
 });
 </script>
 
@@ -1121,40 +2031,36 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     border: 1px solid #e5e7eb;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
 }
 
 .unified-header {
     background: linear-gradient(135deg, #1e40af, #3b82f6);
     color: white;
-    padding: 1.5rem 2rem;
+    padding: 0.6rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .unified-icon {
-    width: 48px;
-    height: 48px;
+    width: 32px;
+    height: 32px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    margin-right: 1rem;
+    font-size: 1rem;
+    margin-right: 0.75rem;
 }
 
 .unified-title h3 {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     font-weight: 700;
     margin: 0;
-    margin-bottom: 0.25rem;
-}
-
-.unified-title p {
-    margin: 0;
-    opacity: 0.9;
-    font-size: 0.875rem;
 }
 
 .unified-sla {
@@ -1162,23 +2068,18 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .unified-sla .sla-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.unified-sla .sla-time {
-    display: block;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.75rem;
 }
 
 .unified-body {
-    padding: 2rem;
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .info-section {
@@ -1229,106 +2130,203 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.875rem;
     color: #111827;
     font-weight: 600;
-    text-align: right;
+    text-align: right !important;
     flex: 1;
+    direction: ltr;
 }
 
-/* TIMELINE COMPACTO */
+/* TIMELINE SÚPER ANGOSTO HORIZONTALMENTE */
 .compact-timeline-section {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
     border: 1px solid #e5e7eb;
+    /* Mismo formato que unified-info-card */
 }
 
 .timeline-header {
-    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
 }
 
 .timeline-header h5 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 700;
     margin: 0;
-}
-
-.compact-timeline {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: center;
-}
-
-.timeline-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
-}
-
-.timeline-item.completed {
-    background: #dcfce7;
-    border-color: #bbf7d0;
-}
-
-.timeline-item.completed .timeline-dot {
-    background: #22c55e;
     color: white;
 }
 
-.timeline-item.active {
-    background: #fef3c7;
-    border-color: #fcd34d;
-    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+.timeline-header h5 i {
+    margin-right: 0.4rem;
+    font-size: 0.85rem;
 }
 
-.timeline-item.active .timeline-dot {
-    background: #f59e0b;
-    color: white;
-    animation: pulse 2s infinite;
+.timeline-header h5::after {
+    display: none; /* Quitar la línea decorativa */
 }
 
-.timeline-item.pending {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+/* TIMELINE SÚPER DELGADO Y HORIZONTAL */
+.slim-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0.4rem 1.2rem;
+    margin: 0 auto;
+    gap: 0;
+    max-width: 100%;
 }
 
-.timeline-item.pending .timeline-dot {
-    background: #94a3b8;
-    color: white;
+/* LÍNEA CONECTORA SÚPER DELGADA */
+.slim-timeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        #22c55e 0%, 
+        #22c55e 30%, 
+        #f59e0b 30%, 
+        #f59e0b 60%, 
+        #94a3b8 60%, 
+        #94a3b8 100%
+    );
+    z-index: 1;
+    transform: translateY(-50%);
 }
 
-.timeline-dot {
-    width: 24px;
-    height: 24px;
+/* PASO DEL TIMELINE */
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+.timeline-step:hover {
+    transform: translateY(-2px);
+}
+
+/* PUNTO/ICONO DEL PASO */
+.step-dot {
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
-    flex-shrink: 0;
+    font-size: 0.6rem;
+    margin-bottom: 0.25rem;
+    position: relative;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
 }
 
-.timeline-content {
+/* ESTADOS DE LOS PUNTOS */
+.timeline-step.completed .step-dot {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    box-shadow: 0 3px 12px rgba(34, 197, 94, 0.3);
+}
+
+.timeline-step.active .step-dot {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
+    animation: activePulse 2s ease-in-out infinite alternate;
+}
+
+.timeline-step.pending .step-dot {
+    background: #f8fafc;
+    color: #9ca3af;
+    border-color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes activePulse {
+    0% {
+        box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
+    }
+    100% {
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+    }
+}
+
+/* ETIQUETA DEL PASO */
+.step-label {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.05rem;
 }
 
-.timeline-title {
-    font-size: 0.875rem;
+.step-name {
+    font-size: 0.65rem;
     font-weight: 600;
-    color: #1f2937;
+    color: #374151;
+    line-height: 1.1;
+    word-break: break-word;
+    max-width: 70px;
 }
 
-.timeline-sla {
-    font-size: 0.75rem;
-    color: #6b7280;
+.step-sla {
+    font-size: 0.55rem;
+    font-weight: 400;
+    color: #9ca3af;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.05rem 0.25rem;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
 }
+
+/* COLORES PARA DIFERENTES ESTADOS */
+.timeline-step.completed .step-name {
+    color: #166534;
+}
+
+.timeline-step.completed .step-sla {
+    color: #166534;
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.timeline-step.active .step-name {
+    color: #92400e;
+    font-weight: 700;
+}
+
+.timeline-step.active .step-sla {
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.timeline-step.pending .step-name {
+    color: #9ca3af;
+}
+
+.timeline-step.pending .step-sla {
+    color: #9ca3af;
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+
 
 /* SISTEMA DE PESTAÑAS */
 .tabs-section {
@@ -1587,6 +2585,35 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 /* RESPONSIVE */
+@media (max-width: 1024px) {
+    .compact-timeline {
+        margin: 0 1rem;
+    }
+    
+    .compact-timeline::before {
+        left: 2rem;
+        right: 2rem;
+    }
+    
+    .timeline-item {
+        max-width: 160px;
+    }
+    
+    .timeline-stage {
+        padding: 1rem 0.75rem;
+    }
+    
+    .timeline-dot {
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+    }
+    
+    .timeline-title {
+        font-size: 0.875rem;
+    }
+}
+
 @media (max-width: 768px) {
     .unified-header {
         flex-direction: column;
@@ -1598,13 +2625,69 @@ document.addEventListener('DOMContentLoaded', function() {
         padding: 1rem;
     }
     
+    .compact-timeline-section {
+        padding: 2rem 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline-header h5 {
+        font-size: 1.3rem;
+    }
+    
     .compact-timeline {
         flex-direction: column;
         align-items: stretch;
+        margin: 0 auto;
+        gap: 1rem;
+        padding: 1rem 0;
+        max-width: 80%;
+    }
+    
+    .compact-timeline::before {
+        display: none;
     }
     
     .timeline-item {
-        justify-content: flex-start;
+        max-width: 100%;
+        transform: none !important;
+    }
+    
+    .timeline-item:hover {
+        transform: none;
+    }
+    
+    .timeline-stage {
+        padding: 1.5rem 1rem;
+    }
+    
+    .timeline-dot {
+        width: 56px;
+        height: 56px;
+        font-size: 1.25rem;
+    }
+    
+    .timeline-title {
+        font-size: 1rem;
+    }
+    
+    /* Mobile Timeline Connector */
+    .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        bottom: -1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 1.5rem;
+        background: linear-gradient(180deg, transparent 0%, #e5e7eb 50%, transparent 100%);
+    }
+    
+    .timeline-item.completed:not(:last-child)::after {
+        background: linear-gradient(180deg, transparent 0%, #22c55e 50%, transparent 100%);
+    }
+    
+    .timeline-item.active:not(:last-child)::after {
+        background: linear-gradient(180deg, transparent 0%, #f59e0b 50%, transparent 100%);
     }
     
     .tabs-header {
@@ -1668,6 +2751,1054 @@ document.addEventListener('DOMContentLoaded', function() {
 .comentarios-content::-webkit-scrollbar-thumb:hover,
 .documentos-content::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* ========================================
+   ESTILOS MODERNOS PARA COMENTARIOS
+   ======================================== */
+
+/* Header de comentarios */
+.comentarios-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0 1.5rem 0;
+    border-bottom: 2px solid #f1f5f9;
+    margin-bottom: 1.5rem;
+}
+
+.header-info h6 {
+    color: #1f2937;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header-info small {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.comentarios-count .badge {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* Formulario moderno de comentarios */
+.comentario-form-modern {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.comentario-form-modern:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.form-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    margin-right: 0.75rem;
+}
+
+.user-info strong {
+    display: block;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.user-info small {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.form-body {
+    padding: 1.5rem;
+}
+
+.form-control-modern {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #f1f5f9;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.3s ease;
+    background: #fafbfc;
+}
+
+.form-control-modern:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.char-counter {
+    text-align: right;
+    margin-top: 0.5rem;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: #fafbfc;
+    border-top: 1px solid #e5e7eb;
+}
+
+.form-actions-left,
+.form-actions-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.btn-action-secondary {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+.btn-cancel {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.btn-enviar {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-enviar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-enviar:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Lista de comentarios moderna */
+.comentarios-lista {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.comentario-item-modern {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+.comentario-item-modern:hover {
+    background: #fafbfc;
+}
+
+.comentario-item-modern:last-child {
+    border-bottom: none;
+}
+
+.comentario-avatar-modern {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.comentario-content-modern {
+    flex: 1;
+}
+
+.comentario-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.author-name {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.author-role {
+    background: #e0f2fe;
+    color: #0277bd;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.comentario-date-modern {
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.comentario-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-action-mini {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-mini:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.btn-action-mini.text-danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.comentario-text-modern {
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.comentario-footer-modern {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-reaction {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.btn-reaction:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Estado vacío moderno */
+.empty-state-modern {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #9ca3af;
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f1f5f9, #e5e7eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+    color: #d1d5db;
+}
+
+.empty-state-modern h6 {
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-modern p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Notificaciones toast */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.toast-error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .comentarios-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .form-footer {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .form-actions-left,
+    .form-actions-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .form-actions-right {
+        flex-direction: row-reverse;
+    }
+    
+    .comentario-item-modern {
+        padding: 1rem;
+    }
+    
+    .author-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .toast-notification {
+        left: 20px;
+        right: 20px;
+        transform: translateY(-100px);
+    }
+    
+    .toast-notification.show {
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   CHAT MODERNO - COMENTARIOS DE ANALISTA
+   ========================================== */
+
+.chat-container-analista {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    height: 420px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header del Chat Analista */
+.chat-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.chat-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.chat-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #28a745;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Área de Mensajes */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+}
+
+
+
+/* Mensajes individuales */
+.message-bubble {
+    max-width: 85%;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-bubble.own {
+    align-self: flex-end;
+}
+
+.message-bubble.other {
+    align-self: flex-start;
+}
+
+.message-content {
+    background: #007bff;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.message-bubble.other .message-content {
+    background: #ffffff;
+    color: #2c3e50;
+    border: 1px solid #e9ecef;
+    border-radius: 18px 18px 18px 4px;
+}
+
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.message-bubble.own .message-meta {
+    justify-content: flex-end;
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message-bubble:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f8f9fa;
+    color: #007bff;
+}
+
+/* Input Container */
+.chat-input-container {
+    background: white;
+    border-top: 1px solid #e9ecef;
+    padding: 12px 16px;
+    border-radius: 0 0 16px 16px;
+}
+
+.chat-form {
+    margin: 0;
+}
+
+.input-group-chat {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.user-avatar-chat {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.input-wrapper {
+    flex: 1;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    border-color: #007bff;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.chat-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.input-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.send-button {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.send-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.send-button:active {
+    transform: scale(0.95);
+}
+
+.loading-spinner-chat {
+    display: none;
+}
+
+/* Scrollbar personalizado */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* ==========================================
+   CHAT MODERNO - COMENTARIOS GENERALES
+   ========================================== */
+
+.chat-container-general {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    height: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header del Chat General */
+.chat-header-general {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.chat-title-general {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.chat-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+}
+
+/* Área de Mensajes Generales */
+.chat-messages-general {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-welcome-general {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: #e8f5e9;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4caf50;
+}
+
+.welcome-avatar-general {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4caf50, #388e3c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.welcome-message-general p {
+    margin: 0;
+    color: #2e7d32;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.welcome-message-general p:first-child {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* Input Container General */
+.chat-input-container-general {
+    background: white;
+    border-top: 1px solid #e9ecef;
+    padding: 12px 16px;
+    border-radius: 0 0 16px 16px;
+}
+
+.chat-form-general {
+    margin: 0;
+}
+
+.input-group-chat-general {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.user-avatar-chat-general {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.input-wrapper-general {
+    flex: 1;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.input-wrapper-general:focus-within {
+    border-color: #28a745;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.chat-input-general {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.input-actions-general {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.attachment-button,
+.mention-button {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.attachment-button:hover,
+.mention-button:hover {
+    background: #e9ecef;
+    color: #28a745;
+}
+
+.char-counter-general {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.send-button-general {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.send-button-general:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.send-button-general:active {
+    transform: scale(0.95);
+}
+
+.loading-spinner-chat-general {
+    display: none;
+}
+
+/* Scrollbar personalizado para chat general */
+.chat-messages-general::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages-general::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages-general::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.chat-messages-general::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* Animaciones y efectos */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.message-bubble {
+    animation: fadeInUp 0.3s ease;
+}
+
+.message-bubble.own {
+    animation: slideInRight 0.3s ease;
+}
+
+.message-bubble.other {
+    animation: slideInLeft 0.3s ease;
+}
+
+/* Mejoras responsive */
+@media (max-width: 1199px) {
+    .chat-container-analista {
+        height: calc(100vh - 250px);
+    }
+}
+
+@media (max-width: 991px) {
+    .chat-container-analista {
+        position: static;
+        height: 420px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chat-container-general {
+        height: 400px;
+    }
+    
+    .message-bubble {
+        max-width: 90%;
+    }
+    
+    .chat-header,
+    .chat-header-general {
+        padding: 12px 16px;
+    }
+    
+    .chat-title,
+    .chat-title-general {
+        font-size: 0.9rem;
+    }
+    
+    .chat-input-container,
+    .chat-input-container-general {
+        padding: 12px 16px;
+    }
+    
+    .input-group-chat,
+    .input-group-chat-general {
+        gap: 8px;
+    }
+    
+    .user-avatar-chat,
+    .user-avatar-chat-general {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    
+    .send-button,
+    .send-button-general {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .chat-container-analista,
+    .chat-container-general {
+        height: 350px;
+    }
+    
+    .message-bubble {
+        max-width: 95%;
+    }
+    
+    .message-content {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+    
+    .message-meta {
+        font-size: 0.7rem;
+    }
+    
+    .chat-welcome-general {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .welcome-avatar-general {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .welcome-message-general p {
+        font-size: 0.8rem;
+    }
 }
 </style>
 
