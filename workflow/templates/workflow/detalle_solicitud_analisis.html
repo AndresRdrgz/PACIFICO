@@ -1,0 +1,4850 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Análisis de Solicitud - {{ solicitud.codigo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de la Solicitud -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
+                            </a>
+                            <div>
+                                <h2 class="mb-1">
+                                    <i class="fas fa-microscope me-2"></i>
+                                    Análisis de Solicitud: {{ solicitud.codigo }}
+                                </h2>
+                                <p class="mb-0 opacity-75">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ solicitud.cliente_nombre|default:"Sin cliente" }} 
+                                    {% if solicitud.cliente_cedula %}
+                                        - {{ solicitud.cliente_cedula }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="aprobarSolicitud()">
+                                <i class="fas fa-check me-1"></i>Aprobar
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="solicitarMasInformacion()">
+                                <i class="fas fa-question-circle me-1"></i>Solicitar Info
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="rechazarSolicitud()">
+                                <i class="fas fa-times me-1"></i>Rechazar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL: RESUMEN + COMENTARIOS ANALISTA -->
+    <div class="row mb-4">
+        <div class="col-8">
+            <div class="unified-info-card">
+                <div class="unified-header">
+                    <div class="unified-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="unified-title">
+                        <h3>Resumen Completo de la Solicitud</h3>
+                    </div>
+                    <div class="unified-sla">
+                        <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
+                            {% if sla_info.estado == 'vencido' %}
+                                <i class="fas fa-exclamation-triangle me-1"></i>Vencido
+                            {% elif sla_info.estado == 'por_vencer' %}
+                                <i class="fas fa-hourglass-half me-1"></i>Por Vencer
+                            {% elif sla_info.estado == 'en_tiempo' %}
+                                <i class="fas fa-check-circle me-1"></i>En Tiempo
+                                {% if sla_info.tiempo_restante_formateado %}
+                                    - {{ sla_info.tiempo_restante_formateado }}
+                                {% endif %}
+                            {% else %}
+                                <i class="fas fa-question-circle me-1"></i>Sin SLA
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="unified-body">
+                    <div class="row g-4">
+                        <!-- Sección Cliente -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-user text-primary"></i>
+                                    <h5>Información del Cliente</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Nombre Completo:</span>
+                                            <span class="info-value">{{ solicitud.cliente_nombre|default:"Sin cliente" }}</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-nombre" data-field="nombre">
+                                            <label for="check-nombre" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Cédula:</span>
+                                            <span class="info-value">{{ solicitud.cliente_cedula|default:"-" }}</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-cedula" data-field="cedula">
+                                            <label for="check-cedula" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Canal de Origen:</span>
+                                            <span class="info-value">Web/Digital</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-canal" data-field="canal">
+                                            <label for="check-canal" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección Cotización -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-calculator text-success"></i>
+                                    <h5>Detalles de la Cotización</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Monto Solicitado:</span>
+                                            <span class="info-value">{{ solicitud.monto_formateado|default:"B/. 11,000" }}</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-monto" data-field="monto">
+                                            <label for="check-monto" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Plazo:</span>
+                                            <span class="info-value">48 meses</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-plazo" data-field="plazo">
+                                            <label for="check-plazo" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Tasa de Interés:</span>
+                                            <span class="info-value">12.5%</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-tasa" data-field="tasa">
+                                            <label for="check-tasa" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Cuota Mensual:</span>
+                                            <span class="info-value">B/. 697.50</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-cuota" data-field="cuota">
+                                            <label for="check-cuota" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección Estado del Proceso -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-tasks text-warning"></i>
+                                    <h5>Estado del Proceso</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Fecha de Inicio:</span>
+                                            <span class="info-value">09/07/2025 16:06</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-fecha" data-field="fecha">
+                                            <label for="check-fecha" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Etapa Actual:</span>
+                                            <span class="info-value">Consulta</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-etapa" data-field="etapa">
+                                            <label for="check-etapa" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Área Responsable:</span>
+                                            <span class="info-value">Flujo de Consulta</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-area" data-field="area">
+                                            <label for="check-area" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Responsable:</span>
+                                            <span class="info-value">Sin asignar</span>
+                                        </div>
+                                        <div class="compliance-check">
+                                            <input type="checkbox" class="compliance-checkbox" id="check-responsable" data-field="responsable">
+                                            <label for="check-responsable" class="compliance-label">
+                                                <i class="fas fa-check check-icon"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- COMENTARIOS DE ANALISTA (1/3 del ancho) -->
+        <div class="col-4">
+            <div class="chat-container-analista">
+                <!-- Header del Chat -->
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <i class="fas fa-user-tie text-primary me-2"></i>
+                        <span>Análisis y observaciones del préstamo</span>
+                    </div>
+                    <div class="chat-status">
+                        <span class="status-dot online"></span>
+                        <small>En línea</small>
+                    </div>
+                </div>
+                
+                <!-- Área de Mensajes (con scroll) -->
+                <div class="chat-messages" id="lista-comentarios-analista">
+                    <!-- Mensaje de bienvenida -->
+                    <div class="chat-welcome">
+                        <div class="welcome-avatar">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="welcome-message">
+                            <p><strong>Análisis Técnico</strong></p>
+                            <p>Aquí puede dejar su análisis del crédito. Evalúe la documentación, capacidad de pago y otros aspectos relevantes para la decisión crediticia.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Input de Mensaje (fijo abajo) -->
+                <div class="chat-input-container">
+                    <form id="form-comentario-analista" method="post" class="chat-form">
+                        {% csrf_token %}
+                        <div class="input-group-chat">
+                            <div class="user-avatar-chat">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="input-wrapper">
+                                <textarea class="chat-input" 
+                                          placeholder="Escribe tu análisis técnico..."
+                                          rows="1" 
+                                          id="comentario-analista-text"
+                                          maxlength="1000"></textarea>
+                                <div class="input-actions">
+                                    <span class="char-counter">
+                                        <span id="char-count-analista">0</span>/1000
+                                    </span>
+                                    <button type="submit" class="send-button" id="btn-enviar-analista">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <div class="loading-spinner-chat" style="display: none;">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLUJO DEL PROCESO - Ancho completo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="compact-timeline-section">
+                <div class="timeline-header">
+                    <h5><i class="fas fa-route me-2"></i>Flujo del Proceso</h5>
+                </div>
+                <div class="slim-timeline">
+                    {% for etapa in etapas_pipeline %}
+                    <div class="timeline-step {% if etapa.orden < solicitud.etapa_actual.orden %}completed{% elif etapa == solicitud.etapa_actual %}active{% else %}pending{% endif %}">
+                        <div class="step-dot">
+                            {% if etapa.orden < solicitud.etapa_actual.orden %}
+                                <i class="fas fa-check"></i>
+                            {% elif etapa == solicitud.etapa_actual %}
+                                <i class="fas fa-clock"></i>
+                            {% else %}
+                                <i class="fas fa-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div class="step-label">
+                            <span class="step-name">{{ etapa.nombre }}</span>
+                            <span class="step-sla">
+                                {% if etapa.sla %}{{ etapa.sla }}{% else %}1 day{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL: PESTAÑAS + SOLICITUDES RELACIONADAS -->
+    <div class="row">
+        <!-- SISTEMA DE PESTAÑAS (2/3 del ancho) -->
+        <div class="col-lg-8">
+            <!-- SISTEMA DE PESTAÑAS -->
+    <div class="tabs-section">
+        <div class="tabs-header">
+            <button class="tab-button active" data-tab="comentarios">
+                <i class="fas fa-comments me-2"></i>Comentarios Generales
+            </button>
+            <button class="tab-button" data-tab="documentos">
+                <i class="fas fa-file-alt me-2"></i>Documentos
+            </button>
+            <button class="tab-button" data-tab="historial">
+                <i class="fas fa-history me-2"></i>Historial
+            </button>
+        </div>
+        
+        <div class="tabs-content">
+            <!-- Tab Comentarios -->
+            <div class="tab-pane active" id="tab-comentarios">
+                <div class="chat-container-general">
+                    <!-- Header del Chat General -->
+                    <div class="chat-header-general">
+                        <div class="chat-title-general">
+                            <i class="fas fa-comments text-primary me-2"></i>
+                            <span>Comentarios Generales</span>
+                        </div>
+                        <div class="chat-info">
+                            <span class="badge bg-primary" id="contador-comentarios-generales">0 comentarios</span>
+                            <span class="status-dot online"></span>
+                            <small>En línea</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Área de Mensajes Generales (con scroll) -->
+                    <div class="chat-messages-general" id="lista-comentarios">
+                        <!-- Los mensajes se cargan dinámicamente via AJAX -->
+                        <div class="chat-welcome-general">
+                            <div class="welcome-avatar-general">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="welcome-message-general">
+                                <p><strong>Chat General</strong></p>
+                                <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Input de Mensaje General (fijo abajo) -->
+                    <div class="chat-input-container-general">
+                        <form id="form-comentario-moderno" method="post" class="chat-form-general">
+                            {% csrf_token %}
+                            <div class="input-group-chat-general">
+                                <div class="user-avatar-chat-general">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="input-wrapper-general">
+                                    <textarea class="chat-input-general" 
+                                              placeholder="Escribe tu comentario general..."
+                                              rows="1" 
+                                              id="comentario-text-modern"
+                                              maxlength="1000"></textarea>
+                                    <div class="input-actions-general">
+                                        <button type="button" class="attachment-button" title="Adjuntar archivo">
+                                            <i class="fas fa-paperclip"></i>
+                                        </button>
+                                        <button type="button" class="mention-button" title="Mencionar usuario">
+                                            <i class="fas fa-at"></i>
+                                        </button>
+                                        <span class="char-counter-general">
+                                            <span id="char-count">0</span>/1000
+                                        </span>
+                                        <button type="submit" class="send-button-general" id="btn-enviar-comentario">
+                                            <i class="fas fa-paper-plane"></i>
+                                            <div class="loading-spinner-chat-general" style="display: none;">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Documentos -->
+            <div class="tab-pane" id="tab-documentos">
+                <div class="documentos-content">
+                    <!-- Área de subir documentos -->
+                    <div class="upload-section">
+                        <div class="upload-header">
+                            <h6><i class="fas fa-cloud-upload-alt me-2"></i>Subir Nuevo Documento</h6>
+                        </div>
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p class="upload-text">Arrastra y suelta archivos aquí o <span class="upload-link">haz clic para seleccionar</span></p>
+                                <small class="upload-hint">Archivos PDF, JPG, PNG - Máximo 10MB</small>
+                            </div>
+                            <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de documentos -->
+                    <div class="documentos-list">
+                        <div class="documento-item">
+                            <div class="documento-icon">
+                                <i class="fas fa-file-pdf text-danger"></i>
+                            </div>
+                            <div class="documento-details">
+                                <div class="documento-header">
+                                    <strong>APC</strong>
+                                    <span class="documento-size">PDF - 768.0 KB</span>
+                                </div>
+                                <div class="documento-status">
+                                    <span class="badge bg-success">Enviado</span>
+                                </div>
+                            </div>
+                            <div class="documento-actions">
+                                <button class="btn btn-outline-primary btn-sm me-2" title="Ver documento">
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                                <div class="documento-validation">
+                                    <button class="validation-btn valid" title="Documento válido" data-doc="apc" data-status="valid">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="validation-btn invalid" title="Documento inválido" data-doc="apc" data-status="invalid">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="documento-item">
+                            <div class="documento-icon">
+                                <i class="fas fa-file-pdf text-danger"></i>
+                            </div>
+                            <div class="documento-details">
+                                <div class="documento-header">
+                                    <strong>Ficha CSS</strong>
+                                    <span class="documento-size">Pendiente de subir</span>
+                                </div>
+                                <div class="documento-status">
+                                    <span class="badge bg-secondary">Sin archivo</span>
+                                </div>
+                            </div>
+                            <div class="documento-actions">
+                                <button class="btn btn-outline-secondary btn-sm me-2" disabled>
+                                    <i class="fas fa-upload"></i> Subir
+                                </button>
+                                <div class="documento-validation">
+                                    <button class="validation-btn valid" title="Documento válido" data-doc="css" data-status="valid">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="validation-btn invalid" title="Documento inválido" data-doc="css" data-status="invalid">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Historial -->
+            <div class="tab-pane" id="tab-historial">
+                <div class="historial-content">
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>Consulta</strong>
+                                <span class="historial-date">10/07/2025 16:45</span>
+                            </div>
+                            <div class="historial-info">
+                                Por andresrdrg_
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>Documentación Pendiente</strong>
+                                <span class="historial-date">10/07/2025 16:45</span>
+                            </div>
+                            <div class="historial-info">
+                                Por andresrdrg_
+                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>Nuevo Lead</strong>
+                                <span class="historial-date">10/07/2025 16:45</span>
+                            </div>
+                            <div class="historial-info">
+                                Por andresrdrg
+                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>Documentación Pendiente</strong>
+                                <span class="historial-date">10/07/2025 14:51</span>
+                            </div>
+                            <div class="historial-info">
+                                Por otejeira
+                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>Nuevo Lead</strong>
+                                <span class="historial-date">10/07/2025 14:15</span>
+                            </div>
+                            <div class="historial-info">
+                                Por otejeira
+                                <br><span class="text-success">Completado: 10/07/2025 14:51</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+        
+        <!-- SOLICITUDES RELACIONADAS (1/3 del ancho) -->
+        <div class="col-lg-4">
+            <div class="related-requests-section">
+                <div class="related-header">
+                    <h5><i class="fas fa-link me-2"></i>Solicitudes Relacionadas</h5>
+                    <small class="text-muted">Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
+                </div>
+                
+                <div class="related-content">
+                    {% if mostrar_mensaje_sin_cliente %}
+                        <div class="alert alert-warning text-center my-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
+                        </div>
+                    {% else %}
+                        <!-- Búsqueda automática por cédula -->
+                        <div class="search-info">
+                            <i class="fas fa-search me-2"></i>
+                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
+                        </div>
+                        
+                        <!-- Lista de solicitudes relacionadas -->
+                        <div class="related-list">
+                            {% for s in solicitudes_relacionadas %}
+                            <div class="related-item">
+                                <div class="related-icon">
+                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
+                                </div>
+                                <div class="related-details">
+                                    <div class="related-header-item">
+                                        <strong>{{ s.codigo }}</strong>
+                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="related-info">
+                                        <span class="badge 
+                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
+                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
+                                        </span>
+                                        <span class="related-amount">
+                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="related-description">
+                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
+                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
+                                        {% else %}Préstamo{% endif %}
+                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
+                                    </div>
+                                </div>
+                                <div class="related-actions">
+                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="alert alert-info text-center my-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Sin solicitudes relacionadas disponibles para esta cédula.
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if solicitudes_relacionadas %}
+                        <div class="related-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Solicitudes:</span>
+                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Aprobadas:</span>
+                                <span class="summary-value text-success">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">En Proceso:</span>
+                                <span class="summary-value text-warning">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Rechazadas:</span>
+                                <span class="summary-value text-danger">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para funcionalidades -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funciones para comentarios
+    function guardarComentario(tipo, texto) {
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                comentario: texto,
+                tipo: tipo
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al guardar comentario: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar comentario');
+        });
+    }
+
+    // Sistema de pestañas
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            
+            // Remover clase active de todos los botones y panes
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Activar el botón y pane seleccionado
+            this.classList.add('active');
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
+        });
+    });
+
+    // Formulario comentario moderno con AJAX
+    const formComentarioModerno = document.getElementById('form-comentario-moderno');
+    const comentarioTextModerno = document.getElementById('comentario-text-modern');
+    const charCountSpan = document.getElementById('char-count');
+    const btnEnviar = document.getElementById('btn-enviar-comentario');
+    const btnCancelar = document.getElementById('btn-cancelar-comentario');
+    
+    // Contador de caracteres
+    if (comentarioTextModerno && charCountSpan) {
+        comentarioTextModerno.addEventListener('input', function() {
+            const count = this.value.length;
+            charCountSpan.textContent = count;
+            
+            // Cambiar color según límite
+            if (count > 900) {
+                charCountSpan.parentElement.className = 'text-danger';
+            } else if (count > 700) {
+                charCountSpan.parentElement.className = 'text-warning';
+            } else {
+                charCountSpan.parentElement.className = 'text-muted';
+            }
+        });
+    }
+    
+    // Manejar envío de comentario moderno
+    if (formComentarioModerno) {
+        formComentarioModerno.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const comentarioTexto = comentarioTextModerno.value.trim();
+            if (!comentarioTexto) {
+                alert('Por favor escribe un comentario antes de enviar.');
+                return;
+            }
+            
+            // Deshabilitar botón y mostrar loading
+            btnEnviar.disabled = true;
+            btnEnviar.querySelector('span').style.display = 'none';
+            btnEnviar.querySelector('.loading-spinner').style.display = 'inline-block';
+            
+            // Enviar comentario via AJAX
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/comentarios/crear/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    comentario: comentarioTexto,
+                    tipo: 'analisis'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Agregar comentario a la lista sin recargar
+                    agregarComentarioALista(data.comentario);
+                    
+                    // Limpiar formulario
+                    comentarioTextModerno.value = '';
+                    charCountSpan.textContent = '0';
+                    charCountSpan.parentElement.className = 'text-muted';
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarNotificacionExito('Comentario agregado correctamente');
+                    
+                    // Actualizar contador de comentarios
+                    actualizarContadorComentarios();
+                } else {
+                    mostrarNotificacionError('Error al guardar comentario: ' + (data.error || 'Error desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarNotificacionError('Error de red al enviar el comentario');
+            })
+            .finally(() => {
+                // Rehabilitar botón
+                btnEnviar.disabled = false;
+                btnEnviar.querySelector('span').style.display = 'inline-block';
+                btnEnviar.querySelector('.loading-spinner').style.display = 'none';
+            });
+        });
+    }
+    
+    // Función para agregar comentario a la lista
+    function agregarComentarioALista(comentario) {
+        const listaComentarios = document.getElementById('lista-comentarios');
+        const emptyState = listaComentarios.querySelector('.empty-state-modern');
+        
+        // Remover estado vacío si existe
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Crear HTML del nuevo comentario
+        const comentarioHTML = `
+            <div class="comentario-item-modern">
+                <div class="comentario-avatar-modern">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="comentario-content-modern">
+                    <div class="comentario-header-modern">
+                        <div class="author-info">
+                            <strong class="author-name">${comentario.usuario_nombre}</strong>
+                            <span class="author-role">Analista</span>
+                            <span class="comentario-date-modern">Hace un momento</span>
+                        </div>
+                        <div class="comentario-actions">
+                            <button class="btn-action-mini" title="Editar comentario">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action-mini text-danger" title="Eliminar comentario">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="comentario-text-modern">
+                        ${comentario.texto.replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="comentario-footer-modern">
+                        <button class="btn-reaction">
+                            <i class="fas fa-thumbs-up me-1"></i>
+                            <span>0</span>
+                        </button>
+                        <button class="btn-reaction">
+                            <i class="fas fa-reply me-1"></i>
+                            Responder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insertar al inicio de la lista
+        listaComentarios.insertAdjacentHTML('afterbegin', comentarioHTML);
+        
+        // Animar el nuevo comentario
+        const nuevoComentario = listaComentarios.firstElementChild;
+        nuevoComentario.style.opacity = '0';
+        nuevoComentario.style.transform = 'translateY(-20px)';
+        
+        setTimeout(() => {
+            nuevoComentario.style.transition = 'all 0.3s ease';
+            nuevoComentario.style.opacity = '1';
+            nuevoComentario.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    // Función para actualizar contador de comentarios
+    function actualizarContadorComentarios() {
+        const badge = document.querySelector('.comentarios-count .badge');
+        if (badge) {
+            const count = document.querySelectorAll('.comentario-item-modern').length;
+            badge.textContent = `${count} comentario${count !== 1 ? 's' : ''}`;
+        }
+    }
+    
+    // Funciones de notificación mejoradas
+    function mostrarNotificacionExito(mensaje) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-success';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-check-circle me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    function mostrarNotificacionError(mensaje) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-error';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+    
+    // Cancelar comentario
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', function() {
+            comentarioTextModerno.value = '';
+            charCountSpan.textContent = '0';
+            charCountSpan.parentElement.className = 'text-muted';
+        });
+    }
+
+    // Funciones para botones de acción
+    window.ejecutarTransicion = function(transicionId) {
+        if (confirm('¿Está seguro de realizar esta transición?')) {
+            // Implementar lógica de transición
+            console.log('Ejecutando transición:', transicionId);
+        }
+    };
+
+    window.aprobarSolicitud = function() {
+        if (confirm('¿Está seguro de aprobar esta solicitud?')) {
+            // Implementar lógica de aprobación
+            console.log('Aprobando solicitud');
+        }
+    };
+
+    window.rechazarSolicitud = function() {
+        if (confirm('¿Está seguro de rechazar esta solicitud?')) {
+            // Implementar lógica de rechazo
+            console.log('Rechazando solicitud');
+        }
+    };
+
+    window.solicitarMasInformacion = function() {
+        const motivo = prompt('Indique el motivo por el cual solicita más información:');
+        if (motivo) {
+            // Implementar lógica para solicitar más información
+            console.log('Solicitando más información:', motivo);
+        }
+    };
+
+    window.derivarSolicitud = function() {
+        // Implementar lógica para derivar solicitud
+        console.log('Derivando solicitud');
+    };
+
+    window.editarComentario = function(comentarioId) {
+        // Implementar lógica para editar comentario
+        console.log('Editando comentario:', comentarioId);
+    };
+
+    window.eliminarComentario = function(comentarioId) {
+        if (confirm('¿Está seguro de eliminar este comentario?')) {
+            // Implementar lógica para eliminar comentario
+            console.log('Eliminando comentario:', comentarioId);
+        }
+    };
+    
+    // ==========================================
+    // SISTEMA DE COMENTARIOS COMPLETO
+    // ==========================================
+    
+    // Variables globales
+    const solicitudId = parseInt('{{ solicitud.id }}');
+    const usuarioActualId = parseInt('{{ request.user.id }}');
+    
+    // Función para obtener token CSRF
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    // Función para mostrar notificaciones toast
+    function mostrarToast(mensaje, tipo = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${tipo}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${tipo === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                ${mensaje}
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Mostrar toast
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Ocultar toast después de 3 segundos
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Función para formatear fecha
+    function formatearFecha(fecha) {
+        const now = new Date();
+        const diff = now - new Date(fecha);
+        const seconds = Math.floor(diff / 1000);
+        
+        if (seconds < 60) return 'hace unos segundos';
+        if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} minutos`;
+        if (seconds < 86400) return `hace ${Math.floor(seconds / 3600)} horas`;
+        return `hace ${Math.floor(seconds / 86400)} días`;
+    }
+    
+    // Función para auto-expandir textarea
+    function autoExpandTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+    
+    // Función para enviar mensaje con Enter
+    function handleKeyDown(event, submitFunction) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            submitFunction(event);
+        }
+    }
+    
+    // Función para scroll automático al final del chat
+    function scrollToBottom(container) {
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+    
+    // Función para configurar chat
+    function configurarChat() {
+        // Configurar textarea de analista
+        const textareaAnalista = document.getElementById('comentario-analista-text');
+        if (textareaAnalista) {
+            textareaAnalista.addEventListener('input', function() {
+                autoExpandTextarea(this);
+                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+            });
+            
+            textareaAnalista.addEventListener('keydown', function(event) {
+                handleKeyDown(event, enviarComentarioAnalista);
+            });
+        }
+        
+        // Configurar textarea general
+        const textareaGeneral = document.getElementById('comentario-text-modern');
+        if (textareaGeneral) {
+            textareaGeneral.addEventListener('input', function() {
+                autoExpandTextarea(this);
+                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+            });
+            
+            textareaGeneral.addEventListener('keydown', function(event) {
+                handleKeyDown(event, enviarComentarioGeneral);
+            });
+        }
+    }
+    
+    // FUNCIONES PARA COMENTARIOS DE ANALISTA
+    
+    // Cargar comentarios de analista
+    function cargarComentariosAnalista() {
+        console.log('🔄 Cargando comentarios de analista...');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Comentarios analista recibidos:', data);
+                
+                if (data.success) {
+                    const container = document.getElementById('lista-comentarios-analista');
+                    
+                    if (data.comentarios.length === 0) {
+                        container.innerHTML = '';
+                    } else {
+                        // Mostrar solo comentarios sin mensaje de bienvenida
+                        const welcomeMessage = ``;
+                        
+                        const messages = data.comentarios.map(comentario => {
+                            const esPropio = comentario.usuario.id === usuarioActualId;
+                            return `
+                                <div class="message-bubble ${esPropio ? 'own' : 'other'}" data-comentario-id="${comentario.id}">
+                                    <div class="message-content">
+                                        ${comentario.comentario}
+                                    </div>
+                                    <div class="message-meta">
+                                        <span class="message-author">${comentario.usuario.nombre_completo}</span>
+                                        <span class="message-time">${formatearFecha(comentario.fecha_creacion)}</span>
+                                        ${comentario.puede_editar ? `
+                                            <div class="message-actions">
+                                                <button class="action-btn" onclick="editarComentarioAnalista(${comentario.id})" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="action-btn" onclick="eliminarComentarioAnalista(${comentario.id})" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        container.innerHTML = welcomeMessage + messages;
+                        
+                        // Scroll automático al final
+                        setTimeout(() => {
+                            container.scrollTop = container.scrollHeight;
+                        }, 100);
+                    }
+                } else {
+                    console.error('❌ Error al cargar comentarios:', data.error);
+                    mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error de red:', error);
+                mostrarToast('Error de red al cargar comentarios', 'error');
+            });
+    }
+    
+    // Función para enviar comentario de analista
+    function enviarComentarioAnalista(evento) {
+        evento.preventDefault();
+        
+        const textarea = document.getElementById('comentario-analista-text');
+        const comentarioTexto = textarea.value.trim();
+        
+        if (!comentarioTexto) {
+            mostrarToast('Por favor ingresa un comentario', 'error');
+            return;
+        }
+        
+        const botonEnviar = document.getElementById('btn-enviar-analista');
+        const spinner = botonEnviar.querySelector('.loading-spinner-chat');
+        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat i)');
+        
+        // Deshabilitar botón y mostrar spinner
+        botonEnviar.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+            iconoBoton.style.display = 'none';
+        }
+        
+        console.log('📤 Enviando comentario de analista:', comentarioTexto);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                comentario: comentarioTexto,
+                tipo: 'analista'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarToast('Comentario de analista enviado exitosamente');
+                textarea.value = '';
+                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al enviar comentario', 'error');
+        })
+        .finally(() => {
+            // Rehabilitar botón y ocultar spinner
+            botonEnviar.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+                iconoBoton.style.display = 'inline-block';
+            }
+        });
+    }
+    
+    // Función para editar comentario de analista
+    window.editarComentarioAnalista = function(comentarioId) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textoElement = comentarioElement.querySelector('.comentario-text-sidebar');
+        const textoOriginal = textoElement.textContent.trim();
+        
+        // Crear campo de edición
+        const textarea = document.createElement('textarea');
+        textarea.className = 'form-control-sidebar';
+        textarea.value = textoOriginal;
+        textarea.style.minHeight = '60px';
+        
+        // Crear botones
+        const botonesContainer = document.createElement('div');
+        botonesContainer.className = 'comentario-actions-sidebar mt-2';
+        botonesContainer.innerHTML = `
+            <button class="btn-action-sidebar" onclick="guardarEdicionAnalista(${comentarioId}, this)">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+            <button class="btn-action-sidebar" onclick="cancelarEdicionAnalista(${comentarioId})">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        `;
+        
+        // Reemplazar contenido
+        textoElement.innerHTML = '';
+        textoElement.appendChild(textarea);
+        textoElement.appendChild(botonesContainer);
+        
+        // Ocultar botones originales
+        const accionesOriginales = comentarioElement.querySelector('.comentario-actions-sidebar:not(.mt-2)');
+        if (accionesOriginales) {
+            accionesOriginales.style.display = 'none';
+        }
+        
+        // Enfocar textarea
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    };
+    
+    // Función para guardar edición de comentario analista
+    window.guardarEdicionAnalista = function(comentarioId, botonElement) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textarea = comentarioElement.querySelector('textarea');
+        const nuevoTexto = textarea.value.trim();
+        
+        if (!nuevoTexto) {
+            mostrarToast('El comentario no puede estar vacío', 'error');
+            return;
+        }
+        
+        console.log('💾 Guardando edición comentario analista:', comentarioId, nuevoTexto);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/editar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ comentario: nuevoTexto })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario actualizado exitosamente');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al actualizar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al actualizar comentario', 'error');
+        });
+    };
+    
+    // Función para cancelar edición de comentario analista
+    window.cancelarEdicionAnalista = function(comentarioId) {
+        cargarComentariosAnalista();
+    };
+    
+    // Función para eliminar comentario de analista
+    window.eliminarComentarioAnalista = function(comentarioId) {
+        if (!confirm('¿Estás seguro de eliminar este comentario de analista?')) {
+            return;
+        }
+        
+        console.log('🗑️ Eliminando comentario analista:', comentarioId);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario eliminado exitosamente');
+                cargarComentariosAnalista();
+            } else {
+                mostrarToast('Error al eliminar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al eliminar comentario', 'error');
+        });
+    };
+    
+    // FUNCIONES PARA COMENTARIOS GENERALES
+    
+    // Cargar comentarios generales
+    function cargarComentariosGenerales() {
+        console.log('🔄 Cargando comentarios generales...');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=general`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Comentarios generales recibidos:', data);
+                
+                if (data.success) {
+                    const container = document.getElementById('lista-comentarios');
+                    
+                                         // Actualizar contador
+                     const contadorGenerales = document.getElementById('contador-comentarios-generales');
+                     if (contadorGenerales) {
+                         contadorGenerales.textContent = `${data.comentarios.length} comentario${data.comentarios.length !== 1 ? 's' : ''}`;
+                     }
+                     
+                     if (data.comentarios.length === 0) {
+                         container.innerHTML = `
+                             <div class="chat-welcome-general">
+                                 <div class="welcome-avatar-general">
+                                     <i class="fas fa-users"></i>
+                                 </div>
+                                 <div class="welcome-message-general">
+                                     <p><strong>Chat General</strong></p>
+                                     <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
+                                 </div>
+                             </div>
+                         `;
+                     } else {
+                         // Mostrar mensaje de bienvenida + comentarios
+                         const welcomeMessage = `
+                             <div class="chat-welcome-general">
+                                 <div class="welcome-avatar-general">
+                                     <i class="fas fa-users"></i>
+                                 </div>
+                                 <div class="welcome-message-general">
+                                     <p><strong>Chat General</strong></p>
+                                     <p>Historial de conversaciones sobre esta solicitud.</p>
+                                 </div>
+                             </div>
+                         `;
+                         
+                                                   const messages = data.comentarios.map(comentario => {
+                              const esPropio = comentario.usuario.id === usuarioActualId;
+                              return `
+                                  <div class="message-bubble ${esPropio ? 'own' : 'other'}" data-comentario-id="${comentario.id}">
+                                      <div class="message-content">
+                                          ${comentario.comentario}
+                                      </div>
+                                      <div class="message-meta">
+                                          <span class="message-author">${comentario.usuario.nombre_completo}</span>
+                                          <span class="message-time">${formatearFecha(comentario.fecha_creacion)}</span>
+                                          ${comentario.puede_editar ? `
+                                              <div class="message-actions">
+                                                  <button class="action-btn" onclick="editarComentarioGeneral(${comentario.id})" title="Editar">
+                                                      <i class="fas fa-edit"></i>
+                                                  </button>
+                                                  <button class="action-btn" onclick="eliminarComentarioGeneral(${comentario.id})" title="Eliminar">
+                                                      <i class="fas fa-trash"></i>
+                                                  </button>
+                                              </div>
+                                          ` : ''}
+                                      </div>
+                                  </div>
+                              `;
+                          }).join('');
+                          
+                          container.innerHTML = welcomeMessage + messages;
+                          
+                          // Scroll automático al final
+                          setTimeout(() => {
+                              container.scrollTop = container.scrollHeight;
+                          }, 100);
+                    }
+                } else {
+                    console.error('❌ Error al cargar comentarios generales:', data.error);
+                    mostrarToast('Error al cargar comentarios generales: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error de red:', error);
+                mostrarToast('Error de red al cargar comentarios generales', 'error');
+            });
+    }
+    
+    // Función para enviar comentario general
+    function enviarComentarioGeneral(evento) {
+        evento.preventDefault();
+        
+        const textarea = document.getElementById('comentario-text-modern');
+        const comentarioTexto = textarea.value.trim();
+        
+        if (!comentarioTexto) {
+            mostrarToast('Por favor ingresa un comentario', 'error');
+            return;
+        }
+        
+        const botonEnviar = document.getElementById('btn-enviar-comentario');
+        const spinner = botonEnviar.querySelector('.loading-spinner-chat-general');
+        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat-general i)');
+        
+        // Deshabilitar botón y mostrar spinner
+        botonEnviar.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+            iconoBoton.style.display = 'none';
+        }
+        
+        console.log('📤 Enviando comentario general:', comentarioTexto);
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                comentario: comentarioTexto,
+                tipo: 'general'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ Respuesta del servidor:', data);
+            
+            if (data.success) {
+                mostrarToast('Comentario enviado exitosamente');
+                textarea.value = '';
+                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al enviar comentario', 'error');
+        })
+        .finally(() => {
+            // Rehabilitar botón y ocultar spinner
+            botonEnviar.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+                iconoBoton.style.display = 'inline-block';
+            }
+        });
+    }
+    
+    // Función para editar comentario general
+    window.editarComentarioGeneral = function(comentarioId) {
+        // Similar a la función de analista pero para comentarios generales
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textoElement = comentarioElement.querySelector('.comentario-text-modern');
+        const textoOriginal = textoElement.textContent.trim();
+        
+        // Crear campo de edición
+        const textarea = document.createElement('textarea');
+        textarea.className = 'form-control-modern';
+        textarea.value = textoOriginal;
+        textarea.style.minHeight = '80px';
+        
+        // Crear botones
+        const botonesContainer = document.createElement('div');
+        botonesContainer.className = 'comentario-actions mt-2';
+        botonesContainer.innerHTML = `
+            <button class="btn-action-mini" onclick="guardarEdicionGeneral(${comentarioId}, this)">
+                <i class="fas fa-save"></i>
+            </button>
+            <button class="btn-action-mini" onclick="cancelarEdicionGeneral(${comentarioId})">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Reemplazar contenido
+        textoElement.innerHTML = '';
+        textoElement.appendChild(textarea);
+        textoElement.appendChild(botonesContainer);
+        
+        // Ocultar botones originales
+        const accionesOriginales = comentarioElement.querySelector('.comentario-actions:not(.mt-2)');
+        if (accionesOriginales) {
+            accionesOriginales.style.display = 'none';
+        }
+        
+        // Enfocar textarea
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    };
+    
+    // Función para guardar edición de comentario general
+    window.guardarEdicionGeneral = function(comentarioId, botonElement) {
+        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
+        const textarea = comentarioElement.querySelector('textarea');
+        const nuevoTexto = textarea.value.trim();
+        
+        if (!nuevoTexto) {
+            mostrarToast('El comentario no puede estar vacío', 'error');
+            return;
+        }
+        
+        console.log('💾 Guardando edición comentario general:', comentarioId, nuevoTexto);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/editar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ comentario: nuevoTexto })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario actualizado exitosamente');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al actualizar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al actualizar comentario', 'error');
+        });
+    };
+    
+    // Función para cancelar edición de comentario general
+    window.cancelarEdicionGeneral = function(comentarioId) {
+        cargarComentariosGenerales();
+    };
+    
+    // Función para eliminar comentario general
+    window.eliminarComentarioGeneral = function(comentarioId) {
+        if (!confirm('¿Estás seguro de eliminar este comentario?')) {
+            return;
+        }
+        
+        console.log('🗑️ Eliminando comentario general:', comentarioId);
+        
+        fetch(`/workflow/api/comentarios/${comentarioId}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario eliminado exitosamente');
+                cargarComentariosGenerales();
+            } else {
+                mostrarToast('Error al eliminar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error:', error);
+            mostrarToast('Error de red al eliminar comentario', 'error');
+        });
+    };
+    
+    // FUNCIONES AUXILIARES
+    
+    // Función para actualizar contador de caracteres
+    function actualizarContadorCaracteres(textareaId, counterId) {
+        const textarea = document.getElementById(textareaId);
+        const counter = document.getElementById(counterId);
+        
+        if (textarea && counter) {
+            counter.textContent = textarea.value.length;
+        }
+    }
+    
+    // EVENT LISTENERS
+    
+    // Formulario de comentarios de analista
+    document.getElementById('form-comentario-analista').addEventListener('submit', enviarComentarioAnalista);
+    
+    // Formulario de comentarios generales
+    document.getElementById('form-comentario-moderno').addEventListener('submit', enviarComentarioGeneral);
+    
+    // Contador de caracteres para comentarios de analista
+    document.getElementById('comentario-analista-text').addEventListener('input', function() {
+        actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
+    });
+    
+    // Contador de caracteres para comentarios generales
+    document.getElementById('comentario-text-modern').addEventListener('input', function() {
+        actualizarContadorCaracteres('comentario-text-modern', 'char-count');
+    });
+    
+    // INICIALIZACIÓN
+    console.log('🚀 Inicializando sistema de comentarios completo...');
+    
+    // Configurar funcionalidades de chat
+    configurarChat();
+    
+    // Cargar comentarios al cargar la página
+    cargarComentariosAnalista();
+    cargarComentariosGenerales();
+    
+    // Actualizar comentarios cada 30 segundos
+    setInterval(function() {
+        cargarComentariosAnalista();
+        cargarComentariosGenerales();
+    }, 30000);
+    
+    // Inicializar nuevas funcionalidades
+    inicializarCheckboxesCompliance();
+    inicializarUploadDocumentos();
+    inicializarValidacionDocumentos();
+    cargarSolicitudesRelacionadas();
+    
+    console.log('✅ Sistema completo inicializado correctamente');
+});
+
+// ==========================================
+// FUNCIONALIDADES NUEVAS
+// ==========================================
+
+// Función para inicializar checkboxes de compliance
+function inicializarCheckboxesCompliance() {
+    const checkboxes = document.querySelectorAll('.compliance-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const field = this.dataset.field;
+            const checked = this.checked;
+            
+            // Guardar estado en localStorage
+            localStorage.setItem(`compliance_${field}`, checked);
+            
+            // Mostrar notificación
+            if (checked) {
+                mostrarToast(`Campo "${field}" marcado como cumplido`, 'success');
+            } else {
+                mostrarToast(`Campo "${field}" desmarcado`, 'info');
+            }
+        });
+        
+        // Restaurar estado desde localStorage
+        const field = checkbox.dataset.field;
+        const saved = localStorage.getItem(`compliance_${field}`);
+        if (saved === 'true') {
+            checkbox.checked = true;
+        }
+    });
+}
+
+// Función para inicializar upload de documentos
+function inicializarUploadDocumentos() {
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    
+    if (!uploadZone || !fileInput) return;
+    
+    // Click en zona de upload
+    uploadZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('drag-over');
+    });
+    
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        procesarArchivos(files);
+    });
+    
+    // Cambio en input file
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        procesarArchivos(files);
+    });
+}
+
+// Función para procesar archivos subidos
+function procesarArchivos(files) {
+    Array.from(files).forEach(file => {
+        // Validar tipo de archivo
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        if (!allowedTypes.includes(file.type)) {
+            mostrarToast(`Archivo "${file.name}" no es un tipo válido`, 'error');
+            return;
+        }
+        
+        // Validar tamaño (10MB máximo)
+        if (file.size > 10 * 1024 * 1024) {
+            mostrarToast(`Archivo "${file.name}" es demasiado grande`, 'error');
+            return;
+        }
+        
+        // Simular subida
+        subirArchivo(file);
+    });
+}
+
+// Función para simular subida de archivo
+function subirArchivo(file) {
+    mostrarToast(`Subiendo archivo "${file.name}"...`, 'info');
+    
+    // Simular proceso de subida
+    setTimeout(() => {
+        mostrarToast(`Archivo "${file.name}" subido exitosamente`, 'success');
+        agregarDocumentoALista(file);
+    }, 2000);
+}
+
+// Función para agregar documento a la lista
+function agregarDocumentoALista(file) {
+    const documentosList = document.querySelector('.documentos-list');
+    
+    const documentoHTML = `
+        <div class="documento-item">
+            <div class="documento-icon">
+                <i class="fas fa-file-${file.type.includes('pdf') ? 'pdf' : 'image'} text-${file.type.includes('pdf') ? 'danger' : 'primary'}"></i>
+            </div>
+            <div class="documento-details">
+                <div class="documento-header">
+                    <strong>${file.name}</strong>
+                    <span class="documento-size">${formatFileSize(file.size)}</span>
+                </div>
+                <div class="documento-status">
+                    <span class="badge bg-success">Subido</span>
+                </div>
+            </div>
+            <div class="documento-actions">
+                <button class="btn btn-outline-primary btn-sm me-2" title="Ver documento">
+                    <i class="fas fa-eye"></i> Ver
+                </button>
+                <div class="documento-validation">
+                    <button class="validation-btn valid" title="Documento válido" data-doc="${file.name}" data-status="valid">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="validation-btn invalid" title="Documento inválido" data-doc="${file.name}" data-status="invalid">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    documentosList.insertAdjacentHTML('beforeend', documentoHTML);
+    
+    // Reinicializar eventos de validación para el nuevo documento
+    inicializarValidacionDocumentos();
+}
+
+// Función para formatear tamaño de archivo
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Función para inicializar validación de documentos
+function inicializarValidacionDocumentos() {
+    const validationButtons = document.querySelectorAll('.validation-btn');
+    
+    validationButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const doc = this.dataset.doc;
+            const status = this.dataset.status;
+            const docItem = this.closest('.documento-item');
+            
+            // Remover clase active de otros botones del mismo documento
+            const otherButtons = docItem.querySelectorAll('.validation-btn');
+            otherButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Agregar clase active al botón clickeado
+            this.classList.add('active');
+            
+            // Guardar estado en localStorage
+            localStorage.setItem(`doc_validation_${doc}`, status);
+            
+            // Mostrar notificación
+            const statusText = status === 'valid' ? 'válido' : 'inválido';
+            mostrarToast(`Documento "${doc}" marcado como ${statusText}`, status === 'valid' ? 'success' : 'error');
+        });
+        
+        // Restaurar estado desde localStorage
+        const doc = button.dataset.doc;
+        const status = button.dataset.status;
+        const saved = localStorage.getItem(`doc_validation_${doc}`);
+        if (saved === status) {
+            button.classList.add('active');
+        }
+    });
+}
+
+// Función para cargar solicitudes relacionadas
+function cargarSolicitudesRelacionadas() {
+    const cedula = '{{ solicitud.cliente_cedula|default:"123193" }}';
+    
+    // Simular carga de solicitudes relacionadas
+    console.log(`🔍 Buscando solicitudes relacionadas para cédula: ${cedula}`);
+    
+    // En un escenario real, aquí haríamos una llamada AJAX al backend
+    // fetch(`/workflow/api/solicitudes/relacionadas/?cedula=${cedula}`)
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         mostrarSolicitudesRelacionadas(data.solicitudes);
+    //     });
+    
+    // Por ahora, las solicitudes están hardcodeadas en el HTML
+    mostrarToast(`Solicitudes relacionadas cargadas para cédula ${cedula}`, 'info');
+}
+
+// Función para mostrar notificaciones toast mejoradas
+function mostrarToast(mensaje, tipo = 'info') {
+    const toastContainer = document.querySelector('.toast-container') || crearToastContainer();
+    
+    const iconos = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-triangle',
+        info: 'fa-info-circle',
+        warning: 'fa-exclamation-triangle'
+    };
+    
+    const colores = {
+        success: 'success',
+        error: 'danger',
+        info: 'info',
+        warning: 'warning'
+    };
+    
+    const toastHTML = `
+        <div class="toast align-items-center text-bg-${colores[tipo]} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 12px;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${iconos[tipo]} me-2"></i>
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    
+    // Mostrar toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: tipo === 'error' ? 5000 : 3000
+    });
+    toast.show();
+    
+    // Remover elemento después de que se oculte
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Función para crear contenedor de toast si no existe
+function crearToastContainer() {
+    const container = document.createElement('div');
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1055';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+
+<style>
+/* ============================== */
+/* ESTILOS ÉPICOS DE ANÁLISIS    */
+/* ============================== */
+
+/* Variables de colores */
+:root {
+    --color-green: #22c55e;
+    --color-green-light: #dcfce7;
+    --color-blue: #3b82f6;
+    --color-blue-light: #dbeafe;
+    --color-orange: #f97316;
+    --color-orange-light: #fed7aa;
+    --color-warning: #fbbf24;
+    --color-danger: #ef4444;
+    --color-success: #10b981;
+    --shadow-epic: 0 10px 40px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.15);
+    --border-radius: 16px;
+    --gradient-green: linear-gradient(135deg, #22c55e, #16a34a);
+    --gradient-blue: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    --gradient-orange: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+/* Timeline Horizontal Épico */
+.workflow-timeline-section {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.workflow-timeline-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-green);
+}
+
+.timeline-icon-main {
+    width: 64px;
+    height: 64px;
+    background: var(--gradient-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    box-shadow: var(--shadow-epic);
+}
+
+.horizontal-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow-x: auto;
+    padding: 2rem 0;
+    gap: 1rem;
+}
+
+.timeline-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #e2e8f0;
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    min-width: 120px;
+}
+
+.step-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.timeline-step.completed .step-circle {
+    background: var(--gradient-green);
+    color: white;
+    box-shadow: 0 8px 30px rgba(34, 197, 94, 0.3);
+    transform: scale(1.1);
+}
+
+.timeline-step.active .step-circle {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4);
+    transform: scale(1.15);
+    animation: pulse 2s infinite;
+}
+
+.timeline-step.pending .step-circle {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 3px solid #e2e8f0;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4); }
+    50% { box-shadow: 0 8px 40px rgba(251, 191, 36, 0.6); }
+}
+
+.step-icon {
+    font-size: 1.5rem;
+}
+
+.step-number {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-content {
+    text-align: center;
+}
+
+.step-title {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.step-sla {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Epic Cards */
+.epic-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-epic);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.epic-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
+}
+
+.epic-card.card-green {
+    border-top: 4px solid var(--color-green);
+}
+
+.epic-card.card-blue {
+    border-top: 4px solid var(--color-blue);
+}
+
+.epic-card.card-orange {
+    border-top: 4px solid var(--color-orange);
+}
+
+.epic-card-header {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.epic-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.card-green .epic-icon {
+    background: var(--gradient-green);
+}
+
+.card-blue .epic-icon {
+    background: var(--gradient-blue);
+}
+
+.card-orange .epic-icon {
+    background: var(--gradient-orange);
+}
+
+.epic-title h6 {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+}
+
+.epic-title small {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.epic-card-body {
+    padding: 1.5rem;
+}
+
+.epic-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.epic-item:hover {
+    background: #f8fafc;
+}
+
+.epic-item:last-child {
+    margin-bottom: 0;
+}
+
+.epic-item i {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.epic-item .label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.epic-item strong {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* SLA Status Card */
+.sla-status-card {
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-epic);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.sla-status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.sla-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sla-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.sla-info h5 {
+    color: #1f2937;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.sla-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.sla-badge.sla-success {
+    background: var(--color-green-light);
+    color: var(--color-success);
+}
+
+.sla-badge.sla-warning {
+    background: #fef3c7;
+    color: var(--color-warning);
+}
+
+.sla-badge.sla-danger {
+    background: #fecaca;
+    color: var(--color-danger);
+}
+
+.sla-badge.sla-muted {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.sla-progress {
+    background: #f1f5f9;
+    border-radius: 10px;
+    height: 8px;
+    position: relative;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.progress-bar-epic {
+    height: 100%;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.sla-details {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
+/* Sidebar Epic Cards */
+.epic-card-sidebar {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-epic);
+    border: none;
+    overflow: hidden;
+    border-top: 4px solid var(--color-warning);
+}
+
+.epic-card-header-sidebar {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.epic-icon-sidebar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    margin-right: 1rem;
+}
+
+.epic-title-sidebar h6 {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.epic-title-sidebar small {
+    color: #64748b;
+}
+
+.epic-card-body-sidebar {
+    padding: 1.5rem;
+}
+
+/* Comment Form Epic */
+.comment-form-epic {
+    margin-bottom: 2rem;
+}
+
+.form-group-epic {
+    margin-bottom: 1rem;
+}
+
+.form-label-epic {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-control-epic {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: #fafafa;
+}
+
+.form-control-epic:focus {
+    outline: none;
+    border-color: var(--color-warning);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+    background: white;
+}
+
+.btn-epic {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-epic.btn-success {
+    background: var(--gradient-green);
+    color: white;
+}
+
+.btn-epic.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+}
+
+/* Comments Epic */
+.comments-epic {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.comment-epic {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.comment-epic:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.comment-header-epic {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.comment-author-epic {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.author-avatar-epic {
+    width: 32px;
+    height: 32px;
+    background: var(--gradient-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.875rem;
+    margin-right: 0.75rem;
+}
+
+.author-info-epic strong {
+    display: block;
+    color: #1f2937;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.author-info-epic small {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.comment-actions-epic {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-icon-epic {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon-epic:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #374151;
+}
+
+.btn-icon-epic.btn-danger:hover {
+    background: #fecaca;
+    color: #dc2626;
+}
+
+.comment-content-epic {
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.empty-state-epic {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+}
+
+.empty-state-epic i {
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
+/* Text Colors */
+.text-blue { color: var(--color-blue) !important; }
+.text-orange { color: var(--color-orange) !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .horizontal-timeline {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .timeline-track {
+        display: none;
+    }
+    
+    .epic-card-header {
+        padding: 1rem;
+    }
+    
+    .epic-card-body {
+        padding: 1rem;
+    }
+    
+    .step-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .step-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* Scrollbar personalizada */
+.comments-epic::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comments-epic::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.comments-epic::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.comments-epic::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ========================================
+   ESTILOS PARA LA NUEVA ESTRUCTURA
+   ======================================== */
+
+/* TARJETA UNIFICADA */
+.unified-info-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+}
+
+.unified-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    padding: 0.6rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.unified-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    margin-right: 0.75rem;
+}
+
+.unified-title h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.unified-sla {
+    text-align: right;
+}
+
+.unified-sla .sla-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+}
+
+.unified-body {
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.info-section {
+    height: 100%;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.section-header i {
+    font-size: 1.25rem;
+    margin-right: 0.75rem;
+}
+
+.section-header h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1f2937;
+}
+
+.section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    flex: 1;
+}
+
+.info-value {
+    font-size: 0.875rem;
+    color: #111827;
+    font-weight: 600;
+    text-align: right !important;
+    flex: 1;
+    direction: ltr;
+}
+
+/* TIMELINE SÚPER ANGOSTO HORIZONTALMENTE */
+.compact-timeline-section {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    /* Mismo formato que unified-info-card */
+}
+
+.timeline-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+}
+
+.timeline-header h5 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    color: white;
+}
+
+.timeline-header h5 i {
+    margin-right: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.timeline-header h5::after {
+    display: none; /* Quitar la línea decorativa */
+}
+
+/* TIMELINE SÚPER DELGADO Y HORIZONTAL */
+.slim-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0.4rem 1.2rem;
+    margin: 0 auto;
+    gap: 0;
+    max-width: 100%;
+}
+
+/* LÍNEA CONECTORA SÚPER DELGADA */
+.slim-timeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        #22c55e 0%, 
+        #22c55e 30%, 
+        #f59e0b 30%, 
+        #f59e0b 60%, 
+        #94a3b8 60%, 
+        #94a3b8 100%
+    );
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+/* PASO DEL TIMELINE */
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+.timeline-step:hover {
+    transform: translateY(-2px);
+}
+
+/* PUNTO/ICONO DEL PASO */
+.step-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    margin-bottom: 0.25rem;
+    position: relative;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+/* ESTADOS DE LOS PUNTOS */
+.timeline-step.completed .step-dot {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    box-shadow: 0 3px 12px rgba(34, 197, 94, 0.3);
+}
+
+.timeline-step.active .step-dot {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
+    animation: activePulse 2s ease-in-out infinite alternate;
+}
+
+.timeline-step.pending .step-dot {
+    background: #f8fafc;
+    color: #9ca3af;
+    border-color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes activePulse {
+    0% {
+        box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
+    }
+    100% {
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+    }
+}
+
+/* ETIQUETA DEL PASO */
+.step-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.05rem;
+}
+
+.step-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.1;
+    word-break: break-word;
+    max-width: 70px;
+}
+
+.step-sla {
+    font-size: 0.55rem;
+    font-weight: 400;
+    color: #9ca3af;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.05rem 0.25rem;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+}
+
+/* COLORES PARA DIFERENTES ESTADOS */
+.timeline-step.completed .step-name {
+    color: #166534;
+}
+
+.timeline-step.completed .step-sla {
+    color: #166534;
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+.timeline-step.active .step-name {
+    color: #92400e;
+    font-weight: 700;
+}
+
+.timeline-step.active .step-sla {
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.timeline-step.pending .step-name {
+    color: #9ca3af;
+}
+
+.timeline-step.pending .step-sla {
+    color: #9ca3af;
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+
+
+/* SISTEMA DE PESTAÑAS */
+.tabs-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.tabs-header {
+    display: flex;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+    color: #374151;
+    background: #f3f4f6;
+}
+
+.tab-button.active {
+    color: #1f2937;
+    background: white;
+    border-bottom-color: #3b82f6;
+    font-weight: 600;
+}
+
+.tabs-content {
+    background: white;
+}
+
+.tab-pane {
+    display: none;
+    padding: 1.5rem;
+    min-height: 400px;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* CONTENIDO DE PESTAÑAS */
+.historial-content,
+.comentarios-content,
+.documentos-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.historial-item,
+.comentario-item,
+.documento-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.historial-item:last-child,
+.comentario-item:last-child,
+.documento-item:last-child {
+    border-bottom: none;
+}
+
+.historial-avatar,
+.comentario-avatar,
+.documento-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.historial-avatar,
+.comentario-avatar {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.documento-icon {
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 8px;
+}
+
+.historial-details,
+.comentario-details,
+.documento-details {
+    flex: 1;
+}
+
+.historial-header,
+.comentario-header,
+.documento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.historial-header strong,
+.comentario-header strong,
+.documento-header strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.historial-date,
+.comentario-date,
+.documento-size {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.historial-info,
+.comentario-text,
+.documento-obs {
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.documento-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.comentario-form {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.comentario-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.comentario-form .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    resize: vertical;
+}
+
+.comentario-form .form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.documento-upload {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.empty-state i {
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* BOTONES DE ACCIÓN */
+.action-buttons-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.action-btn {
+    padding: 0.875rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.action-btn.btn-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+}
+
+.action-btn.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+}
+
+.action-btn.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.action-btn.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
+.action-btn.btn-outline-primary {
+    background: white;
+    color: #3b82f6;
+    border: 2px solid #3b82f6;
+}
+
+.action-btn.btn-outline-primary:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+    .compact-timeline {
+        margin: 0 1rem;
+    }
+    
+    .compact-timeline::before {
+        left: 2rem;
+        right: 2rem;
+    }
+    
+    .timeline-item {
+        max-width: 160px;
+    }
+    
+    .timeline-stage {
+        padding: 1rem 0.75rem;
+    }
+    
+    .timeline-dot {
+        width: 48px;
+        height: 48px;
+        font-size: 1rem;
+    }
+    
+    .timeline-title {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .unified-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .unified-body {
+        padding: 1rem;
+    }
+    
+    .compact-timeline-section {
+        padding: 2rem 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline-header h5 {
+        font-size: 1.3rem;
+    }
+    
+    .compact-timeline {
+        flex-direction: column;
+        align-items: stretch;
+        margin: 0 auto;
+        gap: 1rem;
+        padding: 1rem 0;
+        max-width: 80%;
+    }
+    
+    .compact-timeline::before {
+        display: none;
+    }
+    
+    .timeline-item {
+        max-width: 100%;
+        transform: none !important;
+    }
+    
+    .timeline-item:hover {
+        transform: none;
+    }
+    
+    .timeline-stage {
+        padding: 1.5rem 1rem;
+    }
+    
+    .timeline-dot {
+        width: 56px;
+        height: 56px;
+        font-size: 1.25rem;
+    }
+    
+    .timeline-title {
+        font-size: 1rem;
+    }
+    
+    /* Mobile Timeline Connector */
+    .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        bottom: -1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 1.5rem;
+        background: linear-gradient(180deg, transparent 0%, #e5e7eb 50%, transparent 100%);
+    }
+    
+    .timeline-item.completed:not(:last-child)::after {
+        background: linear-gradient(180deg, transparent 0%, #22c55e 50%, transparent 100%);
+    }
+    
+    .timeline-item.active:not(:last-child)::after {
+        background: linear-gradient(180deg, transparent 0%, #f59e0b 50%, transparent 100%);
+    }
+    
+    .tabs-header {
+        flex-direction: column;
+    }
+    
+    .tab-button {
+        text-align: left;
+    }
+    
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .historial-item,
+    .comentario-item,
+    .documento-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .historial-avatar,
+    .comentario-avatar,
+    .documento-icon {
+        align-self: center;
+    }
+}
+
+/* ANIMACIONES */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* SCROLLBAR PERSONALIZADA */
+.historial-content::-webkit-scrollbar,
+.comentarios-content::-webkit-scrollbar,
+.documentos-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.historial-content::-webkit-scrollbar-track,
+.comentarios-content::-webkit-scrollbar-track,
+.documentos-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.historial-content::-webkit-scrollbar-thumb,
+.comentarios-content::-webkit-scrollbar-thumb,
+.documentos-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.historial-content::-webkit-scrollbar-thumb:hover,
+.comentarios-content::-webkit-scrollbar-thumb:hover,
+.documentos-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ========================================
+   ESTILOS MODERNOS PARA COMENTARIOS
+   ======================================== */
+
+/* Header de comentarios */
+.comentarios-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0 1.5rem 0;
+    border-bottom: 2px solid #f1f5f9;
+    margin-bottom: 1.5rem;
+}
+
+.header-info h6 {
+    color: #1f2937;
+    font-weight: 700;
+    margin: 0;
+}
+
+.header-info small {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.comentarios-count .badge {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* Formulario moderno de comentarios */
+.comentario-form-modern {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.comentario-form-modern:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.form-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    margin-right: 0.75rem;
+}
+
+.user-info strong {
+    display: block;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.user-info small {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.form-body {
+    padding: 1.5rem;
+}
+
+.form-control-modern {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #f1f5f9;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.3s ease;
+    background: #fafbfc;
+}
+
+.form-control-modern:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.char-counter {
+    text-align: right;
+    margin-top: 0.5rem;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: #fafbfc;
+    border-top: 1px solid #e5e7eb;
+}
+
+.form-actions-left,
+.form-actions-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.btn-action-secondary {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-secondary:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
+.btn-cancel {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.btn-enviar {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-enviar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-enviar:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Lista de comentarios moderna */
+.comentarios-lista {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.comentario-item-modern {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+.comentario-item-modern:hover {
+    background: #fafbfc;
+}
+
+.comentario-item-modern:last-child {
+    border-bottom: none;
+}
+
+.comentario-avatar-modern {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.comentario-content-modern {
+    flex: 1;
+}
+
+.comentario-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.author-name {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.author-role {
+    background: #e0f2fe;
+    color: #0277bd;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.comentario-date-modern {
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.comentario-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-action-mini {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-mini:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.btn-action-mini.text-danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.comentario-text-modern {
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.comentario-footer-modern {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-reaction {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.btn-reaction:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Estado vacío moderno */
+.empty-state-modern {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #9ca3af;
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f1f5f9, #e5e7eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+    color: #d1d5db;
+}
+
+.empty-state-modern h6 {
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-modern p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Notificaciones toast */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.toast-error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .comentarios-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .form-footer {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .form-actions-left,
+    .form-actions-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .form-actions-right {
+        flex-direction: row-reverse;
+    }
+    
+    .comentario-item-modern {
+        padding: 1rem;
+    }
+    
+    .author-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .toast-notification {
+        left: 20px;
+        right: 20px;
+        transform: translateY(-100px);
+    }
+    
+    .toast-notification.show {
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   CHAT MODERNO - COMENTARIOS DE ANALISTA
+   ========================================== */
+
+.chat-container-analista {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    height: 420px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header del Chat Analista */
+.chat-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.chat-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.chat-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #28a745;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Área de Mensajes */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+}
+
+
+
+/* Mensajes individuales */
+.message-bubble {
+    max-width: 85%;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-bubble.own {
+    align-self: flex-end;
+}
+
+.message-bubble.other {
+    align-self: flex-start;
+}
+
+.message-content {
+    background: #007bff;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.message-bubble.other .message-content {
+    background: #ffffff;
+    color: #2c3e50;
+    border: 1px solid #e9ecef;
+    border-radius: 18px 18px 18px 4px;
+}
+
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.message-bubble.own .message-meta {
+    justify-content: flex-end;
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.message-bubble:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f8f9fa;
+    color: #007bff;
+}
+
+/* Input Container */
+.chat-input-container {
+    background: white;
+    border-top: 1px solid #e9ecef;
+    padding: 12px 16px;
+    border-radius: 0 0 16px 16px;
+}
+
+.chat-form {
+    margin: 0;
+}
+
+.input-group-chat {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.user-avatar-chat {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.input-wrapper {
+    flex: 1;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+    border-color: #007bff;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.chat-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.input-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.send-button {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.send-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.send-button:active {
+    transform: scale(0.95);
+}
+
+.loading-spinner-chat {
+    display: none;
+}
+
+/* Scrollbar personalizado */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* ==========================================
+   CHAT MODERNO - COMENTARIOS GENERALES
+   ========================================== */
+
+.chat-container-general {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    height: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header del Chat General */
+.chat-header-general {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.chat-title-general {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.chat-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+}
+
+/* Área de Mensajes Generales */
+.chat-messages-general {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-welcome-general {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: #e8f5e9;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4caf50;
+}
+
+.welcome-avatar-general {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4caf50, #388e3c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.welcome-message-general p {
+    margin: 0;
+    color: #2e7d32;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.welcome-message-general p:first-child {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* Input Container General */
+.chat-input-container-general {
+    background: white;
+    border-top: 1px solid #e9ecef;
+    padding: 12px 16px;
+    border-radius: 0 0 16px 16px;
+}
+
+.chat-form-general {
+    margin: 0;
+}
+
+.input-group-chat-general {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.user-avatar-chat-general {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.input-wrapper-general {
+    flex: 1;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.input-wrapper-general:focus-within {
+    border-color: #28a745;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.chat-input-general {
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.input-actions-general {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.attachment-button,
+.mention-button {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.attachment-button:hover,
+.mention-button:hover {
+    background: #e9ecef;
+    color: #28a745;
+}
+
+.char-counter-general {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.send-button-general {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.send-button-general:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.send-button-general:active {
+    transform: scale(0.95);
+}
+
+.loading-spinner-chat-general {
+    display: none;
+}
+
+/* Scrollbar personalizado para chat general */
+.chat-messages-general::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages-general::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages-general::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.chat-messages-general::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* Animaciones y efectos */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.message-bubble {
+    animation: fadeInUp 0.3s ease;
+}
+
+.message-bubble.own {
+    animation: slideInRight 0.3s ease;
+}
+
+.message-bubble.other {
+    animation: slideInLeft 0.3s ease;
+}
+
+/* Mejoras responsive */
+@media (max-width: 1199px) {
+    .chat-container-analista {
+        height: calc(100vh - 250px);
+    }
+}
+
+@media (max-width: 991px) {
+    .chat-container-analista {
+        position: static;
+        height: 420px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chat-container-general {
+        height: 400px;
+    }
+    
+    .message-bubble {
+        max-width: 90%;
+    }
+    
+    .chat-header,
+    .chat-header-general {
+        padding: 12px 16px;
+    }
+    
+    .chat-title,
+    .chat-title-general {
+        font-size: 0.9rem;
+    }
+    
+    .chat-input-container,
+    .chat-input-container-general {
+        padding: 12px 16px;
+    }
+    
+    .input-group-chat,
+    .input-group-chat-general {
+        gap: 8px;
+    }
+    
+    .user-avatar-chat,
+    .user-avatar-chat-general {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    
+    .send-button,
+    .send-button-general {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .chat-container-analista,
+    .chat-container-general {
+        height: 350px;
+    }
+    
+    .message-bubble {
+        max-width: 95%;
+    }
+    
+    .message-content {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+    
+    .message-meta {
+        font-size: 0.7rem;
+    }
+    
+    .chat-welcome-general {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .welcome-avatar-general {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .welcome-message-general p {
+        font-size: 0.8rem;
+    }
+}
+
+/* ===============================================
+   ESTILOS PARA LAS NUEVAS FUNCIONALIDADES
+   =============================================== */
+
+/* Estilos para checkboxes de compliance */
+.info-row-with-check {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.info-row-with-check:hover {
+    background-color: #f8f9fa;
+}
+
+.info-data {
+    flex: 1;
+}
+
+.info-data .info-label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.info-data .info-value {
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.compliance-check {
+    margin-left: 16px;
+    flex-shrink: 0;
+}
+
+.compliance-checkbox {
+    display: none;
+}
+
+.compliance-label {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #dee2e6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    margin: 0;
+}
+
+.compliance-label:hover {
+    border-color: #28a745;
+    background: #f8f9fa;
+}
+
+.compliance-checkbox:checked + .compliance-label {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.compliance-checkbox:checked + .compliance-label .check-icon {
+    color: white;
+    font-size: 0.75rem;
+}
+
+.check-icon {
+    color: transparent;
+    font-size: 0.75rem;
+    transition: color 0.2s ease;
+}
+
+/* Estilos para la sección de upload de documentos */
+.upload-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #e9ecef;
+}
+
+.upload-header h6 {
+    color: #495057;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.upload-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.upload-zone:hover {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+.upload-zone.drag-over {
+    border-color: #28a745;
+    background: #f8fff9;
+    border-style: solid;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: #6c757d;
+    margin-bottom: 12px;
+}
+
+.upload-text {
+    color: #495057;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.upload-link {
+    color: #28a745;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.upload-hint {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Estilos para lista de documentos */
+.documentos-list {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.documento-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f3f4;
+    transition: background-color 0.2s ease;
+}
+
+.documento-item:last-child {
+    border-bottom: none;
+}
+
+.documento-item:hover {
+    background-color: #f8f9fa;
+}
+
+.documento-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    font-size: 1.5rem;
+}
+
+.documento-details {
+    flex: 1;
+}
+
+.documento-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.documento-header strong {
+    color: #212529;
+    font-size: 0.95rem;
+}
+
+.documento-size {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.documento-status {
+    margin-top: 4px;
+}
+
+.documento-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.documento-validation {
+    display: flex;
+    gap: 4px;
+}
+
+.validation-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+}
+
+.validation-btn.valid {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.validation-btn.valid:hover {
+    background: #2e7d32;
+    color: white;
+}
+
+.validation-btn.invalid {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.validation-btn.invalid:hover {
+    background: #c62828;
+    color: white;
+}
+
+.validation-btn.active.valid {
+    background: #2e7d32;
+    color: white;
+}
+
+.validation-btn.active.invalid {
+    background: #c62828;
+    color: white;
+}
+
+/* Estilos para solicitudes relacionadas */
+.related-requests-section {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    height: fit-content;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.related-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f3f4;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+.related-header h5 {
+    color: #495057;
+    margin-bottom: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.related-header small {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.related-content {
+    padding: 16px 20px;
+}
+
+.search-info {
+    display: flex;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.search-info i {
+    color: #28a745;
+}
+
+.related-list {
+    margin-bottom: 20px;
+}
+
+.related-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #f1f3f4;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.related-item:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.related-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.related-details {
+    flex: 1;
+}
+
+.related-header-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.related-header-item strong {
+    color: #212529;
+    font-size: 0.9rem;
+}
+
+.related-date {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.related-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.related-amount {
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.related-description {
+    color: #6c757d;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.related-actions {
+    flex-shrink: 0;
+}
+
+.related-summary {
+    border-top: 1px solid #f1f3f4;
+    padding-top: 16px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.summary-label {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.summary-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #212529;
+}
+
+/* Estilos para el mensaje de bienvenida del chat de analista */
+.chat-welcome {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.welcome-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.welcome-message p {
+    margin: 0;
+    color: #0056b3;
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.welcome-message p:first-child {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* Mejoras responsive para nuevas secciones */
+@media (max-width: 991px) {
+    .related-requests-section {
+        margin-top: 20px;
+    }
+    
+    .documento-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .documento-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .related-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .related-header-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 767px) {
+    .info-row-with-check {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .compliance-check {
+        margin-left: 0;
+        align-self: flex-end;
+    }
+    
+    .upload-zone {
+        padding: 16px;
+    }
+    
+    .upload-icon {
+        font-size: 1.5rem;
+    }
+    
+    .documento-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+    
+    .validation-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+    
+    .related-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+{% endblock %} 

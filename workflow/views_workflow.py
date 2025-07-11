@@ -9,6 +9,7 @@ from django.contrib.auth.models import Group, User
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.db import models
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -3434,7 +3435,14 @@ def api_obtener_comentarios(request, solicitud_id):
                 request.user.is_staff):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
-        comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
+        # Obtener tipo de comentario del query parameter (opcional)
+        tipo_filtro = request.GET.get('tipo')
+        
+        # Filtrar comentarios por tipo si se especifica
+        if tipo_filtro and tipo_filtro in ['general', 'analista']:
+            comentarios = solicitud.comentarios.filter(tipo=tipo_filtro).order_by('-fecha_creacion')
+        else:
+            comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
         
         datos_comentarios = []
         for comentario in comentarios:
@@ -3446,6 +3454,7 @@ def api_obtener_comentarios(request, solicitud_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -3486,11 +3495,19 @@ def api_crear_comentario(request, solicitud_id):
         if not comentario_texto:
             return JsonResponse({'error': 'El comentario no puede estar vacío'}, status=400)
         
+        # Obtener tipo de comentario (por defecto 'general')
+        tipo_comentario = data.get('tipo', 'general')
+        
+        # Validar tipo de comentario
+        if tipo_comentario not in ['general', 'analista']:
+            return JsonResponse({'error': 'Tipo de comentario inválido'}, status=400)
+        
         # Crear el comentario
         comentario = SolicitudComentario.objects.create(
             solicitud=solicitud,
             usuario=request.user,
-            comentario=comentario_texto
+            comentario=comentario_texto,
+            tipo=tipo_comentario
         )
         
         # Notificar cambio en tiempo real
@@ -3506,6 +3523,7 @@ def api_crear_comentario(request, solicitud_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -3558,6 +3576,7 @@ def api_editar_comentario(request, comentario_id):
                     'nombre_completo': comentario.usuario.get_full_name() or comentario.usuario.username
                 },
                 'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),
                 'fecha_modificacion': comentario.fecha_modificacion.isoformat(),
                 'es_editado': comentario.es_editado,
@@ -4334,6 +4353,8 @@ def detalle_solicitud_v2(request, solicitud_id):
     }
     
     return render(request, 'workflow/detalleSolicitud_V2.html', context)
+
+
 # ==========================================
 # APIs PARA GESTIÓN DE PERMISOS DE PIPELINE
 # ==========================================
@@ -4740,3 +4761,170 @@ def api_obtener_grupos(request):
 # ==========================================
 # FUNCIONES PARA REQUISITOS DE TRANSICIÓN
 # ==========================================
+
+# ==========================================
+# VISTA DE ANÁLISIS PARA ANALISTAS
+# ==========================================
+
+@login_required
+def detalle_solicitud_analisis(request, solicitud_id):
+    """Vista especializada para análisis de solicitudes por parte de analistas"""
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar permisos - Permitir acceso si no está asignada o si el usuario tiene permisos
+    if solicitud.asignada_a and solicitud.asignada_a != request.user:
+        if not (request.user.is_superuser or request.user.is_staff):
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_ver=True
+            ).exists()
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para ver esta solicitud asignada a otro usuario.')
+                return redirect('workflow:vista_mixta_bandejas')
+    
+    cliente = solicitud.cliente if hasattr(solicitud, 'cliente') else None
+    cotizacion = solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None
+    historial = solicitud.historial.all().order_by('-fecha_inicio')
+    requisitos = solicitud.requisitos.all().select_related('requisito')
+    comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
+    etapas_pipeline = solicitud.pipeline.etapas.all().order_by('orden')
+    
+    # Solicitudes relacionadas (por cédula del cliente, excluyendo la actual)
+    solicitudes_relacionadas = []
+    mostrar_mensaje_sin_cliente = False
+    cedula_cliente = None
+    
+    # Obtener cédula desde cliente o cotización
+    if solicitud.cliente and solicitud.cliente.cedulaCliente:
+        cedula_cliente = solicitud.cliente.cedulaCliente
+    elif solicitud.cotizacion and solicitud.cotizacion.cedulaCliente:
+        cedula_cliente = solicitud.cotizacion.cedulaCliente
+    
+    if cedula_cliente:
+        # Buscar todas las solicitudes con la misma cédula (en cliente o cotización)
+        solicitudes_relacionadas = Solicitud.objects.filter(
+            (models.Q(cliente__cedulaCliente=cedula_cliente) | 
+             models.Q(cotizacion__cedulaCliente=cedula_cliente))
+        ).exclude(id=solicitud.id).select_related('cotizacion', 'cliente').order_by('-fecha_creacion')
+    else:
+        mostrar_mensaje_sin_cliente = True
+    
+    # Calcular información de progreso
+    total_etapas = etapas_pipeline.count()
+    if total_etapas > 0:
+        etapa_actual_orden = solicitud.etapa_actual.orden if solicitud.etapa_actual else 0
+        progreso_porcentaje = (etapa_actual_orden / total_etapas) * 100
+    else:
+        progreso_porcentaje = 0
+    
+    sla_info = calcular_sla_detallado(solicitud)
+    
+    context = {
+        'solicitud': solicitud,
+        'cliente': cliente,
+        'cotizacion': cotizacion,
+        'historial': historial,
+        'requisitos': requisitos,
+        'comentarios': comentarios,
+        'etapas_pipeline': etapas_pipeline,
+        'transiciones_disponibles': [],
+        'progreso_porcentaje': progreso_porcentaje,
+        'sla_info': sla_info,
+        'puede_editar': request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user,
+        'timestamp': timezone.now().timestamp(),
+        'solicitudes_relacionadas': solicitudes_relacionadas,
+        'mostrar_mensaje_sin_cliente': mostrar_mensaje_sin_cliente,
+    }
+    
+    return render(request, 'workflow/detalle_solicitud_analisis.html', context)
+
+
+def calcular_sla_detallado(solicitud):
+    """Calcula información detallada del SLA para una solicitud"""
+    
+    if not solicitud.etapa_actual:
+        return {
+            'estado': 'sin_etapa',
+            'tiempo_restante': None,
+            'tiempo_transcurrido': None,
+            'color_clase': 'text-muted',
+            'porcentaje_usado': 0
+        }
+    
+    # Buscar historial actual (sin fecha_fin)
+    historial_actual = solicitud.historial.filter(fecha_fin__isnull=True).first()
+    
+    if not historial_actual:
+        return {
+            'estado': 'sin_historial',
+            'tiempo_restante': None,
+            'tiempo_transcurrido': None,
+            'color_clase': 'text-muted',
+            'porcentaje_usado': 0
+        }
+    
+    # Calcular tiempo transcurrido
+    tiempo_transcurrido = timezone.now() - historial_actual.fecha_inicio
+    sla_total = solicitud.etapa_actual.sla
+    
+    # Formatear tiempo transcurrido de manera legible
+    def formatear_timedelta(td):
+        days = td.days
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        
+        parts = []
+        if days > 0:
+            parts.append(f"{days} día{'s' if days != 1 else ''}")
+        if hours > 0:
+            parts.append(f"{hours} hora{'s' if hours != 1 else ''}")
+        if minutes > 0:
+            parts.append(f"{minutes} minuto{'s' if minutes != 1 else ''}")
+        
+        if not parts:
+            return "menos de 1 minuto"
+        return ", ".join(parts)
+    
+    tiempo_transcurrido_formateado = formatear_timedelta(tiempo_transcurrido)
+    
+    if sla_total:
+        tiempo_restante = sla_total - tiempo_transcurrido
+        porcentaje_usado = (tiempo_transcurrido.total_seconds() / sla_total.total_seconds()) * 100
+        
+        if tiempo_restante.total_seconds() <= 0:
+            # SLA vencido
+            estado = 'vencido'
+            color_clase = 'text-danger'
+        elif porcentaje_usado >= 75:
+            # Por vencer (75% o más del SLA usado)
+            estado = 'por_vencer'
+            color_clase = 'text-warning'
+        else:
+            # En tiempo
+            estado = 'en_tiempo'
+            color_clase = 'text-success'
+        
+        tiempo_restante_formateado = formatear_timedelta(abs(tiempo_restante)) if tiempo_restante.total_seconds() < 0 else formatear_timedelta(tiempo_restante)
+        
+        return {
+            'estado': estado,
+            'tiempo_restante': tiempo_restante,
+            'tiempo_restante_formateado': tiempo_restante_formateado,
+            'tiempo_transcurrido': tiempo_transcurrido,
+            'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
+            'color_clase': color_clase,
+            'porcentaje_usado': min(porcentaje_usado, 100),
+            'sla_total': sla_total
+        }
+    
+    return {
+        'estado': 'sin_sla',
+        'tiempo_restante': None,
+        'tiempo_transcurrido': tiempo_transcurrido,
+        'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
+        'color_clase': 'text-muted',
+        'porcentaje_usado': 0
+    }
