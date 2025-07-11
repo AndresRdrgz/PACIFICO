@@ -6,62 +6,123 @@
 
 {% block content %}
 <div class="mt-0 pt-0">
+    {% if not no_access %}
         <!-- Header Estático - Sin Animaciones -->
-    <div class="card mb-1" style="border: 1px solid #e0e0e0;">
-        <div class="card-header" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 0; border: none;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0 text-white fw-bold">
-                        <i class="fas fa-briefcase me-2"></i>
-                        {% if pipeline %}{{ pipeline.nombre }}{% else %}Pipeline de Negocio{% endif %}
-                    </h1>
-                </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <!-- Selector de Pipeline -->
-                    <div class="dropdown">
-                        <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownPipeline" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-project-diagram me-1"></i>
-                            Pipelines
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownPipeline" style="z-index: 9999;">
-                            {% for p in pipelines %}
-                            <li>
-                                <a class="dropdown-item {% if pipeline and p.id == pipeline.id %}active{% endif %}" 
-                                   href="?pipeline={{ p.id }}&view={{ request.GET.view|default:'table' }}">
-                                    {{ p.nombre }}
-                                </a>
-                            </li>
-                            {% empty %}
-                            <li><span class="dropdown-item-text text-muted">No hay pipelines disponibles</span></li>
-                            {% endfor %}
-                        </ul>
+        <div class="card mb-1" style="border: 1px solid #e0e0e0;">
+            <div class="card-header" style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 0; border: none;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0 text-white fw-bold">
+                            <i class="fas fa-briefcase me-2"></i>
+                            {% if pipeline %}{{ pipeline.nombre }}{% else %}Pipeline de Negocio{% endif %}
+                        </h1>
                     </div>
-                    
-                    <!-- Botones de cambio de vista -->
-                    <div class="btn-group" role="group" aria-label="Cambiar vista">
-                        <button type="button" class="btn btn-light btn-sm active" id="btnVistaTabla" onclick="cambiarVista('table')">
-                            <i class="fas fa-table me-1"></i>
-                            Tabla
-                        </button>
-                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaKanban" onclick="cambiarVista('kanban')">
-                            <i class="fas fa-columns me-1"></i>
-                            Kanban
-                        </button>
+                    <div class="d-flex gap-2 align-items-center">
+                        <!-- Selector de Pipeline -->
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownPipeline" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-project-diagram me-1"></i>
+                                Pipelines
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="dropdownPipeline" style="z-index: 9999;">
+                                {% for p in pipelines %}
+                                <li>
+                                    <a class="dropdown-item {% if pipeline and p.id == pipeline.id %}active{% endif %}" 
+                                       href="?pipeline={{ p.id }}&view={{ request.GET.view|default:'table' }}">
+                                        {{ p.nombre }}
+                                    </a>
+                                </li>
+                                {% empty %}
+                                <li><span class="dropdown-item-text text-muted">No hay pipelines disponibles</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <!-- Botones de cambio de vista -->
+                        <div class="btn-group" role="group" aria-label="Cambiar vista">
+                            <button type="button" class="btn btn-light btn-sm active" id="btnVistaTabla" onclick="cambiarVista('table')">
+                                <i class="fas fa-table me-1"></i>
+                                Tabla
+                            </button>
+                            <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaKanban" onclick="cambiarVista('kanban')">
+                                <i class="fas fa-columns me-1"></i>
+                                Kanban
+                            </button>
+                        </div>
+                        
+                        {% if pipeline %}
+                        <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext({{ pipeline.id }})">
+                            <i class="fas fa-plus me-1"></i>Nueva Solicitud
+                        </a>
+                        {% else %}
+                        <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext()">
+                            <i class="fas fa-plus me-1"></i>Nueva Solicitud
+                        </a>
+                        {% endif %}
                     </div>
-                    
-                    {% if pipeline %}
-                    <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext({{ pipeline.id }})">
-                        <i class="fas fa-plus me-1"></i>Nueva Solicitud
-                    </a>
-                    {% else %}
-                    <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext()">
-                        <i class="fas fa-plus me-1"></i>Nueva Solicitud
-                    </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
+    {% endif %}
+
+    {% if no_access %}
+    <!-- Mensaje de acceso denegado -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-lock fa-4x text-muted mb-3"></i>
+                <h3 class="text-muted mb-3">Acceso Restringido</h3>
+                {% if error_message %}
+                    <p class="text-muted mb-4">{{ error_message }}</p>
+                {% else %}
+                    <p class="text-muted mb-4">No tienes acceso a ningún pipeline en el sistema de workflow.</p>
+                {% endif %}
+            </div>
+            
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>¿Cómo obtener acceso?</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-user-tie me-2 text-primary"></i>Contacta a tu Administrador</h6>
+                                    <p class="small text-muted">Solicita que te asignen permisos para acceder a los pipelines necesarios para tu trabajo.</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-users me-2 text-success"></i>Únete a un Grupo</h6>
+                                    <p class="small text-muted">Pregunta si existe un grupo de usuarios con acceso a los pipelines que necesitas.</p>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-cog me-2 text-warning"></i>Configuración de Permisos</h6>
+                                    <p class="small text-muted">Los permisos se configuran en la sección de administración del sistema.</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-question-circle me-2 text-info"></i>¿Necesitas ayuda?</h6>
+                                    <p class="small text-muted">Contacta al equipo de soporte técnico si tienes dudas sobre el acceso.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'workflow:dashboard' %}" class="btn btn-primary me-2">
+                    <i class="fas fa-tachometer-alt me-2"></i>Ir al Dashboard
+                </a>
+                <a href="{% url 'main_menu' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Menú Principal
+                </a>
+            </div>
+        </div>
     </div>
+    {% else %}
 
     {% if pipeline %}
         <!-- KPIs Estáticos en Fila Horizontal -->
@@ -980,6 +1041,7 @@
         </div>
     </div>
 </div>
+    {% endif %}
 
 {% endblock %}
 

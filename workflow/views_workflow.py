@@ -125,8 +125,93 @@ def negocios_view(request):
     # Obtener todos los pipelines disponibles
     pipelines = Pipeline.objects.all()
     
+    # Verificar si el usuario tiene acceso a algún pipeline
+    if not (request.user.is_superuser or request.user.is_staff):
+        # Para usuarios regulares, verificar permisos de pipeline
+        from .modelsWorkflow import PermisoPipeline
+        
+        # Obtener grupos del usuario
+        user_groups = request.user.groups.all()
+        
+        # Filtrar pipelines a los que el usuario tiene acceso
+        pipelines_permitidos = []
+        for pipeline in pipelines:
+            # Verificar si el usuario tiene permisos directos
+            tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                pipeline=pipeline,
+                usuario=request.user,
+                puede_ver=True
+            ).exists()
+            
+            # Verificar si el usuario tiene permisos por grupo
+            tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                pipeline=pipeline,
+                grupo__in=user_groups,
+                puede_ver=True
+            ).exists()
+            
+            if tiene_permiso_usuario or tiene_permiso_grupo:
+                pipelines_permitidos.append(pipeline)
+        
+        # Si no tiene acceso a ningún pipeline, mostrar mensaje de ayuda
+        if not pipelines_permitidos:
+            context = {
+                'pipelines': [],
+                'view_type': view_type,
+                'no_access': True,
+                'user_role': 'Usuario',
+                'oficiales': [],
+            }
+            return render(request, 'workflow/negocios.html', context)
+        
+        # Usar solo los pipelines permitidos
+        pipelines = pipelines_permitidos
+    
     if pipeline_id:
-        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        # Verificar que el pipeline existe y el usuario tiene acceso
+        try:
+            pipeline = Pipeline.objects.get(id=pipeline_id)
+            
+            # Verificar permisos para este pipeline específico
+            if not (request.user.is_superuser or request.user.is_staff):
+                from .modelsWorkflow import PermisoPipeline
+                user_groups = request.user.groups.all()
+                
+                tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                    pipeline=pipeline,
+                    usuario=request.user,
+                    puede_ver=True
+                ).exists()
+                
+                tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                    pipeline=pipeline,
+                    grupo__in=user_groups,
+                    puede_ver=True
+                ).exists()
+                
+                if not (tiene_permiso_usuario or tiene_permiso_grupo):
+                    # Usuario no tiene acceso a este pipeline específico
+                    context = {
+                        'pipelines': pipelines,
+                        'view_type': view_type,
+                        'no_access': True,
+                        'user_role': 'Usuario',
+                        'oficiales': [],
+                        'error_message': f'No tienes acceso al pipeline "{pipeline.nombre}". Contacta a tu administrador para solicitar permisos.'
+                    }
+                    return render(request, 'workflow/negocios.html', context)
+                    
+        except Pipeline.DoesNotExist:
+            # Pipeline no existe
+            context = {
+                'pipelines': pipelines,
+                'view_type': view_type,
+                'no_access': True,
+                'user_role': 'Usuario',
+                'oficiales': [],
+                'error_message': 'El pipeline solicitado no existe.'
+            }
+            return render(request, 'workflow/negocios.html', context)
         # Guardar último pipeline visitado en la sesión
         request.session['ultimo_pipeline_id'] = pipeline_id
         
