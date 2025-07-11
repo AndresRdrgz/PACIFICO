@@ -9,6 +9,7 @@ from django.contrib.auth.models import Group, User
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.db import models
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -4352,6 +4353,8 @@ def detalle_solicitud_v2(request, solicitud_id):
     }
     
     return render(request, 'workflow/detalleSolicitud_V2.html', context)
+
+
 # ==========================================
 # APIs PARA GESTIÓN DE PERMISOS DE PIPELINE
 # ==========================================
@@ -4770,9 +4773,7 @@ def detalle_solicitud_analisis(request, solicitud_id):
     solicitud = get_object_or_404(Solicitud, id=solicitud_id)
     
     # Verificar permisos - Permitir acceso si no está asignada o si el usuario tiene permisos
-    # Solo verificar permisos estrictos si la solicitud está asignada a otro usuario
     if solicitud.asignada_a and solicitud.asignada_a != request.user:
-        # Superusers bypass permission checks
         if not (request.user.is_superuser or request.user.is_staff):
             grupos_usuario = request.user.groups.all()
             tiene_permiso = PermisoEtapa.objects.filter(
@@ -4780,48 +4781,36 @@ def detalle_solicitud_analisis(request, solicitud_id):
                 grupo__in=grupos_usuario,
                 puede_ver=True
             ).exists()
-            
-            # Solo bloquear si no tiene permisos y la solicitud está específicamente asignada a otro usuario
             if not tiene_permiso:
                 messages.error(request, 'No tienes permisos para ver esta solicitud asignada a otro usuario.')
                 return redirect('workflow:vista_mixta_bandejas')
     
-    # Obtener información del cliente y cotización
     cliente = solicitud.cliente if hasattr(solicitud, 'cliente') else None
     cotizacion = solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None
-    
-    # Obtener historial completo
     historial = solicitud.historial.all().order_by('-fecha_inicio')
-    
-    # Obtener requisitos con sus archivos
     requisitos = solicitud.requisitos.all().select_related('requisito')
-    
-    # Obtener comentarios - Se cargan dinámicamente vía AJAX
     comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
-    
-    # Obtener todas las etapas del pipeline para mostrar el flujo
     etapas_pipeline = solicitud.pipeline.etapas.all().order_by('orden')
     
-    # Obtener transiciones disponibles
-    transiciones_disponibles = []
-    if solicitud.etapa_actual:
-        transiciones = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        )
-        
-        for transicion in transiciones:
-            if not transicion.requiere_permiso:
-                transiciones_disponibles.append(transicion)
-            else:
-                # Verificar si el usuario tiene permisos específicos
-                grupos_usuario = request.user.groups.all()
-                tiene_permiso = PermisoEtapa.objects.filter(
-                    etapa=transicion.etapa_destino,
-                    grupo__in=grupos_usuario
-                ).exists()
-                if tiene_permiso:
-                    transiciones_disponibles.append(transicion)
+    # Solicitudes relacionadas (por cédula del cliente, excluyendo la actual)
+    solicitudes_relacionadas = []
+    mostrar_mensaje_sin_cliente = False
+    cedula_cliente = None
+    
+    # Obtener cédula desde cliente o cotización
+    if solicitud.cliente and solicitud.cliente.cedulaCliente:
+        cedula_cliente = solicitud.cliente.cedulaCliente
+    elif solicitud.cotizacion and solicitud.cotizacion.cedulaCliente:
+        cedula_cliente = solicitud.cotizacion.cedulaCliente
+    
+    if cedula_cliente:
+        # Buscar todas las solicitudes con la misma cédula (en cliente o cotización)
+        solicitudes_relacionadas = Solicitud.objects.filter(
+            (models.Q(cliente__cedulaCliente=cedula_cliente) | 
+             models.Q(cotizacion__cedulaCliente=cedula_cliente))
+        ).exclude(id=solicitud.id).select_related('cotizacion', 'cliente').order_by('-fecha_creacion')
+    else:
+        mostrar_mensaje_sin_cliente = True
     
     # Calcular información de progreso
     total_etapas = etapas_pipeline.count()
@@ -4831,7 +4820,6 @@ def detalle_solicitud_analisis(request, solicitud_id):
     else:
         progreso_porcentaje = 0
     
-    # Calcular información de SLA
     sla_info = calcular_sla_detallado(solicitud)
     
     context = {
@@ -4842,11 +4830,13 @@ def detalle_solicitud_analisis(request, solicitud_id):
         'requisitos': requisitos,
         'comentarios': comentarios,
         'etapas_pipeline': etapas_pipeline,
-        'transiciones_disponibles': transiciones_disponibles,
+        'transiciones_disponibles': [],
         'progreso_porcentaje': progreso_porcentaje,
         'sla_info': sla_info,
         'puede_editar': request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user,
-        'timestamp': timezone.now().timestamp(),  # Para forzar actualización de cache
+        'timestamp': timezone.now().timestamp(),
+        'solicitudes_relacionadas': solicitudes_relacionadas,
+        'mostrar_mensaje_sin_cliente': mostrar_mensaje_sin_cliente,
     }
     
     return render(request, 'workflow/detalle_solicitud_analisis.html', context)

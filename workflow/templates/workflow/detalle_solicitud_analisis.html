@@ -602,109 +602,93 @@
             <div class="related-requests-section">
                 <div class="related-header">
                     <h5><i class="fas fa-link me-2"></i>Solicitudes Relacionadas</h5>
-                    <small class="text-muted">Cliente: {{ solicitud.cliente_cedula|default:"123193" }}</small>
+                    <small class="text-muted">Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
                 </div>
                 
                 <div class="related-content">
-                    <!-- Búsqueda automática por cédula -->
-                    <div class="search-info">
-                        <i class="fas fa-search me-2"></i>
-                        <span>Buscando por cédula: <strong>123193</strong></span>
-                    </div>
-                    
-                    <!-- Lista de solicitudes relacionadas -->
-                    <div class="related-list">
-                        <div class="related-item">
-                            <div class="related-icon">
-                                <i class="fas fa-file-alt text-primary"></i>
-                            </div>
-                            <div class="related-details">
-                                <div class="related-header-item">
-                                    <strong>SOL-2024-001</strong>
-                                    <span class="related-date">15/06/2024</span>
-                                </div>
-                                <div class="related-info">
-                                    <span class="badge bg-success">Aprobada</span>
-                                    <span class="related-amount">B/. 8,500.00</span>
-                                </div>
-                                <div class="related-description">
-                                    Préstamo Personal - 36 meses
-                                </div>
-                            </div>
-                            <div class="related-actions">
-                                <button class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
+                    {% if mostrar_mensaje_sin_cliente %}
+                        <div class="alert alert-warning text-center my-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
+                        </div>
+                    {% else %}
+                        <!-- Búsqueda automática por cédula -->
+                        <div class="search-info">
+                            <i class="fas fa-search me-2"></i>
+                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
                         </div>
                         
-                        <div class="related-item">
-                            <div class="related-icon">
-                                <i class="fas fa-file-alt text-warning"></i>
-                            </div>
-                            <div class="related-details">
-                                <div class="related-header-item">
-                                    <strong>SOL-2024-045</strong>
-                                    <span class="related-date">20/08/2024</span>
+                        <!-- Lista de solicitudes relacionadas -->
+                        <div class="related-list">
+                            {% for s in solicitudes_relacionadas %}
+                            <div class="related-item">
+                                <div class="related-icon">
+                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
                                 </div>
-                                <div class="related-info">
-                                    <span class="badge bg-warning">En Proceso</span>
-                                    <span class="related-amount">B/. 15,000.00</span>
+                                <div class="related-details">
+                                    <div class="related-header-item">
+                                        <strong>{{ s.codigo }}</strong>
+                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="related-info">
+                                        <span class="badge 
+                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
+                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
+                                        </span>
+                                        <span class="related-amount">
+                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="related-description">
+                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
+                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
+                                        {% else %}Préstamo{% endif %}
+                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
+                                    </div>
                                 </div>
-                                <div class="related-description">
-                                    Préstamo Hipotecario - 120 meses
+                                <div class="related-actions">
+                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
                                 </div>
                             </div>
-                            <div class="related-actions">
-                                <button class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            {% empty %}
+                            <div class="alert alert-info text-center my-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Sin solicitudes relacionadas disponibles para esta cédula.
                             </div>
+                            {% endfor %}
                         </div>
                         
-                        <div class="related-item">
-                            <div class="related-icon">
-                                <i class="fas fa-file-alt text-danger"></i>
+                        {% if solicitudes_relacionadas %}
+                        <div class="related-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Solicitudes:</span>
+                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
                             </div>
-                            <div class="related-details">
-                                <div class="related-header-item">
-                                    <strong>SOL-2023-089</strong>
-                                    <span class="related-date">12/11/2023</span>
-                                </div>
-                                <div class="related-info">
-                                    <span class="badge bg-danger">Rechazada</span>
-                                    <span class="related-amount">B/. 5,000.00</span>
-                                </div>
-                                <div class="related-description">
-                                    Préstamo Personal - 24 meses
-                                </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Aprobadas:</span>
+                                <span class="summary-value text-success">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
                             </div>
-                            <div class="related-actions">
-                                <button class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <div class="summary-item">
+                                <span class="summary-label">En Proceso:</span>
+                                <span class="summary-value text-warning">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Rechazadas:</span>
+                                <span class="summary-value text-danger">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="related-summary">
-                        <div class="summary-item">
-                            <span class="summary-label">Total Solicitudes:</span>
-                            <span class="summary-value">3</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Aprobadas:</span>
-                            <span class="summary-value text-success">1</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">En Proceso:</span>
-                            <span class="summary-value text-warning">1</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Rechazadas:</span>
-                            <span class="summary-value text-danger">1</span>
-                        </div>
-                    </div>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
