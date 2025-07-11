@@ -1,0 +1,130 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Invitar Usuario - {{ proyecto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'proyectos:dashboard' %}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}">{{ proyecto.nombre }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">Invitar Usuario</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-2 text-dark">
+                <i class="fas fa-user-plus text-success me-2"></i>
+                Invitar Usuario al Proyecto
+            </h1>
+            <p class="text-muted mb-0">Invita usuarios al proyecto {{ proyecto.nombre }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Información de la Invitación
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="usuario" class="form-label">
+                                <strong>Usuario *</strong>
+                            </label>
+                            <select class="form-control form-control-custom" id="usuario" name="usuario" required>
+                                <option value="">Seleccionar usuario</option>
+                                {% for usuario in usuarios_disponibles %}
+                                    <option value="{{ usuario.id }}">
+                                        {% if usuario.first_name and usuario.last_name %}
+                                            {{ usuario.first_name }} {{ usuario.last_name }} ({{ usuario.username }})
+                                        {% else %}
+                                            {{ usuario.username }}
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Selecciona el usuario que deseas invitar al proyecto</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="rol" class="form-label">
+                                <strong>Rol *</strong>
+                            </label>
+                            <select class="form-control form-control-custom" id="rol" name="rol" required>
+                                <option value="">Seleccionar rol</option>
+                                <option value="tester">Tester</option>
+                                <option value="desarrollador">Desarrollador</option>
+                            </select>
+                            <div class="form-text">Define el rol del usuario en el proyecto</div>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-pacifico">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Invitación
+                            </button>
+                            <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info-custom alert-custom mb-4">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Roles disponibles:</strong>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2"><i class="fas fa-vial text-success me-2"></i>Tester</h6>
+                        <p class="text-muted small mb-0">
+                            Puede crear y ejecutar casos de prueba, reportar resultados y solicitar revisiones.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="mb-2"><i class="fas fa-code text-primary me-2"></i>Desarrollador</h6>
+                        <p class="text-muted small mb-0">
+                            Puede ver pruebas fallidas, corregir problemas y marcar como resueltos.
+                        </p>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="alert alert-warning-custom alert-custom">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Nota importante:</strong>
+                        <ul class="mb-0 mt-3">
+                            <li>Solo se muestran usuarios no invitados</li>
+                            <li>El usuario recibirá acceso inmediato</li>
+                            <li>Puedes cambiar roles desde el admin</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

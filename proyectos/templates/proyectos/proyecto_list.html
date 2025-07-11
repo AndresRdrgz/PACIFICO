@@ -1,0 +1,88 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Lista de Proyectos - QA{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-2 text-dark">
+                        <i class="fas fa-list text-success me-2"></i>
+                        Lista de Proyectos
+                    </h1>
+                </div>
+                {% if user.is_superuser %}
+                    <div>
+                        <a href="{% url 'proyectos:proyecto_create' %}" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Nuevo Proyecto
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card-custom">
+                <div class="card-body p-4">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3">Proyecto</th>
+                                        <th class="px-3">Estado</th>
+                                        <th class="px-3">Creado por</th>
+                                        <th class="px-3">Fecha</th>
+                                        <th class="px-3">Pruebas</th>
+                                        <th class="px-3">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for proyecto in page_obj %}
+                                    <tr>
+                                        <td class="px-3">
+                                            <strong>{{ proyecto.nombre }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ proyecto.descripcion|truncatewords:10 }}</small>
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge 
+                                                {% if proyecto.estado == 'activo' %}badge-success-custom
+                                                {% elif proyecto.estado == 'pausado' %}badge-warning-custom
+                                                {% elif proyecto.estado == 'completado' %}badge-pacifico
+                                                {% else %}badge-secondary{% endif %}">
+                                                {{ proyecto.get_estado_display }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3">{{ proyecto.creado_por.get_full_name|default:proyecto.creado_por.username }}</td>
+                                        <td class="px-3">{{ proyecto.fecha_creacion|date:"d/m/Y" }}</td>
+                                        <td class="px-3">{{ proyecto.total_pruebas }}</td>
+                                        <td class="px-3">
+                                            <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay proyectos disponibles</h5>
+                            <p class="text-muted">No se encontraron proyectos que coincidan con los criterios de búsqueda.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,626 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}{{ proyecto.nombre }} - Detalles{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'proyectos:dashboard' %}">Dashboard</a>
+                            </li>
+                            <li class="breadcrumb-item active">{{ proyecto.nombre }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-2 text-dark">
+                        <i class="fas fa-project-diagram text-success me-2"></i>
+                        {{ proyecto.nombre }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ proyecto.descripcion }}</p>
+                </div>
+                <div>
+                    {% if user.is_superuser or rol_usuario == 'tester' %}
+                        <a href="{% url 'proyectos:prueba_create' proyecto.id %}" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Nueva Prueba
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Stats KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-gradient rounded-3 p-3">
+                                <i class="fas fa-vial text-white fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title mb-1">{{ proyecto.total_pruebas }}</h5>
+                            <p class="card-text text-muted mb-0">Total Pruebas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-gradient rounded-3 p-3">
+                                <i class="fas fa-check-circle text-white fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title mb-1">{{ proyecto.pruebas_exitosas }}</h5>
+                            <p class="card-text text-muted mb-0">Exitosas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-gradient rounded-3 p-3">
+                                <i class="fas fa-clock text-white fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title mb-1">{{ proyecto.pruebas_pendientes }}</h5>
+                            <p class="card-text text-muted mb-0">Pendientes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-danger bg-gradient rounded-3 p-3">
+                                <i class="fas fa-exclamation-triangle text-white fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title mb-1">{{ proyecto.pruebas_fallidas }}</h5>
+                            <p class="card-text text-muted mb-0">Fallidas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información del Proyecto
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-3"><strong>Estado:</strong> 
+                                <span class="badge 
+                                    {% if proyecto.estado == 'activo' %}badge-success-custom
+                                    {% elif proyecto.estado == 'pausado' %}badge-warning-custom
+                                    {% elif proyecto.estado == 'completado' %}badge-pacifico
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ proyecto.get_estado_display }}
+                                </span>
+                            </p>
+                            <p class="mb-3"><strong>Creado por:</strong> {{ proyecto.creado_por.get_full_name|default:proyecto.creado_por.username }}</p>
+                            <p class="mb-3"><strong>Fecha de creación:</strong> {{ proyecto.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if proyecto.pruebas_revision > 0 %}
+                            <p class="mb-3"><strong>En revisión:</strong> 
+                                <span class="badge badge-warning-custom">{{ proyecto.pruebas_revision }}</span>
+                            </p>
+                            {% endif %}
+                            <p class="mb-3"><strong>Última actualización:</strong> {{ proyecto.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
+                            <p class="mb-3"><strong>Progreso:</strong> 
+                                {% if proyecto.total_pruebas > 0 %}
+                                    {% widthratio proyecto.pruebas_exitosas proyecto.total_pruebas 100 %}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Management Sections (Admin Only) -->
+    {% if user.is_superuser %}
+    <div class="row mb-4">
+        <!-- Modules Section -->
+        <div class="col-12 col-lg-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-header-custom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-puzzle-piece me-2"></i>
+                            Módulos del Proyecto
+                        </h5>
+                        <a href="{% url 'proyectos:crear_modulo' proyecto.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Crear Módulo
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    {% if proyecto.modulos.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3">Módulo</th>
+                                        <th class="px-3">Pruebas</th>
+                                        <th class="px-3">Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for modulo in proyecto.modulos.all %}
+                                    <tr>
+                                        <td class="px-3">
+                                            <strong>{{ modulo.nombre }}</strong>
+                                            {% if modulo.descripcion %}
+                                                <br>
+                                                <small class="text-muted">{{ modulo.descripcion|truncatewords:10 }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge badge-pacifico">{{ modulo.pruebas.count }}</span>
+                                        </td>
+                                        <td class="px-3">{{ modulo.fecha_creacion|date:"d/m/Y" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-puzzle-piece fa-2x text-muted mb-3"></i>
+                            <h6 class="text-muted">No hay módulos</h6>
+                            <p class="text-muted small">Crea módulos para organizar las pruebas</p>
+                            <a href="{% url 'proyectos:crear_modulo' proyecto.id %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Crear Primer Módulo
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div class="col-12 col-lg-6 mb-3">
+            <div class="card-custom h-100">
+                <div class="card-header-custom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            Usuarios del Proyecto
+                        </h5>
+                        <a href="{% url 'proyectos:invitar_usuario' proyecto.id %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-user-plus me-1"></i>Invitar Usuario
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    {% if proyecto.usuarios_invitados.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3">Usuario</th>
+                                        <th class="px-3">Rol</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for proyecto_usuario in proyecto.usuarios_invitados.all %}
+                                    <tr>
+                                        <td class="px-3">
+                                            <strong>{{ proyecto_usuario.usuario.get_full_name|default:proyecto_usuario.usuario.username }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ proyecto_usuario.usuario.username }}</small>
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge 
+                                                {% if proyecto_usuario.rol == 'tester' %}badge-success-custom
+                                                {% else %}badge-pacifico{% endif %}">
+                                                {{ proyecto_usuario.get_rol_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-2x text-muted mb-3"></i>
+                            <h6 class="text-muted">No hay usuarios invitados</h6>
+                            <p class="text-muted small">Invita usuarios para comenzar a trabajar</p>
+                            <a href="{% url 'proyectos:invitar_usuario' proyecto.id %}" class="btn btn-success btn-sm">
+                                <i class="fas fa-user-plus me-1"></i>Invitar Primer Usuario
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Test Cases Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-vial me-2"></i>
+                            Pruebas del Proyecto
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'proyectos:export_pruebas_excel' proyecto.id %}?{{ request.GET.urlencode }}" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Filters Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="filter-section">
+                                <form method="get" class="row g-3">
+                                <div class="col-md-2">
+                                    <label for="resultado" class="form-label small">Resultado</label>
+                                    <select class="form-control form-control-sm" id="resultado" name="resultado">
+                                        <option value="">Todos</option>
+                                        <option value="pendiente" {% if resultado_filter == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                        <option value="exitoso" {% if resultado_filter == 'exitoso' %}selected{% endif %}>Exitoso</option>
+                                        <option value="fallido" {% if resultado_filter == 'fallido' %}selected{% endif %}>Fallido</option>
+                                        <option value="solicitud_revision" {% if resultado_filter == 'solicitud_revision' %}selected{% endif %}>En Revisión</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="modulo" class="form-label small">Módulo</label>
+                                    <select class="form-control form-control-sm" id="modulo" name="modulo">
+                                        <option value="">Todos</option>
+                                        {% for modulo in modulos %}
+                                            <option value="{{ modulo.id }}" {% if modulo_filter == modulo.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ modulo.nombre }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="prioridad" class="form-label small">Prioridad</label>
+                                    <select class="form-control form-control-sm" id="prioridad" name="prioridad">
+                                        <option value="">Todas</option>
+                                        <option value="baja" {% if prioridad_filter == 'baja' %}selected{% endif %}>Baja</option>
+                                        <option value="media" {% if prioridad_filter == 'media' %}selected{% endif %}>Media</option>
+                                        <option value="alta" {% if prioridad_filter == 'alta' %}selected{% endif %}>Alta</option>
+                                        <option value="critica" {% if prioridad_filter == 'critica' %}selected{% endif %}>Crítica</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="tester" class="form-label small">Tester</label>
+                                    <select class="form-control form-control-sm" id="tester" name="tester">
+                                        <option value="">Todos</option>
+                                        {% for tester in testers %}
+                                            <option value="{{ tester.id }}" {% if tester_filter == tester.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ tester.get_full_name|default:tester.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="desarrollador" class="form-label small">Desarrollador</label>
+                                    <select class="form-control form-control-sm" id="desarrollador" name="desarrollador">
+                                        <option value="">Todos</option>
+                                        {% for desarrollador in desarrolladores %}
+                                            <option value="{{ desarrollador.id }}" {% if desarrollador_filter == desarrollador.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ desarrollador.get_full_name|default:desarrollador.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <div class="d-flex gap-2 w-100">
+                                        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                                            <i class="fas fa-filter me-1"></i>Filtrar
+                                        </button>
+                                        <a href="{% url 'proyectos:proyecto_detail' proyecto.id %}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-times me-1"></i>Limpiar
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="px-3">Prueba</th>
+                                        <th class="px-3">Módulo</th>
+                                        <th class="px-3">Prioridad</th>
+                                        <th class="px-3">Resultado</th>
+                                        <th class="px-3">Tester</th>
+                                        <th class="px-3">Fecha</th>
+                                        <th class="px-3">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for prueba in page_obj %}
+                                    <tr>
+                                        <td class="px-3">
+                                            <strong>{{ prueba.titulo }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ prueba.descripcion|truncatewords:10 }}</small>
+                                        </td>
+                                        <td class="px-3">{{ prueba.modulo.nombre }}</td>
+                                        <td class="px-3">
+                                            <span class="badge 
+                                                {% if prueba.prioridad == 'critica' %}badge-danger-custom
+                                                {% elif prueba.prioridad == 'alta' %}badge-warning-custom
+                                                {% elif prueba.prioridad == 'media' %}badge-pacifico
+                                                {% else %}badge-secondary{% endif %}">
+                                                {{ prueba.get_prioridad_display }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge 
+                                                {% if prueba.resultado == 'exitoso' %}badge-success-custom
+                                                {% elif prueba.resultado == 'fallido' %}badge-danger-custom
+                                                {% elif prueba.resultado == 'solicitud_revision' %}badge-warning-custom
+                                                {% else %}badge-secondary{% endif %} fs-6 px-3 py-2">
+                                                <i class="fas fa-{% if prueba.resultado == 'exitoso' %}check-circle{% elif prueba.resultado == 'fallido' %}times-circle{% elif prueba.resultado == 'solicitud_revision' %}clock{% else %}hourglass-half{% endif %} me-1"></i>
+                                                {{ prueba.get_resultado_display }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3">
+                                            {% if prueba.tester %}
+                                                {{ prueba.tester.get_full_name|default:prueba.tester.username }}
+                                            {% else %}
+                                                <span class="text-muted">Sin asignar</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-3">{{ prueba.fecha_creacion|date:"d/m/Y" }}</td>
+                                        <td class="px-3">
+                                            <a href="{% url 'proyectos:prueba_detail' prueba.id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <div class="text-muted">
+                                Mostrando {{ page_obj.start_index }} - {{ page_obj.end_index }} de {{ page_obj.paginator.count }} pruebas
+                            </div>
+                            <nav aria-label="Paginación de pruebas">
+                                <ul class="pagination pagination-sm mb-0">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                                <i class="fas fa-angle-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                                <i class="fas fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                                <i class="fas fa-angle-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-vial fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay pruebas en este proyecto</h5>
+                            <p class="text-muted">Aún no se han creado pruebas para este proyecto.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for filters -->
+<style>
+.filter-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.filter-section .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.filter-section .form-control-sm {
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.filter-section .form-control-sm:focus {
+    border-color: var(--verde-pacifico);
+    box-shadow: 0 0 0 0.2rem rgba(0, 156, 60, 0.25);
+}
+
+.filter-section .btn-sm {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.filter-section .btn-sm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.pagination .page-link {
+    border-radius: 6px;
+    margin: 0 2px;
+    border: 1px solid #dee2e6;
+    color: var(--verde-pacifico);
+    transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--verde-pacifico);
+    border-color: var(--verde-pacifico);
+    color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--verde-pacifico);
+    border-color: var(--verde-pacifico);
+}
+
+.export-button {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.export-button:hover {
+    background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.export-button.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>
+
+<!-- JavaScript for enhanced filtering -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form when filters change
+    const filterSelects = document.querySelectorAll('#resultado, #modulo, #prioridad, #tester, #desarrollador');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            // Add a small delay to allow multiple selections
+            setTimeout(() => {
+                this.closest('form').submit();
+            }, 300);
+        });
+    });
+    
+    // Show active filters count
+    function updateActiveFiltersCount() {
+        const activeFilters = document.querySelectorAll('select[name]:not([name="page"]) option:checked:not([value=""])').length;
+        const filterButton = document.querySelector('button[type="submit"]');
+        if (activeFilters > 0) {
+            filterButton.innerHTML = `<i class="fas fa-filter me-1"></i>Filtrar (${activeFilters})`;
+            filterButton.classList.add('btn-warning');
+            filterButton.classList.remove('btn-primary');
+        } else {
+            filterButton.innerHTML = '<i class="fas fa-filter me-1"></i>Filtrar';
+            filterButton.classList.remove('btn-warning');
+            filterButton.classList.add('btn-primary');
+        }
+    }
+    
+    updateActiveFiltersCount();
+    
+    // Update count when filters change
+    filterSelects.forEach(select => {
+        select.addEventListener('change', updateActiveFiltersCount);
+    });
+    
+    // Export button loading state
+    const exportButton = document.querySelector('a[href*="export-excel"]');
+    if (exportButton) {
+        exportButton.classList.add('export-button');
+        exportButton.addEventListener('click', function() {
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando...';
+            this.classList.add('disabled');
+            
+            // Re-enable after a delay (in case of error)
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.classList.remove('disabled');
+            }, 10000);
+        });
+    }
+});
+</script>
+{% endblock %} 
