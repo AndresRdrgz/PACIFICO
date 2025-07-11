@@ -1,0 +1,1674 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Análisis de Solicitud - {{ solicitud.codigo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de la Solicitud -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-1">
+                                <i class="fas fa-microscope me-2"></i>
+                                Análisis de Solicitud: {{ solicitud.codigo }}
+                            </h2>
+                            <p class="mb-0 opacity-75">
+                                <i class="fas fa-user me-1"></i>
+                                {{ solicitud.cliente_nombre|default:"Sin cliente" }} 
+                                {% if solicitud.cliente_cedula %}
+                                    - {{ solicitud.cliente_cedula }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TARJETA UNIFICADA SUPERIOR -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="unified-info-card">
+                <div class="unified-header">
+                    <div class="unified-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="unified-title">
+                        <h3>Resumen Completo de la Solicitud</h3>
+                        <p>Información integral del préstamo y análisis</p>
+                    </div>
+                    <div class="unified-sla">
+                        <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
+                            {% if sla_info.estado == 'vencido' %}
+                                <i class="fas fa-exclamation-triangle me-1"></i>Vencido
+                            {% elif sla_info.estado == 'por_vencer' %}
+                                <i class="fas fa-hourglass-half me-1"></i>Por Vencer
+                            {% elif sla_info.estado == 'en_tiempo' %}
+                                <i class="fas fa-check-circle me-1"></i>En Tiempo
+                            {% else %}
+                                <i class="fas fa-question-circle me-1"></i>Sin SLA
+                            {% endif %}
+                        </div>
+                        {% if sla_info.tiempo_restante_formateado %}
+                        <small class="sla-time">{{ sla_info.tiempo_restante_formateado }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="unified-body">
+                    <div class="row g-4">
+                        <!-- Sección Cliente -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-user text-primary"></i>
+                                    <h5>Información del Cliente</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Nombre Completo:</span>
+                                        <span class="info-value">{{ solicitud.cliente_nombre|default:"Sin cliente" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Cédula:</span>
+                                        <span class="info-value">{{ solicitud.cliente_cedula|default:"-" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Canal de Origen:</span>
+                                        <span class="info-value">Web/Digital</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección Cotización -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-calculator text-success"></i>
+                                    <h5>Detalles de la Cotización</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Monto Solicitado:</span>
+                                        <span class="info-value">{{ solicitud.monto_formateado|default:"B/. 25,000.00" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Plazo:</span>
+                                        <span class="info-value">48 meses</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Tasa de Interés:</span>
+                                        <span class="info-value">12.5%</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Cuota Mensual:</span>
+                                        <span class="info-value">B/. 697.50</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección Estado del Proceso -->
+                        <div class="col-md-4">
+                            <div class="info-section">
+                                <div class="section-header">
+                                    <i class="fas fa-tasks text-warning"></i>
+                                    <h5>Estado del Proceso</h5>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Fecha de Inicio:</span>
+                                        <span class="info-value">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Etapa Actual:</span>
+                                        <span class="info-value">{{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Área Responsable:</span>
+                                        <span class="info-value">{{ solicitud.pipeline.nombre }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Responsable:</span>
+                                        <span class="info-value">{{ solicitud.asignada_a.get_full_name|default:"Sin asignar" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMELINE COMPACTO -->
+    <div class="compact-timeline-section mb-4">
+        <div class="timeline-header">
+            <h5><i class="fas fa-route me-2"></i>Flujo del Proceso</h5>
+        </div>
+        <div class="compact-timeline">
+            {% for etapa in etapas_pipeline %}
+            <div class="timeline-item {% if etapa.orden < solicitud.etapa_actual.orden %}completed{% elif etapa == solicitud.etapa_actual %}active{% else %}pending{% endif %}">
+                <div class="timeline-dot">
+                    {% if etapa.orden < solicitud.etapa_actual.orden %}
+                        <i class="fas fa-check"></i>
+                    {% elif etapa == solicitud.etapa_actual %}
+                        <i class="fas fa-clock"></i>
+                    {% else %}
+                        <i class="fas fa-circle"></i>
+                    {% endif %}
+                </div>
+                <div class="timeline-content">
+                    <span class="timeline-title">{{ etapa.nombre }}</span>
+                    {% if etapa.sla %}
+                        <small class="timeline-sla">SLA: {{ etapa.sla }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SISTEMA DE PESTAÑAS -->
+    <div class="tabs-section">
+        <div class="tabs-header">
+            <button class="tab-button active" data-tab="historial">
+                <i class="fas fa-history me-2"></i>Historial
+            </button>
+            <button class="tab-button" data-tab="comentarios">
+                <i class="fas fa-comments me-2"></i>Comentarios
+            </button>
+            <button class="tab-button" data-tab="documentos">
+                <i class="fas fa-file-alt me-2"></i>Documentos
+            </button>
+        </div>
+        
+        <div class="tabs-content">
+            <!-- Tab Historial -->
+            <div class="tab-pane active" id="tab-historial">
+                <div class="historial-content">
+                    {% for evento in historial %}
+                    <div class="historial-item">
+                        <div class="historial-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="historial-details">
+                            <div class="historial-header">
+                                <strong>{{ evento.etapa.nombre }}</strong>
+                                <span class="historial-date">{{ evento.fecha_inicio|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div class="historial-info">
+                                {% if evento.usuario_responsable %}
+                                    Por {{ evento.usuario_responsable.get_full_name|default:evento.usuario_responsable.username }}
+                                {% endif %}
+                                {% if evento.fecha_fin %}
+                                    <br><span class="text-success">Completado: {{ evento.fecha_fin|date:"d/m/Y H:i" }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-history fa-3x"></i>
+                        <p>No hay historial disponible</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Tab Comentarios -->
+            <div class="tab-pane" id="tab-comentarios">
+                <div class="comentarios-content">
+                    <!-- Comentarios existentes -->
+                    {% for comentario in comentarios %}
+                    <div class="comentario-item">
+                        <div class="comentario-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="comentario-details">
+                            <div class="comentario-header">
+                                <strong>{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</strong>
+                                <span class="comentario-date">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div class="comentario-text">
+                                {{ comentario.comentario }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-comments fa-3x"></i>
+                        <p>No hay comentarios aún</p>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Formulario para nuevo comentario -->
+                    <div class="comentario-form">
+                        <form id="form-comentario" method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <textarea class="form-control" 
+                                          placeholder="Escriba un comentario..." 
+                                          rows="3" 
+                                          id="comentario-text"></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline-secondary">
+                                    <i class="fas fa-paperclip me-1"></i>Adjuntar
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-paper-plane me-1"></i>Enviar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Documentos -->
+            <div class="tab-pane" id="tab-documentos">
+                <div class="documentos-content">
+                    {% for requisito in requisitos %}
+                    <div class="documento-item">
+                        <div class="documento-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="documento-details">
+                            <div class="documento-header">
+                                <strong>{{ requisito.requisito.nombre }}</strong>
+                                <span class="documento-size">
+                                    {% if requisito.archivo %}
+                                        PDF - {{ requisito.archivo.size|filesizeformat }}
+                                    {% else %}
+                                        Pendiente de subir
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if requisito.observaciones %}
+                            <div class="documento-obs">
+                                {{ requisito.observaciones }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="documento-actions">
+                            {% if requisito.archivo %}
+                                <a href="{{ requisito.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">Ver</a>
+                            {% else %}
+                                <button class="btn btn-outline-secondary btn-sm" disabled>Sin archivo</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open fa-3x"></i>
+                        <p>No hay documentos asociados a esta solicitud</p>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Botón para subir documento -->
+                    <div class="documento-upload">
+                        <button class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-upload me-2"></i>Subir Nuevo Documento
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="action-buttons-section mt-4">
+        <div class="action-grid">
+            <button class="action-btn btn-success" onclick="aprobarSolicitud()">
+                <i class="fas fa-check me-2"></i>Aprobar Solicitud
+            </button>
+            <button class="action-btn btn-outline-primary" onclick="solicitarMasInformacion()">
+                Solicitar Más Información
+            </button>
+            <button class="action-btn btn-danger" onclick="rechazarSolicitud()">
+                <i class="fas fa-times me-2"></i>Rechazar Solicitud
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Contenido movido a las pestañas -->
+        </div>
+    </div>
+
+</div>
+
+<!-- Script para funcionalidades -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funciones para comentarios
+    function guardarComentario(tipo, texto) {
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/comentarios/crear/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                comentario: texto,
+                tipo: tipo
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al guardar comentario: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar comentario');
+        });
+    }
+
+    // Sistema de pestañas
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            
+            // Remover clase active de todos los botones y panes
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Activar el botón y pane seleccionado
+            this.classList.add('active');
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
+        });
+    });
+
+    // Formulario comentario en pestañas
+    const formComentario = document.getElementById('form-comentario');
+    if (formComentario) {
+        formComentario.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const comentario = document.getElementById('comentario-text').value;
+            
+            if (comentario.trim()) {
+                guardarComentario('general', comentario);
+            }
+        });
+    }
+
+    // Funciones para botones de acción
+    window.ejecutarTransicion = function(transicionId) {
+        if (confirm('¿Está seguro de realizar esta transición?')) {
+            // Implementar lógica de transición
+            console.log('Ejecutando transición:', transicionId);
+        }
+    };
+
+    window.aprobarSolicitud = function() {
+        if (confirm('¿Está seguro de aprobar esta solicitud?')) {
+            // Implementar lógica de aprobación
+            console.log('Aprobando solicitud');
+        }
+    };
+
+    window.rechazarSolicitud = function() {
+        if (confirm('¿Está seguro de rechazar esta solicitud?')) {
+            // Implementar lógica de rechazo
+            console.log('Rechazando solicitud');
+        }
+    };
+
+    window.solicitarMasInformacion = function() {
+        const motivo = prompt('Indique el motivo por el cual solicita más información:');
+        if (motivo) {
+            // Implementar lógica para solicitar más información
+            console.log('Solicitando más información:', motivo);
+        }
+    };
+
+    window.derivarSolicitud = function() {
+        // Implementar lógica para derivar solicitud
+        console.log('Derivando solicitud');
+    };
+
+    window.editarComentario = function(comentarioId) {
+        // Implementar lógica para editar comentario
+        console.log('Editando comentario:', comentarioId);
+    };
+
+    window.eliminarComentario = function(comentarioId) {
+        if (confirm('¿Está seguro de eliminar este comentario?')) {
+            // Implementar lógica para eliminar comentario
+            console.log('Eliminando comentario:', comentarioId);
+        }
+    };
+});
+</script>
+
+<style>
+/* ============================== */
+/* ESTILOS ÉPICOS DE ANÁLISIS    */
+/* ============================== */
+
+/* Variables de colores */
+:root {
+    --color-green: #22c55e;
+    --color-green-light: #dcfce7;
+    --color-blue: #3b82f6;
+    --color-blue-light: #dbeafe;
+    --color-orange: #f97316;
+    --color-orange-light: #fed7aa;
+    --color-warning: #fbbf24;
+    --color-danger: #ef4444;
+    --color-success: #10b981;
+    --shadow-epic: 0 10px 40px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.15);
+    --border-radius: 16px;
+    --gradient-green: linear-gradient(135deg, #22c55e, #16a34a);
+    --gradient-blue: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    --gradient-orange: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+/* Timeline Horizontal Épico */
+.workflow-timeline-section {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.workflow-timeline-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-green);
+}
+
+.timeline-icon-main {
+    width: 64px;
+    height: 64px;
+    background: var(--gradient-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    box-shadow: var(--shadow-epic);
+}
+
+.horizontal-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow-x: auto;
+    padding: 2rem 0;
+    gap: 1rem;
+}
+
+.timeline-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #e2e8f0;
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    min-width: 120px;
+}
+
+.step-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.timeline-step.completed .step-circle {
+    background: var(--gradient-green);
+    color: white;
+    box-shadow: 0 8px 30px rgba(34, 197, 94, 0.3);
+    transform: scale(1.1);
+}
+
+.timeline-step.active .step-circle {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4);
+    transform: scale(1.15);
+    animation: pulse 2s infinite;
+}
+
+.timeline-step.pending .step-circle {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 3px solid #e2e8f0;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4); }
+    50% { box-shadow: 0 8px 40px rgba(251, 191, 36, 0.6); }
+}
+
+.step-icon {
+    font-size: 1.5rem;
+}
+
+.step-number {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-content {
+    text-align: center;
+}
+
+.step-title {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.step-sla {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Epic Cards */
+.epic-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-epic);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.epic-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
+}
+
+.epic-card.card-green {
+    border-top: 4px solid var(--color-green);
+}
+
+.epic-card.card-blue {
+    border-top: 4px solid var(--color-blue);
+}
+
+.epic-card.card-orange {
+    border-top: 4px solid var(--color-orange);
+}
+
+.epic-card-header {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.epic-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.card-green .epic-icon {
+    background: var(--gradient-green);
+}
+
+.card-blue .epic-icon {
+    background: var(--gradient-blue);
+}
+
+.card-orange .epic-icon {
+    background: var(--gradient-orange);
+}
+
+.epic-title h6 {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+}
+
+.epic-title small {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.epic-card-body {
+    padding: 1.5rem;
+}
+
+.epic-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.epic-item:hover {
+    background: #f8fafc;
+}
+
+.epic-item:last-child {
+    margin-bottom: 0;
+}
+
+.epic-item i {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.epic-item .label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.epic-item strong {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* SLA Status Card */
+.sla-status-card {
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-epic);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.sla-status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.sla-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.sla-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.sla-info h5 {
+    color: #1f2937;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.sla-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.sla-badge.sla-success {
+    background: var(--color-green-light);
+    color: var(--color-success);
+}
+
+.sla-badge.sla-warning {
+    background: #fef3c7;
+    color: var(--color-warning);
+}
+
+.sla-badge.sla-danger {
+    background: #fecaca;
+    color: var(--color-danger);
+}
+
+.sla-badge.sla-muted {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.sla-progress {
+    background: #f1f5f9;
+    border-radius: 10px;
+    height: 8px;
+    position: relative;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.progress-bar-epic {
+    height: 100%;
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.sla-details {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+}
+
+/* Sidebar Epic Cards */
+.epic-card-sidebar {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-epic);
+    border: none;
+    overflow: hidden;
+    border-top: 4px solid var(--color-warning);
+}
+
+.epic-card-header-sidebar {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.epic-icon-sidebar {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    margin-right: 1rem;
+}
+
+.epic-title-sidebar h6 {
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.epic-title-sidebar small {
+    color: #64748b;
+}
+
+.epic-card-body-sidebar {
+    padding: 1.5rem;
+}
+
+/* Comment Form Epic */
+.comment-form-epic {
+    margin-bottom: 2rem;
+}
+
+.form-group-epic {
+    margin-bottom: 1rem;
+}
+
+.form-label-epic {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-control-epic {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: #fafafa;
+}
+
+.form-control-epic:focus {
+    outline: none;
+    border-color: var(--color-warning);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+    background: white;
+}
+
+.btn-epic {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-epic.btn-success {
+    background: var(--gradient-green);
+    color: white;
+}
+
+.btn-epic.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+}
+
+/* Comments Epic */
+.comments-epic {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.comment-epic {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.comment-epic:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.comment-header-epic {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.comment-author-epic {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.author-avatar-epic {
+    width: 32px;
+    height: 32px;
+    background: var(--gradient-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.875rem;
+    margin-right: 0.75rem;
+}
+
+.author-info-epic strong {
+    display: block;
+    color: #1f2937;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.author-info-epic small {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.comment-actions-epic {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-icon-epic {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon-epic:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #374151;
+}
+
+.btn-icon-epic.btn-danger:hover {
+    background: #fecaca;
+    color: #dc2626;
+}
+
+.comment-content-epic {
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.empty-state-epic {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+}
+
+.empty-state-epic i {
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
+/* Text Colors */
+.text-blue { color: var(--color-blue) !important; }
+.text-orange { color: var(--color-orange) !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .horizontal-timeline {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .timeline-track {
+        display: none;
+    }
+    
+    .epic-card-header {
+        padding: 1rem;
+    }
+    
+    .epic-card-body {
+        padding: 1rem;
+    }
+    
+    .step-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .step-icon {
+        font-size: 1.25rem;
+    }
+}
+
+/* Scrollbar personalizada */
+.comments-epic::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comments-epic::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.comments-epic::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.comments-epic::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ========================================
+   ESTILOS PARA LA NUEVA ESTRUCTURA
+   ======================================== */
+
+/* TARJETA UNIFICADA */
+.unified-info-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.unified-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.unified-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+}
+
+.unified-title h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    margin-bottom: 0.25rem;
+}
+
+.unified-title p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.875rem;
+}
+
+.unified-sla {
+    text-align: right;
+}
+
+.unified-sla .sla-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.unified-sla .sla-time {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+}
+
+.unified-body {
+    padding: 2rem;
+}
+
+.info-section {
+    height: 100%;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.section-header i {
+    font-size: 1.25rem;
+    margin-right: 0.75rem;
+}
+
+.section-header h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: #1f2937;
+}
+
+.section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    flex: 1;
+}
+
+.info-value {
+    font-size: 0.875rem;
+    color: #111827;
+    font-weight: 600;
+    text-align: right;
+    flex: 1;
+}
+
+/* TIMELINE COMPACTO */
+.compact-timeline-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.timeline-header {
+    margin-bottom: 1rem;
+}
+
+.timeline-header h5 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.compact-timeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.timeline-item.completed {
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+.timeline-item.completed .timeline-dot {
+    background: #22c55e;
+    color: white;
+}
+
+.timeline-item.active {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+}
+
+.timeline-item.active .timeline-dot {
+    background: #f59e0b;
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.timeline-item.pending {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.timeline-item.pending .timeline-dot {
+    background: #94a3b8;
+    color: white;
+}
+
+.timeline-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.timeline-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.timeline-sla {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* SISTEMA DE PESTAÑAS */
+.tabs-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.tabs-header {
+    display: flex;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+    color: #374151;
+    background: #f3f4f6;
+}
+
+.tab-button.active {
+    color: #1f2937;
+    background: white;
+    border-bottom-color: #3b82f6;
+    font-weight: 600;
+}
+
+.tabs-content {
+    background: white;
+}
+
+.tab-pane {
+    display: none;
+    padding: 1.5rem;
+    min-height: 400px;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* CONTENIDO DE PESTAÑAS */
+.historial-content,
+.comentarios-content,
+.documentos-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.historial-item,
+.comentario-item,
+.documento-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.historial-item:last-child,
+.comentario-item:last-child,
+.documento-item:last-child {
+    border-bottom: none;
+}
+
+.historial-avatar,
+.comentario-avatar,
+.documento-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.historial-avatar,
+.comentario-avatar {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.documento-icon {
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 8px;
+}
+
+.historial-details,
+.comentario-details,
+.documento-details {
+    flex: 1;
+}
+
+.historial-header,
+.comentario-header,
+.documento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.historial-header strong,
+.comentario-header strong,
+.documento-header strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.historial-date,
+.comentario-date,
+.documento-size {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.historial-info,
+.comentario-text,
+.documento-obs {
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.documento-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.comentario-form {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.comentario-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.comentario-form .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    resize: vertical;
+}
+
+.comentario-form .form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.documento-upload {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.empty-state i {
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* BOTONES DE ACCIÓN */
+.action-buttons-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.action-btn {
+    padding: 0.875rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.action-btn.btn-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+}
+
+.action-btn.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+}
+
+.action-btn.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.action-btn.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+}
+
+.action-btn.btn-outline-primary {
+    background: white;
+    color: #3b82f6;
+    border: 2px solid #3b82f6;
+}
+
+.action-btn.btn-outline-primary:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .unified-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .unified-body {
+        padding: 1rem;
+    }
+    
+    .compact-timeline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .timeline-item {
+        justify-content: flex-start;
+    }
+    
+    .tabs-header {
+        flex-direction: column;
+    }
+    
+    .tab-button {
+        text-align: left;
+    }
+    
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .historial-item,
+    .comentario-item,
+    .documento-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .historial-avatar,
+    .comentario-avatar,
+    .documento-icon {
+        align-self: center;
+    }
+}
+
+/* ANIMACIONES */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* SCROLLBAR PERSONALIZADA */
+.historial-content::-webkit-scrollbar,
+.comentarios-content::-webkit-scrollbar,
+.documentos-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.historial-content::-webkit-scrollbar-track,
+.comentarios-content::-webkit-scrollbar-track,
+.documentos-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.historial-content::-webkit-scrollbar-thumb,
+.comentarios-content::-webkit-scrollbar-thumb,
+.documentos-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.historial-content::-webkit-scrollbar-thumb:hover,
+.comentarios-content::-webkit-scrollbar-thumb:hover,
+.documentos-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+</style>
+
+{% endblock %} 

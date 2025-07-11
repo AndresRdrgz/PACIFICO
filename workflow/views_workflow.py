@@ -4740,3 +4740,183 @@ def api_obtener_grupos(request):
 # ==========================================
 # FUNCIONES PARA REQUISITOS DE TRANSICIÓN
 # ==========================================
+
+# ==========================================
+# VISTA DE ANÁLISIS PARA ANALISTAS
+# ==========================================
+
+@login_required
+def detalle_solicitud_analisis(request, solicitud_id):
+    """Vista especializada para análisis de solicitudes por parte de analistas"""
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar permisos - Permitir acceso si no está asignada o si el usuario tiene permisos
+    # Solo verificar permisos estrictos si la solicitud está asignada a otro usuario
+    if solicitud.asignada_a and solicitud.asignada_a != request.user:
+        # Superusers bypass permission checks
+        if not (request.user.is_superuser or request.user.is_staff):
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_ver=True
+            ).exists()
+            
+            # Solo bloquear si no tiene permisos y la solicitud está específicamente asignada a otro usuario
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para ver esta solicitud asignada a otro usuario.')
+                return redirect('workflow:vista_mixta_bandejas')
+    
+    # Obtener información del cliente y cotización
+    cliente = solicitud.cliente if hasattr(solicitud, 'cliente') else None
+    cotizacion = solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None
+    
+    # Obtener historial completo
+    historial = solicitud.historial.all().order_by('-fecha_inicio')
+    
+    # Obtener requisitos con sus archivos
+    requisitos = solicitud.requisitos.all().select_related('requisito')
+    
+    # Obtener comentarios
+    comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
+    
+    # Obtener todas las etapas del pipeline para mostrar el flujo
+    etapas_pipeline = solicitud.pipeline.etapas.all().order_by('orden')
+    
+    # Obtener transiciones disponibles
+    transiciones_disponibles = []
+    if solicitud.etapa_actual:
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        )
+        
+        for transicion in transiciones:
+            if not transicion.requiere_permiso:
+                transiciones_disponibles.append(transicion)
+            else:
+                # Verificar si el usuario tiene permisos específicos
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=transicion.etapa_destino,
+                    grupo__in=grupos_usuario
+                ).exists()
+                if tiene_permiso:
+                    transiciones_disponibles.append(transicion)
+    
+    # Calcular información de progreso
+    total_etapas = etapas_pipeline.count()
+    if total_etapas > 0:
+        etapa_actual_orden = solicitud.etapa_actual.orden if solicitud.etapa_actual else 0
+        progreso_porcentaje = (etapa_actual_orden / total_etapas) * 100
+    else:
+        progreso_porcentaje = 0
+    
+    # Calcular información de SLA
+    sla_info = calcular_sla_detallado(solicitud)
+    
+    context = {
+        'solicitud': solicitud,
+        'cliente': cliente,
+        'cotizacion': cotizacion,
+        'historial': historial,
+        'requisitos': requisitos,
+        'comentarios': comentarios,
+        'etapas_pipeline': etapas_pipeline,
+        'transiciones_disponibles': transiciones_disponibles,
+        'progreso_porcentaje': progreso_porcentaje,
+        'sla_info': sla_info,
+        'puede_editar': request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user,
+        'timestamp': timezone.now().timestamp(),  # Para forzar actualización de cache
+    }
+    
+    return render(request, 'workflow/detalle_solicitud_analisis.html', context)
+
+
+def calcular_sla_detallado(solicitud):
+    """Calcula información detallada del SLA para una solicitud"""
+    
+    if not solicitud.etapa_actual:
+        return {
+            'estado': 'sin_etapa',
+            'tiempo_restante': None,
+            'tiempo_transcurrido': None,
+            'color_clase': 'text-muted',
+            'porcentaje_usado': 0
+        }
+    
+    # Buscar historial actual (sin fecha_fin)
+    historial_actual = solicitud.historial.filter(fecha_fin__isnull=True).first()
+    
+    if not historial_actual:
+        return {
+            'estado': 'sin_historial',
+            'tiempo_restante': None,
+            'tiempo_transcurrido': None,
+            'color_clase': 'text-muted',
+            'porcentaje_usado': 0
+        }
+    
+    # Calcular tiempo transcurrido
+    tiempo_transcurrido = timezone.now() - historial_actual.fecha_inicio
+    sla_total = solicitud.etapa_actual.sla
+    
+    # Formatear tiempo transcurrido de manera legible
+    def formatear_timedelta(td):
+        days = td.days
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        
+        parts = []
+        if days > 0:
+            parts.append(f"{days} día{'s' if days != 1 else ''}")
+        if hours > 0:
+            parts.append(f"{hours} hora{'s' if hours != 1 else ''}")
+        if minutes > 0:
+            parts.append(f"{minutes} minuto{'s' if minutes != 1 else ''}")
+        
+        if not parts:
+            return "menos de 1 minuto"
+        return ", ".join(parts)
+    
+    tiempo_transcurrido_formateado = formatear_timedelta(tiempo_transcurrido)
+    
+    if sla_total:
+        tiempo_restante = sla_total - tiempo_transcurrido
+        porcentaje_usado = (tiempo_transcurrido.total_seconds() / sla_total.total_seconds()) * 100
+        
+        if tiempo_restante.total_seconds() <= 0:
+            # SLA vencido
+            estado = 'vencido'
+            color_clase = 'text-danger'
+        elif porcentaje_usado >= 75:
+            # Por vencer (75% o más del SLA usado)
+            estado = 'por_vencer'
+            color_clase = 'text-warning'
+        else:
+            # En tiempo
+            estado = 'en_tiempo'
+            color_clase = 'text-success'
+        
+        tiempo_restante_formateado = formatear_timedelta(abs(tiempo_restante)) if tiempo_restante.total_seconds() < 0 else formatear_timedelta(tiempo_restante)
+        
+        return {
+            'estado': estado,
+            'tiempo_restante': tiempo_restante,
+            'tiempo_restante_formateado': tiempo_restante_formateado,
+            'tiempo_transcurrido': tiempo_transcurrido,
+            'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
+            'color_clase': color_clase,
+            'porcentaje_usado': min(porcentaje_usado, 100),
+            'sla_total': sla_total
+        }
+    
+    return {
+        'estado': 'sin_sla',
+        'tiempo_restante': None,
+        'tiempo_transcurrido': tiempo_transcurrido,
+        'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
+        'color_clase': 'text-muted',
+        'porcentaje_usado': 0
+    }
