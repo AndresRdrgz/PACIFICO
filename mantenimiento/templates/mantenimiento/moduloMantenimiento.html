@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block title %}Módulo de Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto bg-white shadow-lg rounded-lg p-8 mt-8">
+    <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Módulo de Mantenimiento</h2>
+    
+    <!-- Navigation Tabs -->
+    <div class="border-b border-gray-200 mb-8">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button onclick="showTab('patronos')" class="tab-button active border-b-2 border-blue-500 py-2 px-1 text-sm font-medium text-blue-600">
+                Patronos
+            </button>
+            <button onclick="showTab('promociones')" class="tab-button border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                Promociones
+            </button>
+            <button onclick="showTab('target-promociones')" class="tab-button border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                Target Promociones
+            </button>
+            <button onclick="showTab('agencias')" class="tab-button border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                Agencias
+            </button>
+        </nav>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 mb-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700 border border-red-400{% elif message.tags == 'success' %}bg-green-100 text-green-700 border border-green-400{% else %}bg-blue-100 text-blue-700 border border-blue-400{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Patronos Tab -->
+    <div id="patronos" class="tab-content">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Gestión de Patronos</h3>
+            <button onclick="showModal('patronoModal')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Agregar Patrono
+            </button>
+        </div>
+        
+        <!-- Upload Form -->
+        <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h4 class="font-medium text-gray-800 mb-3">Carga Masiva de Patronos</h4>
+            <form method="post" enctype="multipart/form-data" action="{% url 'cargaPatronos' %}">
+                {% csrf_token %}
+                <div class="flex items-center space-x-4">
+                    <input type="file" name="file" accept=".xlsx" required class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Subir Excel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Patronos Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Código</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Descripción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Agrupador</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Descuento</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for patrono in patronos %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ patrono.codigo }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ patrono.descripcion }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ patrono.agrupador|default:"-" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ patrono.selectDescuento }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="editPatrono({{ patrono.codigo }})" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                                <button onclick="deletePatrono({{ patrono.codigo }})" class="text-red-600 hover:text-red-900">Eliminar</button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">No hay patronos registrados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Promociones Tab -->
+    <div id="promociones" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Gestión de Promociones</h3>
+            <button onclick="showModal('promocionModal')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Agregar Promoción
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Descripción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Producto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Incentivo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for promocion in promociones %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ promocion.descripcion }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ promocion.producto }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ promocion.incentivo }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if promocion.activa %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ promocion.activa|yesno:"Activa,Inactiva" }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="editPromocion({{ promocion.id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                                <button onclick="deletePromocion({{ promocion.id }})" class="text-red-600 hover:text-red-900">Eliminar</button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">No hay promociones registradas.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Target Promociones Tab -->
+    <div id="target-promociones" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Gestión de Target Promociones</h3>
+            <button onclick="showModal('targetPromocionModal')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Agregar Target
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Promoción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">PATCAt</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Agrupador</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Todos</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for target in target_promociones %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ target.promocion.descripcion }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ target.patcat|default:"-" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ target.agrupador|default:"-" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ target.todos|yesno:"Sí,No" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="editTargetPromocion({{ target.id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                                <button onclick="deleteTargetPromocion({{ target.id }})" class="text-red-600 hover:text-red-900">Eliminar</button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">No hay targets de promociones registrados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Agencias Tab -->
+    <div id="agencias" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-800">Gestión de Agencias</h3>
+            <button onclick="showModal('agenciaModal')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Agregar Agencia
+            </button>
+        </div>
+        
+        <!-- Upload Form -->
+        <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <h4 class="font-medium text-gray-800 mb-3">Carga Masiva de Agencias</h4>
+            <form method="post" enctype="multipart/form-data" action="{% url 'cargaAgencias' %}" id="agenciaUploadForm">
+                {% csrf_token %}
+                <div class="flex items-center space-x-4">
+                    <input type="file" name="file" accept=".xlsx" required class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" id="agenciaFile">
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" id="uploadAgenciaBtn">
+                        Subir Excel
+                    </button>
+                </div>
+                <div class="mt-2 text-sm text-gray-600">
+                    <p>El archivo Excel debe contener solo 2 columnas: <strong>secuencia</strong> y <strong>razon_social</strong></p>
+                    <p>Los duplicados se detectarán automáticamente basándose en la columna secuencia.</p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Secuencia</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Razón Social</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for agencia in agencias %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ agencia.secuencia }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ agencia.razon_social }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="editAgencia({{ agencia.id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</button>
+                                <button onclick="deleteAgencia({{ agencia.id }})" class="text-red-600 hover:text-red-900">Eliminar</button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-gray-500">No hay agencias registradas.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for CRUD operations would go here -->
+<!-- This is a placeholder for the modal structure -->
+
+<script>
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.add('hidden'));
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+        button.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabName).classList.remove('hidden');
+    
+    // Add active class to clicked button
+    event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
+    event.target.classList.remove('border-transparent', 'text-gray-500');
+}
+
+function showModal(modalId) {
+    // This would show the appropriate modal for CRUD operations
+    console.log('Show modal:', modalId);
+}
+
+// CRUD functions (placeholders)
+function editPatrono(codigo) {
+    console.log('Edit patrono:', codigo);
+}
+
+function deletePatrono(codigo) {
+    if (confirm('¿Está seguro de que desea eliminar este patrono?')) {
+        console.log('Delete patrono:', codigo);
+    }
+}
+
+function editPromocion(id) {
+    console.log('Edit promocion:', id);
+}
+
+function deletePromocion(id) {
+    if (confirm('¿Está seguro de que desea eliminar esta promoción?')) {
+        console.log('Delete promocion:', id);
+    }
+}
+
+function editTargetPromocion(id) {
+    console.log('Edit target promocion:', id);
+}
+
+function deleteTargetPromocion(id) {
+    if (confirm('¿Está seguro de que desea eliminar este target de promoción?')) {
+        console.log('Delete target promocion:', id);
+    }
+}
+
+function editAgencia(id) {
+    console.log('Edit agencia:', id);
+}
+
+function deleteAgencia(id) {
+    if (confirm('¿Está seguro de que desea eliminar esta agencia?')) {
+        console.log('Delete agencia:', id);
+    }
+}
+
+// Agencia bulk upload functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const agenciaUploadForm = document.getElementById('agenciaUploadForm');
+    const agenciaFile = document.getElementById('agenciaFile');
+    const uploadAgenciaBtn = document.getElementById('uploadAgenciaBtn');
+
+    if (agenciaUploadForm) {
+        agenciaUploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const file = agenciaFile.files[0];
+            if (!file) {
+                alert('Por favor seleccione un archivo Excel.');
+                return;
+            }
+
+            if (!file.name.endsWith('.xlsx')) {
+                alert('Por favor seleccione un archivo Excel válido (.xlsx).');
+                return;
+            }
+
+            // Show loading state
+            uploadAgenciaBtn.disabled = true;
+            uploadAgenciaBtn.textContent = 'Subiendo...';
+            uploadAgenciaBtn.classList.add('opacity-50');
+
+            // Create FormData and submit
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch('{% url "cargaAgencias" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showMessage('success', `Carga exitosa: ${data.created} agencias creadas, ${data.updated} actualizadas, ${data.skipped} duplicados omitidos.`);
+                    // Reload the page to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('error', data.error || 'Error al procesar el archivo.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('error', 'Error de conexión. Por favor intente nuevamente.');
+            })
+            .finally(() => {
+                // Reset button state
+                uploadAgenciaBtn.disabled = false;
+                uploadAgenciaBtn.textContent = 'Subir Excel';
+                uploadAgenciaBtn.classList.remove('opacity-50');
+                // Clear file input
+                agenciaFile.value = '';
+            });
+        });
+    }
+});
+
+function showMessage(type, message) {
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `p-4 mb-4 rounded-lg ${
+        type === 'error' ? 'bg-red-100 text-red-700 border border-red-400' : 
+        type === 'success' ? 'bg-green-100 text-green-700 border border-green-400' : 
+        'bg-blue-100 text-blue-700 border border-blue-400'
+    }`;
+    messageDiv.textContent = message;
+
+    // Insert at the top of the content area
+    const contentArea = document.querySelector('.max-w-7xl');
+    contentArea.insertBefore(messageDiv, contentArea.firstChild);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 5000);
+}
+</script>
+
+<style>
+.tab-button.active {
+    border-bottom-color: #3b82f6;
+    color: #2563eb;
+}
+</style>
+
+{% endblock %} 
