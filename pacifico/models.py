@@ -238,6 +238,12 @@ class Cotizacion(models.Model):
         null=True,
         blank=True
     )
+    quinVende = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Agencia que vende el producto"
+    )
     vendedorImpuesto = models.CharField(
         max_length=10,
         choices=[('N', 'N'), ('Y', 'Y')],
@@ -321,6 +327,7 @@ class Cotizacion(models.Model):
         null=True,
         blank=True
     )
+    
     yearsFinanciamiento = models.IntegerField(null=True, default=1, blank=True)
     #DATOS DE LA CONSULTA
     observaciones = models.TextField(null=True, blank=True)

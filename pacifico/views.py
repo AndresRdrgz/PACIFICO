@@ -688,6 +688,10 @@ def fideicomiso_view(request):
                 montoanualSeguro = float(montoanualSeguro)
                 montoMensualSeguro = float(montoMensualSeguro)
                 sucursal = int(sucursal)
+                quinVende = form.cleaned_data['quinVende'] if form.cleaned_data['quinVende'] is not None else "-"
+                marcaAuto = form.cleaned_data['marcaAuto'] if form.cleaned_data['marcaAuto'] is not None else "-"
+                print('marcaAuto', marcaAuto, 'quinVende', quinVende)
+               
                 #print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
                 params = {
@@ -718,6 +722,8 @@ def fideicomiso_view(request):
                     'selectDescuento': selectDescuento,
                     'porServDesc': porServDesc,
                     'pagaDiciembre': pagaDiciembre,
+                    'quinVende': quinVende,
+                    'marcaAuto': marcaAuto,
 
                 }
                 #print('RESULTADO PARAMETROS', params)

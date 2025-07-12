@@ -58,3 +58,10 @@ class TargetPromocion(models.Model):
 
     def __str__(self):
         return f"Target for {self.promocion.descripcion} - PATCAt: {self.patcat}, AGRUPADOR: {self.agrupador}, Todos: {self.todos}"
+
+class Agencias(models.Model):
+    secuencia = models.IntegerField()
+    razon_social = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.secuencia} - {self.razon_social}"

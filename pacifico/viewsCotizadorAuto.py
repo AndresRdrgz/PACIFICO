@@ -86,6 +86,10 @@ def cotizadorPrestAuto(request, pk=None):
                 sucursal = int(sucursal)
                 #print('Sucursal', sucursal)
                 # Call the generarFideicomiso2 function
+                quinVende = form.cleaned_data['quinVende'] if form.cleaned_data['quinVende'] is not None else "-"
+                marcaAuto = form.cleaned_data['marca'] if form.cleaned_data['marca'] is not None else "-"
+                print('marcaAuto', marcaAuto, 'quinVende', quinVende)
+                
                 params = {
                     'tipoPrestamo': 'PREST AUTO',
                     'edad': edad,
@@ -115,7 +119,8 @@ def cotizadorPrestAuto(request, pk=None):
                     'porServDesc': porServDesc,
                     'pagaDiciembre': pagaDiciembre,
                     'vendedorTipo': vendedorTipo,
-
+                    'quinVende': quinVende,
+                    'marcaAuto': marcaAuto,
                 }
                 #print('RESULTADO PARAMETROS', params)
                 resultado = generarFideicomiso3(params)

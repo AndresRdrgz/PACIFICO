@@ -308,7 +308,15 @@ def calcular_promocion(params, fecha_calculo):
             promociones_activas = promociones_activas.exclude(id=promocion.id)
 
     
-
+    #PROMOCION DIRIGIDO A MARCA y agencia, if marca is GEELY and agencia is BAY MOTORS, S.A. promocion monto 300
+    if params['marcaAuto'] == "GEELY" and params['quinVende'] == "BAY MOTORS, S.A.":
+        print("Promocion dirigida a marca y agencia, marca:", params['marcaAuto'], "agencia:", params['quinVende'])
+        comisionTotal8 = 300
+        print("Comision Total 8:", comisionTotal8)
+        promocion_aplicada = "MARCA Y AGENCIA"
+    
+    
+    
     # If no valid target found, return 0
     if comisionTotal8 == 0:
         print("No valid target found, returning 0.")

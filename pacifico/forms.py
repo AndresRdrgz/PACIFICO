@@ -1,6 +1,7 @@
 import os
 from django import forms
 from .models import Cotizacion, Aseguradora, Cliente, UserProfile, CotizacionDocumento
+from mantenimiento.models import Agencias
 from django.contrib.auth.models import User
 from pathlib import Path
 import json
@@ -236,6 +237,10 @@ class FideicomisoForm(forms.ModelForm):
             
             'vendedorImpuesto': forms.Select(attrs={
                 'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            }),
+            'quinVende': forms.Select(attrs={
+                'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+                'placeholder': 'Seleccione una agencia',
             }),
                                     
             'vendedorComision': forms.NumberInput(attrs={
@@ -1017,6 +1022,15 @@ class FideicomisoForm(forms.ModelForm):
             'readonly': 'readonly',
         })
     )
+    quinVende = forms.ChoiceField(
+        choices=[('', 'Seleccione una agencia')] + 
+        [(agencia.razon_social, agencia.razon_social) for agencia in Agencias.objects.all().order_by('razon_social')],
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
+            'placeholder': 'Seleccione una agencia',
+        })
+    )
     tipoSeguro = forms.ChoiceField(
         choices=[('INCLUIDO', 'Incluido'), ('NO INCLUIDO', 'No Incluido')],
         initial='INCLUIDO',
@@ -1397,6 +1411,7 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['vendedorOtroPorcentaje'].required = False
         self.fields['vendedorOtroComision'].required = False
         self.fields['vendedorImpuesto'].required = False
+        self.fields['quinVende'].required = False
         
         
 
