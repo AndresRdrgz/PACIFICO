@@ -1023,8 +1023,7 @@ class FideicomisoForm(forms.ModelForm):
         })
     )
     quinVende = forms.ChoiceField(
-        choices=[('', 'Seleccione una agencia')] + 
-        [(agencia.razon_social, agencia.razon_social) for agencia in Agencias.objects.all().order_by('razon_social')],
+        choices=[('', 'Seleccione una agencia')],
         required=False,
         widget=forms.Select(attrs={
             'class': 'w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2 transition duration-300 ease focus:outline-none focus:border-blue-500 hover:border-gray-300 shadow-sm focus:shadow',
@@ -1412,6 +1411,14 @@ class FideicomisoForm(forms.ModelForm):
         self.fields['vendedorOtroComision'].required = False
         self.fields['vendedorImpuesto'].required = False
         self.fields['quinVende'].required = False
+        
+        # Dynamically load agency choices
+        try:
+            agency_choices = [(agencia.razon_social, agencia.razon_social) for agencia in Agencias.objects.all().order_by('razon_social')]
+            self.fields['quinVende'].choices = [('', 'Seleccione una agencia')] + agency_choices
+        except Exception:
+            # If database is not ready or table doesn't exist, use empty choices
+            self.fields['quinVende'].choices = [('', 'Seleccione una agencia')]
         
         
 
