@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -191,3 +191,38 @@ class PermisoBandejaAdmin(admin.ModelAdmin):
     list_filter = ('etapa', 'grupo', 'puede_ver', 'puede_tomar', 'puede_devolver', 'puede_transicionar', 'puede_editar')
     search_fields = ('etapa__nombre', 'grupo__name', 'usuario__username')
     list_editable = ('puede_ver', 'puede_tomar', 'puede_devolver', 'puede_transicionar', 'puede_editar')
+
+
+@admin.register(CalificacionCampo)
+class CalificacionCampoAdmin(admin.ModelAdmin):
+    list_display = ('solicitud', 'campo', 'estado', 'usuario', 'fecha_modificacion', 'tiene_comentario')
+    list_filter = ('estado', 'campo', 'fecha_creacion', 'fecha_modificacion')
+    search_fields = ('solicitud__codigo', 'campo', 'usuario__username', 'comentario')
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    list_per_page = 50
+    
+    def tiene_comentario(self, obj):
+        return bool(obj.comentario and obj.comentario.strip())
+    tiene_comentario.boolean = True
+    tiene_comentario.short_description = 'Tiene Comentario'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('solicitud', 'usuario')
+
+
+@admin.register(SolicitudComentario)
+class SolicitudComentarioAdmin(admin.ModelAdmin):
+    list_display = ('solicitud', 'usuario', 'tipo', 'comentario_truncado', 'fecha_creacion', 'es_editado')
+    list_filter = ('tipo', 'es_editado', 'fecha_creacion')
+    search_fields = ('solicitud__codigo', 'usuario__username', 'comentario')
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion', 'es_editado')
+    list_per_page = 50
+    
+    def comentario_truncado(self, obj):
+        if len(obj.comentario) > 100:
+            return obj.comentario[:100] + '...'
+        return obj.comentario
+    comentario_truncado.short_description = 'Comentario'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('solicitud', 'usuario')

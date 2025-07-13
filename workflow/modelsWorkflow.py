@@ -277,6 +277,56 @@ class SolicitudComentario(models.Model):
 
 
 # --------------------------------------
+# CALIFICACIÓN DE CAMPOS DE COMPLIANCE
+# --------------------------------------
+
+class CalificacionCampo(models.Model):
+    """
+    Modelo para guardar la calificación de campos de compliance por solicitud
+    """
+    ESTADO_CHOICES = [
+        ('bueno', 'Bueno'),
+        ('malo', 'Malo'),
+        ('sin_calificar', 'Sin Calificar'),
+    ]
+    
+    solicitud = models.ForeignKey('Solicitud', on_delete=models.CASCADE, related_name='calificaciones_campos')
+    campo = models.CharField(max_length=50, help_text="Nombre del campo (nombre, cedula, monto, etc.)")
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='sin_calificar')
+    comentario = models.TextField(blank=True, null=True, help_text="Comentario sobre la calificación")
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Usuario que realizó la calificación")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('solicitud', 'campo')
+        ordering = ['-fecha_modificacion']
+        verbose_name = "Calificación de Campo"
+        verbose_name_plural = "Calificaciones de Campos"
+        
+    def __str__(self):
+        return f"{self.solicitud.codigo} - {self.campo}: {self.get_estado_display()}"
+    
+    def get_estado_display_color(self):
+        """Retorna el color CSS basado en el estado"""
+        colors = {
+            'bueno': '#28a745',
+            'malo': '#dc3545', 
+            'sin_calificar': '#6c757d'
+        }
+        return colors.get(self.estado, '#6c757d')
+    
+    def get_estado_icon(self):
+        """Retorna el icono FontAwesome basado en el estado"""
+        icons = {
+            'bueno': 'fa-check',
+            'malo': 'fa-times',
+            'sin_calificar': 'fa-question'
+        }
+        return icons.get(self.estado, 'fa-question')
+
+
+# --------------------------------------
 # GESTIÓN DE ACCESO A PIPELINES Y BANDEJAS
 # --------------------------------------
 
