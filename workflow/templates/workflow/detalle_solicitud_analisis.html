@@ -15,6 +15,7 @@
                         <div class="d-flex align-items-center gap-3">
                             <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-light btn-sm">
                                 <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
+                                <span class="ms-2" id="tiempo-boton" style="font-family: monospace; font-size: 0.8rem; color: #6c757d;">--:--:--</span>
                             </a>
                             <div>
                                 <h2 class="mb-1">
@@ -27,10 +28,7 @@
                                     {% if solicitud.cliente_cedula %}
                                         - {{ solicitud.cliente_cedula }}
                                     {% endif %}
-                                    <span class="ms-3">
-                                        <i class="fas fa-clock me-1"></i>
-                                        <span id="reloj-tiempo-real">--:--:--</span>
-                                    </span>
+
                                     <span class="ms-3">
                                         <i class="fas fa-calendar me-1"></i>
                                         <span id="fecha-actual">--/--/----</span>
@@ -78,18 +76,22 @@
                         <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
                             {% if sla_info.estado == 'vencido' %}
                                 <i class="fas fa-exclamation-triangle me-1"></i>Vencido
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #dc3545; font-weight: bold;">--:--:--</span>
                             {% elif sla_info.estado == 'por_vencer' %}
                                 <i class="fas fa-hourglass-half me-1"></i>Por Vencer
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #fd7e14; font-weight: bold;">--:--:--</span>
                             {% elif sla_info.estado == 'en_tiempo' %}
                                 <i class="fas fa-check-circle me-1"></i>En Tiempo
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #198754; font-weight: bold;">--:--:--</span>
                                 {% if sla_info.tiempo_restante_formateado %}
                                     - {{ sla_info.tiempo_restante_formateado }}
                                 {% endif %}
                             {% else %}
                                 <i class="fas fa-question-circle me-1"></i>Sin SLA
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #6c757d; font-weight: bold;">--:--:--</span>
                             {% endif %}
                         </div>
-                        <button class="btn btn-primary btn-sm ms-2" onclick="marcarTodosComoBueno()">
+                        <button class="btn btn-light btn-sm ms-2" onclick="marcarTodosComoBueno()">
                             <i class="fas fa-check-double me-1"></i>Marcar Todos como Bueno
                         </button>
                     </div>
@@ -530,14 +532,21 @@
                                 </div>
                                 <div class="adjunto-details">
                                     <div class="adjunto-name">{{ requisito_solicitud.requisito.nombre }}</div>
-                                    <div class="adjunto-status">
-                                        {% if requisito_solicitud.cumplido %}
-                                            <span class="badge bg-success">Cumplido</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">Pendiente</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="adjunto-compliance">
+                                    <div class="adjunto-status-line">
+                                        <div class="adjunto-status-group">
+                                            <div class="adjunto-status">
+                                                {% if requisito_solicitud.cumplido %}
+                                                    <span class="badge bg-success">Cumplido</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pendiente</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if requisito_solicitud.archivo %}
+                                                <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
                                         <div class="compliance-actions">
                                             <button type="button" class="btn-compliance btn-good" data-field="doc_{{ requisito_solicitud.id }}" data-action="bueno" title="Documento válido">
                                                 <i class="fas fa-check"></i>
@@ -550,13 +559,6 @@
                                             </button>
                                         </div>
                                     </div>
-                                    {% if requisito_solicitud.archivo %}
-                                        <div class="adjunto-actions">
-                                            <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         {% endfor %}
@@ -571,9 +573,10 @@
         </div>
     </div>
 
-    <!-- CONTENEDOR DE COMENTARIOS DE ANALISTA OPTIMIZADO -->
+    <!-- LAYOUT PRINCIPAL: COMENTARIOS DE ANALISTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
     <div class="row mb-4">
-        <div class="col-12">
+        <!-- COMENTARIOS DE ANALISTA (4/6 del ancho) -->
+        <div class="col-lg-8">
             <div class="comentarios-analista-section-compact">
                 <div class="comentarios-analista-header-compact">
                     <h6><i class="fas fa-user-md me-2"></i>Comentarios de Analista</h6>
@@ -587,40 +590,141 @@
                             <small>Aún no hay comentarios de analista para esta solicitud</small>
                         </div>
                     </div>
-                    
-                    <!-- Formulario compacto -->
-                    <div class="nuevo-comentario-form-compact">
-                        <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
-                            {% csrf_token %}
-                            <div class="form-body-compact">
-                                <textarea class="form-control comentario-textarea-compact" 
-                                          id="comentario-analista-credito-text"
-                                          placeholder="Escriba su análisis..."
-                                          rows="2" 
-                                          maxlength="1000"
-                                          required></textarea>
-                                <div class="form-footer-compact">
-                                    <div class="char-counter-compact">
-                                        <span id="char-count-analista-credito">0</span>/1000
-                                    </div>
-                                    <div class="form-actions-compact">
-                                        <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
-                                            <i class="fas fa-save me-1"></i>Guardar
-                                        </button>
-                                    </div>
+                </div>
+                
+                <!-- Formulario compacto fijo en el pie -->
+                <div class="nuevo-comentario-form-compact">
+                    <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
+                        {% csrf_token %}
+                        <div class="form-body-compact">
+                            <textarea class="form-control comentario-textarea-compact" 
+                                      id="comentario-analista-credito-text"
+                                      placeholder="Escriba su análisis..."
+                                      rows="2" 
+                                      maxlength="1000"
+                                      required></textarea>
+                            <div class="form-footer-compact">
+                                <div class="char-counter-compact">
+                                    <span id="char-count-analista-credito">0</span>/1000
+                                </div>
+                                <div class="form-actions-compact">
+                                    <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
+                                        <i class="fas fa-save me-1"></i>Guardar
+                                    </button>
                                 </div>
                             </div>
-                        </form>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SOLICITUDES RELACIONADAS (2/6 del ancho) -->
+        <div class="col-lg-4">
+            <div class="related-requests-section">
+                <div class="related-header">
+                    <div class="related-icon">
+                        <i class="fas fa-link"></i>
                     </div>
+                    <div class="related-title">
+                        <h5>Solicitudes Relacionadas</h5>
+                        <small>Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
+                    </div>
+                </div>
+                
+                <div class="related-content">
+                    {% if mostrar_mensaje_sin_cliente %}
+                        <div class="alert alert-warning text-center my-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
+                        </div>
+                    {% else %}
+                        <!-- Búsqueda automática por cédula -->
+                        <div class="search-info">
+                            <i class="fas fa-search me-2"></i>
+                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
+                        </div>
+                        
+                        <!-- Lista de solicitudes relacionadas -->
+                        <div class="related-list">
+                            {% for s in solicitudes_relacionadas %}
+                            <div class="related-item">
+                                <div class="related-icon">
+                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
+                                </div>
+                                <div class="related-details">
+                                    <div class="related-header-item">
+                                        <strong>{{ s.codigo }}</strong>
+                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="related-info">
+                                        <span class="badge 
+                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
+                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
+                                        </span>
+                                        <span class="related-amount">
+                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="related-description">
+                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
+                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
+                                        {% else %}Préstamo{% endif %}
+                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
+                                    </div>
+                                </div>
+                                <div class="related-actions">
+                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="alert alert-info text-center my-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Sin solicitudes relacionadas disponibles para esta cédula.
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if solicitudes_relacionadas %}
+                        <div class="related-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Solicitudes:</span>
+                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Aprobadas:</span>
+                                <span class="summary-value text-success">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">En Proceso:</span>
+                                <span class="summary-value text-warning">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Rechazadas:</span>
+                                <span class="summary-value text-danger">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- LAYOUT PRINCIPAL: PESTAÑAS + SOLICITUDES RELACIONADAS -->
+    <!-- LAYOUT SECUNDARIO: PESTAÑAS (OCUPAN TODO EL ANCHO) -->
     <div class="row">
-        <!-- SISTEMA DE PESTAÑAS (4/6 del ancho) -->
-        <div class="col-lg-8">
+        <!-- SISTEMA DE PESTAÑAS (ANCHO COMPLETO) -->
+        <div class="col-12">
             <!-- SISTEMA DE PESTAÑAS -->
     <div class="tabs-section">
         <div class="tabs-header">
@@ -707,20 +811,7 @@
             <!-- Tab Documentos -->
             <div class="tab-pane" id="tab-documentos">
                 <div class="documentos-content">
-                    <!-- Área de subir documentos -->
-                    <div class="upload-section">
-                        <div class="upload-header">
-                            <h6><i class="fas fa-cloud-upload-alt me-2"></i>Subir Nuevo Documento</h6>
-                        </div>
-                        <div class="upload-zone" id="upload-zone">
-                            <div class="upload-content">
-                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                <p class="upload-text">Arrastra y suelta archivos aquí o <span class="upload-link">haz clic para seleccionar</span></p>
-                                <small class="upload-hint">Archivos PDF, JPG, PNG - Máximo 10MB</small>
-                            </div>
-                            <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
-                        </div>
-                    </div>
+
                     
                     <!-- Lista de documentos -->
                     <div class="documentos-list">
@@ -868,181 +959,7 @@
             </div>
         </div>
     </div>
-        </div>
-        
-        <!-- SOLICITUDES RELACIONADAS (2/6 del ancho) -->
-        <div class="col-lg-4">
-            <div class="related-requests-section">
-                <div class="related-header">
-                    <div class="related-icon">
-                        <i class="fas fa-link"></i>
-                    </div>
-                    <div class="related-title">
-                        <h5>Solicitudes Relacionadas</h5>
-                        <small>Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
-                    </div>
-                </div>
-                
-                <div class="related-content">
-                    {% if mostrar_mensaje_sin_cliente %}
-                        <div class="alert alert-warning text-center my-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
-                        </div>
-                    {% else %}
-                        <!-- Búsqueda automática por cédula -->
-                        <div class="search-info">
-                            <i class="fas fa-search me-2"></i>
-                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
-                        </div>
-                        
-                        <!-- Lista de solicitudes relacionadas -->
-                        <div class="related-list">
-                            {% for s in solicitudes_relacionadas %}
-                            <div class="related-item">
-                                <div class="related-icon">
-                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
-                                </div>
-                                <div class="related-details">
-                                    <div class="related-header-item">
-                                        <strong>{{ s.codigo }}</strong>
-                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
-                                    </div>
-                                    <div class="related-info">
-                                        <span class="badge 
-                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
-                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
-                                            {% else %}bg-warning{% endif %}">
-                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
-                                        </span>
-                                        <span class="related-amount">
-                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
-                                        </span>
-                                    </div>
-                                    <div class="related-description">
-                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
-                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
-                                        {% else %}Préstamo{% endif %}
-                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
-                                    </div>
-                                </div>
-                                <div class="related-actions">
-                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="alert alert-info text-center my-3">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Sin solicitudes relacionadas disponibles para esta cédula.
-                            </div>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if solicitudes_relacionadas %}
-                        <div class="related-summary">
-                            <div class="summary-item">
-                                <span class="summary-label">Total Solicitudes:</span>
-                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">Aprobadas:</span>
-                                <span class="summary-value text-success">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">En Proceso:</span>
-                                <span class="summary-value text-warning">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">Rechazadas:</span>
-                                <span class="summary-value text-danger">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- COMENTARIOS ANALISTA - CHAT ESPECIALIZADO (Sección en evaluación) -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-warning">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Sección en Evaluación</h6>
-                <p class="mb-0 small">La siguiente sección está siendo evaluada para determinar si permanece en el sistema.</p>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="chat-container-analista">
-                <!-- Header del Chat -->
-                <div class="chat-header">
-                    <div class="chat-title">
-                        <i class="fas fa-user-tie text-primary me-2"></i>
-                        <span>Análisis y observaciones del préstamo</span>
-                    </div>
-                    <div class="chat-status">
-                        <span class="status-dot online"></span>
-                        <small>En línea</small>
-                    </div>
-                </div>
-                
-                <!-- Área de Mensajes (con scroll) -->
-                <div class="chat-messages" id="lista-comentarios-analista">
-                    <!-- Mensaje de bienvenida -->
-                    <div class="chat-welcome">
-                        <div class="welcome-avatar">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="welcome-message">
-                            <p><strong>Análisis Técnico</strong></p>
-                            <p>Aquí puede dejar su análisis del crédito. Evalúe la documentación, capacidad de pago y otros aspectos relevantes para la decisión crediticia.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Input de Mensaje (fijo abajo) -->
-                <div class="chat-input-container">
-                    <form id="form-comentario-analista" method="post" class="chat-form">
-                        {% csrf_token %}
-                        <div class="input-group-chat">
-                            <div class="user-avatar-chat">
-                                <i class="fas fa-user-tie"></i>
-                            </div>
-                            <div class="input-wrapper">
-                                <textarea class="chat-input" 
-                                          placeholder="Escribe tu análisis técnico..."
-                                          rows="1" 
-                                          id="comentario-analista-text"
-                                          maxlength="1000"></textarea>
-                                <div class="input-actions">
-                                    <span class="char-counter">
-                                        <span id="char-count-analista">0</span>/1000
-                                    </span>
-                                    <button type="submit" class="send-button" id="btn-enviar-analista">
-                                        <i class="fas fa-paper-plane"></i>
-                                        <div class="loading-spinner-chat" style="display: none;">
-                                            <i class="fas fa-spinner fa-spin"></i>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </div>
 
 <!-- Modal para Comentarios de Compliance -->
@@ -1110,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Actualizar elementos
         document.getElementById('reloj-tiempo-real').textContent = `${horas}:${minutos}:${segundos}`;
         document.getElementById('fecha-actual').textContent = `${dia}/${mes}/${año}`;
+        document.getElementById('tiempo-boton').textContent = `${horas}:${minutos}:${segundos}`;
     }
     
     // Inicializar tiempo inmediatamente
@@ -1465,18 +1383,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Función para configurar chat
     function configurarChat() {
-        // Configurar textarea de analista
-        const textareaAnalista = document.getElementById('comentario-analista-text');
-        if (textareaAnalista) {
-            textareaAnalista.addEventListener('input', function() {
-                autoExpandTextarea(this);
-                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-            });
-            
-            textareaAnalista.addEventListener('keydown', function(event) {
-                handleKeyDown(event, enviarComentarioAnalista);
-            });
-        }
         
         // Configurar textarea general
         const textareaGeneral = document.getElementById('comentario-text-modern');
@@ -1555,68 +1461,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Función para enviar comentario de analista
-    function enviarComentarioAnalista(evento) {
-        evento.preventDefault();
-        
-        const textarea = document.getElementById('comentario-analista-text');
-        const comentarioTexto = textarea.value.trim();
-        
-        if (!comentarioTexto) {
-            mostrarToast('Por favor ingresa un comentario', 'error');
-            return;
-        }
-        
-        const botonEnviar = document.getElementById('btn-enviar-analista');
-        const spinner = botonEnviar.querySelector('.loading-spinner-chat');
-        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat i)');
-        
-        // Deshabilitar botón y mostrar spinner
-        botonEnviar.disabled = true;
-        if (spinner) {
-            spinner.style.display = 'inline-block';
-            iconoBoton.style.display = 'none';
-        }
-        
-        console.log('📤 Enviando comentario de analista:', comentarioTexto);
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify({
-                comentario: comentarioTexto,
-                tipo: 'analista'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('✅ Respuesta del servidor:', data);
-            
-            if (data.success) {
-                mostrarToast('Comentario de analista enviado exitosamente');
-                textarea.value = '';
-                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-                cargarComentariosAnalista();
-            } else {
-                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            mostrarToast('Error de red al enviar comentario', 'error');
-        })
-        .finally(() => {
-            // Rehabilitar botón y ocultar spinner
-            botonEnviar.disabled = false;
-            if (spinner) {
-                spinner.style.display = 'none';
-                iconoBoton.style.display = 'inline-block';
-            }
-        });
-    }
+
     
     // Función para editar comentario de analista
     window.editarComentarioAnalista = function(comentarioId) {
@@ -2005,16 +1850,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // EVENT LISTENERS
     
-    // Formulario de comentarios de analista
-    document.getElementById('form-comentario-analista').addEventListener('submit', enviarComentarioAnalista);
-    
     // Formulario de comentarios generales
     document.getElementById('form-comentario-moderno').addEventListener('submit', enviarComentarioGeneral);
-    
-    // Contador de caracteres para comentarios de analista
-    document.getElementById('comentario-analista-text').addEventListener('input', function() {
-        actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-    });
     
     // Contador de caracteres para comentarios generales
     document.getElementById('comentario-text-modern').addEventListener('input', function() {
@@ -2326,10 +2163,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar nuevas funcionalidades
     inicializarComplianceButtons();
-    inicializarUploadDocumentos();
     inicializarValidacionDocumentos();
     cargarSolicitudesRelacionadas();
-    inicializarComentariosAnalistaCredito();
+    
+    // Asegurar que el DOM esté completamente cargado antes de inicializar comentarios
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                inicializarComentariosAnalistaCredito();
+            }, 100);
+        });
+    } else {
+        setTimeout(() => {
+            inicializarComentariosAnalistaCredito();
+        }, 100);
+    }
     
     // Función para marcar todos los campos como bueno
     window.marcarTodosComoBueno = function() {
@@ -2386,127 +2234,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // FUNCIONALIDADES ADICIONALES
 // ==========================================
 
-// Función para inicializar upload de documentos
-function inicializarUploadDocumentos() {
-    const uploadZone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
-    
-    if (!uploadZone || !fileInput) return;
-    
-    // Click en zona de upload
-    uploadZone.addEventListener('click', function() {
-        fileInput.click();
-    });
-    
-    // Drag & Drop
-    uploadZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.add('drag-over');
-    });
-    
-    uploadZone.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.remove('drag-over');
-    });
-    
-    uploadZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        procesarArchivos(files);
-    });
-    
-    // Cambio en input file
-    fileInput.addEventListener('change', function(e) {
-        const files = e.target.files;
-        procesarArchivos(files);
-    });
-}
 
-// Función para procesar archivos subidos
-function procesarArchivos(files) {
-    Array.from(files).forEach(file => {
-        // Validar tipo de archivo
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(file.type)) {
-            mostrarToast(`Archivo "${file.name}" no es un tipo válido`, 'error');
-            return;
-        }
-        
-        // Validar tamaño (10MB máximo)
-        if (file.size > 10 * 1024 * 1024) {
-            mostrarToast(`Archivo "${file.name}" es demasiado grande`, 'error');
-            return;
-        }
-        
-        // Simular subida
-        subirArchivo(file);
-    });
-}
 
-// Función para simular subida de archivo
-function subirArchivo(file) {
-    mostrarToast(`Subiendo archivo "${file.name}"...`, 'info');
-    
-    // Simular proceso de subida
-    setTimeout(() => {
-        mostrarToast(`Archivo "${file.name}" subido exitosamente`, 'success');
-        agregarDocumentoALista(file);
-    }, 2000);
-}
 
-// Función para agregar documento a la lista
-function agregarDocumentoALista(file) {
-    const documentosList = document.querySelector('.documentos-list');
-    
-    const documentoHTML = `
-        <div class="documento-item">
-            <div class="documento-icon">
-                <i class="fas fa-file-${file.type.includes('pdf') ? 'pdf' : 'image'} text-${file.type.includes('pdf') ? 'danger' : 'primary'}"></i>
-            </div>
-            <div class="documento-details">
-                <div class="documento-header">
-                    <strong>${file.name}</strong>
-                    <span class="documento-size">${formatFileSize(file.size)}</span>
-                </div>
-                <div class="documento-status">
-                    <span class="badge bg-success">Subido</span>
-                </div>
-            </div>
-            <div class="documento-actions">
-                <button class="btn btn-outline-primary btn-sm me-2" title="Ver documento">
-                    <i class="fas fa-eye"></i> Ver
-                </button>
-                <div class="documento-validation">
-                    <button class="validation-btn valid" title="Documento válido" data-doc="${file.name}" data-status="valid">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="validation-btn invalid" title="Documento inválido" data-doc="${file.name}" data-status="invalid">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    documentosList.insertAdjacentHTML('beforeend', documentoHTML);
-    
-    // Reinicializar eventos de validación para el nuevo documento
-    inicializarValidacionDocumentos();
-}
-
-// Función para formatear tamaño de archivo
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
 
 // Función para inicializar validación de documentos
 function inicializarValidacionDocumentos() {
@@ -2604,6 +2334,11 @@ function mostrarToast(mensaje, tipo = 'info') {
     // Remover elemento después de que se oculte
     toastElement.addEventListener('hidden.bs.toast', function() {
         this.remove();
+        // Verificar si el contenedor está vacío y eliminarlo si no hay más toasts
+        const container = document.querySelector('.toast-container');
+        if (container && container.children.length === 0) {
+            container.remove();
+        }
     });
 }
 
@@ -2623,10 +2358,36 @@ function crearToastContainer() {
 function inicializarComentariosAnalistaCredito() {
     console.log('🏥 Inicializando comentarios de analista de crédito...');
     
-    // Configurar contador de caracteres
-    const textarea = document.getElementById('comentario-analista-credito-text');
-    const charCounter = document.getElementById('char-count-analista-credito');
+    try {
+        // Verificar que todos los elementos necesarios existan
+        const container = document.getElementById('lista-comentarios-analista-credito');
+        const sinComentarios = document.getElementById('sin-comentarios-analista');
+        const textarea = document.getElementById('comentario-analista-credito-text');
+        const charCounter = document.getElementById('char-count-analista-credito');
+        const formElement = document.getElementById('form-comentario-analista-credito');
+        
+        console.log('🔍 Verificando elementos del DOM:');
+        console.log('- Container:', container ? '✅' : '❌');
+        console.log('- Sin comentarios:', sinComentarios ? '✅' : '❌');
+        console.log('- Textarea:', textarea ? '✅' : '❌');
+        console.log('- Char counter:', charCounter ? '✅' : '❌');
+        console.log('- Form:', formElement ? '✅' : '❌');
+        
+        // Verificar elementos críticos
+        if (!container || !textarea || !formElement) {
+            console.error('❌ Error: Elementos críticos no encontrados. Reintentando en 500ms...');
+            setTimeout(() => {
+                inicializarComentariosAnalistaCredito();
+            }, 500);
+            return;
+        }
     
+        if (!container) {
+        console.error('❌ Error crítico: No se encontró el contenedor de comentarios');
+        return;
+    }
+    
+    // Configurar contador de caracteres
     if (textarea && charCounter) {
         textarea.addEventListener('input', function() {
             charCounter.textContent = this.value.length;
@@ -2664,6 +2425,34 @@ function inicializarComentariosAnalistaCredito() {
     cargarComentariosAnalistaCredito();
     
     console.log('✅ Comentarios de analista de crédito inicializados');
+    
+    } catch (error) {
+        console.error('❌ Error al inicializar comentarios de analista de crédito:', error);
+        mostrarToast('Error al inicializar comentarios de analista', 'error');
+    }
+}
+
+function cargarComentariosAnalistaCredito() {
+    console.log('📋 Cargando comentarios de analista de crédito...');
+    
+    const solicitudId = parseInt('{{ solicitud.id }}');
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Comentarios recibidos:', data);
+            
+            if (data.success) {
+                mostrarComentariosAnalistaCredito(data.comentarios);
+            } else {
+                console.error('❌ Error al cargar comentarios:', data.error);
+                mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de red:', error);
+            mostrarToast('Error de red al cargar comentarios', 'error');
+        });
 }
 
 function enviarComentarioAnalistaCredito(event) {
@@ -2730,90 +2519,99 @@ function enviarComentarioAnalistaCredito(event) {
     });
 }
 
-function cargarComentariosAnalistaCredito() {
-    console.log('📋 Cargando comentarios de analista de crédito...');
-    
-    const solicitudId = parseInt('{{ solicitud.id }}');
-    
-    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('📊 Comentarios recibidos:', data);
-            
-            if (data.success) {
-                mostrarComentariosAnalistaCredito(data.comentarios);
-            } else {
-                console.error('❌ Error al cargar comentarios:', data.error);
-                mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error de red:', error);
-            mostrarToast('Error de red al cargar comentarios', 'error');
-        });
-}
-
 function mostrarComentariosAnalistaCredito(comentarios) {
-    const container = document.getElementById('lista-comentarios-analista-credito');
-    const sinComentarios = document.getElementById('sin-comentarios-analista');
-    
-    if (comentarios.length === 0) {
-        if (sinComentarios) {
-            sinComentarios.style.display = 'block';
+    try {
+        console.log('📋 Mostrando comentarios de analista de crédito...', comentarios);
+        
+        const container = document.getElementById('lista-comentarios-analista-credito');
+        const sinComentarios = document.getElementById('sin-comentarios-analista');
+        
+        // Verificar que el container existe
+        if (!container) {
+            console.error('❌ Error: No se encontró el elemento lista-comentarios-analista-credito');
+            // Intentar recargar después de un momento
+            setTimeout(() => {
+                const containerRetry = document.getElementById('lista-comentarios-analista-credito');
+                if (containerRetry) {
+                    mostrarComentariosAnalistaCredito(comentarios);
+                } else {
+                    console.error('❌ Error: Elemento aún no existe después del reintento');
+                }
+            }, 500);
+            return;
         }
-        return;
-    }
-    
-    if (sinComentarios) {
-        sinComentarios.style.display = 'none';
-    }
-    
-    const comentariosHTML = comentarios.map((comentario, index) => {
-        const numeroComentario = index + 1;
-        const fechaFormateada = new Date(comentario.fecha_creacion).toLocaleString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
+        
+        // Verificar que comentarios es un array
+        if (!Array.isArray(comentarios)) {
+            console.error('❌ Error: comentarios no es un array:', comentarios);
+            return;
+        }
+        
+        if (comentarios.length === 0) {
+            if (sinComentarios) {
+                sinComentarios.style.display = 'block';
+            }
+            container.innerHTML = '';
+            return;
+        }
+        
+        if (sinComentarios) {
+            sinComentarios.style.display = 'none';
+        }
+        
+        const comentariosHTML = comentarios.map((comentario, index) => {
+            const numeroComentario = index + 1;
+            const fechaFormateada = new Date(comentario.fecha_creacion).toLocaleString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            return `
+                <div class="comentario-analista-item">
+                    <div class="comentario-analista-header">
+                        <div class="comentario-analista-author">
+                            <div class="comentario-analista-avatar">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="comentario-analista-info">
+                                <strong>${comentario.usuario_nombre || 'Usuario'}</strong>
+                                <small>${fechaFormateada}</small>
+                            </div>
+                        </div>
+                        <div class="comentario-analista-numero">
+                            Comentario ${numeroComentario}
+                        </div>
+                    </div>
+                    <div class="comentario-analista-text">
+                        ${(comentario.comentario || '').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = comentariosHTML;
+        
+        // Animar entrada de comentarios
+        const items = container.querySelectorAll('.comentario-analista-item');
+        items.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                item.style.transition = 'all 0.3s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0)';
+            }, index * 100);
         });
         
-        return `
-            <div class="comentario-analista-item">
-                <div class="comentario-analista-header">
-                    <div class="comentario-analista-author">
-                        <div class="comentario-analista-avatar">
-                            <i class="fas fa-user-md"></i>
-                        </div>
-                        <div class="comentario-analista-info">
-                            <strong>${comentario.usuario_nombre}</strong>
-                            <small>${fechaFormateada}</small>
-                        </div>
-                    </div>
-                    <div class="comentario-analista-numero">
-                        Comentario ${numeroComentario}
-                    </div>
-                </div>
-                <div class="comentario-analista-text">
-                    ${comentario.comentario.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = comentariosHTML;
-    
-    // Animar entrada de comentarios
-    const items = container.querySelectorAll('.comentario-analista-item');
-    items.forEach((item, index) => {
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            item.style.transition = 'all 0.3s ease';
-            item.style.opacity = '1';
-            item.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
+        console.log('✅ Comentarios mostrados correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error al mostrar comentarios de analista de crédito:', error);
+        mostrarToast('Error al mostrar comentarios', 'error');
+    }
 }
 </script>
 
@@ -4653,258 +4451,7 @@ function mostrarComentariosAnalistaCredito(comentarios) {
     }
 }
 
-/* ==========================================
-   CHAT MODERNO - COMENTARIOS DE ANALISTA
-   ========================================== */
 
-.chat-container-analista {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e9ecef;
-    height: 420px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Header del Chat Analista */
-.chat-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 16px 16px 0 0;
-}
-
-.chat-title {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.chat-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8rem;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #28a745;
-    animation: pulse-dot 2s infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Área de Mensajes */
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    display: flex;
-    flex-direction: column;
-}
-
-
-
-/* Mensajes individuales */
-.message-bubble {
-    max-width: 85%;
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-bubble.own {
-    align-self: flex-end;
-}
-
-.message-bubble.other {
-    align-self: flex-start;
-}
-
-.message-content {
-    background: #007bff;
-    color: white;
-    padding: 10px 14px;
-    border-radius: 16px 16px 4px 16px;
-    font-size: 0.8rem;
-    line-height: 1.3;
-    word-wrap: break-word;
-}
-
-.message-bubble.other .message-content {
-    background: #ffffff;
-    color: #2c3e50;
-    border: 1px solid #e9ecef;
-    border-radius: 18px 18px 18px 4px;
-}
-
-.message-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.message-bubble.own .message-meta {
-    justify-content: flex-end;
-}
-
-.message-actions {
-    display: flex;
-    gap: 8px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.message-bubble:hover .message-actions {
-    opacity: 1;
-}
-
-.action-btn {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-    background: #f8f9fa;
-    color: #007bff;
-}
-
-/* Input Container */
-.chat-input-container {
-    background: white;
-    border-top: 1px solid #e9ecef;
-    padding: 12px 16px;
-    border-radius: 0 0 16px 16px;
-}
-
-.chat-form {
-    margin: 0;
-}
-
-.input-group-chat {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-}
-
-.user-avatar-chat {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.input-wrapper {
-    flex: 1;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 20px;
-    padding: 8px 16px;
-    transition: all 0.2s ease;
-}
-
-.input-wrapper:focus-within {
-    border-color: #007bff;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.chat-input {
-    width: 100%;
-    border: none;
-    background: transparent;
-    resize: none;
-    outline: none;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.input-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-}
-
-.char-counter {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.send-button {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.send-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.send-button:active {
-    transform: scale(0.95);
-}
-
-.loading-spinner-chat {
-    display: none;
-}
-
-/* Scrollbar personalizado */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: #adb5bd;
-}
 
 /* ==========================================
    CHAT MODERNO - COMENTARIOS GENERALES
@@ -5442,19 +4989,26 @@ function mostrarComentariosAnalistaCredito(comentarios) {
 }
 
 /* Estilos para compliance en adjuntos */
-.adjunto-compliance {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #f1f3f4;
+.adjunto-status-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    gap: 8px;
 }
 
-.adjunto-compliance .compliance-actions {
+.adjunto-status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adjunto-status-line .compliance-actions {
     margin-left: 0;
-    margin-top: 4px;
     gap: 4px;
 }
 
-.adjunto-compliance .btn-compliance {
+.adjunto-status-line .btn-compliance {
     width: 18px;
     height: 18px;
     font-size: 0.6rem;
@@ -5937,6 +5491,9 @@ function mostrarComentariosAnalistaCredito(comentarios) {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     border: 1px solid #e5e7eb;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
     margin-bottom: 1rem;
 }
 
@@ -5948,6 +5505,7 @@ function mostrarComentariosAnalistaCredito(comentarios) {
     justify-content: space-between;
     align-items: center;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
 }
 
 .comentarios-analista-header-compact h6 {
@@ -5963,31 +5521,42 @@ function mostrarComentariosAnalistaCredito(comentarios) {
 
 .comentarios-analista-body-compact {
     padding: 1rem;
-    max-height: 300px;
+    flex: 1;
     overflow-y: auto;
+    max-height: calc(420px - 120px); /* Resta header y formulario */
 }
 
 .comentarios-lista-compact {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
 }
 
 .nuevo-comentario-form-compact {
     border-top: 1px solid #e5e7eb;
-    padding-top: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 0 0 12px 12px;
+    flex-shrink: 0;
 }
 
 .comentario-form-compact .form-body-compact {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .comentario-textarea-compact {
     border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 0.5rem;
+    border-radius: 20px;
+    padding: 0.75rem 1rem;
     font-size: 0.85rem;
     resize: none;
+    background: white;
+    transition: border-color 0.2s ease;
+}
+
+.comentario-textarea-compact:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-footer-compact {
@@ -6004,6 +5573,18 @@ function mostrarComentariosAnalistaCredito(comentarios) {
 .form-actions-compact {
     display: flex;
     gap: 0.5rem;
+}
+
+.form-actions-compact .btn {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.form-actions-compact .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Estilos para el mensaje de bienvenida del chat de analista */
@@ -6047,6 +5628,22 @@ function mostrarComentariosAnalistaCredito(comentarios) {
         margin-top: 20px;
     }
     
+    .comentarios-analista-body-compact {
+        max-height: calc(350px - 120px); /* Altura reducida en móviles */
+    }
+    
+    .comentario-textarea-compact {
+        border-radius: 12px; /* Menos redondeado en móviles */
+        padding: 0.6rem 0.8rem;
+    }
+    
+    .form-actions-compact .btn {
+        border-radius: 12px;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+@media (max-width: 991px) {
     .documento-item {
         flex-direction: column;
         align-items: flex-start;
@@ -6622,15 +6219,21 @@ function mostrarComentariosAnalistaCredito(comentarios) {
         margin-top: 1rem;
     }
     
-    /* Ajustes para pestañas y solicitudes relacionadas en móviles */
-    .col-lg-8,
-    .col-lg-4 {
+    /* Ajustes para comentarios de analista y solicitudes relacionadas en móviles */
+    .row.mb-4 .col-lg-8,
+    .row.mb-4 .col-lg-4 {
         flex: 0 0 100%;
         max-width: 100%;
     }
     
-    .col-lg-4 {
+    .row.mb-4 .col-lg-4 {
         margin-top: 1.5rem;
+    }
+    
+    /* Ajustes específicos para comentarios de analista en móviles */
+    .comentarios-analista-section-compact {
+        height: auto;
+        max-height: 350px;
     }
     
     /* Ajustes específicos para solicitudes relacionadas en móviles */
