@@ -3,6 +3,7 @@ from django.views.static import serve
 from django.conf import settings
 from . import views_workflow
 from . import views
+from . import api
 import os
 
 app_name = 'workflow'
@@ -145,6 +146,15 @@ urlpatterns += [
     # APIs para obtener usuarios y grupos
     path('api/usuarios/', views_workflow.api_obtener_usuarios, name='api_obtener_usuarios'),
     path('api/grupos/', views_workflow.api_obtener_grupos, name='api_obtener_grupos'),
+    
+    # APIs para calificaciones de compliance
+    path('api/solicitudes/<int:solicitud_id>/calificar-campo/', api.api_calificar_campo, name='api_calificar_campo'),
+    path('api/solicitudes/<int:solicitud_id>/comentario-compliance/', api.api_comentario_compliance, name='api_comentario_compliance'),
+    path('api/solicitudes/<int:solicitud_id>/calificaciones/', api.api_obtener_calificaciones, name='api_obtener_calificaciones'),
+    
+    # APIs para comentarios de analista de crédito
+    path('api/solicitudes/<int:solicitud_id>/comentario-analista-credito/', api.api_comentario_analista_credito, name='api_comentario_analista_credito'),
+    path('api/solicitudes/<int:solicitud_id>/comentarios-analista-credito/', api.api_obtener_comentarios_analista_credito, name='api_obtener_comentarios_analista_credito'),
 ]
 
 

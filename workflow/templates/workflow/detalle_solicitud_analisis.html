@@ -9,11 +9,12 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;">
+                <div class="card-header" style="background: linear-gradient(135deg, #1e40af, #3b82f6); color: white;">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-3">
                             <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-light btn-sm">
                                 <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
+                                <span class="ms-2" id="tiempo-boton" style="font-family: monospace; font-size: 0.8rem; color: #6c757d;">--:--:--</span>
                             </a>
                             <div>
                                 <h2 class="mb-1">
@@ -26,11 +27,22 @@
                                     {% if solicitud.cliente_cedula %}
                                         - {{ solicitud.cliente_cedula }}
                                     {% endif %}
+
+                                    <span class="ms-3">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        <span id="fecha-actual">--/--/----</span>
+                                    </span>
+                                    {% if solicitud.fecha_creacion %}
+                                    <span class="ms-3">
+                                        <i class="fas fa-history me-1"></i>
+                                        Creada: {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}
+                                    </span>
+                                    {% endif %}
                                 </p>
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-success btn-sm" onclick="aprobarSolicitud()">
+                            <button class="btn btn-primary btn-sm" onclick="aprobarSolicitud()">
                                 <i class="fas fa-check me-1"></i>Aprobar
                             </button>
                             <button class="btn btn-outline-light btn-sm" onclick="solicitarMasInformacion()">
@@ -46,7 +58,9 @@
         </div>
     </div>
 
-    <!-- LAYOUT PRINCIPAL: RESUMEN + COMENTARIOS ANALISTA -->
+
+
+    <!-- LAYOUT PRINCIPAL: RESUMEN COMPLETO (4/6) + ADJUNTOS (2/6) -->
     <div class="row mb-4">
         <div class="col-8">
             <div class="unified-info-card">
@@ -61,184 +75,427 @@
                         <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
                             {% if sla_info.estado == 'vencido' %}
                                 <i class="fas fa-exclamation-triangle me-1"></i>Vencido
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #dc3545; font-weight: bold;">--:--:--</span>
                             {% elif sla_info.estado == 'por_vencer' %}
                                 <i class="fas fa-hourglass-half me-1"></i>Por Vencer
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #fd7e14; font-weight: bold;">--:--:--</span>
                             {% elif sla_info.estado == 'en_tiempo' %}
                                 <i class="fas fa-check-circle me-1"></i>En Tiempo
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #198754; font-weight: bold;">--:--:--</span>
                                 {% if sla_info.tiempo_restante_formateado %}
                                     - {{ sla_info.tiempo_restante_formateado }}
                                 {% endif %}
                             {% else %}
                                 <i class="fas fa-question-circle me-1"></i>Sin SLA
+                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #6c757d; font-weight: bold;">--:--:--</span>
                             {% endif %}
                         </div>
+                        <button class="btn btn-light btn-sm ms-2" onclick="marcarTodosComoBueno()">
+                            <i class="fas fa-check-double me-1"></i>Marcar Todos como Bueno
+                        </button>
                     </div>
                 </div>
                 
                 <div class="unified-body">
-                    <div class="row g-4">
-                        <!-- Sección Cliente -->
+                    <div class="row g-3">
+                        <!-- 1. Información de Cliente -->
                         <div class="col-md-4">
                             <div class="info-section">
                                 <div class="section-header">
-                                    <i class="fas fa-user text-primary"></i>
-                                    <h5>Información del Cliente</h5>
+                                    <i class="fas fa-user text-info"></i>
+                                    <h5>Información de Cliente</h5>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Nombre Completo:</span>
-                                            <span class="info-value">{{ solicitud.cliente_nombre|default:"Sin cliente" }}</span>
+                                            <span class="info-label">Empresa Privada:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.nombreEmpresa|default:"Sin datos" }}</span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-nombre" data-field="nombre">
-                                            <label for="check-nombre" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="info-row-with-check">
-                                        <div class="info-data">
-                                            <span class="info-label">Cédula:</span>
-                                            <span class="info-value">{{ solicitud.cliente_cedula|default:"-" }}</span>
-                                        </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-cedula" data-field="cedula">
-                                            <label for="check-cedula" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="empresa_privada" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="empresa_privada" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="empresa_privada" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Canal de Origen:</span>
-                                            <span class="info-value">Web/Digital</span>
+                                            <span class="info-label">Cargo:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.posicion|default:"Sin datos" }}</span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-canal" data-field="canal">
-                                            <label for="check-canal" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="cargo" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="cargo" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="cargo" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">T/S:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.tiempoServicio|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="tiempo_servicio" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="tiempo_servicio" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="tiempo_servicio" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Salario:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.salarioBaseMensual %}
+                                                    B/. {{ solicitud.cotizacion.salarioBaseMensual|floatformat:2 }}
+                                                {% elif solicitud.cotizacion.ingresos %}
+                                                    B/. {{ solicitud.cotizacion.ingresos|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="salario" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="salario" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="salario" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Score:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.apcScore|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="score" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="score" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="score" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Sección Cotización -->
+                        <!-- 2. Detalle de la Solicitud -->
                         <div class="col-md-4">
                             <div class="info-section">
                                 <div class="section-header">
-                                    <i class="fas fa-calculator text-success"></i>
-                                    <h5>Detalles de la Cotización</h5>
+                                    <i class="fas fa-calculator text-primary"></i>
+                                    <h5>Detalle de la Solicitud</h5>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Monto Solicitado:</span>
-                                            <span class="info-value">{{ solicitud.monto_formateado|default:"B/. 11,000" }}</span>
+                                            <span class="info-label">Valor del equipo:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.valorAuto %}
+                                                    B/. {{ solicitud.cotizacion.valorAuto|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-monto" data-field="monto">
-                                            <label for="check-monto" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="valor_equipo" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="valor_equipo" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="valor_equipo" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Abono:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.abono and solicitud.cotizacion.abonoPorcentaje %}
+                                                    B/. {{ solicitud.cotizacion.abono|floatformat:2 }} ({{ solicitud.cotizacion.abonoPorcentaje|floatformat:1 }}%)
+                                                {% elif solicitud.cotizacion.abono %}
+                                                    B/. {{ solicitud.cotizacion.abono|floatformat:2 }}
+                                                {% elif solicitud.cotizacion.abonoPorcentaje %}
+                                                    {{ solicitud.cotizacion.abonoPorcentaje|floatformat:1 }}%
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="abono" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="abono" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="abono" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Monto financiado:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.montoPrestamo %}
+                                                    B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="monto_financiado" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="monto_financiado" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="monto_financiado" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
                                             <span class="info-label">Plazo:</span>
-                                            <span class="info-value">48 meses</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.plazoPago %}
+                                                    {{ solicitud.cotizacion.plazoPago }} meses
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-plazo" data-field="plazo">
-                                            <label for="check-plazo" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="plazo" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="plazo" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="plazo" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Tasa de Interés:</span>
-                                            <span class="info-value">12.5%</span>
+                                            <span class="info-label">Rentabilidad:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.r_deseada %}
+                                                    {{ solicitud.cotizacion.r_deseada|floatformat:2 }}%
+                                                {% elif solicitud.cotizacion.r1 %}
+                                                    {{ solicitud.cotizacion.r1|floatformat:2 }}%
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-tasa" data-field="tasa">
-                                            <label for="check-tasa" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="rentabilidad" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="rentabilidad" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="rentabilidad" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Cuota Mensual:</span>
-                                            <span class="info-value">B/. 697.50</span>
+                                            <span class="info-label">Total de letra c/seg:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.wrkMontoLetra %}
+                                                    B/. {{ solicitud.cotizacion.wrkMontoLetra|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-cuota" data-field="cuota">
-                                            <label for="check-cuota" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="total_letra" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="total_letra" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="total_letra" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Sector:</span>
+                                            <span class="info-value">-</span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="sector" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="sector" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="sector" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Sección Estado del Proceso -->
+                        <!-- 3. Datos del Vehículo -->
                         <div class="col-md-4">
                             <div class="info-section">
                                 <div class="section-header">
-                                    <i class="fas fa-tasks text-warning"></i>
-                                    <h5>Estado del Proceso</h5>
+                                    <i class="fas fa-car text-warning"></i>
+                                    <h5>Datos del Vehículo</h5>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Fecha de Inicio:</span>
-                                            <span class="info-value">09/07/2025 16:06</span>
+                                            <span class="info-label">Marca:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.marca|default:"Sin datos" }}</span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-fecha" data-field="fecha">
-                                            <label for="check-fecha" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="info-row-with-check">
-                                        <div class="info-data">
-                                            <span class="info-label">Etapa Actual:</span>
-                                            <span class="info-value">Consulta</span>
-                                        </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-etapa" data-field="etapa">
-                                            <label for="check-etapa" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="marca" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="marca" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="marca" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Área Responsable:</span>
-                                            <span class="info-value">Flujo de Consulta</span>
+                                            <span class="info-label">Modelo:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.modelo|default:"Sin datos" }}</span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-area" data-field="area">
-                                            <label for="check-area" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="modelo" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="modelo" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="modelo" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">Responsable:</span>
-                                            <span class="info-value">Sin asignar</span>
+                                            <span class="info-label">Año:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.yearCarro|default:"Sin datos" }}</span>
                                         </div>
-                                        <div class="compliance-check">
-                                            <input type="checkbox" class="compliance-checkbox" id="check-responsable" data-field="responsable">
-                                            <label for="check-responsable" class="compliance-label">
-                                                <i class="fas fa-check check-icon"></i>
-                                            </label>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="año" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="año" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="año" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Transmisión:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.transmisionAuto|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="transmision" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="transmision" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="transmision" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">KM:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.kilometrajeAuto %}
+                                                    {{ solicitud.cotizacion.kilometrajeAuto|floatformat:0 }} km
+                                                {% else %}
+                                                    0 km
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="kilometraje" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="kilometraje" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="kilometraje" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-check">
+                                        <div class="info-data">
+                                            <span class="info-label">Política:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.aseguradora %}
+                                                    {{ solicitud.cotizacion.aseguradora }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="politica" data-action="bueno" title="Calificar como bueno">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="politica" data-action="malo" title="Calificar como malo">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="politica" data-action="comentario" title="Agregar comentario">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -249,58 +506,109 @@
             </div>
         </div>
         
-        <!-- COMENTARIOS DE ANALISTA (1/3 del ancho) -->
+        <!-- ADJUNTOS ASOCIADOS (2/6 del ancho) -->
         <div class="col-4">
-            <div class="chat-container-analista">
-                <!-- Header del Chat -->
-                <div class="chat-header">
-                    <div class="chat-title">
-                        <i class="fas fa-user-tie text-primary me-2"></i>
-                        <span>Análisis y observaciones del préstamo</span>
+            <div class="adjuntos-container">
+                <div class="adjuntos-header">
+                    <div class="adjuntos-icon">
+                        <i class="fas fa-paperclip"></i>
                     </div>
-                    <div class="chat-status">
-                        <span class="status-dot online"></span>
-                        <small>En línea</small>
+                    <div class="adjuntos-title">
+                        <h5>Adjuntos</h5>
+                        <small>Asociados a la solicitud</small>
                     </div>
                 </div>
-                
-                <!-- Área de Mensajes (con scroll) -->
-                <div class="chat-messages" id="lista-comentarios-analista">
-                    <!-- Mensaje de bienvenida -->
-                    <div class="chat-welcome">
-                        <div class="welcome-avatar">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="welcome-message">
-                            <p><strong>Análisis Técnico</strong></p>
-                            <p>Aquí puede dejar su análisis del crédito. Evalúe la documentación, capacidad de pago y otros aspectos relevantes para la decisión crediticia.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Input de Mensaje (fijo abajo) -->
-                <div class="chat-input-container">
-                    <form id="form-comentario-analista" method="post" class="chat-form">
-                        {% csrf_token %}
-                        <div class="input-group-chat">
-                            <div class="user-avatar-chat">
-                                <i class="fas fa-user-tie"></i>
-                            </div>
-                            <div class="input-wrapper">
-                                <textarea class="chat-input" 
-                                          placeholder="Escribe tu análisis técnico..."
-                                          rows="1" 
-                                          id="comentario-analista-text"
-                                          maxlength="1000"></textarea>
-                                <div class="input-actions">
-                                    <span class="char-counter">
-                                        <span id="char-count-analista">0</span>/1000
-                                    </span>
-                                    <button type="submit" class="send-button" id="btn-enviar-analista">
-                                        <i class="fas fa-paper-plane"></i>
-                                        <div class="loading-spinner-chat" style="display: none;">
-                                            <i class="fas fa-spinner fa-spin"></i>
+                <div class="adjuntos-content">
+                    {% if solicitud.requisitos.all %}
+                        {% for requisito_solicitud in solicitud.requisitos.all %}
+                            <div class="adjunto-item">
+                                <div class="adjunto-icon">
+                                    {% if requisito_solicitud.archivo %}
+                                        <i class="fas fa-file-pdf text-danger"></i>
+                                    {% else %}
+                                        <i class="fas fa-file-alt text-secondary"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="adjunto-details">
+                                    <div class="adjunto-name">{{ requisito_solicitud.requisito.nombre }}</div>
+                                    <div class="adjunto-status-line">
+                                        <div class="adjunto-status-group">
+                                            <div class="adjunto-status">
+                                                {% if requisito_solicitud.cumplido %}
+                                                    <span class="badge bg-success">Cumplido</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pendiente</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if requisito_solicitud.archivo %}
+                                                <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            {% endif %}
                                         </div>
+                                        <div class="compliance-actions">
+                                            <button type="button" class="btn-compliance btn-good" data-field="doc_{{ requisito_solicitud.id }}" data-action="bueno" title="Documento válido">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-bad" data-field="doc_{{ requisito_solicitud.id }}" data-action="malo" title="Documento inválido">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn-compliance btn-comment" data-field="doc_{{ requisito_solicitud.id }}" data-action="comentario" title="Comentar documento">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-light text-center">
+                            <i class="fas fa-inbox me-2"></i>
+                            <small>Sin adjuntos disponibles</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL: COMENTARIOS DE ANALISTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
+    <div class="row mb-4">
+        <!-- COMENTARIOS DE ANALISTA (4/6 del ancho) -->
+        <div class="col-lg-8">
+            <div class="comentarios-analista-section-compact">
+                <div class="comentarios-analista-header-compact">
+                    <h6><i class="fas fa-user-md me-2"></i>Comentarios de Analista</h6>
+
+                </div>
+                <div class="comentarios-analista-body-compact" id="comentarios-analista-content">
+                    <!-- Lista de comentarios existentes -->
+                    <div class="comentarios-lista-compact" id="lista-comentarios-analista-credito">
+                        <div class="alert alert-light text-center" id="sin-comentarios-analista">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            <small>Aún no hay comentarios de analista para esta solicitud</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulario compacto fijo en el pie -->
+                <div class="nuevo-comentario-form-compact">
+                    <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
+                        {% csrf_token %}
+                        <div class="form-body-compact">
+                            <textarea class="form-control comentario-textarea-compact" 
+                                      id="comentario-analista-credito-text"
+                                      placeholder="Escriba su análisis..."
+                                      rows="2" 
+                                      maxlength="1000"
+                                      required></textarea>
+                            <div class="form-footer-compact">
+                                <div class="char-counter-compact">
+                                    <span id="char-count-analista-credito">0</span>/1000
+                                </div>
+                                <div class="form-actions-compact">
+                                    <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
+                                        <i class="fas fa-save me-1"></i>Guardar
                                     </button>
                                 </div>
                             </div>
@@ -336,17 +644,113 @@
                                 {% if etapa.sla %}{{ etapa.sla_horas }}{% else %}24h{% endif %}
                             </span>
                         </div>
+        
+        <!-- SOLICITUDES RELACIONADAS (2/6 del ancho) -->
+        <div class="col-lg-4">
+            <div class="related-requests-section">
+                <div class="related-header">
+                    <div class="related-icon">
+                        <i class="fas fa-link"></i>
                     </div>
-                    {% endfor %}
+                    <div class="related-title">
+                        <h5>Solicitudes Relacionadas</h5>
+                        <small>Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
+                    </div>
+                </div>
+                
+                <div class="related-content">
+                    {% if mostrar_mensaje_sin_cliente %}
+                        <div class="alert alert-warning text-center my-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
+                        </div>
+                    {% else %}
+                        <!-- Búsqueda automática por cédula -->
+                        <div class="search-info">
+                            <i class="fas fa-search me-2"></i>
+                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
+                        </div>
+                        
+                        <!-- Lista de solicitudes relacionadas -->
+                        <div class="related-list">
+                            {% for s in solicitudes_relacionadas %}
+                            <div class="related-item">
+                                <div class="related-icon">
+                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
+                                </div>
+                                <div class="related-details">
+                                    <div class="related-header-item">
+                                        <strong>{{ s.codigo }}</strong>
+                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="related-info">
+                                        <span class="badge 
+                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
+                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
+                                        </span>
+                                        <span class="related-amount">
+                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="related-description">
+                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
+                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
+                                        {% else %}Préstamo{% endif %}
+                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
+                                    </div>
+                                </div>
+                                <div class="related-actions">
+                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="alert alert-info text-center my-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Sin solicitudes relacionadas disponibles para esta cédula.
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if solicitudes_relacionadas %}
+                        <div class="related-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Solicitudes:</span>
+                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Aprobadas:</span>
+                                <span class="summary-value text-success">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">En Proceso:</span>
+                                <span class="summary-value text-warning">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Rechazadas:</span>
+                                <span class="summary-value text-danger">
+                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- LAYOUT PRINCIPAL: PESTAÑAS + SOLICITUDES RELACIONADAS -->
+    <!-- LAYOUT SECUNDARIO: PESTAÑAS (OCUPAN TODO EL ANCHO) -->
     <div class="row">
-        <!-- SISTEMA DE PESTAÑAS (2/3 del ancho) -->
-        <div class="col-lg-8">
+        <!-- SISTEMA DE PESTAÑAS (ANCHO COMPLETO) -->
+        <div class="col-12">
             <!-- SISTEMA DE PESTAÑAS -->
     <div class="tabs-section">
         <div class="tabs-header">
@@ -433,20 +837,7 @@
             <!-- Tab Documentos -->
             <div class="tab-pane" id="tab-documentos">
                 <div class="documentos-content">
-                    <!-- Área de subir documentos -->
-                    <div class="upload-section">
-                        <div class="upload-header">
-                            <h6><i class="fas fa-cloud-upload-alt me-2"></i>Subir Nuevo Documento</h6>
-                        </div>
-                        <div class="upload-zone" id="upload-zone">
-                            <div class="upload-content">
-                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                <p class="upload-text">Arrastra y suelta archivos aquí o <span class="upload-link">haz clic para seleccionar</span></p>
-                                <small class="upload-hint">Archivos PDF, JPG, PNG - Máximo 10MB</small>
-                            </div>
-                            <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
-                        </div>
-                    </div>
+
                     
                     <!-- Lista de documentos -->
                     <div class="documentos-list">
@@ -594,101 +985,43 @@
             </div>
         </div>
     </div>
-        </div>
-        
-        <!-- SOLICITUDES RELACIONADAS (1/3 del ancho) -->
-        <div class="col-lg-4">
-            <div class="related-requests-section">
-                <div class="related-header">
-                    <h5><i class="fas fa-link me-2"></i>Solicitudes Relacionadas</h5>
-                    <small class="text-muted">Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
+
+</div>
+
+<!-- Modal para Comentarios de Compliance -->
+<div class="modal fade" id="modalComentarioCompliance" tabindex="-1" aria-labelledby="modalComentarioComplianceLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalComentarioComplianceLabel">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    Comentario de Compliance
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Campo:</label>
+                    <div class="fw-bold text-primary" id="campo-nombre"></div>
                 </div>
-                
-                <div class="related-content">
-                    {% if mostrar_mensaje_sin_cliente %}
-                        <div class="alert alert-warning text-center my-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
-                        </div>
-                    {% else %}
-                        <!-- Búsqueda automática por cédula -->
-                        <div class="search-info">
-                            <i class="fas fa-search me-2"></i>
-                            <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
-                        </div>
-                        
-                        <!-- Lista de solicitudes relacionadas -->
-                        <div class="related-list">
-                            {% for s in solicitudes_relacionadas %}
-                            <div class="related-item">
-                                <div class="related-icon">
-                                    <i class="fas fa-file-alt {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}text-success{% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}text-danger{% else %}text-warning{% endif %}"></i>
-                                </div>
-                                <div class="related-details">
-                                    <div class="related-header-item">
-                                        <strong>{{ s.codigo }}</strong>
-                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
-                                    </div>
-                                    <div class="related-info">
-                                        <span class="badge 
-                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
-                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
-                                            {% else %}bg-warning{% endif %}">
-                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
-                                        </span>
-                                        <span class="related-amount">
-                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
-                                        </span>
-                                    </div>
-                                    <div class="related-description">
-                                        {% if s.cotizacion and s.cotizacion.tipoPrestamo %}
-                                            {% if s.cotizacion.tipoPrestamo == 'auto' %}Préstamo Auto{% else %}Préstamo Personal{% endif %}
-                                        {% else %}Préstamo{% endif %}
-                                        {% if s.cotizacion and s.cotizacion.plazoPago %} - {{ s.cotizacion.plazoPago }} meses{% endif %}
-                                    </div>
-                                </div>
-                                <div class="related-actions">
-                                    <a href="{% url 'workflow:detalle_solicitud_analisis' s.id %}" class="btn btn-outline-primary btn-sm" title="Ver detalles">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="alert alert-info text-center my-3">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Sin solicitudes relacionadas disponibles para esta cédula.
-                            </div>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if solicitudes_relacionadas %}
-                        <div class="related-summary">
-                            <div class="summary-item">
-                                <span class="summary-label">Total Solicitudes:</span>
-                                <span class="summary-value">{{ solicitudes_relacionadas|length }}</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">Aprobadas:</span>
-                                <span class="summary-value text-success">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">En Proceso:</span>
-                                <span class="summary-value text-warning">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Proceso' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">Rechazadas:</span>
-                                <span class="summary-value text-danger">
-                                    {% for s in solicitudes_relacionadas %}{% if s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}1{% endif %}{% endfor %}
-                                </span>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% endif %}
+                <div class="mb-3">
+                    <label class="form-label">Valor actual:</label>
+                    <div class="fw-bold" id="campo-valor"></div>
                 </div>
+                <div class="mb-3">
+                    <label for="comentario-compliance" class="form-label">Comentario:</label>
+                    <textarea class="form-control" id="comentario-compliance" rows="5" placeholder="Ingrese su comentario sobre este campo..."></textarea>
+                    <div class="form-text">
+                        <span id="char-count-compliance">0</span>/500 caracteres
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-guardar-comentario-compliance">
+                    <i class="fas fa-save me-2"></i>
+                    Guardar Comentario
+                </button>
             </div>
         </div>
     </div>
@@ -696,7 +1029,41 @@
 
 <!-- Script para funcionalidades -->
 <script>
+// Función global para obtener token CSRF
+function getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar reloj en tiempo real
+    function actualizarTiempo() {
+        const ahora = new Date();
+        
+        // Formatear hora
+        const horas = ahora.getHours().toString().padStart(2, '0');
+        const minutos = ahora.getMinutes().toString().padStart(2, '0');
+        const segundos = ahora.getSeconds().toString().padStart(2, '0');
+        
+        // Formatear fecha
+        const dia = ahora.getDate().toString().padStart(2, '0');
+        const mes = (ahora.getMonth() + 1).toString().padStart(2, '0');
+        const año = ahora.getFullYear();
+        
+        // Actualizar elementos
+        document.getElementById('reloj-tiempo-real').textContent = `${horas}:${minutos}:${segundos}`;
+        document.getElementById('fecha-actual').textContent = `${dia}/${mes}/${año}`;
+        document.getElementById('tiempo-boton').textContent = `${horas}:${minutos}:${segundos}`;
+    }
+    
+    // Inicializar tiempo inmediatamente
+    actualizarTiempo();
+    
+    // Actualizar cada segundo
+    setInterval(actualizarTiempo, 1000);
+    
+
+    
     // Funciones para comentarios
     function guardarComentario(tipo, texto) {
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -1005,32 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const solicitudId = parseInt('{{ solicitud.id }}');
     const usuarioActualId = parseInt('{{ request.user.id }}');
     
-    // Función para obtener token CSRF
-    function getCsrfToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]').value;
-    }
-    
-    // Función para mostrar notificaciones toast
-    function mostrarToast(mensaje, tipo = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${tipo}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas fa-${tipo === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
-                ${mensaje}
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        // Mostrar toast
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Ocultar toast después de 3 segundos
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+    // Función para mostrar notificaciones - usa la función principal al final del archivo
     
     // Función para formatear fecha
     function formatearFecha(fecha) {
@@ -1067,18 +1409,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Función para configurar chat
     function configurarChat() {
-        // Configurar textarea de analista
-        const textareaAnalista = document.getElementById('comentario-analista-text');
-        if (textareaAnalista) {
-            textareaAnalista.addEventListener('input', function() {
-                autoExpandTextarea(this);
-                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-            });
-            
-            textareaAnalista.addEventListener('keydown', function(event) {
-                handleKeyDown(event, enviarComentarioAnalista);
-            });
-        }
         
         // Configurar textarea general
         const textareaGeneral = document.getElementById('comentario-text-modern');
@@ -1157,68 +1487,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Función para enviar comentario de analista
-    function enviarComentarioAnalista(evento) {
-        evento.preventDefault();
-        
-        const textarea = document.getElementById('comentario-analista-text');
-        const comentarioTexto = textarea.value.trim();
-        
-        if (!comentarioTexto) {
-            mostrarToast('Por favor ingresa un comentario', 'error');
-            return;
-        }
-        
-        const botonEnviar = document.getElementById('btn-enviar-analista');
-        const spinner = botonEnviar.querySelector('.loading-spinner-chat');
-        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat i)');
-        
-        // Deshabilitar botón y mostrar spinner
-        botonEnviar.disabled = true;
-        if (spinner) {
-            spinner.style.display = 'inline-block';
-            iconoBoton.style.display = 'none';
-        }
-        
-        console.log('📤 Enviando comentario de analista:', comentarioTexto);
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify({
-                comentario: comentarioTexto,
-                tipo: 'analista'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('✅ Respuesta del servidor:', data);
-            
-            if (data.success) {
-                mostrarToast('Comentario de analista enviado exitosamente');
-                textarea.value = '';
-                actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-                cargarComentariosAnalista();
-            } else {
-                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            mostrarToast('Error de red al enviar comentario', 'error');
-        })
-        .finally(() => {
-            // Rehabilitar botón y ocultar spinner
-            botonEnviar.disabled = false;
-            if (spinner) {
-                spinner.style.display = 'none';
-                iconoBoton.style.display = 'inline-block';
-            }
-        });
-    }
+
     
     // Función para editar comentario de analista
     window.editarComentarioAnalista = function(comentarioId) {
@@ -1607,16 +1876,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // EVENT LISTENERS
     
-    // Formulario de comentarios de analista
-    document.getElementById('form-comentario-analista').addEventListener('submit', enviarComentarioAnalista);
-    
     // Formulario de comentarios generales
     document.getElementById('form-comentario-moderno').addEventListener('submit', enviarComentarioGeneral);
-    
-    // Contador de caracteres para comentarios de analista
-    document.getElementById('comentario-analista-text').addEventListener('input', function() {
-        actualizarContadorCaracteres('comentario-analista-text', 'char-count-analista');
-    });
     
     // Contador de caracteres para comentarios generales
     document.getElementById('comentario-text-modern').addEventListener('input', function() {
@@ -1639,169 +1900,369 @@ document.addEventListener('DOMContentLoaded', function() {
         cargarComentariosGenerales();
     }, 30000);
     
-    // Inicializar nuevas funcionalidades
-    inicializarCheckboxesCompliance();
-    inicializarUploadDocumentos();
-    inicializarValidacionDocumentos();
-    cargarSolicitudesRelacionadas();
+    // ==========================================
+    // FUNCIONALIDADES DE COMPLIANCE
+    // ==========================================
     
-    console.log('✅ Sistema completo inicializado correctamente');
-});
-
-// ==========================================
-// FUNCIONALIDADES NUEVAS
-// ==========================================
-
-// Función para inicializar checkboxes de compliance
-function inicializarCheckboxesCompliance() {
-    const checkboxes = document.querySelectorAll('.compliance-checkbox');
+    // Función para inicializar botones de compliance
+    function inicializarComplianceButtons() {
+        console.log('🔧 Inicializando botones de compliance...');
+        const complianceButtons = document.querySelectorAll('.btn-compliance');
+        
+        console.log(`📊 Encontrados ${complianceButtons.length} botones de compliance`);
+        
+        if (complianceButtons.length === 0) {
+            console.error('❌ No se encontraron botones de compliance');
+            return;
+        }
+        
+        complianceButtons.forEach((button, index) => {
+            const field = button.dataset.field;
+            const action = button.dataset.action;
+            
+            console.log(`🔘 Botón ${index + 1}: campo="${field}", acción="${action}"`);
+            
+            button.addEventListener('click', function(e) {
+                console.log(`🎯 Click en botón: campo="${field}", acción="${action}"`);
+                
+                try {
+                    if (action === 'comentario') {
+                        // Abrir modal para comentario
+                        abrirModalComentario(field);
+                    } else {
+                        // Calificar campo como bueno o malo
+                        calificarCampo(field, action);
+                    }
+                } catch (error) {
+                    console.error('❌ Error al manejar click:', error);
+                    alert('Error al procesar la acción. Ver consola para más detalles.');
+                }
+            });
+        });
+        
+        // Inicializar modal de comentarios
+        inicializarModalComentario();
+        
+        // Cargar estados existentes
+        cargarEstadosCompliance();
+        
+        console.log('✅ Botones de compliance inicializados correctamente');
+    }
     
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const field = this.dataset.field;
-            const checked = this.checked;
-            
-            // Guardar estado en localStorage
-            localStorage.setItem(`compliance_${field}`, checked);
-            
-            // Mostrar notificación
-            if (checked) {
-                mostrarToast(`Campo "${field}" marcado como cumplido`, 'success');
+    // Función para abrir modal de comentario
+    function abrirModalComentario(field) {
+        const modal = new bootstrap.Modal(document.getElementById('modalComentarioCompliance'));
+        const campoNombre = document.getElementById('campo-nombre');
+        const campoValor = document.getElementById('campo-valor');
+        const comentarioTextarea = document.getElementById('comentario-compliance');
+        
+        // Obtener información del campo
+        const fieldInfo = getFieldInfo(field);
+        
+        // Configurar modal
+        campoNombre.textContent = fieldInfo.label;
+        campoValor.textContent = fieldInfo.value;
+        comentarioTextarea.value = fieldInfo.comentario || '';
+        
+        // Configurar botón de guardar
+        const btnGuardar = document.getElementById('btn-guardar-comentario-compliance');
+        btnGuardar.onclick = function() {
+            const comentario = comentarioTextarea.value.trim();
+            if (comentario) {
+                guardarComentarioCompliance(field, comentario);
+                modal.hide();
             } else {
-                mostrarToast(`Campo "${field}" desmarcado`, 'info');
+                mostrarToast('Por favor ingrese un comentario', 'error');
+            }
+        };
+        
+        // Almacenar field actual
+        modal._element.dataset.field = field;
+        
+        modal.show();
+    }
+    
+    // Función para obtener información del campo
+    function getFieldInfo(field) {
+        const fieldMap = {
+            'nombre': { label: 'Nombre Completo' },
+            'cedula': { label: 'Cédula' },
+            'canal': { label: 'Canal de Origen' },
+            'monto': { label: 'Monto Solicitado' },
+            'plazo': { label: 'Plazo' },
+            'tasa': { label: 'Tasa de Interés' },
+            'cuota': { label: 'Cuota Mensual' },
+            'fecha': { label: 'Fecha de Inicio' },
+            'etapa': { label: 'Etapa Actual' },
+            'area': { label: 'Área Responsable' },
+            'responsable': { label: 'Responsable' }
+        };
+        
+        const info = fieldMap[field];
+        if (!info) return { label: field, value: '-', comentario: '' };
+        
+        // Buscar el botón con el data-field y obtener el valor desde el elemento padre
+        const button = document.querySelector(`[data-field="${field}"]`);
+        let value = '-';
+        
+        if (button) {
+            const infoRow = button.closest('.info-row-with-check');
+            if (infoRow) {
+                const valueElement = infoRow.querySelector('.info-value');
+                if (valueElement) {
+                    value = valueElement.textContent.trim();
+                }
+            }
+        }
+        
+        return {
+            label: info.label,
+            value: value,
+            comentario: '' // Se cargará desde la base de datos
+        };
+    }
+    
+    // Función para calificar campo
+    function calificarCampo(field, estado) {
+        console.log(`🔄 Calificando campo: "${field}" como "${estado}"`);
+        
+        const solicitudId = parseInt('{{ solicitud.id }}');
+        console.log(`📋 Solicitud ID: ${solicitudId}`);
+        
+        const token = getCsrfToken();
+        console.log(`🔐 Token CSRF: ${token ? 'Obtenido' : 'No encontrado'}`);
+        
+        if (!token) {
+            console.error('❌ No se pudo obtener el token CSRF');
+            mostrarToast('Error: No se pudo obtener el token de seguridad', 'error');
+            return;
+        }
+        
+        const url = `/workflow/api/solicitudes/${solicitudId}/calificar-campo/`;
+        console.log(`🌐 URL: ${url}`);
+        
+        const payload = {
+            campo: field,
+            estado: estado
+        };
+        console.log(`📦 Datos a enviar:`, payload);
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            console.log(`📡 Respuesta HTTP: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            console.log(`📊 Respuesta del servidor:`, data);
+            
+            if (data.success) {
+                mostrarToast(`Campo "${field}" calificado como ${estado}`, 'success');
+                actualizarEstadoBoton(field, estado);
+            } else {
+                console.error('❌ Error del servidor:', data.error);
+                mostrarToast('Error al calificar campo: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de red:', error);
+            mostrarToast('Error de red al calificar campo', 'error');
+        });
+    }
+    
+    // Función para guardar comentario de compliance
+    function guardarComentarioCompliance(field, comentario) {
+        const solicitudId = parseInt('{{ solicitud.id }}');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-compliance/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                campo: field,
+                comentario: comentario
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Comentario guardado exitosamente', 'success');
+                marcarComentarioEnBoton(field, true);
+            } else {
+                mostrarToast('Error al guardar comentario: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de red al guardar comentario', 'error');
+        });
+    }
+    
+    // Función para actualizar estado visual del botón
+    function actualizarEstadoBoton(field, estado) {
+        const buttons = document.querySelectorAll(`[data-field="${field}"]`);
+        
+        buttons.forEach(button => {
+            if (button.dataset.action === 'bueno' || button.dataset.action === 'malo') {
+                button.classList.remove('active');
             }
         });
         
-        // Restaurar estado desde localStorage
-        const field = checkbox.dataset.field;
-        const saved = localStorage.getItem(`compliance_${field}`);
-        if (saved === 'true') {
-            checkbox.checked = true;
+        const activeButton = document.querySelector(`[data-field="${field}"][data-action="${estado}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
         }
-    });
-}
-
-// Función para inicializar upload de documentos
-function inicializarUploadDocumentos() {
-    const uploadZone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
+    }
     
-    if (!uploadZone || !fileInput) return;
-    
-    // Click en zona de upload
-    uploadZone.addEventListener('click', function() {
-        fileInput.click();
-    });
-    
-    // Drag & Drop
-    uploadZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.add('drag-over');
-    });
-    
-    uploadZone.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.remove('drag-over');
-    });
-    
-    uploadZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        procesarArchivos(files);
-    });
-    
-    // Cambio en input file
-    fileInput.addEventListener('change', function(e) {
-        const files = e.target.files;
-        procesarArchivos(files);
-    });
-}
-
-// Función para procesar archivos subidos
-function procesarArchivos(files) {
-    Array.from(files).forEach(file => {
-        // Validar tipo de archivo
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(file.type)) {
-            mostrarToast(`Archivo "${file.name}" no es un tipo válido`, 'error');
-            return;
+    // Función para marcar comentario en botón
+    function marcarComentarioEnBoton(field, hasComment) {
+        const commentButton = document.querySelector(`[data-field="${field}"][data-action="comentario"]`);
+        if (commentButton) {
+            if (hasComment) {
+                commentButton.classList.add('has-comment');
+            } else {
+                commentButton.classList.remove('has-comment');
+            }
         }
+    }
+    
+    // Función para cargar estados existentes
+    function cargarEstadosCompliance() {
+        console.log('📋 Cargando estados de compliance...');
+        const solicitudId = parseInt('{{ solicitud.id }}');
         
-        // Validar tamaño (10MB máximo)
-        if (file.size > 10 * 1024 * 1024) {
-            mostrarToast(`Archivo "${file.name}" es demasiado grande`, 'error');
-            return;
+        const url = `/workflow/api/solicitudes/${solicitudId}/calificaciones/`;
+        console.log(`🌐 URL calificaciones: ${url}`);
+        
+        fetch(url)
+            .then(response => {
+                console.log(`📡 Respuesta HTTP: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 Calificaciones recibidas:', data);
+                
+                if (data.success) {
+                    console.log(`✅ ${data.calificaciones.length} calificaciones encontradas`);
+                    data.calificaciones.forEach(calificacion => {
+                        console.log(`🔄 Actualizando estado: ${calificacion.campo} = ${calificacion.estado}`);
+                        actualizarEstadoBoton(calificacion.campo, calificacion.estado);
+                        if (calificacion.comentario) {
+                            console.log(`💬 Marcando comentario para: ${calificacion.campo}`);
+                            marcarComentarioEnBoton(calificacion.campo, true);
+                        }
+                    });
+                } else {
+                    console.error('❌ Error al obtener calificaciones:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error cargando calificaciones:', error);
+            });
+    }
+    
+    // Función para inicializar modal de comentarios
+    function inicializarModalComentario() {
+        const comentarioTextarea = document.getElementById('comentario-compliance');
+        const charCount = document.getElementById('char-count-compliance');
+        
+        if (comentarioTextarea && charCount) {
+            comentarioTextarea.addEventListener('input', function() {
+                charCount.textContent = this.value.length;
+                
+                if (this.value.length > 500) {
+                    charCount.parentElement.classList.add('text-danger');
+                } else {
+                    charCount.parentElement.classList.remove('text-danger');
+                }
+            });
         }
-        
-        // Simular subida
-        subirArchivo(file);
-    });
-}
-
-// Función para simular subida de archivo
-function subirArchivo(file) {
-    mostrarToast(`Subiendo archivo "${file.name}"...`, 'info');
+    }
     
-    // Simular proceso de subida
-    setTimeout(() => {
-        mostrarToast(`Archivo "${file.name}" subido exitosamente`, 'success');
-        agregarDocumentoALista(file);
-    }, 2000);
-}
-
-// Función para agregar documento a la lista
-function agregarDocumentoALista(file) {
-    const documentosList = document.querySelector('.documentos-list');
-    
-    const documentoHTML = `
-        <div class="documento-item">
-            <div class="documento-icon">
-                <i class="fas fa-file-${file.type.includes('pdf') ? 'pdf' : 'image'} text-${file.type.includes('pdf') ? 'danger' : 'primary'}"></i>
-            </div>
-            <div class="documento-details">
-                <div class="documento-header">
-                    <strong>${file.name}</strong>
-                    <span class="documento-size">${formatFileSize(file.size)}</span>
-                </div>
-                <div class="documento-status">
-                    <span class="badge bg-success">Subido</span>
-                </div>
-            </div>
-            <div class="documento-actions">
-                <button class="btn btn-outline-primary btn-sm me-2" title="Ver documento">
-                    <i class="fas fa-eye"></i> Ver
-                </button>
-                <div class="documento-validation">
-                    <button class="validation-btn valid" title="Documento válido" data-doc="${file.name}" data-status="valid">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="validation-btn invalid" title="Documento inválido" data-doc="${file.name}" data-status="invalid">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    documentosList.insertAdjacentHTML('beforeend', documentoHTML);
-    
-    // Reinicializar eventos de validación para el nuevo documento
+    // Inicializar nuevas funcionalidades
+    inicializarComplianceButtons();
     inicializarValidacionDocumentos();
-}
+    cargarSolicitudesRelacionadas();
+    
+    // Asegurar que el DOM esté completamente cargado antes de inicializar comentarios
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                inicializarComentariosAnalistaCredito();
+            }, 100);
+        });
+    } else {
+        setTimeout(() => {
+            inicializarComentariosAnalistaCredito();
+        }, 100);
+    }
+    
+    // Función para marcar todos los campos como bueno
+    window.marcarTodosComoBueno = function() {
+        if (!confirm('¿Está seguro de marcar todos los campos como "bueno"?')) {
+            return;
+        }
+        
+        const todosLosBotones = document.querySelectorAll('.btn-compliance.btn-good');
+        let contador = 0;
+        
+        todosLosBotones.forEach((boton, index) => {
+            setTimeout(() => {
+                const field = boton.dataset.field;
+                const action = boton.dataset.action;
+                
+                if (field && action === 'bueno') {
+                    calificarCampo(field, 'bueno');
+                    contador++;
+                }
+                
+                if (index === todosLosBotones.length - 1) {
+                    setTimeout(() => {
+                        mostrarToast(`${contador} campos marcados como "bueno"`, 'success');
+                    }, 500);
+                }
+            }, index * 100);
+        });
+    };
+    
 
-// Función para formatear tamaño de archivo
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+
+    // Función de prueba para verificar el funcionamiento
+    window.testCompliance = function() {
+        console.log('🧪 Probando sistema de compliance...');
+        mostrarToast('Sistema de compliance activo', 'success');
+        
+        // Probar calificación de campo
+        setTimeout(() => {
+            console.log('🎯 Probando calificación de campo...');
+            calificarCampo('nombre', 'bueno');
+        }, 2000);
+    };
+    
+    console.log('✅ Sistema completo inicializado correctamente');
+    console.log('💡 Consejo: Puedes probar el sistema con window.testCompliance()');
+    
+    // Mostrar notificación de que el sistema está listo
+    setTimeout(() => {
+        mostrarToast('Sistema de compliance inicializado', 'success');
+    }, 1000);
+});
+
+// ==========================================
+// FUNCIONALIDADES ADICIONALES
+// ==========================================
+
+
+
+
 
 // Función para inicializar validación de documentos
 function inicializarValidacionDocumentos() {
@@ -1899,6 +2360,11 @@ function mostrarToast(mensaje, tipo = 'info') {
     // Remover elemento después de que se oculte
     toastElement.addEventListener('hidden.bs.toast', function() {
         this.remove();
+        // Verificar si el contenedor está vacío y eliminarlo si no hay más toasts
+        const container = document.querySelector('.toast-container');
+        if (container && container.children.length === 0) {
+            container.remove();
+        }
     });
 }
 
@@ -1906,9 +2372,272 @@ function mostrarToast(mensaje, tipo = 'info') {
 function crearToastContainer() {
     const container = document.createElement('div');
     container.className = 'toast-container position-fixed top-0 end-0 p-3';
-    container.style.zIndex = '1055';
+    container.style.zIndex = '99999';
     document.body.appendChild(container);
     return container;
+}
+
+// ==========================================
+// FUNCIONALIDADES COMENTARIOS ANALISTA CRÉDITO
+// ==========================================
+
+function inicializarComentariosAnalistaCredito() {
+    console.log('🏥 Inicializando comentarios de analista de crédito...');
+    
+    try {
+        // Verificar que todos los elementos necesarios existan
+        const container = document.getElementById('lista-comentarios-analista-credito');
+        const sinComentarios = document.getElementById('sin-comentarios-analista');
+        const textarea = document.getElementById('comentario-analista-credito-text');
+        const charCounter = document.getElementById('char-count-analista-credito');
+        const formElement = document.getElementById('form-comentario-analista-credito');
+        
+        console.log('🔍 Verificando elementos del DOM:');
+        console.log('- Container:', container ? '✅' : '❌');
+        console.log('- Sin comentarios:', sinComentarios ? '✅' : '❌');
+        console.log('- Textarea:', textarea ? '✅' : '❌');
+        console.log('- Char counter:', charCounter ? '✅' : '❌');
+        console.log('- Form:', formElement ? '✅' : '❌');
+        
+        // Verificar elementos críticos
+        if (!container || !textarea || !formElement) {
+            console.error('❌ Error: Elementos críticos no encontrados. Reintentando en 500ms...');
+            setTimeout(() => {
+                inicializarComentariosAnalistaCredito();
+            }, 500);
+            return;
+        }
+    
+        if (!container) {
+        console.error('❌ Error crítico: No se encontró el contenedor de comentarios');
+        return;
+    }
+    
+    // Configurar contador de caracteres
+    if (textarea && charCounter) {
+        textarea.addEventListener('input', function() {
+            charCounter.textContent = this.value.length;
+            
+            if (this.value.length > 1800) {
+                charCounter.parentElement.classList.add('text-danger');
+            } else if (this.value.length > 1500) {
+                charCounter.parentElement.classList.add('text-warning');
+                charCounter.parentElement.classList.remove('text-danger');
+            } else {
+                charCounter.parentElement.classList.remove('text-warning', 'text-danger');
+            }
+        });
+    }
+    
+    // Configurar botón cancelar
+    const btnCancelar = document.getElementById('btn-cancelar-analista-credito');
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', function() {
+            if (textarea) {
+                textarea.value = '';
+                charCounter.textContent = '0';
+                charCounter.parentElement.classList.remove('text-warning', 'text-danger');
+            }
+        });
+    }
+    
+    // Configurar formulario
+    const form = document.getElementById('form-comentario-analista-credito');
+    if (form) {
+        form.addEventListener('submit', enviarComentarioAnalistaCredito);
+    }
+    
+    // Cargar comentarios existentes
+    cargarComentariosAnalistaCredito();
+    
+    console.log('✅ Comentarios de analista de crédito inicializados');
+    
+    } catch (error) {
+        console.error('❌ Error al inicializar comentarios de analista de crédito:', error);
+        mostrarToast('Error al inicializar comentarios de analista', 'error');
+    }
+}
+
+function cargarComentariosAnalistaCredito() {
+    console.log('📋 Cargando comentarios de analista de crédito...');
+    
+    const solicitudId = parseInt('{{ solicitud.id }}');
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Comentarios recibidos:', data);
+            
+            if (data.success) {
+                mostrarComentariosAnalistaCredito(data.comentarios);
+            } else {
+                console.error('❌ Error al cargar comentarios:', data.error);
+                mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de red:', error);
+            mostrarToast('Error de red al cargar comentarios', 'error');
+        });
+}
+
+function enviarComentarioAnalistaCredito(event) {
+    event.preventDefault();
+    
+    const textarea = document.getElementById('comentario-analista-credito-text');
+    const btnEnviar = document.getElementById('btn-enviar-analista-credito');
+    const spinner = btnEnviar.querySelector('.loading-spinner-analista');
+    const iconoBoton = btnEnviar.querySelector('i:not(.loading-spinner-analista i)');
+    
+    const comentarioTexto = textarea.value.trim();
+    
+    if (!comentarioTexto) {
+        mostrarToast('Por favor ingrese un comentario antes de enviar', 'error');
+        return;
+    }
+    
+    // Deshabilitar botón y mostrar spinner
+    btnEnviar.disabled = true;
+    if (spinner && iconoBoton) {
+        spinner.style.display = 'inline-block';
+        iconoBoton.style.display = 'none';
+    }
+    
+    console.log('💾 Enviando comentario de analista de crédito:', comentarioTexto);
+    
+    const solicitudId = parseInt('{{ solicitud.id }}');
+    const token = getCsrfToken();
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-analista-credito/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token
+        },
+        body: JSON.stringify({
+            comentario: comentarioTexto
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('📋 Respuesta del servidor:', data);
+        
+        if (data.success) {
+            mostrarToast('Comentario de analista guardado exitosamente', 'success');
+            textarea.value = '';
+            document.getElementById('char-count-analista-credito').textContent = '0';
+            cargarComentariosAnalistaCredito();
+        } else {
+            mostrarToast('Error al guardar comentario: ' + (data.error || 'Error desconocido'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error:', error);
+        mostrarToast('Error de red al enviar comentario', 'error');
+    })
+    .finally(() => {
+        // Rehabilitar botón y ocultar spinner
+        btnEnviar.disabled = false;
+        if (spinner && iconoBoton) {
+            spinner.style.display = 'none';
+            iconoBoton.style.display = 'inline-block';
+        }
+    });
+}
+
+function mostrarComentariosAnalistaCredito(comentarios) {
+    try {
+        console.log('📋 Mostrando comentarios de analista de crédito...', comentarios);
+        
+        const container = document.getElementById('lista-comentarios-analista-credito');
+        const sinComentarios = document.getElementById('sin-comentarios-analista');
+        
+        // Verificar que el container existe
+        if (!container) {
+            console.error('❌ Error: No se encontró el elemento lista-comentarios-analista-credito');
+            // Intentar recargar después de un momento
+            setTimeout(() => {
+                const containerRetry = document.getElementById('lista-comentarios-analista-credito');
+                if (containerRetry) {
+                    mostrarComentariosAnalistaCredito(comentarios);
+                } else {
+                    console.error('❌ Error: Elemento aún no existe después del reintento');
+                }
+            }, 500);
+            return;
+        }
+        
+        // Verificar que comentarios es un array
+        if (!Array.isArray(comentarios)) {
+            console.error('❌ Error: comentarios no es un array:', comentarios);
+            return;
+        }
+        
+        if (comentarios.length === 0) {
+            if (sinComentarios) {
+                sinComentarios.style.display = 'block';
+            }
+            container.innerHTML = '';
+            return;
+        }
+        
+        if (sinComentarios) {
+            sinComentarios.style.display = 'none';
+        }
+        
+        const comentariosHTML = comentarios.map((comentario, index) => {
+            const numeroComentario = index + 1;
+            const fechaFormateada = new Date(comentario.fecha_creacion).toLocaleString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            return `
+                <div class="comentario-analista-item">
+                    <div class="comentario-analista-header">
+                        <div class="comentario-analista-author">
+                            <div class="comentario-analista-avatar">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="comentario-analista-info">
+                                <strong>${comentario.usuario_nombre || 'Usuario'}</strong>
+                                <small>${fechaFormateada}</small>
+                            </div>
+                        </div>
+                        <div class="comentario-analista-numero">
+                            Comentario ${numeroComentario}
+                        </div>
+                    </div>
+                    <div class="comentario-analista-text">
+                        ${(comentario.comentario || '').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = comentariosHTML;
+        
+        // Animar entrada de comentarios
+        const items = container.querySelectorAll('.comentario-analista-item');
+        items.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                item.style.transition = 'all 0.3s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+        
+        console.log('✅ Comentarios mostrados correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error al mostrar comentarios de analista de crédito:', error);
+        mostrarToast('Error al mostrar comentarios', 'error');
+    }
 }
 </script>
 
@@ -1917,23 +2646,23 @@ function crearToastContainer() {
 /* ESTILOS ÉPICOS DE ANÁLISIS    */
 /* ============================== */
 
-/* Variables de colores */
+/* Variables de colores - TONALIDADES AZULES */
 :root {
-    --color-green: #22c55e;
-    --color-green-light: #dcfce7;
-    --color-blue: #3b82f6;
+    --color-blue-primary: #3b82f6;
     --color-blue-light: #dbeafe;
-    --color-orange: #f97316;
-    --color-orange-light: #fed7aa;
-    --color-warning: #fbbf24;
+    --color-blue-dark: #1e40af;
+    --color-blue-darker: #1e3a8a;
+    --color-blue-accent: #60a5fa;
+    --color-blue-soft: #93c5fd;
+    --color-warning: #3b82f6;
     --color-danger: #ef4444;
-    --color-success: #10b981;
+    --color-success: #3b82f6;
     --shadow-epic: 0 10px 40px rgba(0, 0, 0, 0.1);
     --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.15);
     --border-radius: 16px;
-    --gradient-green: linear-gradient(135deg, #22c55e, #16a34a);
-    --gradient-blue: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    --gradient-orange: linear-gradient(135deg, #f97316, #ea580c);
+    --gradient-blue-primary: linear-gradient(135deg, #3b82f6, #1e40af);
+    --gradient-blue-light: linear-gradient(135deg, #60a5fa, #3b82f6);
+    --gradient-blue-dark: linear-gradient(135deg, #1e40af, #1e3a8a);
 }
 
 /* Timeline Horizontal Épico */
@@ -1953,13 +2682,13 @@ function crearToastContainer() {
     left: 0;
     right: 0;
     height: 4px;
-    background: var(--gradient-green);
+    background: var(--gradient-blue-primary);
 }
 
 .timeline-icon-main {
     width: 64px;
     height: 64px;
-    background: var(--gradient-green);
+    background: var(--gradient-blue-primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -2604,6 +3333,11 @@ function crearToastContainer() {
 
 .unified-sla {
     text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .unified-sla .sla-badge {
@@ -2625,12 +3359,21 @@ function crearToastContainer() {
     height: 100%;
 }
 
+/* Encabezados sticky para las secciones principales */
 .section-header {
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
+    padding: 0.75rem;
     padding-bottom: 0.75rem;
     border-bottom: 2px solid #f3f4f6;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    position: sticky;
+    top: -25px;
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-top: 3px solid #1e40af;
 }
 
 .section-header i {
@@ -2643,6 +3386,12 @@ function crearToastContainer() {
     font-weight: 600;
     margin: 0;
     color: #1f2937;
+}
+
+.adjuntos-title h5 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
 }
 
 .section-content {
@@ -3659,10 +4408,12 @@ function crearToastContainer() {
     border-radius: 12px;
     color: white;
     font-weight: 500;
-    z-index: 10000;
+    z-index: 99999;
     transform: translateX(400px);
     transition: all 0.3s ease;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    max-width: 400px;
+    word-wrap: break-word;
 }
 
 .toast-notification.show {
@@ -3726,258 +4477,7 @@ function crearToastContainer() {
     }
 }
 
-/* ==========================================
-   CHAT MODERNO - COMENTARIOS DE ANALISTA
-   ========================================== */
 
-.chat-container-analista {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e9ecef;
-    height: 420px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Header del Chat Analista */
-.chat-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 16px 16px 0 0;
-}
-
-.chat-title {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.chat-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8rem;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #28a745;
-    animation: pulse-dot 2s infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Área de Mensajes */
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    display: flex;
-    flex-direction: column;
-}
-
-
-
-/* Mensajes individuales */
-.message-bubble {
-    max-width: 85%;
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-bubble.own {
-    align-self: flex-end;
-}
-
-.message-bubble.other {
-    align-self: flex-start;
-}
-
-.message-content {
-    background: #007bff;
-    color: white;
-    padding: 10px 14px;
-    border-radius: 16px 16px 4px 16px;
-    font-size: 0.8rem;
-    line-height: 1.3;
-    word-wrap: break-word;
-}
-
-.message-bubble.other .message-content {
-    background: #ffffff;
-    color: #2c3e50;
-    border: 1px solid #e9ecef;
-    border-radius: 18px 18px 18px 4px;
-}
-
-.message-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.message-bubble.own .message-meta {
-    justify-content: flex-end;
-}
-
-.message-actions {
-    display: flex;
-    gap: 8px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.message-bubble:hover .message-actions {
-    opacity: 1;
-}
-
-.action-btn {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-    background: #f8f9fa;
-    color: #007bff;
-}
-
-/* Input Container */
-.chat-input-container {
-    background: white;
-    border-top: 1px solid #e9ecef;
-    padding: 12px 16px;
-    border-radius: 0 0 16px 16px;
-}
-
-.chat-form {
-    margin: 0;
-}
-
-.input-group-chat {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-}
-
-.user-avatar-chat {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.input-wrapper {
-    flex: 1;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 20px;
-    padding: 8px 16px;
-    transition: all 0.2s ease;
-}
-
-.input-wrapper:focus-within {
-    border-color: #007bff;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.chat-input {
-    width: 100%;
-    border: none;
-    background: transparent;
-    resize: none;
-    outline: none;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.input-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-}
-
-.char-counter {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.send-button {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.send-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.send-button:active {
-    transform: scale(0.95);
-}
-
-.loading-spinner-chat {
-    display: none;
-}
-
-/* Scrollbar personalizado */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: #adb5bd;
-}
 
 /* ==========================================
    CHAT MODERNO - COMENTARIOS GENERALES
@@ -4344,7 +4844,7 @@ function crearToastContainer() {
    ESTILOS PARA LAS NUEVAS FUNCIONALIDADES
    =============================================== */
 
-/* Estilos para checkboxes de compliance */
+/* Estilos para botones de compliance */
 .info-row-with-check {
     display: flex;
     align-items: center;
@@ -4353,6 +4853,13 @@ function crearToastContainer() {
     padding: 8px;
     border-radius: 8px;
     transition: background-color 0.2s ease;
+}
+
+.compliance-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 16px;
+    flex-shrink: 0;
 }
 
 .info-row-with-check:hover {
@@ -4377,48 +4884,284 @@ function crearToastContainer() {
     text-align: left;
 }
 
-.compliance-check {
+.compliance-actions {
+    display: flex;
+    gap: 4px;
     margin-left: 16px;
     flex-shrink: 0;
 }
 
-.compliance-checkbox {
-    display: none;
-}
-
-.compliance-label {
+.btn-compliance {
     width: 24px;
     height: 24px;
     border: 2px solid #dee2e6;
     border-radius: 50%;
+    background: white;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: white;
-    margin: 0;
+    font-size: 0.7rem;
+    color: #6c757d;
+    position: relative;
 }
 
-.compliance-label:hover {
-    border-color: #28a745;
-    background: #f8f9fa;
+.btn-compliance:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.compliance-checkbox:checked + .compliance-label {
-    background: #28a745;
-    border-color: #28a745;
+.btn-compliance.btn-good {
+    border-color: #3b82f6;
+    color: #3b82f6;
 }
 
-.compliance-checkbox:checked + .compliance-label .check-icon {
+.btn-compliance.btn-good:hover {
+    background: #3b82f6;
     color: white;
-    font-size: 0.75rem;
 }
 
-.check-icon {
-    color: transparent;
+.btn-compliance.btn-good.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.btn-compliance.btn-bad {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-compliance.btn-bad:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-compliance.btn-bad.active {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.btn-compliance.btn-comment {
+    border-color: #1e40af;
+    color: #1e40af;
+}
+
+.btn-compliance.btn-comment:hover {
+    background: #1e40af;
+    color: white;
+}
+
+.btn-compliance.btn-comment.has-comment {
+    background: #1e40af;
+    color: white;
+    border-color: #1e40af;
+}
+
+.btn-compliance.btn-comment.has-comment::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    background: #ffc107;
+    border-radius: 50%;
+    border: 1px solid white;
+}
+
+/* Animaciones para botones de compliance */
+@keyframes pulseGreen {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+@keyframes pulseRed {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+@keyframes pulseBlue {
+    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.btn-compliance.btn-good.active {
+    animation: pulseGreen 1s;
+}
+
+.btn-compliance.btn-bad.active {
+    animation: pulseRed 1s;
+}
+
+.btn-compliance.btn-comment.has-comment {
+    animation: pulseBlue 1s;
+}
+
+/* Estilos para el modal de comentarios */
+.modal-dialog.modal-lg {
+    max-width: 600px;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+/* Estilos para compliance en adjuntos */
+.adjunto-status-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    gap: 8px;
+}
+
+.adjunto-status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adjunto-status-line .compliance-actions {
+    margin-left: 0;
+    gap: 4px;
+}
+
+.adjunto-status-line .btn-compliance {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+}
+
+.modal-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    opacity: 0.8;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+.modal-body .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.modal-body .fw-bold {
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+}
+
+.modal-body .text-primary {
+    color: #3b82f6 !important;
+}
+
+.modal-body .form-control {
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.modal-body .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.modal-body .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+}
+
+.modal-footer .btn {
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #5a6268;
+    border-color: #545b62;
+}
+
+.modal-footer .btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+}
+
+.modal-footer .btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    border-color: #0056b3;
+}
+
+/* Tooltips para los botones */
+.btn-compliance[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
     font-size: 0.75rem;
-    transition: color 0.2s ease;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 0.25rem;
+}
+
+/* Responsive para botones de compliance */
+@media (max-width: 768px) {
+    .btn-compliance {
+        width: 22px;
+        height: 22px;
+        font-size: 0.65rem;
+    }
+    
+    .compliance-actions {
+        gap: 3px;
+    }
+    
+    .info-row-with-check {
+        padding: 6px;
+    }
+    
+    .info-data .info-label,
+    .info-data .info-value {
+        font-size: 0.8rem;
+    }
 }
 
 /* Estilos para la sección de upload de documentos */
@@ -4600,31 +5343,58 @@ function crearToastContainer() {
     background: white;
     border-radius: 12px;
     border: 1px solid #e9ecef;
-    height: fit-content;
+    height: 420px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
 }
 
 .related-header {
-    padding: 16px 20px;
+    padding: 0.6rem 1rem;
     border-bottom: 1px solid #f1f3f4;
-    background: #f8f9fa;
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .related-header h5 {
-    color: #495057;
+    color: white;
     margin-bottom: 4px;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
 }
 
 .related-header small {
-    color: #6c757d;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 0.8rem;
+    display: block;
+}
+
+.related-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.related-title {
+    flex: 1;
 }
 
 .related-content {
     padding: 16px 20px;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .search-info {
@@ -4741,6 +5511,108 @@ function crearToastContainer() {
     color: #212529;
 }
 
+/* SECCIÓN COMPACTA DE COMENTARIOS DE ANALISTA */
+.comentarios-analista-section-compact {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.comentarios-analista-header-compact {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+}
+
+.comentarios-analista-header-compact h6 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.analista-actions .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.comentarios-analista-body-compact {
+    padding: 1rem;
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(420px - 120px); /* Resta header y formulario */
+}
+
+.comentarios-lista-compact {
+    margin-bottom: 0;
+}
+
+.nuevo-comentario-form-compact {
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 0 0 12px 12px;
+    flex-shrink: 0;
+}
+
+.comentario-form-compact .form-body-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.comentario-textarea-compact {
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    resize: none;
+    background: white;
+    transition: border-color 0.2s ease;
+}
+
+.comentario-textarea-compact:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-footer-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.char-counter-compact {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.form-actions-compact {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.form-actions-compact .btn {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.form-actions-compact .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Estilos para el mensaje de bienvenida del chat de analista */
 .chat-welcome {
     display: flex;
@@ -4748,7 +5620,7 @@ function crearToastContainer() {
     gap: 12px;
     padding: 16px;
     margin-bottom: 20px;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #3b82f6;
 }
 
 .welcome-avatar {
@@ -4782,6 +5654,22 @@ function crearToastContainer() {
         margin-top: 20px;
     }
     
+    .comentarios-analista-body-compact {
+        max-height: calc(350px - 120px); /* Altura reducida en móviles */
+    }
+    
+    .comentario-textarea-compact {
+        border-radius: 12px; /* Menos redondeado en móviles */
+        padding: 0.6rem 0.8rem;
+    }
+    
+    .form-actions-compact .btn {
+        border-radius: 12px;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+@media (max-width: 991px) {
     .documento-item {
         flex-direction: column;
         align-items: flex-start;
@@ -4842,6 +5730,594 @@ function crearToastContainer() {
         width: 28px;
         height: 28px;
         font-size: 0.9rem;
+    }
+}
+
+/* ===============================================
+   ESTILOS PARA ADJUNTOS ASOCIADOS
+   =============================================== */
+
+.adjuntos-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    height: 420px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.adjuntos-header {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #f1f3f4;
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.adjuntos-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.adjuntos-title {
+    flex: 1;
+}
+
+.adjuntos-title h5 {
+    margin: 0;
+}
+
+.adjuntos-title small {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+
+
+.adjuntos-content {
+    padding: 16px 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.adjunto-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #f1f3f4;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.adjunto-item:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.adjunto-item:last-child {
+    margin-bottom: 0;
+}
+
+.adjunto-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.adjunto-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.adjunto-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.adjunto-status {
+    margin-bottom: 8px;
+}
+
+.adjunto-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.adjunto-actions .btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+/* ===============================================
+   ESTILOS PARA COMENTARIOS DE ANALISTA SECCIÓN
+   =============================================== */
+
+.comentarios-analista-section {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.comentarios-analista-header {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.comentarios-analista-header h5 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+}
+
+.analista-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analista-info .badge {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white;
+    font-weight: 600;
+}
+
+.comentarios-analista-body {
+    padding: 1.5rem;
+}
+
+.comentarios-lista {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+    padding-right: 0.5rem;
+}
+
+.comentario-analista-item {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #dc3545;
+    transition: all 0.2s ease;
+}
+
+.comentario-analista-item:hover {
+    background: #f1f3f4;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.comentario-analista-item:last-child {
+    margin-bottom: 0;
+}
+
+.comentario-analista-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.comentario-analista-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comentario-analista-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.comentario-analista-info strong {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.comentario-analista-info small {
+    color: #6c757d;
+    font-size: 0.75rem;
+    display: block;
+}
+
+.comentario-analista-numero {
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.comentario-analista-text {
+    color: #374151;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.nuevo-comentario-form {
+    border-top: 2px solid #f1f3f4;
+    padding-top: 1.5rem;
+}
+
+.nuevo-comentario-form .form-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.analista-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.form-title strong {
+    color: #dc3545;
+    font-size: 1rem;
+}
+
+.form-title small {
+    color: #6c757d;
+    font-size: 0.85rem;
+    display: block;
+}
+
+.comentario-textarea {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: all 0.2s ease;
+}
+
+.comentario-textarea:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.char-counter {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.loading-spinner-analista {
+    display: none;
+}
+
+/* Ajustes para layout horizontal de 3 columnas */
+@media (min-width: 1200px) {
+    .info-section .section-header h5 {
+        font-size: 1rem;
+    }
+    
+    .info-row-with-check .info-label,
+    .info-row-with-check .info-value {
+        font-size: 0.85rem;
+    }
+    
+    .btn-compliance {
+        width: 22px;
+        height: 22px;
+        font-size: 0.65rem;
+    }
+    
+    .compliance-actions {
+        gap: 3px;
+    }
+}
+
+/* Estilos para el reloj en tiempo real */
+#reloj-tiempo-real {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+#fecha-actual {
+    font-weight: 600;
+    color: #e0e7ff;
+}
+
+.card-header .opacity-75 .ms-3 {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+/* Animación sutil para el reloj */
+#reloj-tiempo-real {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Colores personalizados para íconos de secciones */
+.section-header .text-info {
+    color: #0dcaf0 !important;
+    background: rgba(13, 202, 240, 0.1);
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.section-header .text-primary {
+    color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.section-header .text-warning {
+    color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 8px;
+    border-radius: 50%;
+}
+
+/* Estilos para encabezados sticky */
+.section-content {
+    padding-top: 0.5rem;
+}
+
+.info-section {
+    margin-bottom: 1rem;
+}
+
+/* Ajuste para evitar superposición con encabezados sticky */
+.info-row-with-check:first-child {
+    margin-top: 0.25rem;
+}
+
+/* Transición suave para el sticky header */
+.section-header {
+    transition: all 0.3s ease;
+}
+
+.section-header:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+
+
+
+
+/* Responsive para adjuntos y comentarios de analista */
+@media (max-width: 1199px) {
+    .adjuntos-container {
+        margin-top: 20px;
+    }
+}
+
+/* Ajustes para encabezados sticky en responsive */
+@media (max-width: 768px) {
+    .section-header {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .section-header i {
+        font-size: 1rem;
+        margin-right: 0.5rem;
+    }
+    
+    .section-header h5 {
+        font-size: 0.9rem;
+    }
+    
+    /* Ajustes para el reloj en móviles */
+    .card-header .opacity-75 .ms-3 {
+        margin-left: 0.5rem !important;
+        font-size: 0.8rem;
+    }
+    
+    #reloj-tiempo-real {
+        font-size: 0.8rem;
+    }
+    
+    #fecha-actual {
+        font-size: 0.8rem;
+    }
+    
+    /* Ajustes para headers sticky en móviles */
+    .section-header {
+        z-index: 250;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Ajustes para el unified-sla en móviles */
+    .unified-sla {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+    }
+    
+    .unified-sla .btn {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Ajustes para pantallas muy pequeñas */
+@media (max-width: 576px) {
+    .card-header .opacity-75 .ms-3:nth-child(4) {
+        display: none; /* Ocultar fecha de creación en móviles muy pequeños */
+    }
+    
+    .card-header .opacity-75 {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 991px) {
+    /* En pantallas medianas, cambiar a 1 columna por fila pero manteniendo 3 filas */
+    .unified-body .row .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 767px) {
+    /* En móviles, apilar verticalmente */
+    .unified-body .row .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    /* En móviles, resumen y adjuntos se apilan verticalmente */
+    .row.mb-4 .col-8,
+    .row.mb-4 .col-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .row.mb-4 .col-4 {
+        margin-top: 1rem;
+    }
+    
+    /* Ajustes para comentarios de analista y solicitudes relacionadas en móviles */
+    .row.mb-4 .col-lg-8,
+    .row.mb-4 .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .row.mb-4 .col-lg-4 {
+        margin-top: 1.5rem;
+    }
+    
+    /* Ajustes específicos para comentarios de analista en móviles */
+    .comentarios-analista-section-compact {
+        height: auto;
+        max-height: 350px;
+    }
+    
+    /* Ajustes específicos para solicitudes relacionadas en móviles */
+    .related-requests-section {
+        height: auto;
+        max-height: 300px;
+    }
+    
+    .related-header {
+        padding: 0.5rem;
+    }
+    
+    .related-header h5 {
+        font-size: 1rem;
+    }
+    
+    .related-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+    
+    .adjunto-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .adjunto-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .comentarios-analista-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .analista-info {
+        justify-content: center;
+    }
+    
+    .comentario-analista-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .form-footer {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .form-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
 </style>
