@@ -14,10 +14,10 @@ STATIC_URL = '/static/'
 DEBUG = True
 if DEBUG:
      DATABASES = {
-        'default': dj_database_url.config(
-            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -183,6 +183,14 @@ LOGGING = {
     },
 }
 
+
+# Session configuration
+SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
+SESSION_SAVE_EVERY_REQUEST = True  # Extend session on each request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Don't expire when browser closes
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookies
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'main_menu'

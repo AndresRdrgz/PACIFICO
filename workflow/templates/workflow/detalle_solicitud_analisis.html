@@ -51,7 +51,7 @@
                                         <li>
                                             <a class="dropdown-item {% if not transicion_data.puede_realizar %}disabled text-muted{% endif %}" 
                                                href="#" 
-                                               onclick="if(typeof realizarTransicion === 'function') { realizarTransicion({{ transicion.etapa_destino.id }}, '{{ transicion.etapa_destino.nombre|escapejs }}', {{ transicion_data.puede_realizar|yesno:'true,false' }}, {{ transicion_data.total_requisitos_faltantes }}); } else { console.error('realizarTransicion no está definido'); alert('Error: Función no disponible. Por favor recarga la página.'); }"
+                                               onclick="if(typeof realizarTransicion === 'function') { realizarTransicion({{ transicion.etapa_destino.id }}, '{{ transicion.etapa_destino.nombre|escapejs }}', {{ transicion_data.puede_realizar|yesno:'true,false' }}, {{ transicion_data.total_requisitos_faltantes }}); } else { console.error('realizarTransicion no está definido'); alert('Error: Función no disponible. Por favor recarga la página.'); } return false;"
                                                {% if not transicion_data.puede_realizar %}title="Faltan {{ transicion_data.total_requisitos_faltantes }} requisito(s) obligatorio(s)"{% endif %}>
                                                 <i class="fas fa-arrow-right me-2"></i>
                                                 <strong>{{ transicion.etapa_destino.nombre }}</strong>
@@ -603,7 +603,7 @@
 
 
 
-    <!-- FLUJO DEL PROCESO - Ancho completo -->
+    <!-- FLUJO DEL PROCESO - Ancho completo 
     <div class="row mb-4">
         <div class="col-12">
             <div class="compact-timeline-section">
@@ -634,9 +634,10 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- LAYOUT PRINCIPAL: COMENTARIOS DE ANALISTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
-    <div class="row mb-4">
+    <div class="row mb-5">
         <!-- COMENTARIOS DE ANALISTA (4/6 del ancho) -->
         <div class="col-lg-8">
             <div class="comentarios-analista-section-compact">
@@ -659,36 +660,60 @@
                     <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
                         {% csrf_token %}
                         <div class="form-body-compact">
-                            <!-- Preview de bullet points generados automáticamente -->
-                            <div class="bullet-points-preview" id="bullet-points-preview" style="display: none;">
-                                <div class="preview-header">
-                                    <i class="fas fa-list-ul me-2"></i>
-                                    <strong>Comentarios de campos detectados:</strong>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btn-refresh-bullets">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
+                            <!-- Área de análisis unificado -->
+                            <div class="analisis-unificado-container">
+                                <!-- Sección editable del analista -->
+                                <div class="analisis-seccion-editable">
+                                    <label for="comentario-analista-credito-text" class="form-label">
+                                        <i class="fas fa-edit me-2"></i>Análisis General (Editable)
+                                    </label>
+                                    <textarea class="form-control comentario-textarea-compact" 
+                                              id="comentario-analista-credito-text"
+                                              placeholder="Escriba su análisis general aquí..."
+                                              rows="4" 
+                                              maxlength="2000"
+                                              required></textarea>
                                 </div>
-                                <div class="preview-content" id="preview-content">
-                                    <!-- Los bullet points se generan dinámicamente aquí -->
+                                
+                                <!-- Sección de bullet points auto-generados -->
+                                <div class="analisis-seccion-bullets">
+                                    <div class="bullets-header">
+                                        <i class="fas fa-list-ul me-2"></i>
+                                        <strong>Comentarios de Campos (Auto-generados)</strong>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btn-refresh-bullets" title="Actualizar comentarios">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <div class="bullets-content" id="bullets-content">
+                                        <div class="bullets-placeholder">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <small>Los comentarios de campos se generarán automáticamente al guardar</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Preview del resultado final -->
+                                <div class="analisis-preview" id="analisis-preview" style="display: none;">
+                                    <div class="preview-header">
+                                        <i class="fas fa-eye me-2"></i>
+                                        <strong>Vista Previa del Análisis Completo</strong>
+                                    </div>
+                                    <div class="preview-content" id="preview-content">
+                                        <!-- El análisis completo se muestra aquí -->
+                                    </div>
                                 </div>
                             </div>
                             
-                            <textarea class="form-control comentario-textarea-compact" 
-                                      id="comentario-analista-credito-text"
-                                      placeholder="Escriba su análisis general..."
-                                      rows="3" 
-                                      maxlength="1000"
-                                      required></textarea>
                             <div class="form-footer-compact">
                                 <div class="char-counter-compact">
-                                    <span id="char-count-analista-credito">0</span>/1000
+                                    <span id="char-count-analista-credito">0</span>/2000
                                 </div>
                                 <div class="form-actions-compact">
-                                    <button type="button" class="btn btn-outline-info btn-sm me-2" id="btn-generate-bullets">
-                                        <i class="fas fa-magic me-1"></i>Generar Bullets
+                                    <button type="button" class="btn btn-outline-info btn-sm me-2" id="btn-preview-analisis">
+                                        <i class="fas fa-eye me-1"></i>Vista Previa
                                     </button>
                                     <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
-                                        <i class="fas fa-save me-1"></i>Guardar
+                                        <i class="fas fa-save me-1"></i>Guardar Análisis
                                     </button>
                                 </div>
                             </div>
@@ -1020,8 +1045,29 @@ const solicitudId = parseInt('{{ solicitud.id }}');
 
 // Función global para obtener token CSRF
 function getCsrfToken() {
-    const token = document.querySelector('[name=csrfmiddlewaretoken]');
-    return token ? token.value : '';
+    // Buscar en input hidden
+    const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenElement && tokenElement.value) {
+        return tokenElement.value;
+    }
+    
+    // Fallback: buscar en meta tags
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    if (metaToken) {
+        return metaToken.getAttribute('content');
+    }
+    
+    // Fallback: buscar en cookies
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    console.error('❌ No se pudo obtener el token CSRF');
+    return '';
 }
 
 // ==========================================
@@ -1199,10 +1245,12 @@ window.confirmarTransicion = function(etapaDestinoId, etapaDestinoNombre) {
                 alert(`Solicitud enviada exitosamente a: ${etapaDestinoNombre}`);
             }
             
-            // Recargar página después de un momento
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            // Mostrar mensaje de éxito sin recargar la página
+            if (typeof mostrarToast === 'function') {
+                mostrarToast(`Solicitud enviada exitosamente a: ${etapaDestinoNombre}`, 'success');
+            } else {
+                alert(`Solicitud enviada exitosamente a: ${etapaDestinoNombre}`);
+            }
         } else {
             console.error('❌ Error en transición:', data.error);
             alert('Error al realizar la transición: ' + data.error);
@@ -1250,27 +1298,36 @@ window.mostrarToast = function(mensaje, tipo = 'info') {
     }
 };
 
-// Función para marcar todos los campos como buenos
-window.marcarTodosComoBueno = function() {
-    if (confirm('¿Está seguro que desea marcar todos los campos como "Bueno"?')) {
-        // Obtener todos los botones de calificación "Bueno"
-        const botonesBueno = document.querySelectorAll('.btn-calificar-bueno');
-        
-        botonesBueno.forEach(btn => {
-            const campo = btn.getAttribute('data-campo');
-            if (campo) {
-                calificarCampo(campo, 'bueno');
-            }
-        });
-        
-        // Mostrar mensaje de confirmación
-        if (typeof mostrarToast === 'function') {
-            mostrarToast('Todos los campos han sido marcados como "Bueno"', 'success');
-        } else {
-            alert('Todos los campos han sido marcados como "Bueno"');
+    // Función para marcar todos los campos como buenos
+    window.marcarTodosComoBueno = function() {
+        if (confirm('¿Está seguro que desea marcar todos los campos como "Bueno"?')) {
+            // Mostrar toast de inicio
+            mostrarToast('Iniciando calificación masiva de campos...', 'info');
+            
+            // Obtener todos los botones de calificación "Bueno"
+            const botonesBueno = document.querySelectorAll('.btn-compliance[data-action="bueno"]');
+            let contador = 0;
+            let promesas = [];
+            
+            botonesBueno.forEach(btn => {
+                const campo = btn.getAttribute('data-field');
+                if (campo) {
+                    // Crear promesa para calificar campo sin mostrar toast individual
+                    const promesa = calificarCampoSinToast(campo, 'bueno');
+                    promesas.push(promesa);
+                    contador++;
+                }
+            });
+            
+            // Esperar a que todas las calificaciones se completen
+            Promise.all(promesas).then(() => {
+                mostrarToast(`${contador} campos han sido marcados como "Bueno" exitosamente`, 'success');
+            }).catch(error => {
+                console.error('Error al marcar campos como bueno:', error);
+                mostrarToast('Error al marcar algunos campos como "Bueno"', 'error');
+            });
         }
-    }
-};
+    };
 
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar reloj en tiempo real
@@ -1287,10 +1344,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const mes = (ahora.getMonth() + 1).toString().padStart(2, '0');
         const año = ahora.getFullYear();
         
-        // Actualizar elementos
-        document.getElementById('reloj-tiempo-real').textContent = `${horas}:${minutos}:${segundos}`;
-        document.getElementById('fecha-actual').textContent = `${dia}/${mes}/${año}`;
-        document.getElementById('tiempo-boton').textContent = `${horas}:${minutos}:${segundos}`;
+        // Actualizar elementos con verificación de existencia
+        const relojElement = document.getElementById('reloj-tiempo-real');
+        const fechaElement = document.getElementById('fecha-actual');
+        const tiempoBotonElement = document.getElementById('tiempo-boton');
+        
+        if (relojElement) {
+            relojElement.textContent = `${horas}:${minutos}:${segundos}`;
+        }
+        if (fechaElement) {
+            fechaElement.textContent = `${dia}/${mes}/${año}`;
+        }
+        if (tiempoBotonElement) {
+            tiempoBotonElement.textContent = `${horas}:${minutos}:${segundos}`;
+        }
     }
     
     // Inicializar tiempo inmediatamente
@@ -1319,7 +1386,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                // Mostrar mensaje de éxito sin recargar
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Comentario guardado exitosamente', 'success');
+                } else {
+                    alert('Comentario guardado exitosamente');
+                }
+                // Opcional: limpiar el formulario o actualizar la vista
             } else {
                 alert('Error al guardar comentario: ' + data.error);
             }
@@ -1502,91 +1575,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // FUNCIONALIDAD PARA GENERAR BULLET POINTS
     // ==========================================
     
-    // Función para obtener calificaciones de campos y generar bullet points
-    async function generarBulletPoints() {
-        const previewContainer = document.getElementById('bullet-points-preview');
-        const previewContent = document.getElementById('preview-content');
-        const btnGenerate = document.getElementById('btn-generate-bullets');
-        
-        if (!previewContainer || !previewContent || !btnGenerate) {
-            console.error('❌ Elementos de bullet points no encontrados');
-            return;
-        }
-        
-        // Mostrar loading
-        btnGenerate.disabled = true;
-        btnGenerate.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando...';
-        
-        try {
-            // Obtener calificaciones de campos
-            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error al obtener calificaciones');
-            }
-            
-            // Filtrar solo calificaciones con comentarios
-            const calificacionesConComentarios = data.calificaciones.filter(
-                cal => cal.comentario && cal.comentario.trim() !== ''
-            );
-            
-            if (calificacionesConComentarios.length === 0) {
-                previewContent.innerHTML = `
-                    <div class="no-bullet-points">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No hay comentarios de campos disponibles para generar bullet points.
-                    </div>
-                `;
-                previewContainer.style.display = 'block';
-                return;
-            }
-            
-            // Generar HTML de bullet points
-            const bulletPointsHTML = calificacionesConComentarios.map(cal => {
-                const estadoClass = cal.estado === 'bueno' ? 'success' : cal.estado === 'malo' ? 'danger' : 'secondary';
-                const estadoText = cal.estado === 'bueno' ? 'Bueno' : cal.estado === 'malo' ? 'Malo' : 'Sin calificar';
-                
-                return `
-                    <div class="bullet-point-item">
-                        <div class="bullet-point-icon">
-                            <i class="fas fa-circle"></i>
-                        </div>
-                        <div class="bullet-point-content">
-                            <div class="bullet-point-field">${formatearNombreCampo(cal.campo)}</div>
-                            <div class="bullet-point-comment">${cal.comentario}</div>
-                            <div class="bullet-point-status">
-                                <span class="badge bg-${estadoClass}">${estadoText}</span>
-                                <span class="text-muted">• ${cal.usuario} • ${formatearFecha(cal.fecha_modificacion)}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            previewContent.innerHTML = bulletPointsHTML;
-            previewContainer.style.display = 'block';
-            
-            // Mostrar notificación de éxito
-            mostrarNotificacionExito(`${calificacionesConComentarios.length} bullet points generados`);
-            
-        } catch (error) {
-            console.error('❌ Error al generar bullet points:', error);
-            mostrarNotificacionError('Error al generar bullet points: ' + error.message);
-            
-            previewContent.innerHTML = `
-                <div class="no-bullet-points">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error al cargar comentarios de campos.
-                </div>
-            `;
-            previewContainer.style.display = 'block';
-        } finally {
-            // Restaurar botón
-            btnGenerate.disabled = false;
-            btnGenerate.innerHTML = '<i class="fas fa-magic me-1"></i>Generar Bullets';
-        }
-    }
+
     
     // Función para formatear nombres de campos
     function formatearNombreCampo(campo) {
@@ -1614,45 +1603,168 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para generar comentario completo con bullet points
-    function generarComentarioCompleto() {
+    async function generarComentarioCompleto() {
         const comentarioGeneral = document.getElementById('comentario-analista-credito-text').value.trim();
-        const previewContent = document.getElementById('preview-content');
         
         if (!comentarioGeneral) {
             mostrarNotificacionError('Debe escribir un análisis general antes de guardar');
             return null;
         }
         
-        // Obtener bullet points del preview
-        const bulletPoints = [];
-        const bulletItems = previewContent.querySelectorAll('.bullet-point-item');
-        
-        bulletItems.forEach(item => {
-            const campo = item.querySelector('.bullet-point-field').textContent;
-            const comentario = item.querySelector('.bullet-point-comment').textContent;
-            bulletPoints.push(`• ${campo}: ${comentario}`);
-        });
-        
-        // Combinar comentario general con bullet points
-        let comentarioCompleto = comentarioGeneral;
-        
-        if (bulletPoints.length > 0) {
-            comentarioCompleto += '\n\nComentarios específicos por campo:\n' + bulletPoints.join('\n');
+        try {
+            // Obtener calificaciones de campos para generar bullet points
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Error al obtener calificaciones');
+            }
+            
+            // Filtrar solo calificaciones con comentarios
+            const calificacionesConComentarios = data.calificaciones.filter(
+                cal => cal.comentario && cal.comentario.trim() !== ''
+            );
+            
+            // Generar bullet points
+            const bulletPoints = [];
+            calificacionesConComentarios.forEach(cal => {
+                const campoFormateado = formatearNombreCampo(cal.campo);
+                const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
+                bulletPoints.push(`${estadoIcon} ${campoFormateado}: ${cal.comentario}`);
+            });
+            
+            // Combinar comentario general con bullet points
+            let comentarioCompleto = comentarioGeneral;
+            
+            if (bulletPoints.length > 0) {
+                comentarioCompleto += '\n\n' + bulletPoints.join('\n');
+            }
+            
+            return comentarioCompleto;
+            
+        } catch (error) {
+            console.error('❌ Error al generar comentario completo:', error);
+            mostrarNotificacionError('Error al generar comentario completo: ' + error.message);
+            return null;
         }
-        
-        return comentarioCompleto;
     }
     
-    // Event listeners para botones de bullet points
-    const btnGenerateBullets = document.getElementById('btn-generate-bullets');
+    // Event listeners para botones de análisis unificado
+    const btnPreviewAnalisis = document.getElementById('btn-preview-analisis');
     const btnRefreshBullets = document.getElementById('btn-refresh-bullets');
     
-    if (btnGenerateBullets) {
-        btnGenerateBullets.addEventListener('click', generarBulletPoints);
+    if (btnPreviewAnalisis) {
+        btnPreviewAnalisis.addEventListener('click', mostrarVistaPreviaAnalisis);
     }
     
     if (btnRefreshBullets) {
-        btnRefreshBullets.addEventListener('click', generarBulletPoints);
+        btnRefreshBullets.addEventListener('click', actualizarBulletsPreview);
+    }
+    
+    // Función para mostrar vista previa del análisis completo
+    async function mostrarVistaPreviaAnalisis() {
+        const comentarioCompleto = await generarComentarioCompleto();
+        
+        if (!comentarioCompleto) {
+            return;
+        }
+        
+        const previewContainer = document.getElementById('analisis-preview');
+        const previewContent = document.getElementById('preview-content');
+        
+        if (!previewContainer || !previewContent) {
+            console.error('❌ Elementos de preview no encontrados');
+            return;
+        }
+        
+        // Formatear el contenido para mostrar
+        const contenidoFormateado = comentarioCompleto
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+        
+        previewContent.innerHTML = `<p>${contenidoFormateado}</p>`;
+        previewContainer.style.display = 'block';
+        
+        // Scroll suave al preview
+        previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        mostrarNotificacionExito('Vista previa generada correctamente');
+    }
+    
+    // Función para actualizar preview de bullet points
+    async function actualizarBulletsPreview() {
+        const bulletsContent = document.getElementById('bullets-content');
+        const btnRefresh = document.getElementById('btn-refresh-bullets');
+        
+        if (!bulletsContent || !btnRefresh) {
+            console.error('❌ Elementos de bullets no encontrados');
+            return;
+        }
+        
+        // Mostrar loading
+        btnRefresh.disabled = true;
+        btnRefresh.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            // Obtener calificaciones de campos
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Error al obtener calificaciones');
+            }
+            
+            // Filtrar solo calificaciones con comentarios
+            const calificacionesConComentarios = data.calificaciones.filter(
+                cal => cal.comentario && cal.comentario.trim() !== ''
+            );
+            
+            if (calificacionesConComentarios.length === 0) {
+                bulletsContent.innerHTML = `
+                    <div class="bullets-placeholder">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>No hay comentarios de campos disponibles</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Generar HTML de bullet points
+            const bulletPointsHTML = calificacionesConComentarios.map(cal => {
+                const estadoClass = cal.estado === 'bueno' ? 'success' : cal.estado === 'malo' ? 'danger' : 'secondary';
+                const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
+                
+                return `
+                    <div class="bullet-point-item">
+                        <div class="bullet-point-icon">
+                            <span class="text-${estadoClass}">${estadoIcon}</span>
+                        </div>
+                        <div class="bullet-point-content">
+                            <div class="bullet-point-field">${formatearNombreCampo(cal.campo)}</div>
+                            <div class="bullet-point-comment">${cal.comentario}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            bulletsContent.innerHTML = bulletPointsHTML;
+            mostrarNotificacionExito(`${calificacionesConComentarios.length} comentarios de campos actualizados`);
+            
+        } catch (error) {
+            console.error('❌ Error al actualizar bullets:', error);
+            mostrarNotificacionError('Error al actualizar comentarios: ' + error.message);
+            
+            bulletsContent.innerHTML = `
+                <div class="bullets-placeholder">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <small>Error al cargar comentarios de campos</small>
+                </div>
+            `;
+        } finally {
+            // Restaurar botón
+            btnRefresh.disabled = false;
+            btnRefresh.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        }
     }
     
     // Función para agregar comentario a la lista
@@ -1728,41 +1840,71 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Funciones de notificación mejoradas
+    // Funciones de notificación mejoradas - Usar la función global showToast del base.html
+    function mostrarToast(mensaje, tipo = 'info', duracion = 3000) {
+        // Usar la función global showToast si está disponible, sino crear una local
+        if (typeof showToast === 'function') {
+            showToast(mensaje, tipo, duracion);
+        } else {
+            // Fallback local si showToast no está disponible
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${tipo} position-fixed`;
+            toast.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 1080;
+                max-width: 400px;
+                min-width: 300px;
+                animation: slideInRight 0.3s ease-out;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.1);
+            `;
+            
+            const iconMap = {
+                'success': 'check-circle',
+                'info': 'info-circle',
+                'warning': 'exclamation-triangle',
+                'danger': 'times-circle',
+                'error': 'times-circle'
+            };
+            
+            toast.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${iconMap[tipo] || 'info-circle'} me-2"></i>
+                        <span>${mensaje}</span>
+                    </div>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remove after duration
+            if (duracion > 0) {
+                setTimeout(() => {
+                    if (toast && toast.parentNode) {
+                        toast.style.animation = 'slideOutRight 0.3s ease-in';
+                        setTimeout(() => {
+                            if (toast && toast.parentNode) {
+                                toast.remove();
+                            }
+                        }, 300);
+                    }
+                }, duracion);
+            }
+        }
+    }
+    
+    // Funciones de compatibilidad para mantener el código existente
     function mostrarNotificacionExito(mensaje) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification toast-success';
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas fa-check-circle me-2"></i>
-                ${mensaje}
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        mostrarToast(mensaje, 'success', 3000);
     }
     
     function mostrarNotificacionError(mensaje) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification toast-error';
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                ${mensaje}
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
+        mostrarToast(mensaje, 'error', 4000);
     }
     
     // Cancelar comentario
@@ -2012,10 +2154,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 mostrarToast(`Transición exitosa: ${etapaDestinoNombre}`, 'success');
-                // Recargar la página para mostrar los cambios
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                // Mostrar mensaje de éxito sin recargar la página
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast(`Transición exitosa: ${etapaDestinoNombre}`, 'success');
+                } else {
+                    alert(`Transición exitosa: ${etapaDestinoNombre}`);
+                }
             } else {
                 throw new Error(data.error || 'Error desconocido');
             }
@@ -2577,11 +2721,8 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarComentariosAnalista();
     cargarComentariosGenerales();
     
-    // Actualizar comentarios cada 30 segundos
-    setInterval(function() {
-        cargarComentariosAnalista();
-        cargarComentariosGenerales();
-    }, 30000);
+    // Comentarios se cargan una vez al inicio
+    // Auto-refresh removido para evitar interrupciones del usuario
     
     // ==========================================
     // FUNCIONALIDADES DE COMPLIANCE
@@ -2876,16 +3017,28 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarSolicitudesRelacionadas();
     
     // Asegurar que el DOM esté completamente cargado antes de inicializar comentarios
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                inicializarComentariosAnalistaCredito();
-            }, 100);
-        });
-    } else {
+    function inicializarCuandoEsteListo() {
         setTimeout(() => {
-            inicializarComentariosAnalistaCredito();
-        }, 100);
+            try {
+                if (typeof inicializarComentariosAnalistaCredito === 'function') {
+                    inicializarComentariosAnalistaCredito();
+                } else {
+                    console.warn('⚠️ inicializarComentariosAnalistaCredito no está definida aún');
+                    // Reintentar después
+                    setTimeout(inicializarCuandoEsteListo, 500);
+                }
+            } catch (error) {
+                console.error('❌ Error al inicializar comentarios:', error);
+                // Reintentar después
+                setTimeout(inicializarCuandoEsteListo, 1000);
+            }
+        }, 200);
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarCuandoEsteListo);
+    } else {
+        inicializarCuandoEsteListo();
     }
     
     // Función para marcar todos los campos como bueno
@@ -2983,7 +3136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mostrar notificación de que el sistema está listo
     setTimeout(() => {
-        mostrarToast('Sistema de compliance inicializado', 'success');
+        mostrarToast('Sistema de análisis inicializado correctamente', 'success');
     }, 1000);
 });
 
@@ -3160,6 +3313,17 @@ function inicializarComentariosAnalistaCredito() {
         });
     }
     
+    // Cargar bullets preview inicial (con manejo de errores)
+    try {
+        if (typeof actualizarBulletsPreview === 'function') {
+            actualizarBulletsPreview();
+        } else {
+            console.warn('⚠️ actualizarBulletsPreview no está definida aún, se cargará más tarde');
+        }
+    } catch (error) {
+        console.warn('⚠️ Error al cargar bullets preview inicial:', error);
+    }
+    
     // Configurar botón cancelar
     const btnCancelar = document.getElementById('btn-cancelar-analista-credito');
     if (btnCancelar) {
@@ -3185,47 +3349,62 @@ function inicializarComentariosAnalistaCredito() {
     
     } catch (error) {
         console.error('❌ Error al inicializar comentarios de analista de crédito:', error);
-        mostrarToast('Error al inicializar comentarios de analista', 'error');
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Error al inicializar comentarios de analista', 'error');
+        } else {
+            console.error('❌ Error al inicializar comentarios de analista:', error.message);
+        }
     }
 }
 
 function cargarComentariosAnalistaCredito() {
     console.log('📋 Cargando comentarios de analista de crédito...');
     
-    const solicitudId = parseInt('{{ solicitud.id }}');
-    
-    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('📊 Comentarios recibidos:', data);
-            
-            if (data.success) {
-                mostrarComentariosAnalistaCredito(data.comentarios);
-            } else {
-                console.error('❌ Error al cargar comentarios:', data.error);
-                mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error de red:', error);
-            mostrarToast('Error de red al cargar comentarios', 'error');
-        });
+    try {
+        const solicitudId = parseInt('{{ solicitud.id }}');
+        
+        if (!solicitudId || isNaN(solicitudId)) {
+            console.error('❌ Error: solicitudId inválido:', solicitudId);
+            return;
+        }
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 Comentarios recibidos:', data);
+                
+                if (data.success) {
+                    mostrarComentariosAnalistaCredito(data.comentarios);
+                } else {
+                    console.error('❌ Error al cargar comentarios:', data.error);
+                    if (typeof mostrarToast === 'function') {
+                        mostrarToast('Error al cargar comentarios: ' + data.error, 'error');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error de red:', error);
+                if (typeof mostrarToast === 'function') {
+                    mostrarToast('Error de red al cargar comentarios', 'error');
+                }
+            });
+    } catch (error) {
+        console.error('❌ Error en cargarComentariosAnalistaCredito:', error);
+    }
 }
 
-function enviarComentarioAnalistaCredito(event) {
+async function enviarComentarioAnalistaCredito(event) {
     event.preventDefault();
     
     const textarea = document.getElementById('comentario-analista-credito-text');
     const btnEnviar = document.getElementById('btn-enviar-analista-credito');
     const spinner = btnEnviar.querySelector('.loading-spinner-analista');
     const iconoBoton = btnEnviar.querySelector('i:not(.loading-spinner-analista i)');
-    
-    // Generar comentario completo con bullet points
-    const comentarioCompleto = generarComentarioCompleto();
-    
-    if (!comentarioCompleto) {
-        return; // La función ya muestra el error
-    }
     
     // Deshabilitar botón y mostrar spinner
     btnEnviar.disabled = true;
@@ -3234,46 +3413,59 @@ function enviarComentarioAnalistaCredito(event) {
         iconoBoton.style.display = 'none';
     }
     
-    console.log('💾 Enviando comentario de analista de crédito:', comentarioCompleto);
+    try {
+        // Generar comentario completo con bullet points
+        const comentarioCompleto = await generarComentarioCompleto();
+        
+        if (!comentarioCompleto) {
+            return; // La función ya muestra el error
+        }
     
-    const solicitudId = parseInt('{{ solicitud.id }}');
-    const token = getCsrfToken();
-    
-    fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-analista-credito/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': token
-        },
-        body: JSON.stringify({
-            comentario: comentarioCompleto
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+        console.log('💾 Enviando comentario de analista de crédito:', comentarioCompleto);
+        
+        const solicitudId = parseInt('{{ solicitud.id }}');
+        const token = getCsrfToken();
+        
+        const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-analista-credito/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify({
+                comentario: comentarioCompleto
+            })
+        });
+        
+        const data = await response.json();
         console.log('📋 Respuesta del servidor:', data);
         
         if (data.success) {
-            mostrarToast('Comentario de analista guardado exitosamente', 'success');
+            mostrarToast('Análisis de analista guardado exitosamente', 'success');
             textarea.value = '';
             document.getElementById('char-count-analista-credito').textContent = '0';
             cargarComentariosAnalistaCredito();
+            
+            // Ocultar preview después de guardar
+            const previewContainer = document.getElementById('analisis-preview');
+            if (previewContainer) {
+                previewContainer.style.display = 'none';
+            }
         } else {
-            mostrarToast('Error al guardar comentario: ' + (data.error || 'Error desconocido'), 'error');
+            mostrarToast('Error al guardar análisis: ' + (data.error || 'Error desconocido'), 'error');
         }
-    })
-    .catch(error => {
+        
+    } catch (error) {
         console.error('❌ Error:', error);
-        mostrarToast('Error de red al enviar comentario', 'error');
-    })
-    .finally(() => {
+        mostrarToast('Error de red al enviar análisis', 'error');
+    } finally {
         // Rehabilitar botón y ocultar spinner
         btnEnviar.disabled = false;
         if (spinner && iconoBoton) {
             spinner.style.display = 'none';
             iconoBoton.style.display = 'inline-block';
         }
-    });
+    }
 }
 
 function mostrarComentariosAnalistaCredito(comentarios) {
@@ -3376,6 +3568,88 @@ function mostrarComentariosAnalistaCredito(comentarios) {
 /* ============================== */
 /* ESTILOS ÉPICOS DE ANÁLISIS    */
 /* ============================== */
+
+/* Animaciones para toast notifications */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Estilos para toast notifications */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1080;
+    max-width: 400px;
+    min-width: 300px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast-notification.toast-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.toast-notification.toast-error {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.toast-notification.toast-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.toast-notification.toast-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+.toast-content {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.toast-content .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.toast-content .btn-close:hover {
+    opacity: 1;
+}
 
 /* Variables de colores - TONALIDADES AZULES */
 :root {
@@ -6248,10 +6522,13 @@ function mostrarComentariosAnalistaCredito(comentarios) {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     border: 1px solid #e5e7eb;
-    height: 420px;
+    min-height: 500px;
+    max-height: 700px;
     display: flex;
     flex-direction: column;
     margin-bottom: 1rem;
+    position: relative;
+    z-index: 10;
 }
 
 .comentarios-analista-header-compact {
@@ -6280,7 +6557,8 @@ function mostrarComentariosAnalistaCredito(comentarios) {
     padding: 1rem;
     flex: 1;
     overflow-y: auto;
-    max-height: calc(420px - 120px); /* Resta header y formulario */
+    min-height: 100px;
+    max-height: 200px; /* Altura máxima para la lista de comentarios */
 }
 
 .comentarios-lista-compact {
@@ -6469,6 +6747,178 @@ function mostrarComentariosAnalistaCredito(comentarios) {
         width: 100%;
         justify-content: center;
     }
+}
+
+/* ==========================================
+   ESTILOS PARA ANÁLISIS UNIFICADO
+   ========================================== */
+
+.analisis-unificado-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.analisis-seccion-editable {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.analisis-seccion-editable .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.analisis-seccion-bullets {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.bullets-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.bullets-header strong {
+    margin-right: auto;
+}
+
+.bullets-content {
+    max-height: 150px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.bullets-placeholder {
+    text-align: center;
+    color: #6b7280;
+    padding: 1rem;
+    font-style: italic;
+}
+
+.analisis-preview {
+    background: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.analisis-preview .preview-header {
+    background: #0ea5e9;
+    color: white;
+    margin: -1rem -1rem 1rem -1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px 8px 0 0;
+    font-size: 0.9rem;
+}
+
+.analisis-preview .preview-content {
+    background: white;
+    border-radius: 6px;
+    padding: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-size: 0.9rem;
+}
+
+.analisis-preview .preview-content p {
+    margin-bottom: 1rem;
+}
+
+.analisis-preview .preview-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Estilos para bullet points en el análisis unificado */
+.bullet-point-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #28a745;
+}
+
+.bullet-point-item:last-child {
+    margin-bottom: 0;
+}
+
+.bullet-point-icon {
+    font-size: 0.9rem;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+    font-weight: bold;
+}
+
+.bullet-point-content {
+    flex: 1;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.bullet-point-field {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+.bullet-point-comment {
+    color: #6c757d;
+}
+
+/* Responsive para análisis unificado */
+@media (max-width: 768px) {
+    .comentarios-analista-section-compact {
+        min-height: 400px;
+        max-height: 600px;
+    }
+    
+    .analisis-unificado-container {
+        gap: 0.75rem;
+    }
+    
+    .analisis-seccion-editable,
+    .analisis-seccion-bullets {
+        padding: 0.75rem;
+    }
+    
+    .bullets-content {
+        max-height: 120px;
+    }
+    
+    .analisis-preview .preview-content {
+        max-height: 150px;
+        font-size: 0.85rem;
+    }
+    
+    .comentarios-analista-body-compact {
+        max-height: 150px;
+    }
+}
+
+/* ==========================================
+   ESTILOS PARA TABS SECTION
+   ========================================== */
+
+.tabs-section {
+    position: relative;
+    z-index: 5;
+    margin-top: 1rem;
 }
 
 /* ==========================================

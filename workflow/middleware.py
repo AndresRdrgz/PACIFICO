@@ -23,14 +23,6 @@ class APIResponseMiddleware:
         # Process request
         response = self.get_response(request)
         
-        # If it's an API request and user is not authenticated, return JSON error
-        if is_api_request and not request.user.is_authenticated:
-            return JsonResponse({
-                'success': False,
-                'error': 'Authentication required',
-                'code': 'AUTH_REQUIRED'
-            }, status=401)
-        
         # If it's an API request and response is not JSON, try to convert
         if is_api_request and not response.get('Content-Type', '').startswith('application/json'):
             # Check if response is an HTML error page
