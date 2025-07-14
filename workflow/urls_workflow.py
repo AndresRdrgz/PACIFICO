@@ -9,25 +9,7 @@ import os
 app_name = 'workflow'
 
 urlpatterns = [
-    # PWA routes
-    path('manifest.json', views.manifest_view, name='manifest'),
-    path('sw.js', views.service_worker_view, name='service_worker'),
-    path('test-sw-debug/', views.test_service_worker, name='test_service_worker'),
-    path('offline/', views_workflow.offline_view, name='offline'),
-    path('api/health-check/', views_workflow.health_check, name='health_check'),
-    path('pwa-test/', views_workflow.pwa_test_view, name='pwa_test'),
-    
-    # Alternative service worker route for debugging
-] 
-
-# Add static file serving for service worker in development
-if settings.DEBUG:
-    from django.views.static import serve
-    urlpatterns += [
-        path('sw-static.js', serve, {
-            'document_root': os.path.join(settings.BASE_DIR, 'workflow', 'static', 'workflow'),
-            'path': 'sw.js'
-        }, name='service_worker_static'),
+    # Main routes
     ]
 
 # Vistas principales

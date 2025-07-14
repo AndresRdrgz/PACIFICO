@@ -35,23 +35,6 @@
                             {% endfor %}
                         </ul>
                     </div>
-                    
-                    <!-- Botones de Tipo de Bandeja -->
-                    <div class="btn-group" role="group" aria-label="Tipo de bandeja">
-                        <button type="button" class="btn btn-light btn-sm active" id="btnVistaMixta" onclick="cambiarTipoBandeja('mixta')">
-                            <i class="fas fa-layer-group me-1"></i>Vista Mixta
-                        </button>
-                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaGrupal" onclick="cambiarTipoBandeja('grupal')">
-                            <i class="fas fa-users me-1"></i>Bandeja Grupal
-                        </button>
-                        <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaPersonal" onclick="cambiarTipoBandeja('personal')">
-                            <i class="fas fa-user me-1"></i>Bandeja Personal
-                        </button>
-                    </div>
-                    
-                    <a href="{% url 'workflow:dashboard' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-chart-bar me-1"></i>Dashboard
-                    </a>
                 </div>
             </div>
         </div>
@@ -63,15 +46,7 @@
     <div class="card mb-2" style="border: 1px solid #e0e0e0;">
         <div class="card-body py-2">
             <div class="row g-1 align-items-center">
-                <div class="col-6 col-md-2">
-                    <select id="filtroCliente" class="form-select form-select-sm">
-                        <option value="">Todos los clientes</option>
-                        {% for cliente in clientes_unicos %}
-                        <option value="{{ cliente }}">{{ cliente }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-md-2">
+                <div class="col-6 col-md-3">
                     <select id="filtroEstado" class="form-select form-select-sm">
                         <option value="">Todos los estados</option>
                         {% for estado in estados_unicos %}
@@ -79,15 +54,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-6 col-md-2">
-                    <select id="filtroEtapa" class="form-select form-select-sm">
-                        <option value="">Todas las etapas</option>
-                        {% for etapa in etapas_unicas %}
-                        <option value="{{ etapa }}">{{ etapa }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-md-2">
+                <div class="col-6 col-md-3">
                     <select id="filtroSLA" class="form-select form-select-sm">
                         <option value="">Todos los SLA</option>
                         <option value="en_tiempo">En tiempo</option>
@@ -95,7 +62,7 @@
                         <option value="vencido">Vencido</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-3">
+                <div class="col-12 col-md-5">
                     <input type="text" id="busquedaGlobal" class="form-control form-control-sm" 
                            placeholder="Buscar por código, cliente, cédula...">
                 </div>
@@ -248,10 +215,6 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-success btn-sm procesar-solicitud" 
-                                                            data-solicitud-id="{{ solicitud.id }}">
-                                                        <i class="fas fa-cogs me-1"></i> Procesar
-                                                    </button>
                                                     <button class="btn btn-warning btn-sm devolver-solicitud" 
                                                             data-solicitud-id="{{ solicitud.id }}"
                                                             data-codigo="{{ solicitud.codigo }}">
@@ -406,10 +369,6 @@
                                     <td>{{ solicitud.fecha_inicio|date:"d/m/Y H:i" }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-success btn-sm procesar-solicitud" 
-                                                    data-solicitud-id="{{ solicitud.id }}">
-                                                <i class="fas fa-cogs me-1"></i><span class="btn-action-text">Procesar</span>
-                                            </button>
                                             <button class="btn btn-warning btn-sm devolver-solicitud" 
                                                     data-solicitud-id="{{ solicitud.id }}"
                                                     data-codigo="{{ solicitud.codigo }}">
@@ -801,77 +760,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Función para cambiar tipo de bandeja
-    window.cambiarTipoBandeja = function(tipo) {
-        const vistas = document.querySelectorAll('.vista-bandeja');
-        const tituloBandeja = document.getElementById('titulo-bandeja');
-        
-        // Actualizar botones activos
-        document.querySelectorAll('.btn-group button').forEach(btn => {
-            btn.classList.remove('active', 'btn-light');
-            btn.classList.add('btn-outline-light');
-        });
-        
-        // Ocultar todas las vistas
-        vistas.forEach(vista => vista.style.display = 'none');
-        
-        // Mostrar la vista seleccionada y activar botón correspondiente
-        switch(tipo) {
-            case 'mixta':
-                document.getElementById('vista-mixta').style.display = 'block';
-                tituloBandeja.textContent = 'Vista Mixta';
-                const btnMixta = document.getElementById('btnVistaMixta');
-                btnMixta.classList.remove('btn-outline-light');
-                btnMixta.classList.add('btn-light', 'active');
-                break;
-            case 'grupal':
-                document.getElementById('vista-grupal').style.display = 'block';
-                tituloBandeja.textContent = 'Bandeja Grupal';
-                const btnGrupal = document.getElementById('btnVistaGrupal');
-                btnGrupal.classList.remove('btn-outline-light');
-                btnGrupal.classList.add('btn-light', 'active');
-                break;
-            case 'personal':
-                document.getElementById('vista-personal').style.display = 'block';
-                tituloBandeja.textContent = 'Bandeja Personal';
-                const btnPersonal = document.getElementById('btnVistaPersonal');
-                btnPersonal.classList.remove('btn-outline-light');
-                btnPersonal.classList.add('btn-light', 'active');
-                break;
-        }
-    };
-    
     // Función para aplicar filtros
     function aplicarFiltros() {
-        const filtroCliente = document.getElementById('filtroCliente').value.toLowerCase();
         const filtroEstado = document.getElementById('filtroEstado').value.toLowerCase();
-        const filtroEtapa = document.getElementById('filtroEtapa').value.toLowerCase();
         const filtroSLA = document.getElementById('filtroSLA').value;
         const busqueda = document.getElementById('busquedaGlobal').value.toLowerCase();
         
         const filas = document.querySelectorAll('.solicitud-row');
         
         filas.forEach(fila => {
-            const cliente = fila.dataset.cliente.toLowerCase();
             const estado = fila.dataset.estado.toLowerCase();
-            const etapa = fila.dataset.etapa.toLowerCase();
             const sla = fila.dataset.sla;
             const search = fila.dataset.search || '';
             
             let mostrar = true;
             
-            // Filtro por cliente
-            if (filtroCliente && !cliente.includes(filtroCliente)) {
-                mostrar = false;
-            }
-            
             // Filtro por estado
             if (filtroEstado && !estado.includes(filtroEstado)) {
-                mostrar = false;
-            }
-            
-            // Filtro por etapa
-            if (filtroEtapa && !etapa.includes(filtroEtapa)) {
                 mostrar = false;
             }
             
@@ -890,17 +795,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Event listeners para filtros
-    document.getElementById('filtroCliente').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtroEtapa').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroSLA').addEventListener('change', aplicarFiltros);
     document.getElementById('busquedaGlobal').addEventListener('input', aplicarFiltros);
     
     // Botón limpiar filtros
     document.getElementById('limpiarFiltros').addEventListener('click', function() {
-        document.getElementById('filtroCliente').value = '';
         document.getElementById('filtroEstado').value = '';
-        document.getElementById('filtroEtapa').value = '';
         document.getElementById('filtroSLA').value = '';
         document.getElementById('busquedaGlobal').value = '';
         aplicarFiltros();
@@ -1033,59 +934,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Función para ver detalle
+    // Función para ver detalle - navegar directamente a la página de análisis
     document.querySelectorAll('.ver-detalle').forEach(button => {
         button.addEventListener('click', function() {
             const solicitudId = this.getAttribute('data-solicitud-id');
             
-            // Abrir modal y cargar contenido
-            const modal = new bootstrap.Modal(document.getElementById('detalleModal'));
-            const contenido = document.getElementById('detalle-contenido');
-            
-            contenido.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Cargando...</div>';
-            modal.show();
-            
-            // Cargar detalle de la solicitud
-            fetch(`/workflow/solicitud/${solicitudId}/`)
-                .then(response => response.text())
-                .then(html => {
-                    // Extraer solo el contenido relevante del HTML
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const contenidoDetalle = doc.querySelector('.card-body') || doc.querySelector('main');
-                    
-                    if (contenidoDetalle) {
-                        contenido.innerHTML = contenidoDetalle.innerHTML;
-                    } else {
-                        contenido.innerHTML = '<p>Error al cargar el detalle</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    contenido.innerHTML = '<p>Error al cargar el detalle</p>';
-                });
+            // Navegar directamente a la página de análisis
+            window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
         });
     });
     
-    // Función para procesar solicitud
-    document.querySelectorAll('.procesar-solicitud').forEach(button => {
+    // Función para ver solicitud
+    document.querySelectorAll('.ver-solicitud').forEach(button => {
         button.addEventListener('click', function() {
             const solicitudId = this.getAttribute('data-solicitud-id');
             
-            // Redirigir a la página de detalle para procesar
-            window.location.href = `/workflow/solicitud/${solicitudId}/`;
+            // Navegar directamente a la página de análisis
+            window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
         });
     });
     
-    // RECARGA AUTOMÁTICA CADA 30 SEGUNDOS (COMO RESPALDO)
-    setInterval(function() {
-        if (!document.hidden) {
-            console.log('🔄 Recarga automática programada');
-            location.reload();
-        }
-    }, 30000); // 30 segundos
+    // RECARGA AUTOMÁTICA REMOVIDA - Ya no se recarga automáticamente para evitar expulsar usuarios
+    // setInterval(function() {
+    //     if (!document.hidden) {
+    //         console.log('🔄 Recarga automática programada');
+    //         location.reload();
+    //     }
+    // }, 30000); // REMOVIDO - Era cada 30 segundos
     
-    console.log('✅ Sistema de bandejas inicializado correctamente');
+    console.log('✅ Sistema de bandejas inicializado correctamente - SIN auto-refresh');
 });
 </script>
 

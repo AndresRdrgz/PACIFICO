@@ -361,9 +361,6 @@
                                     <span class="font-medium {{ s.sla_color }}">{{ s.sla_restante }}</span>
                                 </div>
                             </div>
-                            {% for alerta in s.alertas %}
-                                <i class="fas {{ alerta.icon }} text-{{ alerta.color }}" title="{{ alerta.tooltip }}"></i>
-                            {% endfor %}
                         </div>
                     </div>
 
@@ -433,34 +430,14 @@
                     <!-- Primera fila: Filtros principales -->
                     <div class="col-12 col-lg-8">
                         <div class="row g-2">
-                            <div class="col-6 col-md-4 col-lg-2">
-                                <select id="filtroCliente" class="form-select form-select-sm">
-                                    <option value="">Todos los clientes</option>
+                            <div class="col-6 col-md-6 col-lg-6">
+                                <select id="filtroEtapa" class="form-select form-select-sm">
+                                    <option value="">Todas las etapas</option>
                                 </select>
                             </div>
-                            <div class="col-6 col-md-4 col-lg-2">
-                                <select id="filtroProducto" class="form-select form-select-sm">
-                                    <option value="">Todos los productos</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4 col-lg-2">
-                                <select id="filtroEstado" class="form-select form-select-sm">
-                                    <option value="">Todos los estados</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4 col-lg-2">
-                                <select id="filtroAsignado" class="form-select form-select-sm">
-                                    <option value="">Todas las asignaciones</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4 col-lg-2">
+                            <div class="col-6 col-md-6 col-lg-6">
                                 <select id="filtroSLA" class="form-select form-select-sm">
                                     <option value="">Todos los SLA</option>
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-4 col-lg-2">
-                                <select id="filtroPrioridad" class="form-select form-select-sm">
-                                    <option value="">Todas las prioridades</option>
                                 </select>
                             </div>
                         </div>
@@ -506,20 +483,12 @@
                                 {% for s in solicitudes_tabla %}
                                 <tr class="align-middle table-row-hover clickable-row {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
                                     data-solicitud-id="{{ s.id }}"
-                                    data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
-                                    data-producto="{{ s.producto_descripcion|default:'Sin producto' }}"
-                                    data-estado="{{ s.estado_actual|default:'Sin estado' }}"
-                                    data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
+                                    data-etapa="{{ s.etapa_actual.nombre|default:'Sin etapa' }}"
                                     data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
-                                    data-prioridad="{{ s.prioridad|default:'Sin prioridad' }}"
                                     onclick="handleRowClick(event, {{ s.id }})"
                                     style="cursor: pointer;">
                                     <td class="text-dark">
                                         <div class="d-flex align-items-center">
-                                            <!-- Iconos de alerta -->
-                                            {% for alerta in s.alertas %}
-                                            <i class="fas {{ alerta.icon }} text-{{ alerta.color }} me-1" title="{{ alerta.tooltip }}" style="font-size: 0.8rem;"></i>
-                                            {% endfor %}
                                             <!-- Número clickeable -->
                                             <span class="text-decoration-none fw-bold solicitud-link" 
                                                   title="Ver detalles">
@@ -719,27 +688,17 @@
     <div class="card card-custom mb-2">
         <div class="card-body py-2">
             <div class="row g-1 align-items-center">
-                <div class="col-6 col-md-2">
-                    <select id="kanbanFiltroCliente" class="form-select form-select-sm">
-                        <option value="">Todos los clientes</option>
+                <div class="col-6 col-md-3">
+                    <select id="kanbanFiltroEtapa" class="form-select form-select-sm">
+                        <option value="">Todas las etapas</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-2">
-                    <select id="kanbanFiltroEstado" class="form-select form-select-sm">
-                        <option value="">Todos los estados</option>
-                    </select>
-                </div>
-                <div class="col-6 col-md-2">
-                    <select id="kanbanFiltroAsignado" class="form-select form-select-sm">
-                        <option value="">Todas las asignaciones</option>
-                    </select>
-                </div>
-                <div class="col-6 col-md-2">
+                <div class="col-6 col-md-3">
                     <select id="kanbanFiltroSLA" class="form-select form-select-sm">
                         <option value="">Todos los SLA</option>
                     </select>
                 </div>
-                <div class="col-12 col-md-3">
+                <div class="col-12 col-md-5">
                     <input type="text" id="kanbanBusquedaGlobal" class="form-control form-control-sm" 
                            placeholder="Buscar...">
                 </div>
@@ -805,7 +764,7 @@
                                         cursor: pointer;"
                                  onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
                                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
-                                 onclick="mostrarModalSolicitud({{ s.id }})">
+                                 onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'">
                                 <div class="card-body p-2" style="height: 100%;">
                                     <!-- Header compacto -->
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1134,8 +1093,8 @@ function handleRowClick(event, solicitudId) {
         return;
     }
     
-    // Si no es un elemento de formulario, mostrar el modal
-    mostrarModalSolicitud(solicitudId);
+    // Si no es un elemento de formulario, navegar directamente al detalle
+    window.location.href = `/workflow/solicitudes/${solicitudId}/detalle/`;
 }
 
 $(document).ready(function() {
@@ -1343,50 +1302,30 @@ $(document).ready(function() {
         console.log('Configurando filtros...');
         
         // Obtener valores únicos de cada columna
-        var clientes = new Set();
-        var productos = new Set();
-        var estados = new Set();
-        var asignados = new Set();
+        var etapas = new Set();
         var slas = new Set();
-        var prioridades = new Set();
         
         // Usar selector directo para obtener todas las filas
         $('#tablaSolicitudes tbody tr').each(function() {
             var $row = $(this);
             
             // Extraer datos de los atributos data-*
-            var cliente = $row.attr('data-cliente');
-            var producto = $row.attr('data-producto');
-            var estado = $row.attr('data-estado');
-            var asignado = $row.attr('data-asignado');
+            var etapa = $row.attr('data-etapa');
             var sla = $row.attr('data-sla');
-            var prioridad = $row.attr('data-prioridad');
             
-            console.log('Datos de fila:', { cliente, producto, estado, asignado, sla, prioridad });
+            console.log('Datos de fila:', { etapa, sla });
             
-            if (cliente && cliente !== 'Sin cliente') clientes.add(cliente);
-            if (producto && producto !== 'Sin producto') productos.add(producto);
-            if (estado && estado !== 'Sin estado') estados.add(estado);
-            if (asignado && asignado !== 'Sin asignar') asignados.add(asignado);
+            if (etapa && etapa !== 'Sin etapa') etapas.add(etapa);
             if (sla && sla !== 'sin sla') slas.add(sla);
-            if (prioridad && prioridad !== 'Sin prioridad') prioridades.add(prioridad);
         });
         
         // Poblar filtros
-        poblarFiltro('#filtroCliente', Array.from(clientes));
-        poblarFiltro('#filtroProducto', Array.from(productos));
-        poblarFiltro('#filtroEstado', Array.from(estados));
-        poblarFiltro('#filtroAsignado', Array.from(asignados));
+        poblarFiltro('#filtroEtapa', Array.from(etapas));
         poblarFiltro('#filtroSLA', Array.from(slas));
-        poblarFiltro('#filtroPrioridad', Array.from(prioridades));
         
         console.log('Filtros configurados:', {
-            clientes: Array.from(clientes),
-            productos: Array.from(productos),
-            estados: Array.from(estados),
-            asignados: Array.from(asignados),
-            slas: Array.from(slas),
-            prioridades: Array.from(prioridades)
+            etapas: Array.from(etapas),
+            slas: Array.from(slas)
         });
     }
     
@@ -1401,7 +1340,7 @@ $(document).ready(function() {
     }
     
     // Aplicar filtros en tiempo real (solo si la tabla existe)
-    $('#filtroCliente, #filtroProducto, #filtroEstado, #filtroAsignado, #filtroSLA, #filtroPrioridad').on('change', function() {
+    $('#filtroEtapa, #filtroSLA').on('change', function() {
         console.log('Filtro cambiado:', $(this).attr('id'), '=', $(this).val());
         if (table) {
             aplicarFiltrosAvanzados();
@@ -1684,12 +1623,8 @@ $(document).ready(function() {
         $.fn.dataTable.ext.search.splice(0, $.fn.dataTable.ext.search.length);
         
         var filtros = {
-            cliente: $('#filtroCliente').val(),
-            producto: $('#filtroProducto').val(),
-            estado: $('#filtroEstado').val(),
-            asignado: $('#filtroAsignado').val(),
-            sla: $('#filtroSLA').val(),
-            prioridad: $('#filtroPrioridad').val()
+            etapa: $('#filtroEtapa').val(),
+            sla: $('#filtroSLA').val()
         };
         
         console.log('Filtros activos:', filtros);
@@ -1713,35 +1648,15 @@ $(document).ready(function() {
                 var $row = $(row.node());
                 var match = true;
                 
-                if (filtros.cliente) {
-                    var dataCliente = $row.attr('data-cliente');
-                    match = match && (dataCliente === filtros.cliente);
-                    console.log('Cliente:', dataCliente, '===', filtros.cliente, '?', match);
-                }
-                if (filtros.producto) {
-                    var dataProducto = $row.attr('data-producto');
-                    match = match && (dataProducto === filtros.producto);
-                    console.log('Producto:', dataProducto, '===', filtros.producto, '?', match);
-                }
-                if (filtros.estado) {
-                    var dataEstado = $row.attr('data-estado');
-                    match = match && (dataEstado === filtros.estado);
-                    console.log('Estado:', dataEstado, '===', filtros.estado, '?', match);
-                }
-                if (filtros.asignado) {
-                    var dataAsignado = $row.attr('data-asignado');
-                    match = match && (dataAsignado === filtros.asignado);
-                    console.log('Asignado:', dataAsignado, '===', filtros.asignado, '?', match);
+                if (filtros.etapa) {
+                    var dataEtapa = $row.attr('data-etapa');
+                    match = match && (dataEtapa === filtros.etapa);
+                    console.log('Etapa:', dataEtapa, '===', filtros.etapa, '?', match);
                 }
                 if (filtros.sla) {
                     var dataSla = $row.attr('data-sla');
                     match = match && (dataSla === filtros.sla);
                     console.log('SLA:', dataSla, '===', filtros.sla, '?', match);
-                }
-                if (filtros.prioridad) {
-                    var dataPrioridad = $row.attr('data-prioridad');
-                    match = match && (dataPrioridad === filtros.prioridad);
-                    console.log('Prioridad:', dataPrioridad, '===', filtros.prioridad, '?', match);
                 }
                 
                 console.log('Fila', dataIndex, 'match final:', match);
@@ -4891,9 +4806,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
     }
     
-         // 🚀 SISTEMA DE POLLING PARA TABLA/KANBAN
-     // [REMOVED: Polling and timer system for tabla/kanban updates]
-     // ... existing code ...
+        
 });
 </script>
 

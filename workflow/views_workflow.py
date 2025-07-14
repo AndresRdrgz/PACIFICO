@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, HttpResponseRedirect
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
@@ -10,6 +10,9 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.db import models
+import os
+import tempfile
+from PyPDF2 import PdfMerger
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -124,6 +127,57 @@ def negocios_view(request):
     
     # Obtener todos los pipelines disponibles
     pipelines = Pipeline.objects.all()
+    
+    # Si no hay pipeline seleccionado, intentar seleccionar uno por defecto
+    if not pipeline_id:
+        # 1. Intentar usar el último pipeline visitado (guardado en sesión)
+        pipeline_id = request.session.get('ultimo_pipeline_id')
+        
+        # 2. Si no hay pipeline en sesión, seleccionar el primer pipeline disponible
+        if not pipeline_id and pipelines.exists():
+            # Para usuarios regulares, verificar permisos de pipeline
+            if not (request.user.is_superuser or request.user.is_staff):
+                from .modelsWorkflow import PermisoPipeline
+                
+                # Obtener grupos del usuario
+                user_groups = request.user.groups.all()
+                
+                # Filtrar pipelines a los que el usuario tiene acceso
+                pipelines_permitidos = []
+                for pipeline in pipelines:
+                    # Verificar si el usuario tiene permisos directos
+                    tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                        pipeline=pipeline,
+                        usuario=request.user,
+                        puede_ver=True
+                    ).exists()
+                    
+                    # Verificar si el usuario tiene permisos por grupo
+                    tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                        pipeline=pipeline,
+                        grupo__in=user_groups,
+                        puede_ver=True
+                    ).exists()
+                    
+                    if tiene_permiso_usuario or tiene_permiso_grupo:
+                        pipelines_permitidos.append(pipeline)
+                
+                # Si tiene pipelines permitidos, seleccionar el primero
+                if pipelines_permitidos:
+                    pipeline_id = pipelines_permitidos[0].id
+            else:
+                # Para superusers y staff, seleccionar el primer pipeline
+                pipeline_id = pipelines.first().id
+        
+        # 3. Si se seleccionó un pipeline por defecto, redirigir con el parámetro
+        if pipeline_id:
+            # Preservar otros parámetros de la URL
+            params = request.GET.copy()
+            params['pipeline'] = pipeline_id
+            
+            # Construir la URL completa
+            url = f"{request.path}?{params.urlencode()}"
+            return HttpResponseRedirect(url)
     
     # Verificar si el usuario tiene acceso a algún pipeline
     if not (request.user.is_superuser or request.user.is_staff):
@@ -821,8 +875,16 @@ def detalle_solicitud(request, solicitud_id):
         )
         
         for transicion in transiciones:
+            # Verificar requisitos para esta transición
+            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+            
             if not transicion.requiere_permiso:
-                transiciones_disponibles.append(transicion)
+                transiciones_disponibles.append({
+                    'transicion': transicion,
+                    'puede_realizar': len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': requisitos_faltantes,
+                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                })
             else:
                 # Verificar si el usuario tiene permisos específicos
                 grupos_usuario = request.user.groups.all()
@@ -831,7 +893,12 @@ def detalle_solicitud(request, solicitud_id):
                     grupo__in=grupos_usuario
                 ).exists()
                 if tiene_permiso:
-                    transiciones_disponibles.append(transicion)
+                    transiciones_disponibles.append({
+                        'transicion': transicion,
+                        'puede_realizar': len(requisitos_faltantes) == 0,
+                        'requisitos_faltantes': requisitos_faltantes,
+                        'total_requisitos_faltantes': len(requisitos_faltantes)
+                    })
     
     # Obtener historial
     historial = solicitud.historial.all().order_by('-fecha_inicio')
@@ -2127,29 +2194,6 @@ def api_formulario_datos(request):
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
-# ==========================================
-# VISTAS PWA
-# ==========================================
-
-def offline_view(request):
-    """Vista para mostrar página offline de PWA"""
-    return render(request, 'workflow/offline.html')
-
-
-def health_check(request):
-    """Health check endpoint para PWA"""
-    return JsonResponse({
-        'status': 'ok',
-        'timestamp': timezone.now().isoformat(),
-        'version': '1.0.1'
-    })
-
-
-def pwa_test_view(request):
-    """PWA testing page"""
-    return render(request, 'workflow/pwa_test.html')
-
-
 # Sistema de notificaciones en tiempo real
 class NotificationManager:
     def __init__(self):
@@ -2572,7 +2616,6 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
             from django.core.mail import get_connection
             connection = get_connection()
             connection.ssl_context = ssl_context
-            email.connection = connection
             email.send()
         
         print(f"✅ Correo de asignación enviado correctamente para solicitud {solicitud.codigo} - Asignada a: {usuario_asignado.username}, correo enviado a: {solicitud.creada_por.email}")
@@ -2580,6 +2623,153 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo de asignación para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etapa, comentarios_analista, bullet_points, usuario_que_cambio):
+    """
+    Función para enviar correo automático al propietario de la solicitud cuando cambia de etapa.
+    Incluye comentarios del analista y bullet points.
+    """
+    try:
+        # Verificar que la solicitud tiene un creador
+        if not solicitud.creada_por or not solicitud.creada_por.email:
+            print(f"⚠️ No se puede enviar correo: solicitud {solicitud.codigo} sin creador o email")
+            return
+        
+        # Obtener información del cliente
+        cliente_nombre = ""
+        try:
+            if hasattr(solicitud, 'cliente') and solicitud.cliente:
+                cliente_nombre = getattr(solicitud.cliente, 'nombreCliente', 'Sin nombre')
+            elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion and solicitud.cotizacion.cliente:
+                cliente_nombre = getattr(solicitud.cotizacion.cliente, 'nombreCliente', 'Sin nombre')
+            else:
+                cliente_nombre = "Cliente no asignado"
+        except Exception as e:
+            print(f"⚠️ Error obteniendo nombre del cliente: {e}")
+            cliente_nombre = "Error al obtener cliente"
+        
+        # Construir la URL de la solicitud
+        solicitud_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/solicitud/{solicitud.id}/"
+        
+        # Preparar comentarios para el correo
+        comentarios_html = ""
+        comentarios_texto = ""
+        
+        if comentarios_analista:
+            comentarios_html = "<h4>📋 Comentarios del Analista:</h4>"
+            comentarios_texto = "Comentarios del Analista:\n"
+            
+            for comentario in comentarios_analista:
+                fecha = comentario.fecha_creacion.strftime('%d/%m/%Y %H:%M')
+                comentarios_html += f"""
+                <div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
+                    <div style="font-weight: bold; color: #007bff; margin-bottom: 0.5rem;">
+                        {comentario.usuario.get_full_name() or comentario.usuario.username} - {fecha}
+                    </div>
+                    <div style="color: #495057; line-height: 1.5;">
+                        {comentario.comentario.replace(chr(10), '<br>')}
+                    </div>
+                </div>
+                """
+                comentarios_texto += f"\n• {comentario.usuario.get_full_name() or comentario.usuario.username} ({fecha}):\n{comentario.comentario}\n"
+        
+        # Preparar bullet points para el correo
+        bullet_points_html = ""
+        bullet_points_texto = ""
+        
+        if bullet_points:
+            bullet_points_html = "<h4>🔑 Puntos Clave del Análisis:</h4><ul>"
+            bullet_points_texto = "Puntos Clave del Análisis:\n"
+            
+            for punto in bullet_points:
+                bullet_points_html += f"<li style='margin-bottom: 0.5rem; color: #495057;'>{punto}</li>"
+                bullet_points_texto += f"• {punto}\n"
+            
+            bullet_points_html += "</ul>"
+        
+        # Contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa_anterior': etapa_anterior,
+            'nueva_etapa': nueva_etapa,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+            'comentarios_html': comentarios_html,
+            'bullet_points_html': bullet_points_html,
+            'usuario_que_cambio': usuario_que_cambio,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/cambio_etapa_propietario_notification.html', context)
+        
+        # Crear el asunto
+        subject = f"🔄 Tu solicitud ha cambiado de etapa - {solicitud.codigo}"
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+        Tu Solicitud Ha Cambiado de Etapa
+        
+        Hola {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+        
+        Tu solicitud ha cambiado de etapa y está siendo procesada:
+        
+        • Código: {solicitud.codigo}
+        • Cliente: {cliente_nombre or 'Sin asignar'}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Etapa Anterior: {etapa_anterior.nombre if etapa_anterior else 'Sin etapa'}
+        • Nueva Etapa: {nueva_etapa.nombre}
+        • Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
+        • Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        
+        {comentarios_texto}
+        
+        {bullet_points_texto}
+        
+        Para ver el estado de tu solicitud, haz clic en el siguiente enlace:
+        {solicitud_url}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=[solicitud.creada_por.email],
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        print(f"✅ Correo de cambio de etapa enviado correctamente para solicitud {solicitud.codigo} - Propietario: {solicitud.creada_por.email}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de cambio de etapa para solicitud {solicitud.codigo}: {str(e)}")
 
 
 @login_required
@@ -2678,6 +2868,44 @@ def api_cambiar_etapa(request, solicitud_id):
             enviar_correo_bandeja_grupal(solicitud, nueva_etapa)
         else:
             print(f"ℹ️ No se envía correo - la etapa {nueva_etapa.nombre} no es bandeja grupal")
+        
+        # 📧 NUEVO: Enviar correo al propietario de la solicitud con comentarios analista
+        try:
+            # Obtener comentarios de analista
+            comentarios_analista = []
+            try:
+                from workflow.models import CalificacionCampo
+                comentarios_analista = CalificacionCampo.objects.filter(
+                    solicitud=solicitud,
+                    campo__startswith='comentario_analista_credito_'
+                ).select_related('usuario').order_by('-fecha_modificacion')
+            except Exception as e:
+                print(f"⚠️ Error obteniendo comentarios analista: {e}")
+            
+            # Extraer bullet points de los comentarios
+            import re
+            bullet_points = []
+            for comentario in comentarios_analista:
+                texto = comentario.comentario
+                lineas = texto.split('\n')
+                for linea in lineas:
+                    lineaLimpia = linea.strip()
+                    if re.match(r'^[•\-\*]\s', lineaLimpia) or re.match(r'^\d+\.\s', lineaLimpia):
+                        punto = re.sub(r'^[•\-\*]\s', '', re.sub(r'^\d+\.\s', '', lineaLimpia))
+                        if punto:
+                            bullet_points.append(punto)
+            
+            # Enviar correo al propietario
+            enviar_correo_cambio_etapa_propietario(
+                solicitud, 
+                etapa_anterior, 
+                nueva_etapa, 
+                comentarios_analista, 
+                bullet_points, 
+                request.user
+            )
+        except Exception as e:
+            print(f"⚠️ Error al enviar correo al propietario: {e}")
         
         return JsonResponse({
             'success': True,
@@ -5099,6 +5327,40 @@ def detalle_solicitud_analisis(request, solicitud_id):
     
     sla_info = calcular_sla_detallado(solicitud)
     
+    # Obtener transiciones disponibles
+    transiciones_disponibles = []
+    if solicitud.etapa_actual:
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        )
+        
+        for transicion in transiciones:
+            # Verificar requisitos para esta transición
+            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+            
+            if not transicion.requiere_permiso:
+                transiciones_disponibles.append({
+                    'transicion': transicion,
+                    'puede_realizar': len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': requisitos_faltantes,
+                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                })
+            else:
+                # Verificar si el usuario tiene permisos específicos
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=transicion.etapa_destino,
+                    grupo__in=grupos_usuario
+                ).exists()
+                if tiene_permiso:
+                    transiciones_disponibles.append({
+                        'transicion': transicion,
+                        'puede_realizar': len(requisitos_faltantes) == 0,
+                        'requisitos_faltantes': requisitos_faltantes,
+                        'total_requisitos_faltantes': len(requisitos_faltantes)
+                    })
+    
     context = {
         'solicitud': solicitud,
         'cliente': cliente,
@@ -5107,7 +5369,7 @@ def detalle_solicitud_analisis(request, solicitud_id):
         'requisitos': requisitos,
         'comentarios': comentarios,
         'etapas_pipeline': etapas_pipeline,
-        'transiciones_disponibles': [],
+        'transiciones_disponibles': transiciones_disponibles,
         'progreso_porcentaje': progreso_porcentaje,
         'sla_info': sla_info,
         'puede_editar': request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user,
@@ -5205,3 +5467,90 @@ def calcular_sla_detallado(solicitud):
         'color_clase': 'text-muted',
         'porcentaje_usado': 0
     }
+
+
+@login_required
+@csrf_exempt
+def api_download_merged_pdf(request, solicitud_id):
+    """API para descargar un PDF con todos los documentos de la solicitud"""
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if solicitud.asignada_a and solicitud.asignada_a != request.user:
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                if not tiene_permiso:
+                    return JsonResponse({'success': False, 'error': 'No tienes permisos para acceder a esta solicitud'})
+        
+        # Obtener todos los requisitos con archivos
+        requisitos_con_archivos = solicitud.requisitos.filter(archivo__isnull=False).exclude(archivo='')
+        
+        if not requisitos_con_archivos.exists():
+            return JsonResponse({'success': False, 'error': 'No hay documentos disponibles para generar el PDF'})
+        
+        # Crear un merger de PDFs
+        merger = PdfMerger()
+        temp_files = []
+        
+        try:
+            # Agregar cada documento al merger
+            for requisito_solicitud in requisitos_con_archivos:
+                if requisito_solicitud.archivo and os.path.exists(requisito_solicitud.archivo.path):
+                    # Crear archivo temporal para el PDF
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+                    temp_files.append(temp_file.name)
+                    
+                    # Copiar el archivo al temporal
+                    with open(requisito_solicitud.archivo.path, 'rb') as source_file:
+                        temp_file.write(source_file.read())
+                    temp_file.close()
+                    
+                    # Agregar al merger
+                    merger.append(temp_file.name)
+            
+            # Crear archivo temporal para el PDF final
+            output_temp = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+            output_temp.close()
+            
+            # Escribir el PDF combinado
+            merger.write(output_temp.name)
+            merger.close()
+            
+            # Leer el archivo final y enviarlo como respuesta
+            with open(output_temp.name, 'rb') as pdf_file:
+                response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="Solicitud_{solicitud.codigo}_Documentos_Completos.pdf"'
+            
+            # Limpiar archivos temporales
+            for temp_file in temp_files:
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
+            
+            try:
+                os.unlink(output_temp.name)
+            except:
+                pass
+            
+            return response
+            
+        except Exception as e:
+            # Limpiar archivos temporales en caso de error
+            for temp_file in temp_files:
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
+            
+            raise e
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al generar el PDF: {str(e)}'})
