@@ -128,8 +128,11 @@ class Solicitud(models.Model):
     
     @property
     def monto_formateado(self):
-        """Obtiene el monto formateado"""
-        if self.cotizacion and self.cotizacion.montoPrestamo:
+        """Obtiene el monto financiado formateado (auxMonto2)"""
+        if self.cotizacion and self.cotizacion.auxMonto2:
+            return f"$ {self.cotizacion.auxMonto2:,.0f}"
+        elif self.cotizacion and self.cotizacion.montoPrestamo:
+            # Fallback to montoPrestamo if auxMonto2 is not available
             return f"$ {self.cotizacion.montoPrestamo:,.0f}"
         return "$ 0"
     

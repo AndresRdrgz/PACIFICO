@@ -39,13 +39,13 @@
                 <!-- Cotización Selection -->
                 <div class="form-section">
                     <h6 class="form-section-title">
-                        <i class="fas fa-calculator me-2"></i>
-                        Cotización
+                        <i class="fas fa-car me-2"></i>
+                        Cotización de Auto
                     </h6>
                     <div class="form-group">
                         <div class="search-container">
                             <input type="text" id="cotizacionSearch" class="form-control" 
-                                   placeholder="Buscar cotización por nombre, cédula o ID...">
+                                   placeholder="Buscar cotización de auto por nombre, cédula o ID...">
                             <div id="cotizacionResults" class="search-results"></div>
                         </div>
                         <input type="hidden" id="cotizacionId" name="cotizacion">
@@ -879,6 +879,7 @@ function searchClientes(query) {
 }
 
 function showSearchResults(type, results) {
+    console.log('🔧 showSearchResults called with type:', type, 'results:', results);
     const resultsContainer = document.getElementById(`${type}Results`);
     resultsContainer.innerHTML = '';
     
@@ -891,12 +892,17 @@ function showSearchResults(type, results) {
             resultItem.onclick = () => selectItem(type, item);
             
             if (type === 'cotizacion') {
+                // Use montoFinanciado as "Monto Financiado" instead 
+                console.log('🔧 Processing cotización item:', item);
+                const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
+                const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
+                console.log('🔧 montoFinanciado:', montoFinanciado, 'montoFormateado:', montoFormateado);
                 resultItem.innerHTML = `
                     <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
                     <div class="search-result-details">
                         ${item.cedulaCliente || 'Sin cédula'} • 
                         ${item.tipoPrestamo || 'Sin tipo'} • 
-                        $${item.montoPrestamo.toLocaleString()}
+                        Monto Financiado: $${montoFormateado}
                     </div>
                 `;
             } else {
@@ -926,8 +932,11 @@ function selectItem(type, item) {
     const detailsElement = selectedContainer.querySelector('.selected-details');
     
     if (type === 'cotizacion') {
+        // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
+        const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
+        const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
         nameElement.textContent = item.nombreCliente || 'Sin nombre';
-        detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${item.montoPrestamo.toLocaleString()}`;
+        detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
     } else {
         nameElement.textContent = item.nombreCliente || 'Sin nombre';
         detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.edad || 'Sin edad'} años`;
@@ -945,8 +954,11 @@ function selectCotizacion(cotizacion) {
     const nameElement = selectedContainer.querySelector('.selected-name');
     const detailsElement = selectedContainer.querySelector('.selected-details');
     
+    // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
+    const montoFinanciado = cotizacion.montoFinanciado || cotizacion.auxMonto2 || 0;
+    const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
     nameElement.textContent = cotizacion.nombreCliente || 'Sin nombre';
-    detailsElement.textContent = `${cotizacion.cedulaCliente || 'Sin cédula'} • ${cotizacion.tipoPrestamo || 'Sin tipo'} • $${cotizacion.montoPrestamo.toLocaleString()}`;
+    detailsElement.textContent = `${cotizacion.cedulaCliente || 'Sin cédula'} • ${cotizacion.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
     
     selectedContainer.style.display = 'block';
     hideSearchResults('cotizacion');

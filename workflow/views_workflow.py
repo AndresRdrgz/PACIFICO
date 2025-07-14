@@ -2067,14 +2067,16 @@ def api_buscar_cotizaciones(request):
         # Serializar resultados
         resultados = []
         for cotizacion in cotizaciones:
+            # Use auxMonto2 as "Monto Financiado" instead of montoPrestamo
+            monto_financiado = cotizacion.auxMonto2 or cotizacion.montoPrestamo or 0
             resultados.append({
                 'id': cotizacion.id,
                 'numero': cotizacion.NumeroCotizacion or cotizacion.id,
                 'cliente': cotizacion.nombreCliente or 'Sin cliente',
-                'monto': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
+                'monto_financiado': float(monto_financiado),
                 'tipo': cotizacion.tipoPrestamo or 'Sin tipo',
                 'fecha_creacion': cotizacion.created_at.strftime('%d/%m/%Y') if cotizacion.created_at else '',
-                'texto_completo': f"#{cotizacion.NumeroCotizacion or cotizacion.id} - {cotizacion.nombreCliente or 'Sin cliente'} - ${cotizacion.montoPrestamo or 0}"
+                'texto_completo': f"#{cotizacion.NumeroCotizacion or cotizacion.id} - {cotizacion.nombreCliente or 'Sin cliente'} - Monto Financiado: ${monto_financiado}"
             })
         
         return JsonResponse({'cotizaciones': resultados})
@@ -2084,7 +2086,7 @@ def api_buscar_cotizaciones(request):
 
 @login_required
 def api_buscar_cotizaciones_drawer(request):
-    """API para buscar cotizaciones en el drawer"""
+    """API para buscar cotizaciones en el drawer - solo Préstamos de Auto"""
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
         limit = int(request.GET.get('limit', 10))
@@ -2092,12 +2094,21 @@ def api_buscar_cotizaciones_drawer(request):
         if not query:
             return JsonResponse({'success': True, 'cotizaciones': []})
         
-        # Buscar cotizaciones por nombre de cliente, cédula o ID
+        # Base query - SOLO PRÉSTAMOS DE AUTO
         cotizaciones = Cotizacion.objects.filter(
             Q(nombreCliente__icontains=query) | 
             Q(cedulaCliente__icontains=query) |
-            Q(id__icontains=query)
-        ).order_by('-created_at')[:limit]
+            Q(id__icontains=query),
+            tipoPrestamo='auto'  # Solo cotizaciones de préstamos de auto
+        )
+        
+        # Filtrar por permisos de usuario
+        if not (request.user.is_superuser or request.user.is_staff):
+            # Usuarios regulares solo ven sus propias cotizaciones
+            cotizaciones = cotizaciones.filter(added_by=request.user)
+        
+        # Ordenar y limitar resultados
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
         
         # Serializar resultados
         resultados = []
@@ -2107,7 +2118,7 @@ def api_buscar_cotizaciones_drawer(request):
                 'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
                 'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
                 'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
-                'montoPrestamo': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
+                'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
                 'oficial': cotizacion.oficial or 'Sin oficial',
                 'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
             })
@@ -3880,6 +3891,10 @@ def api_solicitud_brief(request, solicitud_id):
                 'plazo': cotizacion.plazoPago or '-',
                 'tasa': float(cotizacion.tasaInteres) if cotizacion.tasaInteres else '-',
                 'cuota': float(getattr(cotizacion, 'wrkMontoLetra', 0)) if hasattr(cotizacion, 'wrkMontoLetra') and cotizacion.wrkMontoLetra else '-',
+                'auxMonto2': float(getattr(cotizacion, 'auxMonto2', 0)) if getattr(cotizacion, 'auxMonto2', None) is not None else 0,
+                'edad': cotizacion.edad if hasattr(cotizacion, 'edad') and cotizacion.edad is not None else '-',
+                'sexo': cotizacion.sexo if hasattr(cotizacion, 'sexo') and cotizacion.sexo else '-',
+                'cartera': cotizacion.cartera if hasattr(cotizacion, 'cartera') and cotizacion.cartera else '-',
             }
 
         return JsonResponse({
@@ -4313,7 +4328,8 @@ def api_subir_requisito_transicion(request, solicitud_id):
         requisito_solicitud.cumplido = True
         if not created:
             # Actualizar observaciones si ya existía
-            requisito_solicitud.observaciones += f'\nActualizado por {request.user.get_full_name() or request.user.username} el {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+            observaciones_actuales = requisito_solicitud.observaciones or ''
+            requisito_solicitud.observaciones = observaciones_actuales + f'\nActualizado por {request.user.get_full_name() or request.user.username} el {timezone.now().strftime("%d/%m/%Y %H:%M")}'
         
         requisito_solicitud.save()
         

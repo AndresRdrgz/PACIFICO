@@ -4,6 +4,8 @@
 
 {% block title %}Negocios - Sistema de Workflow{% endblock %}
 
+
+
 {% block content %}
 <div class="mt-0 pt-0">
     {% if not no_access %}
@@ -1067,16 +1069,10 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
 
-<!-- Toastr CSS y JS para notificaciones -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.min.js"></script>
 <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
-
-<!-- Toastr JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 <script>
 // Función global para manejar clicks en filas de la tabla
@@ -1093,46 +1089,22 @@ function handleRowClick(event, solicitudId) {
         return;
     }
     
-    // Si no es un elemento de formulario, navegar directamente al detalle
-    window.location.href = `/workflow/solicitudes/${solicitudId}/detalle/`;
+    // Mostrar modal con resumen de la solicitud
+    if (typeof window.mostrarModalSolicitud === 'function') {
+        window.mostrarModalSolicitud(solicitudId);
+    } else {
+        // Fallback: navegar directamente al detalle si la función modal no está disponible
+        window.location.href = `/workflow/solicitudes/${solicitudId}/detalle/`;
+    }
 }
 
 $(document).ready(function() {
     // =====================================
-    // CONFIGURACIÓN DE TOASTR
+    // CONFIGURACIÓN DE NOTIFICACIONES
     // =====================================
     
-    // Configurar toastr si está disponible
-    if (typeof toastr !== 'undefined') {
-        toastr.options = {
-            closeButton: true,
-            debug: false,
-            newestOnTop: true,
-            progressBar: true,
-            positionClass: 'toast-top-right',
-            preventDuplicates: true,
-            onclick: null,
-            showDuration: '300',
-            hideDuration: '1000',
-            timeOut: '4000',
-            extendedTimeOut: '1000',
-            showEasing: 'swing',
-            hideEasing: 'linear',
-            showMethod: 'fadeIn',
-            hideMethod: 'fadeOut',
-            toastClass: 'toast-pacifico',
-            iconClasses: {
-                error: 'toast-error',
-                info: 'toast-info',
-                success: 'toast-success',
-                warning: 'toast-warning'
-            }
-        };
-        
-        console.log('✅ Toastr configurado correctamente');
-    } else {
-        console.warn('⚠️ Toastr no está disponible');
-    }
+    // El sistema de toast regular del workflow ya está disponible
+    // No necesitamos configuración adicional para toastr
     
     // =====================================
     // INICIALIZACIÓN DE DATATABLES
@@ -1246,6 +1218,9 @@ $(document).ready(function() {
         }, 4000);
     }
     
+    // Hacer la función globalmente accesible
+    window.mostrarNotificacionExito = mostrarNotificacionExito;
+    
     function mostrarNotificacionError(mensaje) {
         console.log('🚨 Mostrando notificación de error:', mensaje);
         
@@ -1271,6 +1246,9 @@ $(document).ready(function() {
             setTimeout(() => $notificacion.remove(), 300);
         }, 5000);
     }
+    
+    // Hacer la función globalmente accesible
+    window.mostrarNotificacionError = mostrarNotificacionError;
     
     function mostrarNotificacionAdvertencia(mensaje) {
         console.log('⚠️ Mostrando notificación de advertencia:', mensaje);
@@ -1504,8 +1482,8 @@ $(document).ready(function() {
             } else {
                 console.error('❌ Error al cargar transiciones válidas:', data.error);
                 // Mostrar notificación de error
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('Error al cargar transiciones: ' + (data.error || 'Error desconocido'));
+                if (typeof showToast !== 'undefined') {
+                    showToast('Error al cargar transiciones: ' + (data.error || 'Error desconocido'), 'error', 5000);
                 } else {
                     mostrarNotificacionError('Error al cargar transiciones: ' + (data.error || 'Error desconocido'));
                 }
@@ -1525,8 +1503,8 @@ $(document).ready(function() {
                 mensajeError = 'Error en el formato de respuesta del servidor';
             }
             
-            if (typeof toastr !== 'undefined') {
-                toastr.error(mensajeError);
+            if (typeof showToast !== 'undefined') {
+                showToast(mensajeError, 'error', 5000);
             } else {
                 mostrarNotificacionError(mensajeError);
             }
@@ -1555,8 +1533,8 @@ $(document).ready(function() {
         if ($select.prop('disabled')) {
             console.log('❌ Select deshabilitado - solicitud en bandeja grupal');
             // Mostrar mensaje informativo
-            if (typeof toastr !== 'undefined') {
-                toastr.warning('⏳ Esta solicitud está en bandeja grupal. Debes esperar a que el equipo la procese antes de poder cambiar la etapa.');
+            if (typeof showToast !== 'undefined') {
+                showToast('⏳ Esta solicitud está en bandeja grupal. Debes esperar a que el equipo la procese antes de poder cambiar la etapa.', 'warning', 6000);
             } else {
                 mostrarNotificacionAdvertencia('⏳ Esta solicitud está en bandeja grupal. Debes esperar a que el equipo la procese antes de poder cambiar la etapa.');
             }
@@ -1586,15 +1564,31 @@ $(document).ready(function() {
         
         if (puedeRealizar === false || requisitosFaltantes > 0) {
             console.log('🔍 Requisitos faltantes detectados, mostrando modal');
-            window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nombreEtapa, function() {
-                // Callback de éxito - proceder con el cambio
-                console.log('✅ Requisitos completados, procediendo con cambio de etapa');
-                window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
-            }, function() {
-                // Callback de cancelación
-                console.log('❌ Cambio de etapa cancelado');
+            console.log('📋 Parámetros:', { solicitudId, nuevaEtapaId, nombreEtapa, puedeRealizar, requisitosFaltantes });
+            
+            // Usar la función global correcta que maneja la carga de requisitos
+            if (typeof window.mostrarModalRequisitosFaltantes === 'function') {
+                console.log('✅ Función disponible, llamando con parámetros correctos');
+                try {
+                    window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nombreEtapa, function() {
+                        // Callback de éxito - proceder con el cambio
+                        console.log('✅ Requisitos completados, procediendo con cambio de etapa');
+                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
+                    }, function() {
+                        // Callback de cancelación
+                        console.log('❌ Cambio de etapa cancelado');
+                        $select.val(etapaActual); // Revertir selección
+                    });
+                } catch (error) {
+                    console.error('❌ Error al llamar mostrarModalRequisitosFaltantes:', error);
+                    alert('Error al mostrar modal de requisitos: ' + error.message);
+                    $select.val(etapaActual); // Revertir selección
+                }
+            } else {
+                console.error('❌ Función mostrarModalRequisitosFaltantes no disponible');
+                alert('Error: Función de requisitos no disponible');
                 $select.val(etapaActual); // Revertir selección
-            });
+            }
             return;
         }
         
@@ -1670,99 +1664,225 @@ $(document).ready(function() {
     
     // Función mejorada para mostrar modal de solicitud
     window.mostrarModalSolicitud = function(solicitudId) {
-        // Limpia el modal
-        $('#modalSolicitudCodigo').text('Cargando...');
-        $('#modalSolicitudEstadoBadge').text('');
-        $('#modalSolicitudTipo').text('');
-        $('#modalSolicitudFechaInicio').text('-');
-        $('#modalSolicitudVencimiento').text('-');
-        $('#modalSolicitudEtapaActual').text('-');
-        $('#modalSolicitudArea').text('-');
-        $('#modalSolicitudCliente').text('-');
-        $('#modalSolicitudCedula').text('-');
-        $('#modalSolicitudCanal').text('-');
-        // Acciones
-        $('#modalBtnProcesarTarea').prop('disabled', true);
-        $('#modalBtnDevolver').prop('disabled', true);
-        $('#modalBtnAnular').prop('disabled', true);
-        $('#modalBtnComentarios').prop('disabled', true);
-        // Workflow, historial, comentarios
-        $('#modalSolicitudWorkflowProgress').html('<div class="text-center text-muted py-2">Cargando...</div>');
-        $('#modalSolicitudWorkflowDetail').html('');
-        $('#modalSolicitudHistorial').html('');
-        $('#modalSolicitudComentarios').html('');
-
-        // Fetch API
-        $.get(`/workflow/api/solicitud_brief/${solicitudId}/`, function(data) {
-            // General
-            $('#modalSolicitudCodigo').text(data.general.codigo || '-');
-            $('#modalSolicitudEstadoBadge').text(data.general.estado || '-');
-            $('#modalSolicitudTipo').text(data.general.tipo || '-');
-            $('#modalSolicitudFechaInicio').text(data.general.fecha_inicio || '-');
-            $('#modalSolicitudVencimiento').text(data.general.vencimiento || '-');
-            $('#modalSolicitudEtapaActual').text(data.general.etapa_actual || '-');
-            $('#modalSolicitudArea').text(data.general.area || '-');
-            // Cliente
-            $('#modalSolicitudCliente').text(data.cliente.nombre || '-');
-            $('#modalSolicitudCedula').text(data.cliente.cedula || '-');
-            $('#modalSolicitudCanal').text(data.cliente.canal || '-');
-            // Acciones
-            $('#modalBtnProcesarTarea').prop('disabled', !data.acciones.puede_procesar);
-            $('#modalBtnDevolver').prop('disabled', !data.acciones.puede_devolver);
-            $('#modalBtnAnular').prop('disabled', !data.acciones.puede_anular);
-            $('#modalBtnComentarios').prop('disabled', !data.acciones.puede_comentar);
-            // --- WORKFLOW ROADMAP ---
-            let etapas = data.workflow;
-            let roadmapHtml = '<div class="workflow-roadmap">';
-            etapas.forEach(function(etapa, idx) {
-                let stepClass = etapa.actual ? 'workflow-step current' : (etapa.completada ? 'workflow-step completed' : 'workflow-step pending');
-                let icon = etapa.completada ? '<i class="fas fa-check"></i>' : (etapa.actual ? '<i class="fas fa-bolt"></i>' : (idx+1));
-                roadmapHtml += `<div class="${stepClass}">
-                    <div class="circle">${icon}</div>
-                    <div class="step-label">${etapa.nombre}</div>
-                </div>`;
-                if (idx < etapas.length - 1) {
-                    roadmapHtml += '<div class="workflow-connector"></div>';
-                }
-            });
-            roadmapHtml += '</div>';
-            $('#modalSolicitudWorkflowProgress').html(roadmapHtml);
-            // Workflow detail (tab)
-            let detailHtml = '<ul class="list-group">';
-            etapas.forEach(function(etapa) {
-                detailHtml += `<li class="list-group-item d-flex justify-content-between align-items-center ${etapa.actual ? 'active' : ''}">
-                    <span>${etapa.nombre}</span>
-                    <span class="badge bg-${etapa.completada ? 'success' : (etapa.actual ? 'warning text-dark' : 'secondary')}">${etapa.completada ? 'Completada' : (etapa.actual ? 'Actual' : 'Pendiente')}</span>
-                </li>`;
-            });
-            detailHtml += '</ul>';
-            $('#modalSolicitudWorkflowDetail').html(detailHtml);
-            // Historial
-            let histHtml = '<ul class="list-group">';
-            data.historial.forEach(function(h) {
-                histHtml += `<li class="list-group-item">
-                    <div><b>Etapa:</b> ${h.etapa} <span class="text-muted small">(${h.subestado})</span></div>
-                    <div><b>Usuario:</b> ${h.usuario}</div>
-                    <div><b>Inicio:</b> ${h.fecha_inicio} ${h.fecha_fin ? '<b>Fin:</b> ' + h.fecha_fin : ''}</div>
-                </li>`;
-            });
-            histHtml += '</ul>';
-            $('#modalSolicitudHistorial').html(histHtml);
-            // Comentarios
-            let comHtml = '';
-            if (data.comentarios.length === 0) {
-                comHtml = '<div class="text-muted">Sin comentarios.</div>';
-            } else {
-                data.comentarios.forEach(function(c) {
-                    comHtml += `<div class="border rounded p-2 mb-2"><b>${c.usuario}</b> <span class="text-muted small">${c.fecha}</span><br>${c.texto}</div>`;
-                });
-            }
-            $('#modalSolicitudComentarios').html(comHtml);
-        });
-        // Mostrar modal
+        console.log('🔍 Abriendo modal para solicitud:', solicitudId);
+        
+        // Store the solicitudId globally for use in the modal
+        window.currentSolicitudId = solicitudId;
+        
+        // Set the solicitudId on the Ver Detalle button
+        $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
+        
+        // Show loading state
+        showLoadingState();
+        
+        // Show modal first
         var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
         modal.show();
+        
+        // Test if jQuery is available
+        if (typeof $ === 'undefined') {
+            console.error('jQuery is not available');
+            showErrorState('jQuery no está disponible');
+            return;
+        }
+        
+        // Construct the API URL
+        const apiUrl = `/workflow/api/solicitud_brief/${solicitudId}/`;
+        console.log('API URL:', apiUrl);
+        
+        // Fetch API with comprehensive error handling
+        $.ajax({
+            url: apiUrl,
+            method: 'GET',
+            timeout: 10000, // 10 second timeout
+            beforeSend: function(xhr) {
+                console.log('Sending request to:', apiUrl);
+            }
+        })
+        .done(function(data, textStatus, xhr) {
+            console.log('API Success:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                data: data
+            });
+            
+            // Validate response data
+            if (!data || typeof data !== 'object') {
+                console.error('Invalid response data:', data);
+                showErrorState('Respuesta de API inválida');
+                return;
+            }
+            
+            populateModalData(data);
+        })
+        .fail(function(xhr, textStatus, error) {
+            console.error('API Error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText,
+                textStatus: textStatus,
+                error: error,
+                readyState: xhr.readyState
+            });
+            
+            let errorMessage = 'Error desconocido';
+            
+            if (xhr.status === 0) {
+                errorMessage = 'No se pudo conectar al servidor';
+            } else if (xhr.status === 404) {
+                errorMessage = `Solicitud ${solicitudId} no encontrada`;
+            } else if (xhr.status === 500) {
+                errorMessage = 'Error interno del servidor';
+            } else if (xhr.status === 503) {
+                errorMessage = 'Servicio no disponible temporalmente';
+            } else if (textStatus === 'timeout') {
+                errorMessage = 'Tiempo de espera agotado';
+            } else {
+                errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
+            }
+            
+            showErrorState(errorMessage);
+        })
+        .always(function() {
+            console.log('API request completed');
+        });
     };
+    
+    function showLoadingState() {
+        // Clear modal content
+        $('#modalSolicitudCodigo').html('<div class="loading-placeholder" style="width: 120px;"></div>');
+        $('#modalSolicitudEstadoBadge').html('<div class="loading-placeholder" style="width: 80px;"></div>');
+        $('#modalSolicitudTipo').html('<div class="loading-placeholder" style="width: 200px;"></div>');
+        
+        // Reset info fields
+        const infoFields = ['FechaInicio', 'Vencimiento', 'EtapaActual', 'Area', 'Cliente', 'Cedula', 'Canal'];
+        infoFields.forEach(field => {
+            $(`#modalSolicitud${field}`).html('<div class="loading-placeholder" style="width: 100px;"></div>');
+        });
+        
+        // Reset cotización fields
+        const cotizacionFields = ['Monto', 'Plazo', 'Tasa', 'Cuota'];
+        cotizacionFields.forEach(field => {
+            $(`#modalSolicitud${field}`).html('<div class="loading-placeholder" style="width: 100px;"></div>');
+        });
+        
+        // Disable action buttons
+        $('.action-btn').prop('disabled', true);
+        
+        // Show loading in workflow
+        $('#modalSolicitudWorkflowProgress').html(`
+            <div class="d-flex justify-content-center align-items-center" style="height: 100px;">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        `);
+    }
+    
+    function showErrorState(errorMessage = 'Error al cargar la información') {
+        $('#modalSolicitudWorkflowProgress').html(`
+            <div class="text-center text-danger py-4">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <div class="fw-bold mb-2">${errorMessage}</div>
+                <div class="text-muted">Por favor, intente nuevamente o contacte al administrador</div>
+            </div>
+        `);
+        
+        // Enable action buttons but show they're unavailable
+        $('.action-btn').prop('disabled', false).text('No disponible');
+    }
+    
+    function populateModalData(data) {
+        try {
+            console.log('Populating modal with data:', data);
+            
+            // Validate data structure
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid data structure');
+            }
+            
+            // Get solicitudId from the current modal context
+            const solicitudId = window.currentSolicitudId;
+            console.log('Current solicitudId:', solicitudId);
+            
+            // Set the solicitudId on the Ver Detalle button
+            $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
+            
+            // General info with fallbacks
+            const general = data.general || {};
+            $('#modalSolicitudCodigo').text(general.codigo || 'N/A');
+            $('#modalSolicitudEstadoBadge').text(general.estado || 'N/A');
+            $('#modalSolicitudTipo').text(general.tipo || 'N/A');
+            $('#modalSolicitudFechaInicio').text(general.fecha_inicio || 'N/A');
+            $('#modalSolicitudVencimiento').text(general.vencimiento || 'N/A');
+            $('#modalSolicitudEtapaActual').text(general.etapa_actual || 'N/A');
+            $('#modalSolicitudArea').text(general.area || 'N/A');
+            
+            // Client info with fallbacks
+            const cliente = data.cliente || {};
+            $('#modalSolicitudCliente').text(cliente.nombre || 'N/A');
+            $('#modalSolicitudCedula').text(cliente.cedula || 'N/A');
+            $('#modalSolicitudCanal').text(cliente.canal || 'N/A');
+            
+            // Cotización info with fallbacks
+            const cotizacion = data.cotizacion || {};
+            $('#modalSolicitudMonto').text(cotizacion.monto ? `$${cotizacion.monto.toLocaleString()}` : 'N/A');
+            $('#modalSolicitudPlazo').text(cotizacion.plazo ? `${cotizacion.plazo} meses` : 'N/A');
+            $('#modalSolicitudTasa').text(cotizacion.tasa ? `${cotizacion.tasa}%` : 'N/A');
+            $('#modalSolicitudCuota').text(cotizacion.cuota ? `$${cotizacion.cuota.toLocaleString()}` : 'N/A');
+            
+            // Action buttons with fallbacks
+            const acciones = data.acciones || {};
+            $('#modalBtnProcesarTarea').prop('disabled', !(acciones.puede_procesar || false));
+            $('#modalBtnDevolver').prop('disabled', !(acciones.puede_devolver || false));
+            $('#modalBtnAnular').prop('disabled', !(acciones.puede_anular || false));
+            $('#modalBtnComentarios').prop('disabled', !(acciones.puede_comentar || false));
+            
+            // Workflow roadmap with fallbacks
+            const workflow = data.workflow || [];
+            if (workflow.length > 0) {
+                renderWorkflowRoadmap(workflow);
+            } else {
+                $('#modalSolicitudWorkflowProgress').html('<div class="text-center text-muted py-4">No hay información de workflow disponible</div>');
+            }
+            
+            console.log('Modal populated successfully');
+            
+        } catch (error) {
+            console.error('Error populating modal:', error);
+            showErrorState('Error al procesar los datos');
+        }
+    }
+    
+    function renderWorkflowRoadmap(etapas) {
+        let roadmapHtml = '<div class="workflow-roadmap">';
+        
+        etapas.forEach(function(etapa, idx) {
+            let stepClass = 'workflow-step';
+            if (etapa.completada) stepClass += ' completed';
+            if (etapa.actual) stepClass += ' current';
+            if (!etapa.completada && !etapa.actual) stepClass += ' pending';
+            
+            let icon = etapa.completada ? '<i class="fas fa-check"></i>' : 
+                      etapa.actual ? '<i class="fas fa-bolt"></i>' : 
+                      `<span>${idx + 1}</span>`;
+            
+            roadmapHtml += `
+                <div class="${stepClass}">
+                    <div class="circle">${icon}</div>
+                    <div class="step-label">${etapa.nombre}</div>
+                </div>
+            `;
+            
+            if (idx < etapas.length - 1) {
+                let connectorClass = etapa.completada ? 'workflow-connector completed' : 'workflow-connector';
+                roadmapHtml += `<div class="${connectorClass}"></div>`;
+            }
+        });
+        
+        roadmapHtml += '</div>';
+        $('#modalSolicitudWorkflowProgress').html(roadmapHtml);
+    }
     
     // Función para cambiar entre vistas
     window.cambiarVista = function(vista) {
@@ -1863,6 +1983,25 @@ $(document).ready(function() {
 }
 
 .clickable-row:active {
+
+/* === LOADING STATE === */
+.loading-placeholder {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 1rem;
+    margin: 0.25rem 0;
+}
+
+@keyframes loading-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
     transform: translateY(0);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
@@ -1887,6 +2026,35 @@ $(document).ready(function() {
 .kanban-card {
     cursor: grab;
     transition: all 0.3s ease;
+}
+
+/* Estilos para tarjetas con requisitos faltantes */
+.kanban-card.requisitos-faltantes {
+    border-left: 4px solid #dc3545 !important;
+    position: relative;
+}
+
+.kanban-card.requisitos-faltantes::after {
+    content: "⚠️";
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 12px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 /* Estilos para zonas de drop válidas e inválidas */
@@ -3214,128 +3382,7 @@ $(document).ready(function() {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* =====================================
-   ESTILOS PERSONALIZADOS PARA TOASTR
-   ===================================== */
 
-/* Estilos generales para toastr con tema Pacífico */
-.toast-pacifico {
-    border-radius: 12px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    padding: 20px 24px !important;
-    min-width: 320px !important;
-    opacity: 0.95 !important;
-}
-
-/* Toast de éxito con gradiente verde Pacífico */
-.toast-success {
-    background: linear-gradient(135deg, #28a745, #20c997) !important;
-    color: white !important;
-}
-
-.toast-success .toast-progress {
-    background: rgba(255, 255, 255, 0.3) !important;
-}
-
-/* Toast de error con gradiente rojo */
-.toast-error {
-    background: linear-gradient(135deg, #dc3545, #c82333) !important;
-    color: white !important;
-}
-
-.toast-error .toast-progress {
-    background: rgba(255, 255, 255, 0.3) !important;
-}
-
-/* Toast de información con gradiente azul */
-.toast-info {
-    background: linear-gradient(135deg, #17a2b8, #138496) !important;
-    color: white !important;
-}
-
-.toast-info .toast-progress {
-    background: rgba(255, 255, 255, 0.3) !important;
-}
-
-/* Toast de advertencia con gradiente amarillo */
-.toast-warning {
-    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
-    color: #212529 !important;
-}
-
-.toast-warning .toast-progress {
-    background: rgba(0, 0, 0, 0.2) !important;
-}
-
-/* Botón de cerrar personalizado */
-.toast-close-button {
-    color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-    opacity: 0.8 !important;
-    transition: all 0.2s ease !important;
-}
-
-.toast-close-button:hover {
-    opacity: 1 !important;
-    transform: scale(1.1) !important;
-}
-
-/* Barra de progreso personalizada */
-.toast-progress {
-    height: 4px !important;
-    border-radius: 2px !important;
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-}
-
-/* Animaciones personalizadas */
-.toast-pacifico {
-    animation: toastSlideIn 0.3s ease-out !important;
-}
-
-@keyframes toastSlideIn {
-    0% {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 0.95;
-    }
-}
-
-/* Estilos específicos para toasts de requisitos */
-.toast-pacifico[data-requisitos="true"] {
-    border-left: 4px solid rgba(255, 255, 255, 0.3) !important;
-    font-size: 0.95rem !important;
-    line-height: 1.4 !important;
-}
-
-.toast-pacifico[data-requisitos="true"] .toast-title {
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    margin-bottom: 4px !important;
-}
-
-.toast-pacifico[data-requisitos="true"] .toast-message {
-    font-weight: 500 !important;
-    opacity: 0.95 !important;
-}
-
-/* Iconos específicos para requisitos */
-.toast-pacifico[data-requisitos="true"] .toast-close-button::before {
-    content: "×" !important;
-    font-size: 20px !important;
-    font-weight: 300 !important;
-}
 
 /* Estilos para el header de Negocios */
 .ribbon {
@@ -3554,6 +3601,21 @@ $(document).ready(function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Inicializando sistema de requisitos faltantes');
+  
+  // Verificar que todas las funciones estén disponibles
+  if (window.verificarFuncionesRequisitos) {
+    window.verificarFuncionesRequisitos();
+  }
+  
+  // Verificar que el modal esté disponible
+  const modalElement = document.getElementById('modalRequisitosFaltantes');
+  if (modalElement) {
+    console.log('✅ Modal de requisitos faltantes encontrado');
+  } else {
+    console.error('❌ Modal de requisitos faltantes no encontrado');
+  }
+  
   // Manejar edición de etiquetas con select
   document.querySelectorAll('.etiquetas-select').forEach(function(select) {
     select.addEventListener('change', function(e) {
@@ -3884,11 +3946,11 @@ function eliminarSolicitud(id) {
         })
         .then(response => {
             if (response.ok) {
-                if (typeof toastr !== 'undefined') {
-                    toastr.success('Solicitud eliminada exitosamente');
-                } else {
-                    mostrarNotificacionExito('Solicitud eliminada exitosamente');
-                }
+                            if (typeof showToast !== 'undefined') {
+                showToast('Solicitud eliminada exitosamente', 'success', 4000);
+            } else {
+                mostrarNotificacionExito('Solicitud eliminada exitosamente');
+            }
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
@@ -3902,8 +3964,8 @@ function eliminarSolicitud(id) {
         })
         .catch(error => {
             console.error('Error:', error);
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Error al eliminar la solicitud');
+            if (typeof showToast !== 'undefined') {
+                showToast('Error al eliminar la solicitud', 'error', 5000);
             } else {
                 mostrarNotificacionError('Error al eliminar la solicitud');
             }
@@ -3999,7 +4061,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar filtros Kanban
     function configurarFiltrosKanban() {
-        if ($('#kanbanFiltroCliente').length === 0) return; // Solo si estamos en vista Kanban
+        if ($('.kanban-board').length === 0) return; // Solo si estamos en vista Kanban
         
         console.log('Configurando filtros Kanban...');
         
@@ -4192,8 +4254,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Respuesta del servidor Kanban:', response);
                     if (response.success) {
                         // Mostrar mensaje de éxito
-                        if (typeof toastr !== 'undefined') {
-                            toastr.success(response.mensaje || 'Etapa cambiada exitosamente');
+                        if (typeof showToast !== 'undefined') {
+                            showToast(response.mensaje || 'Etapa cambiada exitosamente', 'success', 4000);
                         } else {
                             alert('Etapa cambiada exitosamente');
                         }
@@ -4333,10 +4395,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Inicializar filtros Kanban cuando la página esté lista
-    if ($('#kanbanFiltroCliente').length > 0) {
-        configurarFiltrosKanban();
+    // Inicializar drag and drop cuando la página esté lista
+    if ($('.kanban-board').length > 0) {
+        console.log('Inicializando drag and drop para Kanban...');
         inicializarDragAndDrop();
+        
+        // Solo configurar filtros si existen los elementos de filtro
+        if ($('#kanbanFiltroCliente').length > 0) {
+            configurarFiltrosKanban();
+        }
     }
     
     // ============================================
@@ -4344,15 +4411,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     
     function inicializarDragAndDrop() {
+        // Evitar inicialización múltiple
+        if ($('.kanban-card').data('drag-initialized')) {
+            console.log('Drag and drop ya inicializado, saltando...');
+            return;
+        }
+        
+        console.log('Configurando eventos de drag and drop...');
+        console.log('Tarjetas Kanban encontradas:', $('.kanban-card').length);
+        console.log('Columnas Kanban encontradas:', $('.kanban-column-body').length);
+        
+        // Marcar como inicializado
+        $('.kanban-card').data('drag-initialized', true);
+        
+        // Marcar tarjetas con requisitos faltantes
+        marcarTarjetasConRequisitosFaltantes();
+        
         // Configurar eventos de drag para las tarjetas
         $('.kanban-card').on('dragstart', function(e) {
             var solicitudId = $(this).attr('data-solicitud-id');
             var etapaActual = $(this).attr('data-etapa-id');
             
-            e.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
+            console.log('🔄 Iniciando drag de solicitud:', solicitudId, 'desde etapa:', etapaActual);
+            
+            var dragData = JSON.stringify({
                 solicitudId: solicitudId,
                 etapaActual: etapaActual
-            }));
+            });
+            
+            e.originalEvent.dataTransfer.setData('text/plain', dragData);
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            
+            console.log('📦 Datos de drag configurados:', dragData);
             
             $(this).addClass('dragging');
             
@@ -4372,8 +4462,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Obtener información de la tarjeta que se está arrastrando
             var dragData = null;
             try {
-                dragData = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
+                // Solo intentar obtener datos si hay tipos de datos disponibles
+                if (e.originalEvent.dataTransfer.types.includes('text/plain')) {
+                    dragData = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
+                }
             } catch (e) {
+                console.log('No se pudieron obtener datos del drag:', e);
                 // Si no hay datos, permitir hover normal
                 $(this).addClass('drop-zone-hover');
                 return;
@@ -4382,14 +4476,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var solicitudId = dragData.solicitudId;
             var nuevaEtapaId = $(this).attr('data-etapa-id');
             
-            // Validar si esta es una zona de drop válida
-            validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje) {
-                if (esValida) {
-                    $(this).addClass('drop-zone-hover drop-zone-valid');
-                } else {
-                    $(this).addClass('drop-zone-hover drop-zone-invalid');
-                }
-            }.bind(this));
+            // Simplemente mostrar hover visual sin validación en dragover
+            $(this).addClass('drop-zone-hover');
         });
         
         $('.kanban-column-body').on('dragleave', function(e) {
@@ -4402,6 +4490,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var $dropZone = $(this);
             var nuevaEtapaId = $dropZone.attr('data-etapa-id');
             
+            console.log('🎯 Drop detectado en etapa:', nuevaEtapaId);
+            
             // Remover clases de hover
             $dropZone.removeClass('drop-zone-hover drop-zone-active');
             $('.kanban-column-body').removeClass('drop-zone-active');
@@ -4410,6 +4500,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 var data = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
                 var solicitudId = data.solicitudId;
                 var etapaActual = data.etapaActual;
+                
+                console.log('📥 Datos de drop recibidos:', data);
                 
                 // Verificar si es un movimiento válido
                 if (nuevaEtapaId === etapaActual) {
@@ -4420,14 +4512,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 // NUEVO: Validar transición antes de permitir el drop
                 validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje, requisitosFaltantes) {
                     if (!esValida) {
-                        // Mostrar error y cancelar movimiento
-                        if (typeof toastr !== 'undefined') {
-                            toastr.error(mensaje, 'Transición No Válida', {
-                                positionClass: 'toast-top-right',
-                                timeOut: 5000
-                            });
+                        // Si hay requisitos faltantes, mostrar el modal de requisitos
+                        if (requisitosFaltantes && requisitosFaltantes.length > 0) {
+                            console.log('📋 Mostrando modal de requisitos faltantes:', requisitosFaltantes);
+                            
+                            // Obtener nombre de la nueva etapa
+                            var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
+                            nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
+                            
+                            // Usar la función global correcta que maneja la carga de requisitos
+                            if (typeof window.mostrarModalRequisitosFaltantes === 'function') {
+                                console.log('✅ Función disponible, llamando con parámetros correctos');
+                                try {
+                                    window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nuevaEtapaNombre, function() {
+                                        // Callback de éxito - proceder con el cambio
+                                        console.log('✅ Requisitos completados, procediendo con cambio de etapa');
+                                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
+                                    }, function() {
+                                        // Callback de cancelación
+                                        console.log('❌ Cambio de etapa cancelado');
+                                        // No hacer nada, la tarjeta se queda en su lugar
+                                    });
+                                } catch (error) {
+                                    console.error('❌ Error al llamar mostrarModalRequisitosFaltantes:', error);
+                                    if (typeof showToast !== 'undefined') {
+                                        showToast('Error al mostrar modal de requisitos: ' + error.message, 'error', 6000);
+                                    } else {
+                                        alert('Error al mostrar modal de requisitos: ' + error.message);
+                                    }
+                                }
+                            } else {
+                                console.error('❌ Función mostrarModalRequisitosFaltantes no disponible');
+                                if (typeof showToast !== 'undefined') {
+                                    showToast('Error: Función de requisitos no disponible', 'error', 6000);
+                                } else {
+                                    alert('Error: Función de requisitos no disponible');
+                                }
+                            }
                         } else {
-                            mostrarNotificacionError(mensaje);
+                            // Mostrar error y cancelar movimiento
+                            if (typeof toastr !== 'undefined') {
+                                toastr.error(mensaje, 'Transición No Válida', {
+                                    positionClass: 'toast-top-right',
+                                    timeOut: 5000
+                                });
+                            } else {
+                                mostrarNotificacionError(mensaje);
+                            }
                         }
                         return;
                     }
@@ -4437,93 +4568,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                     
                     // Confirmar movimiento con modal personalizado
-                    mostrarModalConfirmacion(nuevaEtapaNombre, function() {
-                        // Función que se ejecuta al confirmar - AJAX directo para Drag & Drop
+                    window.mostrarModalConfirmacion(nuevaEtapaNombre, function() {
+                        // Función que se ejecuta al confirmar - usar función unificada
                         console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
-                        
-                        // Realizar petición AJAX para cambiar etapa
-                        $.ajax({
-                            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-                            type: 'POST',
-                            headers: {
-                                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                            },
-                            data: JSON.stringify({
-                                etapa_id: nuevaEtapaId
-                            }),
-                            contentType: 'application/json',
-                            success: function(response) {
-                                console.log('✅ DRAG & DROP: Respuesta exitosa del servidor', response);
-                                if (response.success) {
-                                    // Mostrar toast de éxito con configuración específica
-                                    if (typeof toastr !== 'undefined') {
-                                        toastr.success(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`, 'Movimiento Completado', {
-                                            positionClass: 'toast-top-right',
-                                            timeOut: 3000,
-                                            showMethod: 'fadeIn',
-                                            hideMethod: 'fadeOut',
-                                            iconClass: 'toast-success-custom'
-                                        });
-                                    } else {
-                                        mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${nuevaEtapaNombre}`);
-                                    }
-                                    
-                                    console.log('🔄 DRAG & DROP: Actualizando kanban sin recargar página completa...');
-                                    
-                                    // Actualizar la vista kanban dinámicamente sin recargar
-                                    actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, nuevaEtapaNombre);
-                                    
-                                } else {
-                                    console.error('❌ DRAG & DROP: Error en respuesta', response.error);
-                                    
-                                    // Manejar errores específicos
-                                    var errorMsg = response.error;
-                                    if (response.tipo_error === 'transicion_invalida') {
-                                        errorMsg = 'Transición no válida: ' + response.mensaje;
-                                    } else if (response.tipo_error === 'requisitos_faltantes') {
-                                        errorMsg = 'Requisitos faltantes: ' + response.mensaje;
-                                    }
-                                    
-                                    // Mostrar toast de error
-                                    if (typeof toastr !== 'undefined') {
-                                        toastr.error(errorMsg, 'Error en Movimiento', {
-                                            positionClass: 'toast-top-right',
-                                            timeOut: 5000
-                                        });
-                                    } else {
-                                        mostrarNotificacionError(errorMsg);
-                                    }
-                                }
-                            },
-                            error: function(xhr, status, error) {
-                                console.error('❌ DRAG & DROP: Error AJAX', {
-                                    status: status,
-                                    error: error,
-                                    response: xhr.responseText,
-                                    solicitudId: solicitudId,
-                                    nuevaEtapaId: nuevaEtapaId
-                                });
-                                
-                                var errorMsg = 'Error al cambiar etapa';
-                                try {
-                                    var response = JSON.parse(xhr.responseText);
-                                    errorMsg = response.error || errorMsg;
-                                } catch(e) {
-                                    errorMsg = 'Error de conexión con el servidor';
-                                }
-                                
-                                // Mostrar toast de error con más detalles
-                                if (typeof toastr !== 'undefined') {
-                                    toastr.error(errorMsg, 'Error de Conexión', {
-                                        positionClass: 'toast-top-right',
-                                        timeOut: 6000,
-                                        extendedTimeOut: 2000
-                                    });
-                                } else {
-                                    mostrarNotificacionError(errorMsg);
-                                }
-                            }
-                        });
+                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
                     });
                 });
                 return;
@@ -4534,23 +4582,77 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Función para mostrar modal de confirmación - REMOVIDA
+    // Se usa la función global window.mostrarModalConfirmacion definida anteriormente
+    
+    // Función para mostrar modal de requisitos faltantes - REMOVIDA
+    // Esta función ha sido reemplazada por la versión global más adelante en el código
+    
+    // Funciones del sistema anterior de requisitos - REMOVIDAS
+    // Estas funciones han sido reemplazadas por la versión global más adelante en el código
+    
+    // Función para cerrar modal de requisitos - REMOVIDA
+    // Esta función ha sido reemplazada por la versión global más adelante en el código
+    
+    // Función para realizar transición después de completar requisitos - REMOVIDA
+    // Esta función ha sido reemplazada por el sistema de callbacks en la nueva implementación
+    
+    // Función para marcar tarjetas con requisitos faltantes
+    function marcarTarjetasConRequisitosFaltantes() {
+        console.log('🔍 Marcando tarjetas con requisitos faltantes...');
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            var solicitudId = $card.attr('data-solicitud-id');
+            
+            // Verificar requisitos faltantes para cada tarjeta
+            $.ajax({
+                url: `/workflow/api/solicitudes/${solicitudId}/requisitos-faltantes-detallado/`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.requisitos_faltantes && response.requisitos_faltantes.length > 0) {
+                        $card.addClass('requisitos-faltantes');
+                        console.log('⚠️ Tarjeta marcada con requisitos faltantes:', solicitudId);
+                    }
+                },
+                error: function() {
+                    // Silenciar errores para no afectar la experiencia del usuario
+                    console.log('No se pudo verificar requisitos para tarjeta:', solicitudId);
+                }
+            });
+        });
+    }
+    
+    // Hacer funciones globalmente accesibles
+    // Nota: mostrarModalRequisitosFaltantes se asigna más adelante con la versión correcta
+    // Nota: cerrarModalRequisitos se asigna más adelante con la versión correcta
+    window.marcarTarjetasConRequisitosFaltantes = marcarTarjetasConRequisitosFaltantes;
+    
     // Función para validar transiciones en Kanban
     function validarTransicionKanban(solicitudId, nuevaEtapaId, callback) {
         console.log('🔍 Validando transición Kanban:', solicitudId, nuevaEtapaId);
         
-        fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
-        .then(response => {
-            // Verificar si la respuesta es exitosa
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            // Verificar si el contenido es JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('La respuesta no es JSON válido');
-            }
-            return response.json();
-        })
+        // Validar parámetros
+        if (!solicitudId || !nuevaEtapaId || typeof callback !== 'function') {
+            console.error('❌ Parámetros inválidos para validarTransicionKanban');
+            callback(false, 'Parámetros inválidos', []);
+            return;
+        }
+        
+        try {
+            fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
+            .then(response => {
+                // Verificar si la respuesta es exitosa
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Verificar si el contenido es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('La respuesta no es JSON válido');
+                }
+                return response.json();
+            })
         .then(data => {
             if (data.success) {
                 // Buscar si la transición es válida
@@ -4572,131 +4674,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 callback(false, 'Error al validar transición: ' + (data.error || 'Error desconocido'), []);
             }
         })
-        .catch(error => {
-            console.error('❌ Error validando transición Kanban:', error);
-            let mensajeError = 'Error de conexión al validar transición';
-            if (error.message.includes('404')) {
-                mensajeError = 'No se encontró la solicitud';
-            } else if (error.message.includes('403')) {
-                mensajeError = 'No tienes permisos para esta solicitud';
-            } else if (error.message.includes('500')) {
-                mensajeError = 'Error interno del servidor';
-            } else if (error.message.includes('JSON')) {
-                mensajeError = 'Error en el formato de respuesta';
-            }
-            callback(false, mensajeError, []);
-        });
+            .catch(error => {
+                console.error('❌ Error validando transición Kanban:', error);
+                let mensajeError = 'Error de conexión al validar transición';
+                if (error.message.includes('404')) {
+                    mensajeError = 'No se encontró la solicitud';
+                } else if (error.message.includes('403')) {
+                    mensajeError = 'No tienes permisos para esta solicitud';
+                } else if (error.message.includes('500')) {
+                    mensajeError = 'Error interno del servidor';
+                } else if (error.message.includes('JSON')) {
+                    mensajeError = 'Error en el formato de respuesta';
+                }
+                
+                // Usar callback en lugar de mostrar notificación directamente
+                callback(false, mensajeError, []);
+            });
+        } catch (error) {
+            console.error('❌ Error crítico en validarTransicionKanban:', error);
+            callback(false, 'Error interno en la validación', []);
+        }
     }
     
-    function realizarCambioEtapaDragDrop(solicitudId, nuevaEtapaId, etapaNombre) {
-        console.log('🔄 DRAG DROP (Función): Iniciando cambio de etapa', {
-            solicitudId: solicitudId,
-            nuevaEtapaId: nuevaEtapaId,
-            etapaNombre: etapaNombre
-        });
-        
-        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
-        
-        // Agregar indicador de carga visual
-        $card.addClass('updating').css('opacity', '0.7');
-        
-        $.ajax({
-            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-            },
-            data: JSON.stringify({
-                etapa_id: nuevaEtapaId
-            }),
-            contentType: 'application/json',
-            success: function(response) {
-                console.log('✅ DRAG DROP (Función): Respuesta exitosa', response);
-                
-                if (response.success) {
-                    // Mostrar toast de éxito
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.mensaje || `Solicitud movida a ${etapaNombre}`, 'Arrastre Completado', {
-                            positionClass: 'toast-top-right',
-                            timeOut: 3000,
-                            showMethod: 'slideDown'
-                        });
-                    } else {
-                        mostrarNotificacionExito(`Solicitud movida a ${etapaNombre}`);
-                    }
-                    
-                    // Animar movimiento de tarjeta
-                    $card.fadeOut(200, function() {
-                        // Mover la tarjeta a la nueva columna
-                        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
-                        
-                        // Actualizar atributos de la tarjeta
-                        $card.attr('data-etapa-id', nuevaEtapaId);
-                        
-                        // Mover físicamente la tarjeta
-                        $card.appendTo($nuevaColumna);
-                        
-                        // Restablecer estilos y animar aparición
-                        $card.css('opacity', '1').removeClass('updating').fadeIn(300);
-                        
-                        // Actualizar contadores
-                        actualizarContadoresKanban();
-                        
-                        console.log('✅ DRAG DROP (Función): Tarjeta movida y vista actualizada');
-                    });
-                    
-                    // Sincronizar con otras vistas
-                    sincronizarCambioEtapa(solicitudId, nuevaEtapaId, response);
-                    
-                } else {
-                    console.error('❌ DRAG DROP (Función): Error en respuesta', response.error);
-                    
-                    // Mostrar toast de error
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error(response.error || 'Error desconocido', 'Error en Arrastre', {
-                            positionClass: 'toast-top-right',
-                            timeOut: 5000
-                        });
-                    } else {
-                        mostrarNotificacionError(response.error || 'Error al cambiar etapa');
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('❌ DRAG DROP (Función): Error AJAX', {
-                    status: status,
-                    error: error,
-                    response: xhr.responseText
-                });
-                
-                var errorMsg = 'Error al cambiar etapa';
-                try {
-                    var response = JSON.parse(xhr.responseText);
-                    errorMsg = response.error || errorMsg;
-                } catch(e) {
-                    errorMsg = 'Error de conexión';
-                }
-                
-                // Mostrar toast de error
-                if (typeof toastr !== 'undefined') {
-                    toastr.error(errorMsg, 'Error de Conexión', {
-                        positionClass: 'toast-top-right',
-                        timeOut: 5000
-                    });
-                } else {
-                    mostrarNotificacionError(errorMsg);
-                }
-            },
-            complete: function() {
-                // Asegurar que se remueva el indicador de carga
-                $card.removeClass('updating').css('opacity', '1');
-                console.log('🏁 DRAG DROP (Función): Petición completada');
-            }
-        });
-    }
+    // Función realizarCambioEtapaDragDrop - REMOVIDA
+    // Esta función ha sido reemplazada por window.ejecutarCambioEtapa unificada
     
     // Nueva función para actualizar kanban tras movimiento sin recargar página
-    function actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, etapaNombre) {
+    window.actualizarKanbanTrasMovimiento = function(solicitudId, nuevaEtapaId, etapaNombre) {
         console.log('🔄 Actualizando kanban tras movimiento', {
             solicitudId: solicitudId,
             nuevaEtapaId: nuevaEtapaId,
@@ -5514,14 +5518,30 @@ function showSearchResults(type, results) {
             resultItem.className = 'search-result-item';
             resultItem.onclick = () => selectItem(type, item);
             
-            resultItem.innerHTML = `
-                <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
-                <div class="search-result-details">
-                    ${item.cedulaCliente || 'Sin cédula'} • 
-                    ${item.tipoPrestamo || 'Sin tipo'} • 
-                    $${item.montoPrestamo.toLocaleString()}
-                </div>
-            `;
+            if (type === 'cotizacion') {
+                // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
+                console.log('🔧 Processing cotización item in negocios.html:', item);
+                const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
+                const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
+                console.log('🔧 montoFinanciado:', montoFinanciado, 'montoFormateado:', montoFormateado);
+                resultItem.innerHTML = `
+                    <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
+                    <div class="search-result-details">
+                        ${item.cedulaCliente || 'Sin cédula'} • 
+                        ${item.tipoPrestamo || 'Sin tipo'} • 
+                        Monto Financiado: $${montoFormateado}
+                    </div>
+                `;
+            } else {
+                resultItem.innerHTML = `
+                    <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
+                    <div class="search-result-details">
+                        ${item.cedulaCliente || 'Sin cédula'} • 
+                        ${item.tipoPrestamo || 'Sin tipo'} • 
+                        $${(item.montoPrestamo || 0).toLocaleString()}
+                    </div>
+                `;
+            }
             
             resultsContainer.appendChild(resultItem);
         });
@@ -5545,7 +5565,16 @@ function selectItem(type, item) {
         const detailsElement = selectedContainer.querySelector('.selected-details');
         
         if (nameElement) nameElement.textContent = item.nombreCliente || 'Sin nombre';
-        if (detailsElement) detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${item.montoPrestamo.toLocaleString()}`;
+        if (detailsElement) {
+            if (type === 'cotizacion') {
+                // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
+                const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
+                const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
+                detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
+            } else {
+                detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
+            }
+        }
         
         selectedContainer.style.display = 'block';
         
@@ -5826,19 +5855,59 @@ window.clearCliente = function() {
 };
 
 // Función para cerrar el modal de requisitos
+// Función unificada para cerrar el modal de requisitos
 window.cerrarModalRequisitos = function() {
+    console.log('🚪 Cerrando modal de requisitos');
+    
     const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
     if (modal) {
         modal.hide();
+    } else {
+        // Si no hay instancia, intentar crear una nueva y ocultarla
+        const modalElement = document.getElementById('modalRequisitosFaltantes');
+        if (modalElement) {
+            const newModal = new bootstrap.Modal(modalElement);
+            newModal.hide();
+        }
     }
+    
+    // Resetear estado después de cerrar
+    setTimeout(() => {
+        window.resetearEstadoModal();
+    }, 300);
 }
 
-// Función para mostrar modal de requisitos faltantes (global)
+// Función unificada para mostrar modal de requisitos faltantes (funciona para tabla y kanban)
 window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
     console.log('🔍 Mostrando modal de requisitos faltantes');
+    console.log('📋 Parámetros recibidos:', { solicitudId, nuevaEtapaId, nombreEtapa, callbackExito: typeof callbackExito, callbackCancelacion: typeof callbackCancelacion });
+    
+    // Validar parámetros
+    if (!solicitudId || !nuevaEtapaId || !nombreEtapa) {
+        console.error('❌ Parámetros inválidos:', { solicitudId, nuevaEtapaId, nombreEtapa });
+        if (typeof showToast !== 'undefined') {
+            showToast('Error: Parámetros inválidos para mostrar modal de requisitos', 'error', 6000);
+        } else {
+            alert('Error: Parámetros inválidos para mostrar modal de requisitos');
+        }
+        return;
+    }
+    
+    // Resetear estado del modal
+    window.resetearEstadoModal();
+    
+    // Mostrar loading en el modal
+    const listaContainer = document.getElementById('listaRequisitosFaltantes');
+    const loadingElement = document.getElementById('loadingRequisitos');
+    
+    if (listaContainer) listaContainer.innerHTML = '';
+    if (loadingElement) loadingElement.style.display = 'block';
     
     // Actualizar título del modal
-    document.getElementById('etapaDestinoNombre').textContent = nombreEtapa;
+    const etapaDestinoElement = document.getElementById('etapaDestinoNombre');
+    if (etapaDestinoElement) {
+        etapaDestinoElement.textContent = nombreEtapa;
+    }
     
     // Cargar requisitos faltantes
     fetch(`/workflow/api/solicitudes/${solicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${nuevaEtapaId}`)
@@ -5851,11 +5920,12 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     .then(data => {
         console.log('📋 Requisitos faltantes recibidos:', data);
         
+        // Ocultar loading
+        if (loadingElement) loadingElement.style.display = 'none';
+        
         if (data.success) {
             // Llenar la lista de requisitos faltantes
             window.llenarListaRequisitosFaltantes(data.requisitos_faltantes);
-            
-
             
             // Configurar event listeners del modal
             window.configurarEventListenersModal(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion);
@@ -5865,24 +5935,55 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
             modal.show();
         } else {
             console.error('❌ Error al cargar requisitos faltantes:', data.error);
-            alert('Error al cargar requisitos faltantes: ' + data.error);
+            if (typeof showToast !== 'undefined') {
+                showToast('Error al cargar requisitos faltantes: ' + data.error, 'error', 6000);
+            } else {
+                alert('Error al cargar requisitos faltantes: ' + data.error);
+            }
         }
     })
     .catch(error => {
         console.error('❌ Error en petición de requisitos faltantes:', error);
-        alert('Error al cargar requisitos faltantes');
+        // Ocultar loading
+        if (loadingElement) loadingElement.style.display = 'none';
+        
+        if (typeof showToast !== 'undefined') {
+            showToast('Error al cargar requisitos faltantes', 'error', 6000);
+        } else {
+            alert('Error al cargar requisitos faltantes');
+        }
     });
 }
 
-// Función para llenar la lista de requisitos faltantes en el modal
+// Función unificada para llenar la lista de requisitos faltantes en el modal
 window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
     const listaContainer = document.getElementById('listaRequisitosFaltantes');
+    const btnValidar = document.getElementById('btnValidarYContinuar');
+    
+    if (!listaContainer) {
+        console.error('❌ No se encontró el contenedor de requisitos');
+        return;
+    }
+    
+    if (!btnValidar) {
+        console.error('❌ No se encontró el botón de validar');
+        return;
+    }
+    
+    // Limpiar contenedor
     listaContainer.innerHTML = '';
+    
+    // Validar que requisitosFaltantes sea un array
+    if (!Array.isArray(requisitosFaltantes)) {
+        console.error('❌ requisitosFaltantes no es un array:', requisitosFaltantes);
+        listaContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar requisitos</div>';
+        btnValidar.disabled = true;
+        return;
+    }
     
     if (requisitosFaltantes.length === 0) {
         listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
         // Enable the button immediately if no requisitos to show
-        const btnValidar = document.getElementById('btnValidarYContinuar');
         btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
         btnValidar.className = 'btn btn-success';
         btnValidar.disabled = false;
@@ -5961,12 +6062,75 @@ window.configurarEventListenersArchivos = function() {
     });
 }
 
-// Función para subir archivos secuencialmente
+/*
+ * SISTEMA UNIFICADO DE REQUISITOS FALTANTES
+ * =========================================
+ * 
+ * Este sistema maneja la validación y carga de requisitos faltantes para transiciones
+ * de etapa tanto en vista de tabla como en vista Kanban.
+ * 
+ * FUNCIONES PRINCIPALES:
+ * - mostrarModalRequisitosFaltantes: Función principal que muestra el modal
+ * - llenarListaRequisitosFaltantes: Llena la lista de requisitos en el modal
+ * - configurarEventListenersModal: Configura los eventos del modal
+ * - verificarTodosRequisitosCompletos: Verifica si todos los requisitos están completos
+ * - subirArchivosSecuencialmente: Sube archivos uno por uno con progreso
+ * - resetearEstadoModal: Resetea el estado del modal
+ * - cerrarModalRequisitos: Cierra el modal de forma segura
+ * - ejecutarCambioEtapa: Función unificada para cambiar etapa
+ * - verificarFuncionesRequisitos: Verifica que todas las funciones estén disponibles
+ * 
+ * FLUJO DE TRABAJO:
+ * 1. Usuario intenta cambiar etapa (tabla o kanban)
+ * 2. Se verifica si hay requisitos faltantes
+ * 3. Si los hay, se muestra el modal con la lista
+ * 4. Usuario sube archivos o confirma requisitos existentes
+ * 5. Se validan todos los requisitos
+ * 6. Se ejecuta la transición de etapa
+ * 7. Se actualiza la UI según la vista (tabla o kanban)
+ */
+
+// Función para resetear el estado del modal
+window.resetearEstadoModal = function() {
+    console.log('🔄 Reseteando estado del modal');
+    
+    // Resetear botón de validar
+    const btnValidar = document.getElementById('btnValidarYContinuar');
+    if (btnValidar) {
+        btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Validar y Continuar';
+        btnValidar.className = 'btn btn-primary';
+        btnValidar.disabled = true;
+    }
+    
+    // Limpiar contenedor de requisitos
+    const listaContainer = document.getElementById('listaRequisitosFaltantes');
+    if (listaContainer) {
+        listaContainer.innerHTML = '';
+    }
+    
+    // Ocultar loading
+    const loadingElement = document.getElementById('loadingRequisitos');
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+    
+    // Limpiar variables globales
+    window.currentSolicitudId = null;
+    window.currentNuevaEtapaId = null;
+}
+
+// Función unificada para subir archivos secuencialmente
 window.subirArchivosSecuencialmente = function(archivos, index, callback) {
     if (index >= archivos.length) {
         // Todos los archivos subidos
+        console.log('✅ Todos los archivos procesados');
         callback();
         return;
+    }
+    
+    // Actualizar progreso en el loading overlay
+    if (typeof showLoading === 'function') {
+        showLoading('Subiendo archivos...', `Procesando archivo ${index + 1} de ${archivos.length}`);
     }
     
     const archivo = archivos[index];
@@ -5976,6 +6140,15 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
     
     const solicitudId = window.currentSolicitudId;
     
+    if (!solicitudId) {
+        console.error('❌ No se encontró solicitudId para subir archivo');
+        // Continuar con el siguiente archivo
+        window.subirArchivosSecuencialmente(archivos, index + 1, callback);
+        return;
+    }
+    
+    console.log(`📤 Subiendo archivo ${index + 1}/${archivos.length} para requisito ${archivo.requisitoId}`);
+    
     fetch(`/workflow/api/solicitudes/${solicitudId}/subir-requisito-modal/`, {
         method: 'POST',
         body: formData,
@@ -5983,57 +6156,55 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
+            console.log(`✅ Archivo subido exitosamente para requisito ${archivo.requisitoId}`);
+            
             // Actualizar UI para este requisito
             const requisitoCard = document.querySelector(`.requisito-card[data-requisito-id="${archivo.requisitoId}"]`);
             if (requisitoCard) {
                 const uploadSection = requisitoCard.querySelector('.upload-section');
                 const successSection = requisitoCard.querySelector('.success-section');
                 
-                uploadSection.style.display = 'none';
-                successSection.style.display = 'block';
+                if (uploadSection) uploadSection.style.display = 'none';
+                if (successSection) successSection.style.display = 'block';
                 
                 // Actualizar badge
                 const badge = requisitoCard.querySelector('.badge');
-                badge.className = 'badge bg-success';
-                badge.textContent = 'Completo';
+                if (badge) {
+                    badge.className = 'badge bg-success';
+                    badge.textContent = 'Completo';
+                }
             }
             
             // Continuar con el siguiente archivo
             window.subirArchivosSecuencialmente(archivos, index + 1, callback);
         } else {
             // Error en la subida
-            if (typeof toastr !== 'undefined') {
-                const toast = toastr.error('Error al subir archivo: ' + data.error, 'Error de Subida', {
-                    timeOut: 5000,
-                    extendedTimeOut: 2000
-                });
-                // Agregar atributo para estilos específicos de requisitos
-                if (toast && toast.length > 0) {
-                    toast[0].setAttribute('data-requisitos', 'true');
-                }
+            console.error(`❌ Error al subir archivo para requisito ${archivo.requisitoId}:`, data.error);
+            const mensaje = `Error al subir archivo: ${data.error}`;
+            if (typeof showToast !== 'undefined') {
+                showToast(mensaje, 'error', 5000);
             } else {
-                alert('Error al subir archivo: ' + data.error);
+                alert(mensaje);
             }
             // Continuar con el siguiente archivo de todas formas
             window.subirArchivosSecuencialmente(archivos, index + 1, callback);
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        if (typeof toastr !== 'undefined') {
-            const toast = toastr.error('Error al subir archivo', 'Error de Conexión', {
-                timeOut: 5000,
-                extendedTimeOut: 2000
-            });
-            // Agregar atributo para estilos específicos de requisitos
-            if (toast && toast.length > 0) {
-                toast[0].setAttribute('data-requisitos', 'true');
-            }
+        console.error(`❌ Error en petición para requisito ${archivo.requisitoId}:`, error);
+        const mensaje = 'Error al subir archivo';
+        if (typeof showToast !== 'undefined') {
+            showToast(mensaje, 'error', 5000);
         } else {
-            alert('Error al subir archivo');
+            alert(mensaje);
         }
         // Continuar con el siguiente archivo de todas formas
         window.subirArchivosSecuencialmente(archivos, index + 1, callback);
@@ -6086,15 +6257,8 @@ window.subirRequisitoModal = function(requisitoId) {
             badge.textContent = 'Completo';
             
             // Mostrar mensaje de éxito
-            if (typeof toastr !== 'undefined') {
-                const toast = toastr.success(data.mensaje, 'Requisito Completado', {
-                    timeOut: 4000,
-                    extendedTimeOut: 1000
-                });
-                // Agregar atributo para estilos específicos de requisitos
-                if (toast && toast.length > 0) {
-                    toast[0].setAttribute('data-requisitos', 'true');
-                }
+            if (typeof showToast !== 'undefined') {
+                showToast(data.mensaje, 'success', 4000);
             }
             
             // Verificar si todos los requisitos están completos
@@ -6114,39 +6278,62 @@ window.subirRequisitoModal = function(requisitoId) {
     });
 }
 
-// Función para verificar si todos los requisitos están completos
+// Función unificada para verificar si todos los requisitos están completos
 window.verificarTodosRequisitosCompletos = function() {
+    const btnValidar = document.getElementById('btnValidarYContinuar');
+    
+    if (!btnValidar) {
+        console.error('❌ No se encontró el botón de validar');
+        return;
+    }
+    
     const totalRequisitos = document.querySelectorAll('.requisito-card').length;
     const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
     const archivosSeleccionados = document.querySelectorAll('.requisito-card .requisito-file-input[type="file"]:not([style*="display: none"])').length;
     
-    const btnValidar = document.getElementById('btnValidarYContinuar');
+    console.log('🔍 Verificando requisitos:', { totalRequisitos, requisitosCompletos, archivosSeleccionados });
     
-    if (totalRequisitos === requisitosCompletos && totalRequisitos > 0) {
+    if (totalRequisitos === 0) {
+        // No hay requisitos para mostrar
+        btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Continuar';
+        btnValidar.className = 'btn btn-success';
+        btnValidar.disabled = false;
+    } else if (totalRequisitos === requisitosCompletos && totalRequisitos > 0) {
+        // Todos los requisitos están completos
         btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
         btnValidar.className = 'btn btn-success';
-        btnValidar.disabled = false; // Enable the button
+        btnValidar.disabled = false;
     } else if (archivosSeleccionados > 0) {
         // Hay archivos seleccionados, permitir validar y continuar
         btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
         btnValidar.className = 'btn btn-primary';
-        btnValidar.disabled = false; // Enable the button to upload files
+        btnValidar.disabled = false;
     } else {
-        btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
-        btnValidar.className = 'btn btn-primary';
-        btnValidar.disabled = true; // Keep disabled if no files selected and not all complete
+        // No hay archivos seleccionados y faltan requisitos
+        btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+        btnValidar.className = 'btn btn-warning';
+        btnValidar.disabled = true;
     }
 }
 
-// Función para configurar event listeners del modal
+// Función unificada para configurar event listeners del modal
 window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion) {
+    console.log('🔧 Configurando event listeners del modal:', { solicitudId, nuevaEtapaId });
+    
     // Guardar para uso global
     window.currentSolicitudId = solicitudId;
     window.currentNuevaEtapaId = nuevaEtapaId;
     
     // Botón de validar y continuar
     const btnValidar = document.getElementById('btnValidarYContinuar');
+    if (!btnValidar) {
+        console.error('❌ No se encontró el botón de validar');
+        return;
+    }
+    
     btnValidar.onclick = function() {
+        console.log('🔄 Botón validar clickeado');
+        
         // Verificar requisitos nuevamente
         const totalRequisitos = document.querySelectorAll('.requisito-card').length;
         const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
@@ -6164,13 +6351,25 @@ window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callb
             }
         });
         
+        console.log('📁 Archivos para subir:', archivosParaSubir.length);
+        
         if (archivosParaSubir.length > 0) {
             // Hay archivos para subir, hacerlo primero
             btnValidar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo archivos...';
             btnValidar.disabled = true;
             
-            // Subir archivos uno por uno
+            // Mostrar loading overlay con progreso
+            if (typeof showLoading === 'function') {
+                showLoading('Subiendo archivos...', `Procesando archivo 1 de ${archivosParaSubir.length}`);
+            }
+            
+            // Subir archivos uno por uno con progreso
             window.subirArchivosSecuencialmente(archivosParaSubir, 0, function() {
+                // Ocultar loading overlay
+                if (typeof hideLoading === 'function') {
+                    hideLoading();
+                }
+                
                 // Todos los archivos subidos, verificar estado final
                 window.verificarTodosRequisitosCompletos();
                 
@@ -6179,64 +6378,130 @@ window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callb
                 
                 if (totalRequisitosFinal === requisitosCompletosFinal) {
                     // Todos completos, proceder
+                    console.log('✅ Todos los requisitos completos, procediendo con transición');
                     const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
-                    modal.hide();
-                    callbackExito();
+                    if (modal) {
+                        modal.hide();
+                    }
+                    if (callbackExito) {
+                        callbackExito();
+                    }
                 } else {
                     // Aún faltan requisitos
-                    btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletosFinal}/${totalRequisitosFinal})`;
+                    btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletosFinal}/${totalRequisitosFinal})`;
                     btnValidar.disabled = true;
-                    if (typeof toastr !== 'undefined') {
-                        const toast = toastr.warning(`Aún faltan ${totalRequisitosFinal - requisitosCompletosFinal} requisitos por completar`, 'Requisitos Pendientes', {
-                            timeOut: 6000,
-                            extendedTimeOut: 2000
-                        });
-                        // Agregar atributo para estilos específicos de requisitos
-                        if (toast && toast.length > 0) {
-                            toast[0].setAttribute('data-requisitos', 'true');
-                        }
+                    btnValidar.className = 'btn btn-warning';
+                    
+                    const mensaje = `Aún faltan ${totalRequisitosFinal - requisitosCompletosFinal} requisitos por completar`;
+                    if (typeof showToast !== 'undefined') {
+                        showToast(mensaje, 'warning', 6000);
                     } else {
-                        alert(`Aún faltan ${totalRequisitosFinal - requisitosCompletosFinal} requisitos por completar`);
+                        alert(mensaje);
                     }
                 }
             });
         } else if (totalRequisitos === requisitosCompletos) {
             // Todos completos, proceder
+            console.log('✅ Todos los requisitos completos, procediendo con transición');
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
-            modal.hide();
-            callbackExito();
+            if (modal) {
+                modal.hide();
+            }
+            if (callbackExito) {
+                callbackExito();
+            }
         } else {
             // Aún faltan requisitos
-            if (typeof toastr !== 'undefined') {
-                const toast = toastr.warning(`Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`, 'Requisitos Pendientes', {
-                    timeOut: 6000,
-                    extendedTimeOut: 2000
-                });
-                // Agregar atributo para estilos específicos de requisitos
-                if (toast && toast.length > 0) {
-                    toast[0].setAttribute('data-requisitos', 'true');
-                }
+            const mensaje = `Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`;
+            if (typeof showToast !== 'undefined') {
+                showToast(mensaje, 'warning', 6000);
             } else {
-                alert(`Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`);
+                alert(mensaje);
             }
         }
     };
     
-
-    
     // Configurar evento de cierre del modal
     const modal = document.getElementById('modalRequisitosFaltantes');
-    modal.addEventListener('hidden.bs.modal', function() {
-        if (callbackCancelacion) {
-            callbackCancelacion();
-        }
-    });
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function() {
+            console.log('🚪 Modal cerrado');
+            if (callbackCancelacion) {
+                callbackCancelacion();
+            }
+        });
+    }
 }
 
-// Función para ejecutar el cambio de etapa (extraída del código original)
-window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select) {
-    // Deshabilitar select mientras se procesa
-    $select.prop('disabled', true);
+// Función para verificar que todas las funciones necesarias estén disponibles
+window.verificarFuncionesRequisitos = function() {
+    const funcionesNecesarias = [
+        'mostrarModalRequisitosFaltantes',
+        'llenarListaRequisitosFaltantes',
+        'configurarEventListenersModal',
+        'verificarTodosRequisitosCompletos',
+        'subirArchivosSecuencialmente',
+        'resetearEstadoModal',
+        'cerrarModalRequisitos',
+        'ejecutarCambioEtapa'
+    ];
+    
+    const funcionesFaltantes = funcionesNecesarias.filter(func => typeof window[func] !== 'function');
+    
+    if (funcionesFaltantes.length > 0) {
+        console.error('❌ Funciones faltantes:', funcionesFaltantes);
+        return false;
+    }
+    
+    console.log('✅ Todas las funciones de requisitos están disponibles');
+    return true;
+}
+
+// Función de prueba para verificar el sistema completo
+window.probarSistemaRequisitos = function() {
+    console.log('🧪 Probando sistema de requisitos faltantes...');
+    
+    // Verificar funciones
+    const funcionesOk = window.verificarFuncionesRequisitos();
+    if (!funcionesOk) {
+        console.error('❌ Falló la verificación de funciones');
+        return false;
+    }
+    
+    // Verificar modal
+    const modalElement = document.getElementById('modalRequisitosFaltantes');
+    if (!modalElement) {
+        console.error('❌ Modal no encontrado');
+        return false;
+    }
+    
+    // Verificar elementos del modal
+    const elementosNecesarios = [
+        'listaRequisitosFaltantes',
+        'btnValidarYContinuar',
+        'etapaDestinoNombre',
+        'loadingRequisitos'
+    ];
+    
+    const elementosFaltantes = elementosNecesarios.filter(id => !document.getElementById(id));
+    if (elementosFaltantes.length > 0) {
+        console.error('❌ Elementos del modal faltantes:', elementosFaltantes);
+        return false;
+    }
+    
+    console.log('✅ Sistema de requisitos funcionando correctamente');
+    console.log('💡 Para probar el modal, usa: window.mostrarModalRequisitosFaltantes(solicitudId, etapaId, "Nombre Etapa", callback)');
+    return true;
+}
+
+// Función unificada para ejecutar el cambio de etapa (funciona para tabla y kanban)
+window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select, esKanban = false, etapaNombre = null) {
+    console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, esKanban, etapaNombre });
+    
+    // Deshabilitar select mientras se procesa (solo para tabla)
+    if ($select && !esKanban) {
+        $select.prop('disabled', true);
+    }
     
     // Realizar petición AJAX
     fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
@@ -6253,59 +6518,89 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
     .then(data => {
         console.log('Respuesta del servidor:', data);
         if (data.success) {
-            // Actualizar data attribute
-            $select.data('etapa-actual', nuevaEtapaId);
-            
-            // Mostrar mensaje de éxito con toastr si está disponible
-            if (typeof toastr !== 'undefined') {
-                toastr.success(data.mensaje || 'Etapa cambiada exitosamente');
-            } else {
-                // Usar notificación personalizada en lugar de alert
-                mostrarNotificacionExito(data.mensaje || 'Etapa cambiada exitosamente');
+            // Actualizar data attribute (solo para tabla)
+            if ($select && !esKanban) {
+                $select.data('etapa-actual', nuevaEtapaId);
             }
             
-            // Recargar página
-            setTimeout(function() {
-                location.reload();
-            }, 1000);
+            // Mostrar mensaje de éxito
+            if (typeof showToast !== 'undefined') {
+                showToast(data.mensaje || 'Etapa cambiada exitosamente', 'success', 4000);
+            } else {
+                alert(data.mensaje || 'Etapa cambiada exitosamente');
+            }
+            
+            if (esKanban) {
+                // Para Kanban: actualizar UI dinámicamente
+                console.log('🔄 Actualizando Kanban dinámicamente...');
+                actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, etapaNombre);
+            } else {
+                // Para tabla: recargar página
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            }
         } else {
             // Manejar errores específicos
             if (data.tipo_error === 'transicion_invalida') {
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('Transición no válida: ' + data.mensaje);
+                if (typeof showToast !== 'undefined') {
+                    showToast('Transición no válida: ' + data.mensaje, 'error', 6000);
                 } else {
-                    mostrarNotificacionError('Transición no válida: ' + data.mensaje);
+                    alert('Transición no válida: ' + data.mensaje);
                 }
             } else if (data.tipo_error === 'requisitos_faltantes') {
-                if (typeof toastr !== 'undefined') {
-                    toastr.warning('Requisitos faltantes: ' + data.mensaje);
+                if (typeof showToast !== 'undefined') {
+                    showToast('Requisitos faltantes: ' + data.mensaje, 'warning', 6000);
                 } else {
-                    mostrarNotificacionError('Requisitos faltantes: ' + data.mensaje);
+                    alert('Requisitos faltantes: ' + data.mensaje);
                 }
             } else {
-                if (typeof toastr !== 'undefined') {
-                    toastr.error('Error: ' + data.error);
+                if (typeof showToast !== 'undefined') {
+                    showToast('Error: ' + data.error, 'error', 6000);
                 } else {
-                    mostrarNotificacionError('Error: ' + data.error);
+                    alert('Error: ' + data.error);
                 }
             }
-            $select.val(etapaActual); // Revertir selección
+            
+            // Revertir selección
+            if ($select && !esKanban) {
+                $select.val(etapaActual);
+            }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        if (typeof toastr !== 'undefined') {
-            toastr.error('Error al cambiar etapa');
+        if (typeof showToast !== 'undefined') {
+            showToast('Error al cambiar etapa', 'error', 6000);
         } else {
-            mostrarNotificacionError('Error al cambiar etapa');
+            alert('Error al cambiar etapa');
         }
-        $select.val(etapaActual); // Revertir selección
+        
+        // Revertir selección
+        if ($select && !esKanban) {
+            $select.val(etapaActual);
+        }
     })
     .finally(() => {
-        $select.prop('disabled', false);
+        // Habilitar select (solo para tabla)
+        if ($select && !esKanban) {
+            $select.prop('disabled', false);
+        }
     });
 }
 
+    // Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
+    setTimeout(function() {
+        if ($('.kanban-board').length > 0 && $('.kanban-card').length > 0) {
+            console.log('Fallback: Verificando drag and drop...');
+            if (!$('.kanban-card').data('drag-initialized')) {
+                console.log('Fallback: Inicializando drag and drop...');
+                inicializarDragAndDrop();
+                $('.kanban-card').data('drag-initialized', true);
+            }
+        }
+    }, 1000);
+    
 })(); // Close IIFE
 </script>
 
