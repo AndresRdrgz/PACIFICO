@@ -149,4 +149,36 @@ def get_item(dictionary, key):
     """Obtener un elemento de un diccionario por su clave"""
     if dictionary and key in dictionary:
         return dictionary[key]
-    return [] 
+    return []
+
+@register.filter
+def sla_to_hours(sla):
+    """Convertir un timedelta SLA a horas"""
+    if not sla:
+        return "0h"
+    
+    if isinstance(sla, str):
+        # Si es un string, intentar parsearlo
+        try:
+            # Formato "X days, HH:MM:SS" o "HH:MM:SS"
+            if ', ' in sla:
+                # Formato "X days, HH:MM:SS"
+                parts = sla.split(', ')
+                days = int(parts[0].split(' ')[0])
+                time_parts = parts[1].split(':')
+                hours = int(time_parts[0])
+                total_hours = days * 24 + hours
+            else:
+                # Formato "HH:MM:SS"
+                time_parts = sla.split(':')
+                total_hours = int(time_parts[0])
+            
+            return f"{total_hours}h"
+        except (ValueError, IndexError):
+            return sla
+    elif isinstance(sla, timedelta):
+        # Si es un timedelta
+        total_hours = sla.days * 24 + sla.seconds // 3600
+        return f"{total_hours}h"
+    else:
+        return str(sla) 

@@ -27,6 +27,15 @@ class Etapa(models.Model):
 
     def __str__(self):
         return f"{self.pipeline.nombre} - {self.nombre}"
+    
+    @property
+    def sla_horas(self):
+        """Retorna el SLA formateado en horas"""
+        if not self.sla:
+            return "0h"
+        
+        total_hours = self.sla.days * 24 + self.sla.seconds // 3600
+        return f"{total_hours}h"
 
 
 class SubEstado(models.Model):

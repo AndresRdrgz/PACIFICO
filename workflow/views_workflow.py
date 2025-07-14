@@ -14,7 +14,7 @@ from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
-    RequisitoTransicion, SolicitudComentario
+    RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja
 )
 from .models import ClienteEntrevista
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -1591,6 +1591,174 @@ def api_crear_campo_personalizado(request, pipeline_id):
 
 
 @login_required
+@superuser_permission_required('workflow.delete_transicionetapa')
+def api_eliminar_transicion(request, transicion_id):
+    """API para eliminar una transición"""
+    if request.method == 'POST':
+        try:
+            transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+            
+            # Verificar que no hay solicitudes usando esta transición
+            if transicion.solicitud_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar una transición que está siendo utilizada'
+                })
+            
+            transicion.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_transicionetapa')
+def api_editar_transicion(request, transicion_id):
+    """API para editar una transición"""
+    if request.method == 'POST':
+        try:
+            transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+            
+            # Obtener datos del formulario
+            nombre = request.POST.get('nombre')
+            etapa_origen_id = request.POST.get('etapa_origen')
+            etapa_destino_id = request.POST.get('etapa_destino')
+            
+            # Validaciones
+            if not nombre or not etapa_origen_id or not etapa_destino_id:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Todos los campos son obligatorios'
+                })
+            
+            if etapa_origen_id == etapa_destino_id:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'El origen y destino no pueden ser la misma etapa'
+                })
+            
+            # Verificar que las etapas existen y pertenecen al mismo pipeline
+            try:
+                etapa_origen = Etapa.objects.get(id=etapa_origen_id, pipeline=transicion.pipeline)
+                etapa_destino = Etapa.objects.get(id=etapa_destino_id, pipeline=transicion.pipeline)
+            except Etapa.DoesNotExist:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
+                })
+            
+            # Verificar que no hay otra transición con el mismo origen y destino
+            transicion_existente = TransicionEtapa.objects.filter(
+                pipeline=transicion.pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino
+            ).exclude(id=transicion_id).first()
+            
+            if transicion_existente:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Ya existe una transición entre estas etapas'
+                })
+            
+            # Actualizar la transición
+            transicion.nombre = nombre
+            transicion.etapa_origen = etapa_origen
+            transicion.etapa_destino = etapa_destino
+            transicion.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_requisitopipeline')
+def api_eliminar_requisito_pipeline(request, requisito_pipeline_id):
+    """API para eliminar un requisito de un pipeline"""
+    if request.method == 'POST':
+        try:
+            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
+            
+            # Verificar que no hay solicitudes con este requisito
+            if RequisitoSolicitud.objects.filter(requisito_pipeline=requisito_pipeline).exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar un requisito que está siendo utilizado'
+                })
+            
+            requisito_pipeline.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_requisitopipeline')
+def api_editar_requisito_pipeline(request, requisito_pipeline_id):
+    """API para editar un requisito de un pipeline"""
+    if request.method == 'POST':
+        try:
+            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
+            
+            # Obtener datos del formulario
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            obligatorio = request.POST.get('obligatorio') == 'on'
+            
+            # Validaciones
+            if not nombre:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'El nombre es obligatorio'
+                })
+            
+            # Actualizar el requisito base
+            requisito = requisito_pipeline.requisito
+            requisito.nombre = nombre
+            requisito.descripcion = descripcion
+            requisito.save()
+            
+            # Actualizar el requisito del pipeline
+            requisito_pipeline.obligatorio = obligatorio
+            requisito_pipeline.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_campopersonalizado')
+def api_eliminar_campo_personalizado(request, campo_id):
+    """API para eliminar un campo personalizado"""
+    if request.method == 'POST':
+        try:
+            campo = get_object_or_404(CampoPersonalizado, id=campo_id)
+            
+            # Verificar que no hay solicitudes con este campo
+            if campo.valorcampopersonalizado_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar un campo que está siendo utilizado'
+                })
+            
+            campo.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
 def api_obtener_datos_pipeline(request, pipeline_id):
     """API para obtener todos los datos de un pipeline"""
     try:
@@ -1619,6 +1787,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'nombre': transicion.nombre,
                 'etapa_origen': transicion.etapa_origen.nombre,
                 'etapa_destino': transicion.etapa_destino.nombre,
+                'etapa_origen_id': transicion.etapa_origen.id,
+                'etapa_destino_id': transicion.etapa_destino.id,
                 'requiere_permiso': transicion.requiere_permiso
             })
         
@@ -1629,6 +1799,7 @@ def api_obtener_datos_pipeline(request, pipeline_id):
             datos_requisitos.append({
                 'id': req_pipeline.id,
                 'requisito_nombre': req_pipeline.requisito.nombre,
+                'requisito_descripcion': req_pipeline.requisito.descripcion or '',
                 'obligatorio': req_pipeline.obligatorio
             })
         
@@ -4139,11 +4310,22 @@ def api_crear_requisito_transicion(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
     try:
+        # Debug logging
+        print(f"Request body: {request.body}")
+        print(f"Content-Type: {request.content_type}")
+        
         data = json.loads(request.body)
+        print(f"Parsed data: {data}")
+        
         transicion_id = data.get('transicion_id')
         requisito_id = data.get('requisito_id')
         obligatorio = data.get('obligatorio', True)
         mensaje_personalizado = data.get('mensaje_personalizado', '')
+        
+        print(f"transicion_id: {transicion_id} (type: {type(transicion_id)})")
+        print(f"requisito_id: {requisito_id} (type: {type(requisito_id)})")
+        print(f"obligatorio: {obligatorio} (type: {type(obligatorio)})")
+        print(f"mensaje_personalizado: {mensaje_personalizado}")
         
         if not all([transicion_id, requisito_id]):
             return JsonResponse({'error': 'Transición y requisito son obligatorios'}, status=400)
@@ -4177,9 +4359,11 @@ def api_crear_requisito_transicion(request):
             'mensaje': f'Requisito "{requisito.nombre}" asignado a la transición "{transicion.nombre}"'
         })
         
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception as e:
+        print(f"Exception: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -4342,7 +4526,6 @@ def api_subir_requisito_modal(request, solicitud_id):
         
         requisito_id = request.POST.get('requisito_id')
         archivo = request.FILES.get('archivo')
-        observaciones = request.POST.get('observaciones', '')
         
         if not requisito_id:
             return JsonResponse({'error': 'ID de requisito requerido'}, status=400)
@@ -4359,7 +4542,7 @@ def api_subir_requisito_modal(request, solicitud_id):
             defaults={
                 'archivo': archivo,
                 'cumplido': True,
-                'observaciones': observaciones
+                'observaciones': ''  # Campo vacío por defecto
             }
         )
         
@@ -4367,7 +4550,6 @@ def api_subir_requisito_modal(request, solicitud_id):
             # Actualizar existente
             requisito_solicitud.archivo = archivo
             requisito_solicitud.cumplido = True
-            requisito_solicitud.observaciones = observaciones
             requisito_solicitud.save()
         
         return JsonResponse({
@@ -4663,11 +4845,21 @@ def api_crear_permiso_bandeja(request, etapa_id):
     """API para crear un permiso de bandeja"""
     if request.method == 'POST':
         try:
+            # Debug logging
+            print(f"Creating bandeja permission for etapa_id: {etapa_id}")
+            print(f"Request body: {request.body}")
+            print(f"Content-Type: {request.content_type}")
+            
             etapa = get_object_or_404(Etapa, id=etapa_id)
             data = json.loads(request.body)
             
+            print(f"Parsed data: {data}")
+            
             grupo_id = data.get('grupo_id')
             usuario_id = data.get('usuario_id')
+            
+            print(f"grupo_id: {grupo_id}")
+            print(f"usuario_id: {usuario_id}")
             
             if not grupo_id and not usuario_id:
                 return JsonResponse({'success': False, 'error': 'Debe especificar un grupo o un usuario'})

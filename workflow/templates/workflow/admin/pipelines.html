@@ -18,9 +18,6 @@
             <button type="button" class="btn btn-pacifico" data-bs-toggle="modal" data-bs-target="#nuevoPipelineModal">
                 <i class="fas fa-plus me-2"></i>Nuevo Pipeline
             </button>
-            <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-pacifico">
-                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-            </a>
         </div>
     </div>
 
@@ -88,7 +85,7 @@
                             <div class="d-flex align-items-center mb-1">
                                 <div class="bg-success rounded-circle me-2" style="width: 8px; height: 8px;"></div>
                                 <span class="small">{{ etapa.nombre }}</span>
-                                <span class="badge badge-pacifico ms-auto">{{ etapa.sla }}</span>
+                                <span class="badge badge-pacifico ms-auto">{{ etapa.sla_horas }}</span>
                             </div>
                             {% endfor %}
                             {% if pipeline.etapas.count > 3 %}
@@ -384,7 +381,8 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label for="transicionNombre" class="form-label fw-semibold">Nombre *</label>
-                            <input type="text" class="form-control form-control-custom" id="transicionNombre" name="nombre" required>
+                            <input type="text" class="form-control form-control-custom" id="transicionNombre" name="nombre" required readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                            <small class="form-text text-muted">El nombre de la transición se genera automáticamente concatenando el nombre de la etapa de origen y destino, por ejemplo: <strong>Nuevo Lead -&gt; Consulta</strong>. Selecciona ambas etapas para ver el nombre.</small>
                         </div>
                         <div class="col-6">
                             <label for="transicionOrigen" class="form-label fw-semibold">Etapa Origen *</label>
@@ -398,19 +396,52 @@
                                 <option value="">Seleccionar...</option>
                             </select>
                         </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="transicionRequierePermiso" name="requiere_permiso">
-                                <label class="form-check-label" for="transicionRequierePermiso">
-                                    Requiere permisos específicos
-                                </label>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-pacifico">Crear Transición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Transición -->
+<div class="modal fade" id="editarTransicionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Transición</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editarTransicionForm">
+                <input type="hidden" id="editTransicionId" name="transicion_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editTransicionNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="editTransicionNombre" name="nombre" required readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                            <small class="form-text text-muted">El nombre de la transición se genera automáticamente concatenando el nombre de la etapa de origen y destino.</small>
+                        </div>
+                        <div class="col-6">
+                            <label for="editTransicionOrigen" class="form-label fw-semibold">Etapa Origen *</label>
+                            <select class="form-control form-control-custom" id="editTransicionOrigen" name="etapa_origen" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="editTransicionDestino" class="form-label fw-semibold">Etapa Destino *</label>
+                            <select class="form-control form-control-custom" id="editTransicionDestino" name="etapa_destino" required>
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -449,6 +480,45 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-pacifico">Crear Requisito</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Requisito -->
+<div class="modal fade" id="editarRequisitoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Requisito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editarRequisitoForm">
+                <input type="hidden" id="editRequisitoId" name="requisito_pipeline_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editRequisitoNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="editRequisitoNombre" name="nombre" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="editRequisitoDescripcion" class="form-label fw-semibold">Descripción</label>
+                            <textarea class="form-control form-control-custom" id="editRequisitoDescripcion" name="descripcion" rows="3"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editRequisitoObligatorio" name="obligatorio">
+                                <label class="form-check-label" for="editRequisitoObligatorio">
+                                    Requisito obligatorio
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -796,6 +866,160 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Editar Etapa -->
+<div class="modal fade" id="editarEtapaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Etapa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editarEtapaForm">
+                <input type="hidden" id="editEtapaId" name="etapa_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="editEtapaNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="editEtapaNombre" name="nombre" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="editEtapaOrden" class="form-label fw-semibold">Orden *</label>
+                            <input type="number" class="form-control form-control-custom" id="editEtapaOrden" name="orden" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="editEtapaSLA" class="form-label fw-semibold">SLA (horas) *</label>
+                            <input type="number" class="form-control form-control-custom" id="editEtapaSLA" name="sla_horas" min="1" value="24" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editEtapaBandejaGrupal" name="es_bandeja_grupal">
+                                <label class="form-check-label" for="editEtapaBandejaGrupal">
+                                    Es bandeja grupal
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Subestado -->
+<div class="modal fade" id="nuevoSubestadoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Subestado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="nuevoSubestadoForm">
+                <input type="hidden" id="subestadoEtapaId" name="etapa_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="subestadoNombre" class="form-label fw-semibold">Nombre *</label>
+                            <input type="text" class="form-control form-control-custom" id="subestadoNombre" name="nombre" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="subestadoOrden" class="form-label fw-semibold">Orden</label>
+                            <input type="number" class="form-control form-control-custom" id="subestadoOrden" name="orden" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pacifico">Crear Subestado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Transición -->
+<div class="modal fade" id="eliminarTransicionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Transición</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar esta transición?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminarTransicion">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Requisito -->
+<div class="modal fade" id="eliminarRequisitoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Requisito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar este requisito del pipeline?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminarRequisito">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Campo -->
+<div class="modal fade" id="eliminarCampoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Campo Personalizado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar este campo personalizado?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminarCampo">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Etapa -->
+<div class="modal fade" id="eliminarEtapaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Etapa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar esta etapa?</p>
+                <p class="text-muted">Esta acción no se puede deshacer y solo es posible si no hay solicitudes activas en esta etapa.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-pacifico" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminarEtapa">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -805,6 +1029,48 @@ let pipelineActual = null;
 let etapasPipeline = [];
 let transicionesPipeline = [];
 let requisitosPipeline = [];
+let transicionAEliminar = null;
+let requisitoAEliminar = null;
+let campoAEliminar = null;
+let etapaAEliminar = null;
+
+// Función helper para convertir SLA a horas
+function slaToHours(sla) {
+    if (!sla) return "0h";
+    
+    // Si ya está en formato "Xh", devolverlo tal como está
+    if (typeof sla === 'string' && sla.endsWith('h')) {
+        return sla;
+    }
+    
+    if (typeof sla === 'string') {
+        try {
+            // Formato "X days, HH:MM:SS" o "HH:MM:SS"
+            if (sla.includes(', ')) {
+                // Formato "X days, HH:MM:SS"
+                const parts = sla.split(', ');
+                const days = parseInt(parts[0].split(' ')[0]) || 0;
+                const timeParts = parts[1].split(':');
+                const hours = parseInt(timeParts[0]) || 0;
+                const totalHours = days * 24 + hours;
+                return `${totalHours}h`;
+            } else {
+                // Formato "HH:MM:SS"
+                const timeParts = sla.split(':');
+                const hours = parseInt(timeParts[0]) || 0;
+                return `${hours}h`;
+            }
+        } catch (e) {
+            return sla;
+        }
+    } else if (typeof sla === 'number') {
+        // Si es un número (segundos), convertir a horas
+        const hours = Math.floor(sla / 3600);
+        return `${hours}h`;
+    }
+    
+    return String(sla);
+}
 
 // Función para crear nuevo pipeline
 document.getElementById('nuevoPipelineForm').addEventListener('submit', function(e) {
@@ -915,7 +1181,7 @@ function cargarEtapas(etapas) {
                             <div>
                                 <h6 class="mb-1">${etapa.nombre}</h6>
                                 <small class="text-muted">
-                                    Orden: ${etapa.orden} | SLA: ${etapa.sla} | 
+                                    Orden: ${etapa.orden} | SLA: ${slaToHours(etapa.sla)} | 
                                     ${etapa.es_bandeja_grupal ? 'Bandeja Grupal' : 'Bandeja Personal'}
                                 </small>
                             </div>
@@ -962,18 +1228,23 @@ function cargarTransiciones(transiciones) {
         const transicionHtml = `
             <div class="card mb-3">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">${transicion.nombre}</h6>
-                            <small class="text-muted">
-                                ${transicion.etapa_origen} → ${transicion.etapa_destino}
-                                ${transicion.requiere_permiso ? ' (Requiere permisos)' : ''}
-                            </small>
+                                            <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${transicion.nombre}</h6>
+                                <small class="text-muted">
+                                    ${transicion.etapa_origen} → ${transicion.etapa_destino}
+                                    ${transicion.requiere_permiso ? ' (Requiere permisos)' : ''}
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" onclick="editarTransicion(${transicion.id}, '${transicion.nombre}', ${transicion.etapa_origen_id}, ${transicion.etapa_destino_id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="eliminarTransicion(${transicion.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarTransicion(${transicion.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
         `;
@@ -997,9 +1268,14 @@ function cargarRequisitos(requisitos) {
                                 ${requisito.obligatorio ? 'Obligatorio' : 'Opcional'}
                             </small>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarRequisitoPipeline(${requisito.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" onclick="editarRequisitoPipeline(${requisito.id}, '${requisito.requisito_nombre}', ${requisito.obligatorio}, '${requisito.requisito_descripcion || ''}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="eliminarRequisitoPipeline(${requisito.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1038,6 +1314,22 @@ function cargarCampos(campos) {
 
 // Función para nueva etapa
 function nuevaEtapa() {
+    // Calcular el siguiente orden disponible
+    let siguienteOrden = 1;
+    if (etapasPipeline && etapasPipeline.length > 0) {
+        // Encontrar el orden máximo actual
+        const maxOrden = Math.max(...etapasPipeline.map(etapa => etapa.orden));
+        siguienteOrden = maxOrden + 1;
+    }
+    
+    // Prellenar el campo de orden
+    document.getElementById('etapaOrden').value = siguienteOrden;
+    
+    // Limpiar otros campos
+    document.getElementById('etapaNombre').value = '';
+    document.getElementById('etapaSLA').value = '24';
+    document.getElementById('etapaBandejaGrupal').checked = false;
+    
     const modal = new bootstrap.Modal(document.getElementById('nuevaEtapaModal'));
     modal.show();
 }
@@ -1056,8 +1348,155 @@ function nuevaTransicion() {
         destinoSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
     });
     
+    // Limpiar el campo de nombre
+    document.getElementById('transicionNombre').value = '';
+    
     const modal = new bootstrap.Modal(document.getElementById('nuevaTransicionModal'));
     modal.show();
+}
+
+// Función para editar transición
+function editarTransicion(transicionId, nombre, etapaOrigenId, etapaDestinoId) {
+    // Cargar etapas en los selects
+    const origenSelect = document.getElementById('editTransicionOrigen');
+    const destinoSelect = document.getElementById('editTransicionDestino');
+    
+    origenSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    destinoSelect.innerHTML = '<option value="">Seleccionar...</option>';
+    
+    etapasPipeline.forEach(etapa => {
+        origenSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+        destinoSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+    });
+    
+    // Llenar los campos con los datos actuales
+    document.getElementById('editTransicionId').value = transicionId;
+    document.getElementById('editTransicionNombre').value = nombre;
+    origenSelect.value = etapaOrigenId;
+    destinoSelect.value = etapaDestinoId;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editarTransicionModal'));
+    modal.show();
+}
+
+// Función para actualizar nombre de transición automáticamente
+function actualizarNombreTransicion() {
+    const origenSelect = document.getElementById('transicionOrigen');
+    const destinoSelect = document.getElementById('transicionDestino');
+    const nombreInput = document.getElementById('transicionNombre');
+    
+    const origenId = origenSelect.value;
+    const destinoId = destinoSelect.value;
+    
+    if (origenId && destinoId) {
+        // Buscar las etapas seleccionadas
+        const etapaOrigen = etapasPipeline.find(e => e.id == origenId);
+        const etapaDestino = etapasPipeline.find(e => e.id == destinoId);
+        
+        if (etapaOrigen && etapaDestino) {
+            // Generar nombre automático
+            const nombreAutomatico = `${etapaOrigen.nombre} -> ${etapaDestino.nombre}`;
+            nombreInput.value = nombreAutomatico;
+        }
+    } else {
+        // Si no están ambos seleccionados, limpiar el nombre
+        nombreInput.value = '';
+    }
+}
+
+// Función para validar que origen y destino no sean iguales
+function validarTransicion() {
+    const origenSelect = document.getElementById('transicionOrigen');
+    const destinoSelect = document.getElementById('transicionDestino');
+    const submitButton = document.querySelector('#nuevaTransicionForm button[type="submit"]');
+    
+    const origenId = origenSelect.value;
+    const destinoId = destinoSelect.value;
+    
+    if (origenId && destinoId && origenId === destinoId) {
+        // Mostrar error y deshabilitar botón
+        mostrarNotificacion('Error: El origen y destino no pueden ser la misma etapa', 'error');
+        submitButton.disabled = true;
+        submitButton.classList.add('btn-secondary');
+        submitButton.classList.remove('btn-pacifico');
+        
+        // Agregar clases de error a los selects
+        origenSelect.classList.add('is-invalid');
+        destinoSelect.classList.add('is-invalid');
+        
+        return false;
+    } else {
+        // Habilitar botón
+        submitButton.disabled = false;
+        submitButton.classList.remove('btn-secondary');
+        submitButton.classList.add('btn-pacifico');
+        
+        // Remover clases de error de los selects
+        origenSelect.classList.remove('is-invalid');
+        destinoSelect.classList.remove('is-invalid');
+        
+        return true;
+    }
+}
+
+// Función para actualizar nombre de transición en edición automáticamente
+function actualizarNombreTransicionEdit() {
+    const origenSelect = document.getElementById('editTransicionOrigen');
+    const destinoSelect = document.getElementById('editTransicionDestino');
+    const nombreInput = document.getElementById('editTransicionNombre');
+    
+    const origenId = origenSelect.value;
+    const destinoId = destinoSelect.value;
+    
+    if (origenId && destinoId) {
+        // Buscar las etapas seleccionadas
+        const etapaOrigen = etapasPipeline.find(e => e.id == origenId);
+        const etapaDestino = etapasPipeline.find(e => e.id == destinoId);
+        
+        if (etapaOrigen && etapaDestino) {
+            // Generar nombre automático
+            const nombreAutomatico = `${etapaOrigen.nombre} -> ${etapaDestino.nombre}`;
+            nombreInput.value = nombreAutomatico;
+        }
+    } else {
+        // Si no están ambos seleccionados, limpiar el nombre
+        nombreInput.value = '';
+    }
+}
+
+// Función para validar que origen y destino no sean iguales en edición
+function validarTransicionEdit() {
+    const origenSelect = document.getElementById('editTransicionOrigen');
+    const destinoSelect = document.getElementById('editTransicionDestino');
+    const submitButton = document.querySelector('#editarTransicionForm button[type="submit"]');
+    
+    const origenId = origenSelect.value;
+    const destinoId = destinoSelect.value;
+    
+    if (origenId && destinoId && origenId === destinoId) {
+        // Mostrar error y deshabilitar botón
+        mostrarNotificacion('Error: El origen y destino no pueden ser la misma etapa', 'error');
+        submitButton.disabled = true;
+        submitButton.classList.add('btn-secondary');
+        submitButton.classList.remove('btn-pacifico');
+        
+        // Agregar clases de error a los selects
+        origenSelect.classList.add('is-invalid');
+        destinoSelect.classList.add('is-invalid');
+        
+        return false;
+    } else {
+        // Habilitar botón
+        submitButton.disabled = false;
+        submitButton.classList.remove('btn-secondary');
+        submitButton.classList.add('btn-pacifico');
+        
+        // Remover clases de error de los selects
+        origenSelect.classList.remove('is-invalid');
+        destinoSelect.classList.remove('is-invalid');
+        
+        return true;
+    }
 }
 
 // Función para nuevo requisito
@@ -1066,9 +1505,119 @@ function nuevoRequisito() {
     modal.show();
 }
 
+// Función para editar requisito
+function editarRequisitoPipeline(requisitoPipelineId, nombre, obligatorio, descripcion = '') {
+    // Llenar el formulario con los datos actuales
+    document.getElementById('editRequisitoId').value = requisitoPipelineId;
+    document.getElementById('editRequisitoNombre').value = nombre;
+    document.getElementById('editRequisitoDescripcion').value = descripcion;
+    document.getElementById('editRequisitoObligatorio').checked = obligatorio;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editarRequisitoModal'));
+    modal.show();
+}
+
 // Función para nuevo campo
 function nuevoCampo() {
     const modal = new bootstrap.Modal(document.getElementById('nuevoCampoModal'));
+    modal.show();
+}
+
+// ==========================================
+// FUNCIONES PARA GESTIÓN DE ETAPAS
+// ==========================================
+
+// Función para editar etapa
+function editarEtapa(etapaId) {
+    // Buscar la etapa en el array local
+    const etapa = etapasPipeline.find(e => e.id === etapaId);
+    if (!etapa) {
+        mostrarNotificacion('Error: No se encontró la etapa', 'error');
+        return;
+    }
+    
+    // Llenar el formulario con los datos actuales
+    document.getElementById('editEtapaId').value = etapaId;
+    document.getElementById('editEtapaNombre').value = etapa.nombre;
+    document.getElementById('editEtapaOrden').value = etapa.orden;
+    // Convertir SLA de string a horas
+    let slaHoras = 24; // valor por defecto
+    if (etapa.sla) {
+        const slaString = etapa.sla;
+        if (typeof slaString === 'string') {
+            // Parsear formato "X days, HH:MM:SS" o "HH:MM:SS"
+            const parts = slaString.split(', ');
+            if (parts.length > 1) {
+                // Formato "X days, HH:MM:SS"
+                const days = parseInt(parts[0].split(' ')[0]) || 0;
+                const timeParts = parts[1].split(':');
+                const hours = parseInt(timeParts[0]) || 0;
+                slaHoras = days * 24 + hours;
+            } else {
+                // Formato "HH:MM:SS"
+                const timeParts = slaString.split(':');
+                const hours = parseInt(timeParts[0]) || 0;
+                slaHoras = hours;
+            }
+        } else if (typeof slaString === 'number') {
+            // Si es un número (segundos), convertir a horas
+            slaHoras = Math.floor(slaString / 3600);
+        }
+    }
+    document.getElementById('editEtapaSLA').value = slaHoras;
+    document.getElementById('editEtapaBandejaGrupal').checked = etapa.es_bandeja_grupal;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editarEtapaModal'));
+    modal.show();
+}
+
+// Función para agregar subestado
+function agregarSubestado(etapaId) {
+    // Buscar la etapa para obtener sus subestados
+    const etapa = etapasPipeline.find(e => e.id === etapaId);
+    
+    // Calcular el siguiente orden disponible para subestados
+    let siguienteOrden = 0;
+    if (etapa && etapa.subestados && etapa.subestados.length > 0) {
+        // Encontrar el orden máximo actual de subestados
+        const maxOrden = Math.max(...etapa.subestados.map(sub => sub.orden || 0));
+        siguienteOrden = maxOrden + 1;
+    }
+    
+    // Prellenar los campos
+    document.getElementById('subestadoEtapaId').value = etapaId;
+    document.getElementById('subestadoOrden').value = siguienteOrden;
+    document.getElementById('subestadoNombre').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('nuevoSubestadoModal'));
+    modal.show();
+}
+
+// Función para eliminar etapa
+function eliminarEtapa(etapaId) {
+    etapaAEliminar = etapaId;
+    const modal = new bootstrap.Modal(document.getElementById('eliminarEtapaModal'));
+    modal.show();
+}
+
+// Función para eliminar transición
+function eliminarTransicion(transicionId) {
+    transicionAEliminar = transicionId;
+    const modal = new bootstrap.Modal(document.getElementById('eliminarTransicionModal'));
+    modal.show();
+}
+
+// Función para eliminar requisito del pipeline
+function eliminarRequisitoPipeline(requisitoPipelineId) {
+    requisitoAEliminar = requisitoPipelineId;
+    const modal = new bootstrap.Modal(document.getElementById('eliminarRequisitoModal'));
+    modal.show();
+}
+
+// Función para eliminar campo personalizado
+function eliminarCampo(campoId) {
+    campoAEliminar = campoId;
+    const modal = new bootstrap.Modal(document.getElementById('eliminarCampoModal'));
     modal.show();
 }
 
@@ -1197,12 +1746,18 @@ function nuevoRequisitoTransicion() {
     const transicionSelect = document.getElementById('rtTransicion');
     const requisitoSelect = document.getElementById('rtRequisito');
     
+    console.log('Opening nuevoRequisitoTransicion modal');
+    console.log('transicionesPipeline:', transicionesPipeline);
+    console.log('requisitosPipeline:', requisitosPipeline);
+    
     transicionSelect.innerHTML = '<option value="">Seleccionar transición...</option>';
     requisitoSelect.innerHTML = '<option value="">Seleccionar requisito...</option>';
     
     transicionesPipeline.forEach(transicion => {
         transicionSelect.innerHTML += `<option value="${transicion.id}">${transicion.nombre} (${transicion.etapa_origen.nombre} → ${transicion.etapa_destino.nombre})</option>`;
     });
+    
+    console.log('Transiciones loaded:', transicionSelect.innerHTML);
     
     if (requisitosPipeline.length === 0) {
         requisitoSelect.innerHTML = '<option value="">No hay requisitos asignados a este pipeline</option>';
@@ -1237,9 +1792,18 @@ function nuevoRequisitoTransicion() {
         requisitosPipeline.forEach(requisito => {
             requisitoSelect.innerHTML += `<option value="${requisito.id}">${requisito.nombre}</option>`;
         });
+        
+        console.log('Requisitos loaded:', requisitoSelect.innerHTML);
     }
     
     const modal = new bootstrap.Modal(document.getElementById('nuevoRequisitoTransicionModal'));
+    
+    // Add event listener to re-enable selects when modal is hidden
+    document.getElementById('nuevoRequisitoTransicionModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('rtTransicion').disabled = false;
+        document.getElementById('rtRequisito').disabled = false;
+    });
+    
     modal.show();
 }
 
@@ -1249,6 +1813,10 @@ function agregarRequisitoATransicion(transicionId) {
     nuevoRequisitoTransicion();
     document.getElementById('rtTransicion').value = transicionId;
     document.getElementById('rtTransicion').disabled = true;
+    
+    // Debug logging
+    console.log('Pre-selected transicion_id:', transicionId);
+    console.log('Select value after setting:', document.getElementById('rtTransicion').value);
 }
 
 // Función para editar requisito de transición
@@ -1294,6 +1862,10 @@ document.getElementById('nuevaEtapaForm').addEventListener('submit', function(e)
     const formData = new FormData(this);
     formData.append('pipeline_id', pipelineActual);
     
+    // Manejar explícitamente el checkbox de bandeja grupal
+    const bandejaGrupalCheckbox = document.getElementById('etapaBandejaGrupal');
+    formData.set('es_bandeja_grupal', bandejaGrupalCheckbox.checked ? 'true' : 'false');
+    
     fetch(`{% url "workflow:api_crear_etapa" 0 %}`.replace('0', pipelineActual), {
         method: 'POST',
         body: formData,
@@ -1321,6 +1893,11 @@ document.getElementById('nuevaEtapaForm').addEventListener('submit', function(e)
 document.getElementById('nuevaTransicionForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    // Validar que origen y destino no sean iguales
+    if (!validarTransicion()) {
+        return;
+    }
+    
     const formData = new FormData(this);
     formData.append('pipeline_id', pipelineActual);
     
@@ -1345,6 +1922,41 @@ document.getElementById('nuevaTransicionForm').addEventListener('submit', functi
     .catch(error => {
         console.error('Error:', error);
         mostrarNotificacion('Error al crear transición', 'error');
+    });
+});
+
+document.getElementById('editarTransicionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validar que origen y destino no sean iguales
+    if (!validarTransicionEdit()) {
+        return;
+    }
+    
+    const formData = new FormData(this);
+    const transicionId = formData.get('transicion_id');
+    
+    fetch(`{% url "workflow:api_editar_transicion" 0 %}`.replace('0', transicionId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Transición actualizada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editarTransicionModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al actualizar transición: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar transición', 'error');
     });
 });
 
@@ -1398,6 +2010,36 @@ document.getElementById('nuevoRequisitoForm').addEventListener('submit', functio
     });
 });
 
+document.getElementById('editarRequisitoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const requisitoPipelineId = formData.get('requisito_pipeline_id');
+    
+    fetch(`{% url "workflow:api_editar_requisito_pipeline" 0 %}`.replace('0', requisitoPipelineId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Requisito actualizado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editarRequisitoModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al actualizar requisito: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar requisito', 'error');
+    });
+});
+
 document.getElementById('nuevoCampoForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -1433,12 +2075,48 @@ document.getElementById('nuevoRequisitoTransicionForm').addEventListener('submit
     e.preventDefault();
     
     const formData = new FormData(this);
+    
+    // Handle disabled selects - get values directly from elements
+    const transicionSelect = document.getElementById('rtTransicion');
+    const requisitoSelect = document.getElementById('rtRequisito');
+    
+    const transicionId = transicionSelect.disabled ? transicionSelect.value : formData.get('transicion_id');
+    const requisitoId = requisitoSelect.disabled ? requisitoSelect.value : formData.get('requisito_id');
+    
+    // Debug logging
+    console.log('Form data - transicion_id:', transicionId);
+    console.log('Form data - requisito_id:', requisitoId);
+    console.log('Form data - obligatorio:', formData.get('obligatorio'));
+    console.log('Form data - mensaje_personalizado:', formData.get('mensaje_personalizado'));
+    console.log('Transicion select disabled:', transicionSelect.disabled);
+    console.log('Requisito select disabled:', requisitoSelect.disabled);
+    
+    // Validate required fields
+    if (!transicionId || transicionId === '') {
+        mostrarNotificacion('Debe seleccionar una transición', 'error');
+        return;
+    }
+    
+    if (!requisitoId || requisitoId === '') {
+        mostrarNotificacion('Debe seleccionar un requisito', 'error');
+        return;
+    }
+    
+    // Additional validation
+    if (isNaN(parseInt(transicionId)) || isNaN(parseInt(requisitoId))) {
+        mostrarNotificacion('Los IDs de transición y requisito deben ser números válidos', 'error');
+        return;
+    }
+    
     const data = {
-        transicion_id: formData.get('transicion_id'),
-        requisito_id: formData.get('requisito_id'),
+        transicion_id: parseInt(transicionId),
+        requisito_id: parseInt(requisitoId),
         obligatorio: formData.get('obligatorio') === 'on',
-        mensaje_personalizado: formData.get('mensaje_personalizado')
+        mensaje_personalizado: formData.get('mensaje_personalizado') || ''
     };
+    
+    console.log('Sending data:', data);
+    console.log('CSRF Token:', document.querySelector('[name=csrfmiddlewaretoken]').value);
     
     fetch('{% url "workflow:api_crear_requisito_transicion" %}', {
         method: 'POST',
@@ -1448,13 +2126,25 @@ document.getElementById('nuevoRequisitoTransicionForm').addEventListener('submit
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             mostrarNotificacion(data.mensaje, 'success');
             bootstrap.Modal.getInstance(document.getElementById('nuevoRequisitoTransicionModal')).hide();
+            
+            // Reset form and re-enable selects
             this.reset();
-            document.getElementById('rtTransicion').disabled = false; // Re-habilitar select
+            document.getElementById('rtTransicion').disabled = false;
+            document.getElementById('rtRequisito').disabled = false;
+            
             cargarRequisitosTransicion(); // Recargar lista
         } else {
             mostrarNotificacion('Error al asignar requisito: ' + data.error, 'error');
@@ -1462,7 +2152,11 @@ document.getElementById('nuevoRequisitoTransicionForm').addEventListener('submit
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('Error al asignar requisito', 'error');
+        mostrarNotificacion('Error al asignar requisito: ' + error.message, 'error');
+        
+        // Re-enable selects in case of error
+        document.getElementById('rtTransicion').disabled = false;
+        document.getElementById('rtRequisito').disabled = false;
     });
 });
 
@@ -1555,9 +2249,15 @@ document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', fu
     const etapaId = etapaSelect.value;
     
     // Debug logging
+    console.log('=== BANDEJA PERMISSION FORM SUBMISSION ===');
     console.log('Form submission - etapaId:', etapaId);
     console.log('etapaSelect element:', etapaSelect);
     console.log('etapaSelect options:', etapaSelect.options);
+    console.log('tipoAsignacion:', tipoAsignacion);
+    console.log('All form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+    }
     
     // Validate that etapa_id is selected
     if (!etapaId) {
@@ -1568,6 +2268,9 @@ document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', fu
     // Validate that either grupo_id or usuario_id is selected
     const grupoId = tipoAsignacion === 'grupo' ? formData.get('grupo_id') : null;
     const usuarioId = tipoAsignacion === 'usuario' ? formData.get('usuario_id') : null;
+    
+    console.log('grupoId:', grupoId);
+    console.log('usuarioId:', usuarioId);
     
     if (!grupoId && !usuarioId) {
         mostrarNotificacion('Debe seleccionar un grupo o usuario', 'error');
@@ -1585,6 +2288,7 @@ document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', fu
     };
     
     console.log('Submitting data:', data);
+    console.log('CSRF Token:', document.querySelector('[name=csrfmiddlewaretoken]').value);
     console.log('URL:', `{% url "workflow:api_crear_permiso_bandeja" 0 %}`.replace('0', etapaId));
     
     fetch(`{% url "workflow:api_crear_permiso_bandeja" 0 %}`.replace('0', etapaId), {
@@ -1597,12 +2301,17 @@ document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', fu
     })
     .then(response => {
         console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            return response.text().then(text => {
+                console.log('Error response text:', text);
+                throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+            });
         }
         return response.json();
     })
     .then(data => {
+        console.log('Response data:', data);
         if (data.success) {
             mostrarNotificacion(data.mensaje, 'success');
             bootstrap.Modal.getInstance(document.getElementById('nuevoPermisoBandejaModal')).hide();
@@ -1616,6 +2325,172 @@ document.getElementById('nuevoPermisoBandejaForm').addEventListener('submit', fu
     .catch(error => {
         console.error('Error:', error);
         mostrarNotificacion('Error al crear permiso: ' + error.message, 'error');
+    });
+});
+
+// Event listeners para formularios de gestión de etapas
+document.getElementById('editarEtapaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const etapaId = formData.get('etapa_id');
+    
+    // Manejar explícitamente el checkbox de bandeja grupal
+    const bandejaGrupalCheckbox = document.getElementById('editEtapaBandejaGrupal');
+    formData.set('es_bandeja_grupal', bandejaGrupalCheckbox.checked ? 'true' : 'false');
+    
+    fetch(`{% url "workflow:api_editar_etapa" 0 %}`.replace('0', etapaId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Etapa actualizada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editarEtapaModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al actualizar etapa: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al actualizar etapa', 'error');
+    });
+});
+
+document.getElementById('nuevoSubestadoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const etapaId = formData.get('etapa_id');
+    
+    fetch(`{% url "workflow:api_crear_subestado" 0 %}`.replace('0', etapaId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Subestado creado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('nuevoSubestadoModal')).hide();
+            this.reset();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al crear subestado: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al crear subestado', 'error');
+    });
+});
+
+// Event listeners para botones de confirmación de eliminación
+document.getElementById('confirmarEliminarEtapa').addEventListener('click', function() {
+    if (!etapaAEliminar) return;
+    
+    fetch(`{% url "workflow:api_eliminar_etapa" 0 %}`.replace('0', etapaAEliminar), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Etapa eliminada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('eliminarEtapaModal')).hide();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al eliminar etapa: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al eliminar etapa', 'error');
+    });
+});
+
+document.getElementById('confirmarEliminarTransicion').addEventListener('click', function() {
+    if (!transicionAEliminar) return;
+    
+    fetch(`{% url "workflow:api_eliminar_transicion" 0 %}`.replace('0', transicionAEliminar), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Transición eliminada exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('eliminarTransicionModal')).hide();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al eliminar transición: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al eliminar transición', 'error');
+    });
+});
+
+document.getElementById('confirmarEliminarRequisito').addEventListener('click', function() {
+    if (!requisitoAEliminar) return;
+    
+    fetch(`{% url "workflow:api_eliminar_requisito_pipeline" 0 %}`.replace('0', requisitoAEliminar), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Requisito eliminado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('eliminarRequisitoModal')).hide();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al eliminar requisito: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al eliminar requisito', 'error');
+    });
+});
+
+document.getElementById('confirmarEliminarCampo').addEventListener('click', function() {
+    if (!campoAEliminar) return;
+    
+    fetch(`{% url "workflow:api_eliminar_campo_personalizado" 0 %}`.replace('0', campoAEliminar), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Campo eliminado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('eliminarCampoModal')).hide();
+            configurarPipeline(pipelineActual); // Recargar configuración
+        } else {
+            mostrarNotificacion('Error al eliminar campo: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al eliminar campo', 'error');
     });
 });
 
@@ -1635,6 +2510,45 @@ document.querySelectorAll('input[name="tipo_asignacion"]').forEach(radio => {
             document.getElementById('grupoSelect').value = '';
         }
     });
+});
+
+// Event listeners para transiciones
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listeners para los selects de transición
+    const origenSelect = document.getElementById('transicionOrigen');
+    const destinoSelect = document.getElementById('transicionDestino');
+    
+    if (origenSelect) {
+        origenSelect.addEventListener('change', function() {
+            actualizarNombreTransicion();
+            validarTransicion();
+        });
+    }
+    
+    if (destinoSelect) {
+        destinoSelect.addEventListener('change', function() {
+            actualizarNombreTransicion();
+            validarTransicion();
+        });
+    }
+    
+    // Event listeners para los selects de edición de transición
+    const editOrigenSelect = document.getElementById('editTransicionOrigen');
+    const editDestinoSelect = document.getElementById('editTransicionDestino');
+    
+    if (editOrigenSelect) {
+        editOrigenSelect.addEventListener('change', function() {
+            actualizarNombreTransicionEdit();
+            validarTransicionEdit();
+        });
+    }
+    
+    if (editDestinoSelect) {
+        editDestinoSelect.addEventListener('change', function() {
+            actualizarNombreTransicionEdit();
+            validarTransicionEdit();
+        });
+    }
 });
 
 document.querySelectorAll('input[name="tipo_asignacion_bandeja"]').forEach(radio => {
@@ -1934,32 +2848,46 @@ function cargarPermisosBandejas() {
 
 // Función para nuevo permiso de bandeja
 function nuevoPermisoBandeja(etapaId = null) {
+    console.log('=== NUEVO PERMISO BANDEJA ===');
+    console.log('etapaId parameter:', etapaId);
+    console.log('etapasPipeline:', etapasPipeline);
+    
     // Ensure etapasPipeline is available
     if (!etapasPipeline || etapasPipeline.length === 0) {
+        console.error('etapasPipeline is not available');
         mostrarNotificacion('Error: No se pudieron cargar las etapas del pipeline', 'error');
         return;
     }
     
     // Cargar solo etapas que son bandeja grupal
     const etapasBandeja = etapasPipeline.filter(etapa => etapa.es_bandeja_grupal);
+    console.log('etapasBandeja (filtered):', etapasBandeja);
     
     if (etapasBandeja.length === 0) {
+        console.error('No hay etapas configuradas como bandeja grupal');
         mostrarNotificacion('No hay etapas configuradas como bandeja grupal', 'error');
         return;
     }
     
     const etapaSelect = document.getElementById('etapaSelect');
+    console.log('etapaSelect element:', etapaSelect);
+    
     etapaSelect.innerHTML = '<option value="">Seleccionar etapa...</option>';
     etapasBandeja.forEach(etapa => {
         etapaSelect.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
     });
     
+    console.log('etapaSelect options after loading:', etapaSelect.innerHTML);
+    
     if (etapaId) {
         // Pre-seleccionar la etapa
         etapaSelect.value = etapaId;
         etapaSelect.disabled = true;
+        console.log('Pre-selected etapa:', etapaId);
+        console.log('etapaSelect disabled:', etapaSelect.disabled);
     } else {
         etapaSelect.disabled = false;
+        console.log('No pre-selection, etapaSelect enabled');
     }
     
     // Cargar grupos y usuarios
@@ -1970,30 +2898,54 @@ function nuevoPermisoBandeja(etapaId = null) {
 
 // Función para cargar grupos y usuarios para bandejas
 function cargarGruposYUsuariosBandeja() {
+    console.log('=== CARGAR GRUPOS Y USUARIOS BANDEJA ===');
+    
     // Cargar grupos
     fetch('{% url "workflow:api_obtener_grupos" %}')
-    .then(response => response.json())
+    .then(response => {
+        console.log('Grupos response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Grupos data:', data);
         if (data.success) {
             const grupoSelect = document.getElementById('grupoSelectBandeja');
+            console.log('grupoSelectBandeja element:', grupoSelect);
             grupoSelect.innerHTML = '<option value="">Seleccionar grupo...</option>';
             data.grupos.forEach(grupo => {
                 grupoSelect.innerHTML += `<option value="${grupo.id}">${grupo.name} (${grupo.user_count} usuarios)</option>`;
             });
+            console.log('Grupos loaded:', grupoSelect.innerHTML);
+        } else {
+            console.error('Error loading groups:', data.error);
         }
+    })
+    .catch(error => {
+        console.error('Error fetching groups:', error);
     });
     
     // Cargar usuarios
     fetch('{% url "workflow:api_obtener_usuarios" %}')
-    .then(response => response.json())
+    .then(response => {
+        console.log('Usuarios response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Usuarios data:', data);
         if (data.success) {
             const usuarioSelect = document.getElementById('usuarioSelectBandeja');
+            console.log('usuarioSelectBandeja element:', usuarioSelect);
             usuarioSelect.innerHTML = '<option value="">Seleccionar usuario...</option>';
             data.usuarios.forEach(usuario => {
                 usuarioSelect.innerHTML += `<option value="${usuario.id}">${usuario.first_name} ${usuario.last_name} (${usuario.username})</option>`;
             });
+            console.log('Usuarios loaded:', usuarioSelect.innerHTML);
+        } else {
+            console.error('Error loading users:', data.error);
         }
+    })
+    .catch(error => {
+        console.error('Error fetching users:', error);
     });
 }
 
