@@ -1036,6 +1036,8 @@
             </div>
         </div>
 
+       
+
 
 
 
@@ -2890,7 +2892,7 @@
 
 
 
-    // Validate all fields are rated before stage change
+    // Validate all fields are rated and analyst comment is filled before stage change
     const validateAllFieldsRated = () => {
         const allComplianceButtons = document.querySelectorAll('.btn-compliance[data-action="bueno"], .btn-compliance[data-action="malo"]');
         const unratedFields = [];
@@ -2915,9 +2917,14 @@
             }
         });
         
+        // Check if analyst comment is filled
+        const analystTextarea = document.getElementById('comentario-analista-credito-text');
+        const hasAnalystComment = analystTextarea && analystTextarea.value.trim().length > 0;
+        
         return {
-            isValid: unratedFields.length === 0,
-            unratedFields: [...new Set(unratedFields)] // Remove duplicates
+            isValid: unratedFields.length === 0 && hasAnalystComment,
+            unratedFields: [...new Set(unratedFields)], // Remove duplicates
+            hasAnalystComment: hasAnalystComment
         };
     };
 
@@ -2980,7 +2987,7 @@
         return summary;
     };
 
-    // Show confirmation modal with analysis summary
+        // Show confirmation modal with analysis summary
     const showStageChangeConfirmation = (targetStageName) => {
         const validation = validateAllFieldsRated();
         const summary = generateAnalysisSummary();
@@ -2994,17 +3001,36 @@
                             <div class="modal-header bg-danger text-white">
                                 <h5 class="modal-title">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
-                                    Campos Sin Calificar
+                                    Validación Requerida
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
+                                        </div>
                             <div class="modal-body">
                                 <div class="alert alert-warning">
                                     <i class="fas fa-info-circle me-2"></i>
-                                    <strong>No se puede cambiar de etapa</strong> - Todos los campos deben estar calificados como "Bueno" o "Malo".
-                                </div>
+                                    <strong>No se puede cambiar de etapa</strong> - Se requieren las siguientes validaciones:
+                                        </div>
+                                
+                                ${!validation.hasAnalystComment ? `
                                 <div class="mb-3">
-                                    <h6>Campos pendientes de calificación:</h6>
+                                    <h6><i class="fas fa-user-md me-2"></i>Análisis General Requerido</h6>
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        <strong>Falta el análisis general</strong> - Debe completar el análisis general antes de cambiar de etapa.
+                                        <br><br>
+                                        <strong>Instrucciones:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Complete el campo "Análisis General" en la sección de Comentarios de Analista</li>
+                                            <li>El análisis debe contener al menos un carácter</li>
+                                            <li>Guarde el análisis antes de intentar cambiar de etapa</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${validation.unratedFields.length > 0 ? `
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-list-check me-2"></i>Campos Pendientes de Calificación</h6>
                                     <ul class="list-group">
                                         ${validation.unratedFields.map(field => 
                                             `<li class="list-group-item d-flex justify-content-between align-items-center">
@@ -3013,16 +3039,17 @@
                                             </li>`
                                         ).join('')}
                                     </ul>
+                                    <div class="alert alert-info mt-2">
+                                        <i class="fas fa-lightbulb me-2"></i>
+                                        <strong>Instrucciones para calificar campos:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Haga clic en el botón <i class="fas fa-check text-success"></i> para marcar como "Bueno"</li>
+                                            <li>Haga clic en el botón <i class="fas fa-times text-danger"></i> para marcar como "Malo"</li>
+                                            <li>Opcionalmente, agregue comentarios con el botón <i class="fas fa-comment-dots text-primary"></i></li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div class="alert alert-info">
-                                    <i class="fas fa-lightbulb me-2"></i>
-                                    <strong>Instrucciones:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        <li>Haga clic en el botón <i class="fas fa-check text-success"></i> para marcar como "Bueno"</li>
-                                        <li>Haga clic en el botón <i class="fas fa-times text-danger"></i> para marcar como "Malo"</li>
-                                        <li>Opcionalmente, agregue comentarios con el botón <i class="fas fa-comment-dots text-primary"></i></li>
-                                    </ul>
-                                </div>
+                                ` : ''}
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -3121,6 +3148,14 @@
                                     Asegúrese de que esto sea correcto antes de proceder.
                                 </div>
                             ` : ''}
+                            
+                            ${!summary.analystComment ? `
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-user-md me-2"></i>
+                                    <strong>Análisis General:</strong> Se ha incluido un análisis general en la confirmación. 
+                                    Este es un requisito obligatorio para el cambio de etapa.
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -3168,26 +3203,50 @@
                     const match = onclick.match(/handleTransicionClick\((\d+),\s*'([^']+)',\s*(true|false),\s*(\d+)\)/);
                     if (match) {
                         const [, etapaId, etapaNombre, puedeRealizar, requisitosFaltantes] = match;
+                        console.log('Extracted stage change parameters:', { etapaId, etapaNombre, puedeRealizar, requisitosFaltantes });
                         // Call the original stage change function
                         callOriginalStageChange(parseInt(etapaId), etapaNombre, puedeRealizar === 'true', parseInt(requisitosFaltantes));
+                        return; // Exit after finding the correct button
+                    } else {
+                        console.error('Failed to parse onclick attribute:', onclick);
                     }
+                } else {
+                    console.error('No onclick attribute found on button');
                 }
                 break;
             }
         }
+        
+        // If we get here, we couldn't find the button
+        console.error('Could not find stage change button for:', targetStageName);
+        showNotification(`Error: No se pudo encontrar el botón para cambiar a ${targetStageName}`, 'error');
     };
 
     // Call the original stage change function
     const callOriginalStageChange = async (etapaId, etapaNombre, puedeRealizar, requisitosFaltantes) => {
         try {
+            console.log('=== callOriginalStageChange START ===');
+            console.log('Parameters:', { etapaId, etapaNombre, puedeRealizar, requisitosFaltantes });
+            
             const solicitudId = getSolicitudIdFromUrl();
             if (!solicitudId) {
                 showNotification('Error: No se pudo obtener el ID de la solicitud', 'error');
                 return;
             }
 
+            console.log('Solicitud ID:', solicitudId);
+            console.log('Etapa ID:', etapaId);
+            console.log('Etapa Nombre:', etapaNombre);
+
             // Show loading state
             showNotification(`Cambiando a etapa: ${etapaNombre}...`, 'info');
+
+            const requestBody = {
+                etapa_destino_id: etapaId,
+                comentarios_analista: document.getElementById('comentario-analista-credito-text')?.value || ''
+            };
+            
+            console.log('Request body:', requestBody);
 
             const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
                 method: 'POST',
@@ -3196,19 +3255,25 @@
                     'X-CSRFToken': getCSRFToken(),
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({
-                    etapa_destino_id: etapaId,
-                    comentarios_analista: document.getElementById('comentario-analista-credito-text')?.value || ''
-                })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Response error text:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
             const data = await response.json();
+            console.log('Response data:', data);
 
             if (data.success) {
                 showNotification(`✅ Solicitud cambiada exitosamente a: ${etapaNombre}`, 'success');
-                // Redirect to the updated page
+                // Redirect to bandeja mixta after successful stage change
                 setTimeout(() => {
-                    window.location.reload();
+                    window.location.href = "{% url 'workflow:vista_mixta_bandejas' %}";
                 }, 1500);
             } else {
                 // Handle specific error types
@@ -3216,14 +3281,21 @@
                     showValidationErrorModal(data.campos_sin_calificar, etapaNombre);
                 } else if (data.tipo_error === 'requisitos_faltantes') {
                     showRequisitosErrorModal(data.requisitos_faltantes, etapaNombre);
+                } else if (data.tipo_error === 'analisis_general_faltante') {
+                    showAnalisisGeneralErrorModal(etapaNombre);
                 } else {
                     throw new Error(data.error || 'Error al cambiar de etapa');
                 }
             }
 
         } catch (error) {
-            console.error('Error in stage change:', error);
+            console.error('=== Error in callOriginalStageChange ===');
+            console.error('Error type:', error.constructor.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
             showNotification(`Error: ${error.message}`, 'error');
+        } finally {
+            console.log('=== callOriginalStageChange END ===');
         }
     };
 
@@ -3286,25 +3358,25 @@
         modal.show();
     };
 
-    // Show requisitos error modal
+        // Show requisitos error modal
     const showRequisitosErrorModal = (requisitosFaltantes, etapaNombre) => {
         const errorModal = `
             <div class="modal fade" id="requisitosErrorModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
                         <div class="modal-header bg-warning text-dark">
                             <h5 class="modal-title">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 Requisitos Faltantes
-                            </h5>
+                    </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
+                </div>
+                <div class="modal-body">
                             <div class="alert alert-warning">
                                 <i class="fas fa-info-circle me-2"></i>
                                 <strong>No se puede cambiar a ${etapaNombre}</strong> - Faltan requisitos obligatorios.
-                            </div>
-                            <div class="mb-3">
+                    </div>
+                    <div class="mb-3">
                                 <h6>Requisitos pendientes:</h6>
                                 <ul class="list-group">
                                     ${requisitosFaltantes.map(req => 
@@ -3314,7 +3386,7 @@
                                                     <strong>${req.nombre}</strong>
                                                     <br>
                                                     <small class="text-muted">${req.descripcion}</small>
-                                                </div>
+                    </div>
                                                 <div class="text-end">
                                                     <span class="badge bg-warning text-dark">Pendiente</span>
                                                     <br>
@@ -3322,11 +3394,66 @@
                                                         ${req.tiene_archivo ? 'Con archivo' : 'Sin archivo'} | 
                                                         ${req.esta_cumplido ? 'Cumplido' : 'No cumplido'}
                                                     </small>
-                                                </div>
+                        </div>
                                             </div>
                                         </li>`
                                     ).join('')}
                                 </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('requisitosErrorModal');
+        if (existingModal) existingModal.remove();
+        
+        // Add modal to page and show
+        document.body.insertAdjacentHTML('beforeend', errorModal);
+        const modal = new bootstrap.Modal(document.getElementById('requisitosErrorModal'));
+        modal.show();
+    };
+
+    // Show analyst comment error modal
+    const showAnalisisGeneralErrorModal = (etapaNombre) => {
+        const errorModal = `
+            <div class="modal fade" id="analisisGeneralErrorModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-user-md me-2"></i>
+                                Análisis General Requerido
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <strong>No se puede cambiar a ${etapaNombre}</strong> - Debe completar el análisis general antes de cambiar de etapa.
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-info-circle me-2"></i>Instrucciones:</h6>
+                                <div class="alert alert-info">
+                                    <ul class="mb-0">
+                                        <li>Complete el campo "Análisis General" en la sección de Comentarios de Analista</li>
+                                        <li>El análisis debe contener al menos un carácter</li>
+                                        <li>Guarde el análisis haciendo clic en "Guardar Análisis" antes de intentar cambiar de etapa</li>
+                                        <li>El análisis general es obligatorio para proceder con el cambio de etapa</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Consejo:</strong> El análisis general debe incluir una evaluación completa de la solicitud, 
+                                considerando todos los aspectos revisados en los campos de compliance.
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -3340,12 +3467,12 @@
         `;
         
         // Remove existing modal if any
-        const existingModal = document.getElementById('requisitosErrorModal');
+        const existingModal = document.getElementById('analisisGeneralErrorModal');
         if (existingModal) existingModal.remove();
         
         // Add modal to page and show
         document.body.insertAdjacentHTML('beforeend', errorModal);
-        const modal = new bootstrap.Modal(document.getElementById('requisitosErrorModal'));
+        const modal = new bootstrap.Modal(document.getElementById('analisisGeneralErrorModal'));
         modal.show();
     };
 

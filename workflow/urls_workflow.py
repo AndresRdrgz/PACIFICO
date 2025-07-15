@@ -113,6 +113,7 @@ urlpatterns += [
     # URLs de testing para correos (eliminar en producción)
     path('test-correo-bandeja/', views_workflow.test_envio_correo_bandeja, name='test_correo_bandeja'),
     path('test-correo-asignacion/', views_workflow.test_envio_correo_asignacion, name='test_correo_asignacion'),
+    path('test-correo-cambio-etapa/', views_workflow.test_envio_correo_cambio_etapa, name='test_correo_cambio_etapa'),
     # APIs para gestión de permisos de pipeline
     path('api/pipelines/<int:pipeline_id>/permisos/', views_workflow.api_obtener_permisos_pipeline, name='api_obtener_permisos_pipeline'),
     path('api/pipelines/<int:pipeline_id>/permisos/crear/', views_workflow.api_crear_permiso_pipeline, name='api_crear_permiso_pipeline'),

@@ -2641,10 +2641,10 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
         print(f"❌ Error al enviar correo de asignación para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etapa, comentarios_analista, bullet_points, usuario_que_cambio):
+def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etapa, comentarios_analista, bullet_points, analisis_general, usuario_que_cambio):
     """
     Función para enviar correo automático al propietario de la solicitud cuando cambia de etapa.
-    Incluye comentarios del analista y bullet points.
+    Incluye análisis general, comentarios del analista y bullet points estructurados.
     """
     try:
         # Verificar que la solicitud tiene un creador
@@ -2668,13 +2668,31 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         # Construir la URL de la solicitud
         solicitud_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/solicitud/{solicitud.id}/"
         
+        # Preparar análisis general para el correo
+        analisis_html = ""
+        analisis_texto = ""
+        
+        if analisis_general:
+            analisis_html = f"""
+            <div style="background: #e8f5e8; border: 1px solid #28a745; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #155724; margin: 0 0 15px 0; display: flex; align-items: center;">
+                    <i class="fas fa-user-md" style="margin-right: 10px;"></i>
+                    Análisis General del Analista
+                </h4>
+                <div style="color: #155724; line-height: 1.6; font-size: 0.95rem;">
+                    {analisis_general.replace(chr(10), '<br>')}
+                </div>
+            </div>
+            """
+            analisis_texto = f"Análisis General:\n{analisis_general}\n"
+        
         # Preparar comentarios para el correo
         comentarios_html = ""
         comentarios_texto = ""
         
         if comentarios_analista:
-            comentarios_html = "<h4>📋 Comentarios del Analista:</h4>"
-            comentarios_texto = "Comentarios del Analista:\n"
+            comentarios_html = "<h4>📋 Historial de Comentarios del Analista:</h4>"
+            comentarios_texto = "Historial de Comentarios del Analista:\n"
             
             for comentario in comentarios_analista:
                 fecha = comentario.fecha_creacion.strftime('%d/%m/%Y %H:%M')
@@ -2690,19 +2708,42 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
                 """
                 comentarios_texto += f"\n• {comentario.usuario.get_full_name() or comentario.usuario.username} ({fecha}):\n{comentario.comentario}\n"
         
-        # Preparar bullet points para el correo
+        # Preparar bullet points estructurados para el correo
         bullet_points_html = ""
         bullet_points_texto = ""
         
         if bullet_points:
-            bullet_points_html = "<h4>🔑 Puntos Clave del Análisis:</h4><ul>"
-            bullet_points_texto = "Puntos Clave del Análisis:\n"
+            bullet_points_html = """
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #856404; margin: 0 0 15px 0; display: flex; align-items: center;">
+                    <i class="fas fa-list-ul" style="margin-right: 10px;"></i>
+                    Comentarios de Campos Específicos
+                </h4>
+                <div style="max-height: 300px; overflow-y: auto;">
+            """
+            bullet_points_texto = "Comentarios de Campos Específicos:\n"
             
             for punto in bullet_points:
-                bullet_points_html += f"<li style='margin-bottom: 0.5rem; color: #495057;'>{punto}</li>"
-                bullet_points_texto += f"• {punto}\n"
+                estado_color = "#28a745" if punto.get('estado') == 'bueno' else "#dc3545" if punto.get('estado') == 'malo' else "#6c757d"
+                estado_texto = "✅ Bueno" if punto.get('estado') == 'bueno' else "❌ Malo" if punto.get('estado') == 'malo' else "⏸️ Sin calificar"
+                
+                bullet_points_html += f"""
+                <div style="background: white; border-radius: 6px; padding: 12px; margin-bottom: 10px; border-left: 4px solid {estado_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong style="color: #495057; font-size: 0.9rem;">{punto.get('campo', 'Campo')}</strong>
+                        <span style="color: {estado_color}; font-size: 0.8rem; font-weight: bold;">{estado_texto}</span>
+                    </div>
+                    <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 6px;">
+                        <i class="fas fa-user" style="margin-right: 5px;"></i>{punto.get('usuario', 'Usuario')} - {punto.get('fecha', 'Fecha')}
+                    </div>
+                    <div style="color: #495057; line-height: 1.4; font-size: 0.9rem;">
+                        {punto.get('comentario', '').replace(chr(10), '<br>')}
+                    </div>
+                </div>
+                """
+                bullet_points_texto += f"\n• {punto.get('campo', 'Campo')} ({estado_texto}):\n{punto.get('comentario', '')}\n"
             
-            bullet_points_html += "</ul>"
+            bullet_points_html += "</div></div>"
         
         # Contexto para el template
         context = {
@@ -2711,9 +2752,13 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
             'nueva_etapa': nueva_etapa,
             'cliente_nombre': cliente_nombre,
             'solicitud_url': solicitud_url,
+            'analisis_html': analisis_html,
             'comentarios_html': comentarios_html,
             'bullet_points_html': bullet_points_html,
             'usuario_que_cambio': usuario_que_cambio,
+            'tiene_analisis': bool(analisis_general),
+            'tiene_comentarios': bool(comentarios_analista),
+            'tiene_bullet_points': bool(bullet_points),
         }
         
         # Cargar el template HTML
@@ -2737,6 +2782,8 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         • Nueva Etapa: {nueva_etapa.nombre}
         • Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
         • Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        
+        {analisis_texto}
         
         {comentarios_texto}
         
@@ -2807,9 +2854,13 @@ def api_cambiar_etapa(request, solicitud_id):
         
         # Obtener datos del request
         data = json.loads(request.body)
-        nueva_etapa_id = data.get('etapa_id')
+        print(f"🔍 DEBUG: Request data received: {data}")
+        
+        nueva_etapa_id = data.get('etapa_destino_id') or data.get('etapa_id')
+        print(f"🔍 DEBUG: Nueva etapa ID extracted: {nueva_etapa_id}")
         
         if not nueva_etapa_id:
+            print(f"❌ ERROR: No etapa ID found in request data")
             return JsonResponse({'error': 'ID de etapa requerido'}, status=400)
         
         # Obtener la nueva etapa
@@ -2851,6 +2902,15 @@ def api_cambiar_etapa(request, solicitud_id):
                 'tipo_error': 'campos_sin_calificar',
                 'campos_sin_calificar': campos_sin_calificar,
                 'mensaje': f'Hay {len(campos_sin_calificar)} campo(s) sin calificar. Todos los campos deben estar marcados como "Bueno" o "Malo" antes de cambiar de etapa.'
+            }, status=400)
+        
+        # NUEVO: Verificar que existe al menos un comentario de analista
+        tiene_comentario_analista = verificar_comentario_analista(solicitud)
+        if not tiene_comentario_analista:
+            return JsonResponse({
+                'error': 'Análisis general requerido',
+                'tipo_error': 'analisis_general_faltante',
+                'mensaje': 'Debe completar el análisis general antes de cambiar de etapa. Agregue su análisis en la sección "Comentarios de Analista".'
             }, status=400)
         
         # Cerrar el historial actual si existe
@@ -2899,35 +2959,60 @@ def api_cambiar_etapa(request, solicitud_id):
         try:
             # Obtener comentarios de analista
             comentarios_analista = []
+            analisis_general = ""
+            bullet_points = []
+            
             try:
                 from workflow.models import CalificacionCampo
                 comentarios_analista = CalificacionCampo.objects.filter(
                     solicitud=solicitud,
                     campo__startswith='comentario_analista_credito_'
                 ).select_related('usuario').order_by('-fecha_modificacion')
+                
+                # Obtener el análisis general (el comentario más reciente)
+                if comentarios_analista:
+                    analisis_general = comentarios_analista[0].comentario
+                
+                # Obtener bullet points de compliance (comentarios de campos)
+                compliance_comments = CalificacionCampo.objects.filter(
+                    solicitud=solicitud,
+                    comentario__isnull=False
+                ).exclude(
+                    comentario=''
+                ).exclude(
+                    campo__startswith='comentario_analista_credito_'
+                ).select_related('usuario')
+                
+                # Crear bullet points estructurados
+                for calificacion in compliance_comments:
+                    if calificacion.comentario and calificacion.comentario.strip():
+                        # Obtener nombre legible del campo
+                        nombre_campo = obtener_nombre_campo_legible(calificacion.campo, solicitud)
+                        bullet_points.append({
+                            'campo': nombre_campo,
+                            'comentario': calificacion.comentario.strip(),
+                            'estado': calificacion.estado,
+                            'usuario': calificacion.usuario.get_full_name() or calificacion.usuario.username,
+                            'fecha': calificacion.fecha_modificacion.strftime('%d/%m/%Y %H:%M')
+                        })
+                
             except Exception as e:
                 print(f"⚠️ Error obteniendo comentarios analista: {e}")
             
-            # Extraer bullet points de los comentarios
-            import re
-            bullet_points = []
-            for comentario in comentarios_analista:
-                texto = comentario.comentario
-                lineas = texto.split('\n')
-                for linea in lineas:
-                    lineaLimpia = linea.strip()
-                    if re.match(r'^[•\-\*]\s', lineaLimpia) or re.match(r'^\d+\.\s', lineaLimpia):
-                        punto = re.sub(r'^[•\-\*]\s', '', re.sub(r'^\d+\.\s', '', lineaLimpia))
-                        if punto:
-                            bullet_points.append(punto)
-            
             # Enviar correo al propietario
+            print(f"📧 Enviando correo de cambio de etapa para solicitud {solicitud.codigo}")
+            print(f"📧 Propietario: {solicitud.creada_por.email if solicitud.creada_por else 'Sin propietario'}")
+            print(f"📧 Análisis general: {'Sí' if analisis_general else 'No'}")
+            print(f"📧 Comentarios de analista: {len(comentarios_analista)}")
+            print(f"📧 Bullet points: {len(bullet_points)}")
+            
             enviar_correo_cambio_etapa_propietario(
                 solicitud, 
                 etapa_anterior, 
                 nueva_etapa, 
                 comentarios_analista, 
-                bullet_points, 
+                bullet_points,
+                analisis_general,
                 request.user
             )
         except Exception as e:
@@ -3032,6 +3117,21 @@ def verificar_campos_compliance(solicitud):
             })
     
     return campos_sin_calificar
+
+
+def verificar_comentario_analista(solicitud):
+    """
+    Verificar que existe al menos un comentario de analista de crédito
+    """
+    from workflow.models import CalificacionCampo
+    
+    # Buscar comentarios de analista (campos que empiecen con 'comentario_analista_credito_')
+    comentarios_analista = CalificacionCampo.objects.filter(
+        solicitud=solicitud,
+        campo__startswith='comentario_analista_credito_'
+    ).exclude(comentario__isnull=True).exclude(comentario='')
+    
+    return comentarios_analista.exists()
 
 
 def obtener_nombre_campo_legible(campo, solicitud):
@@ -3745,6 +3845,68 @@ def test_envio_correo_asignacion(request):
     return render(request, 'workflow/test_correo_asignacion.html', {
         'solicitudes': solicitudes
     })
+
+
+@login_required
+def test_envio_correo_cambio_etapa(request):
+    """Función de prueba para enviar correo de cambio de etapa con análisis"""
+    try:
+        # Obtener una solicitud de prueba
+        solicitud = Solicitud.objects.first()
+        if not solicitud:
+            return JsonResponse({'error': 'No hay solicitudes disponibles para la prueba'})
+        
+        # Simular datos de prueba
+        etapa_anterior = solicitud.etapa_actual
+        nueva_etapa = solicitud.etapa_actual  # Usar la misma para la prueba
+        
+        # Crear comentarios de prueba
+        comentarios_analista = []
+        analisis_general = "Este es un análisis general de prueba que incluye una evaluación completa de la solicitud del cliente."
+        
+        # Crear bullet points de prueba
+        bullet_points = [
+            {
+                'campo': 'Empresa Privada',
+                'comentario': 'La empresa tiene buena reputación y estabilidad financiera.',
+                'estado': 'bueno',
+                'usuario': request.user.get_full_name() or request.user.username,
+                'fecha': timezone.now().strftime('%d/%m/%Y %H:%M')
+            },
+            {
+                'campo': 'Salario',
+                'comentario': 'El salario es adecuado para el monto solicitado.',
+                'estado': 'bueno',
+                'usuario': request.user.get_full_name() or request.user.username,
+                'fecha': timezone.now().strftime('%d/%m/%Y %H:%M')
+            },
+            {
+                'campo': 'Documento de Identidad',
+                'comentario': 'Documento válido y legible.',
+                'estado': 'bueno',
+                'usuario': request.user.get_full_name() or request.user.username,
+                'fecha': timezone.now().strftime('%d/%m/%Y %H:%M')
+            }
+        ]
+        
+        # Enviar correo
+        enviar_correo_cambio_etapa_propietario(
+            solicitud, 
+            etapa_anterior, 
+            nueva_etapa, 
+            comentarios_analista, 
+            bullet_points,
+            analisis_general,
+            request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Correo de cambio de etapa con análisis enviado para solicitud {solicitud.codigo}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)})
 
 
 @login_required
