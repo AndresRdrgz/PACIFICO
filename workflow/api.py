@@ -73,6 +73,9 @@ def api_calificar_campo(request, solicitud_id):
     """
     API para calificar un campo como bueno o malo
     """
+    import time
+    from django.db import OperationalError
+    
     try:
         # Obtener solicitud
         solicitud = Solicitud.objects.get(id=solicitud_id)
@@ -95,31 +98,44 @@ def api_calificar_campo(request, solicitud_id):
                 'error': 'Estado debe ser "bueno" o "malo"'
             })
         
-        # Crear o actualizar calificación
-        with transaction.atomic():
-            calificacion, created = CalificacionCampo.objects.get_or_create(
-                solicitud=solicitud,
-                campo=campo,
-                defaults={
-                    'estado': estado,
-                    'usuario': request.user
-                }
-            )
-            
-            if not created:
-                calificacion.estado = estado
-                calificacion.usuario = request.user
-                calificacion.save()
+        # Crear o actualizar calificación con retry logic for database locks
+        max_retries = 3
+        retry_delay = 0.1  # 100ms
         
-        return JsonResponse({
-            'success': True,
-            'calificacion': {
-                'campo': calificacion.campo,
-                'estado': calificacion.estado,
-                'usuario': calificacion.usuario.username,
-                'fecha_modificacion': calificacion.fecha_modificacion.isoformat()
-            }
-        })
+        for attempt in range(max_retries):
+            try:
+                with transaction.atomic():
+                    calificacion, created = CalificacionCampo.objects.get_or_create(
+                        solicitud=solicitud,
+                        campo=campo,
+                        defaults={
+                            'estado': estado,
+                            'usuario': request.user
+                        }
+                    )
+                    
+                    if not created:
+                        calificacion.estado = estado
+                        calificacion.usuario = request.user
+                        calificacion.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'calificacion': {
+                        'campo': calificacion.campo,
+                        'estado': calificacion.estado,
+                        'usuario': calificacion.usuario.username,
+                        'fecha_modificacion': calificacion.fecha_modificacion.isoformat()
+                    }
+                })
+                
+            except OperationalError as e:
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    # Wait before retrying
+                    time.sleep(retry_delay * (attempt + 1))
+                    continue
+                else:
+                    raise e
         
     except Solicitud.DoesNotExist:
         return JsonResponse({
@@ -131,6 +147,17 @@ def api_calificar_campo(request, solicitud_id):
             'success': False,
             'error': 'Datos JSON inválidos'
         })
+    except OperationalError as e:
+        if "database is locked" in str(e).lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'Base de datos ocupada. Intente nuevamente en unos segundos.'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error de base de datos: {str(e)}'
+            })
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -145,30 +172,56 @@ def api_comentario_compliance(request, solicitud_id):
     """
     API para agregar/actualizar comentario de compliance
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    print(f"=== api_comentario_compliance START ===")
+    print(f"Request method: {request.method}")
+    print(f"Solicitud ID: {solicitud_id}")
+    print(f"User: {request.user.username}")
+    print(f"Request headers: {dict(request.headers)}")
+    
     try:
+        # Log request body
+        print(f"Request body: {request.body}")
+        
         # Obtener solicitud
+        print(f"Looking for solicitud with ID: {solicitud_id}")
         solicitud = Solicitud.objects.get(id=solicitud_id)
+        print(f"Solicitud found: {solicitud}")
         
         # Parsear datos JSON
+        print(f"Parsing JSON from request body...")
         data = json.loads(request.body)
+        print(f"Parsed data: {data}")
+        
         campo = data.get('campo')
         comentario = data.get('comentario', '').strip()
         
+        print(f"Extracted campo: {campo}")
+        print(f"Extracted comentario: {comentario}")
+        
         # Validar datos
         if not campo:
+            print(f"ERROR: Campo is empty or None")
             return JsonResponse({
                 'success': False,
                 'error': 'Campo es requerido'
             })
         
         if not comentario:
+            print(f"ERROR: Comentario is empty or None")
             return JsonResponse({
                 'success': False,
                 'error': 'Comentario es requerido'
             })
         
+        print(f"Data validation passed. Proceeding with database operation...")
+        
         # Crear o actualizar calificación con comentario
         with transaction.atomic():
+            print(f"Starting database transaction...")
+            
             calificacion, created = CalificacionCampo.objects.get_or_create(
                 solicitud=solicitud,
                 campo=campo,
@@ -179,12 +232,18 @@ def api_comentario_compliance(request, solicitud_id):
                 }
             )
             
+            print(f"Calificacion get_or_create result: created={created}, calificacion={calificacion}")
+            
             if not created:
+                print(f"Updating existing calificacion...")
                 calificacion.comentario = comentario
                 calificacion.usuario = request.user
                 calificacion.save()
+                print(f"Calificacion updated successfully")
+            else:
+                print(f"New calificacion created successfully")
         
-        return JsonResponse({
+        response_data = {
             'success': True,
             'calificacion': {
                 'campo': calificacion.campo,
@@ -193,23 +252,35 @@ def api_comentario_compliance(request, solicitud_id):
                 'usuario': calificacion.usuario.username,
                 'fecha_modificacion': calificacion.fecha_modificacion.isoformat()
             }
-        })
+        }
+        
+        print(f"Returning success response: {response_data}")
+        return JsonResponse(response_data)
         
     except Solicitud.DoesNotExist:
+        print(f"ERROR: Solicitud with ID {solicitud_id} not found")
         return JsonResponse({
             'success': False,
             'error': 'Solicitud no encontrada'
         })
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"ERROR: JSON decode error: {e}")
+        print(f"Request body that caused error: {request.body}")
         return JsonResponse({
             'success': False,
-            'error': 'Datos JSON inválidos'
+            'error': f'Datos JSON inválidos: {str(e)}'
         })
     except Exception as e:
+        print(f"ERROR: Unexpected exception: {e}")
+        print(f"Exception type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
             'error': f'Error interno: {str(e)}'
         })
+    finally:
+        print(f"=== api_comentario_compliance END ===")
 
 
 @login_required
@@ -368,6 +439,107 @@ def api_obtener_comentarios_analista_credito(request, solicitud_id):
             'success': False,
             'error': 'Solicitud no encontrada'
         })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_calificar_campos_bulk(request, solicitud_id):
+    """
+    API para calificar múltiples campos como buenos de una vez
+    """
+    import time
+    from django.db import OperationalError
+    
+    try:
+        # Obtener solicitud
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        
+        # Parsear datos JSON
+        data = json.loads(request.body)
+        campos = data.get('campos', [])
+        estado = data.get('estado', 'bueno')
+        
+        # Validar datos
+        if not campos or not isinstance(campos, list):
+            return JsonResponse({
+                'success': False,
+                'error': 'Lista de campos es requerida'
+            })
+        
+        if estado not in ['bueno', 'malo']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Estado debe ser "bueno" o "malo"'
+            })
+        
+        # Procesar campos en lote
+        resultados = []
+        errores = []
+        
+        with transaction.atomic():
+            for campo in campos:
+                try:
+                    calificacion, created = CalificacionCampo.objects.get_or_create(
+                        solicitud=solicitud,
+                        campo=campo,
+                        defaults={
+                            'estado': estado,
+                            'usuario': request.user
+                        }
+                    )
+                    
+                    if not created:
+                        calificacion.estado = estado
+                        calificacion.usuario = request.user
+                        calificacion.save()
+                    
+                    resultados.append({
+                        'campo': campo,
+                        'estado': calificacion.estado,
+                        'creado': created
+                    })
+                    
+                except Exception as e:
+                    errores.append({
+                        'campo': campo,
+                        'error': str(e)
+                    })
+        
+        return JsonResponse({
+            'success': True,
+            'resultados': resultados,
+            'errores': errores,
+            'total_procesados': len(resultados),
+            'total_errores': len(errores)
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos JSON inválidos'
+        })
+    except OperationalError as e:
+        if "database is locked" in str(e).lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'Base de datos ocupada. Intente nuevamente en unos segundos.'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error de base de datos: {str(e)}'
+            })
     except Exception as e:
         return JsonResponse({
             'success': False,

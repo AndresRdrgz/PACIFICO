@@ -311,6 +311,101 @@
         padding-left: 0.5rem;
         border-left: 1px solid #e5e7eb;
     }
+
+    /* Compliance button styles */
+    .btn-compliance {
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .btn-compliance:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-compliance.btn-good {
+        color: #198754;
+        border-color: #198754;
+    }
+
+    .btn-compliance.btn-good:hover,
+    .btn-compliance.btn-good.active {
+        background: #198754;
+        color: white;
+        border-color: #198754;
+    }
+
+    .btn-compliance.btn-bad {
+        color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .btn-compliance.btn-bad:hover,
+    .btn-compliance.btn-bad.active {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .btn-compliance.btn-comment {
+        color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn-compliance.btn-comment:hover {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+
+    .btn-compliance.btn-comment.has-comment {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+        position: relative;
+    }
+
+    .btn-compliance.btn-comment.has-comment::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 8px;
+        height: 8px;
+        background: #28a745;
+        border-radius: 50%;
+        border: 1px solid white;
+    }
+
+    .btn-compliance:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Document compliance button styles */
+    .adjunto-item .btn-compliance {
+        width: 24px;
+        height: 24px;
+        font-size: 0.7rem;
+    }
+
+    .adjunto-item .btn-compliance.btn-comment.has-comment::after {
+        width: 6px;
+        height: 6px;
+        top: -1px;
+        right: -1px;
+    }
 </style>
 {% endblock %}
 
@@ -404,7 +499,7 @@
                             <h3 class="section-title">Resumen Completo de la Solicitud</h3>
                         </div>
                         <div class="resumen-actions">
-                            <button class="btn btn-light btn-sm" onclick="marcarTodosComoBueno()">
+                            <button class="btn btn-light btn-sm" onclick="confirmarMarcarTodosComoBueno()">
                                 <i class="fas fa-check-double me-1"></i>Marcar Todos como Bueno
                             </button>
                         </div>
@@ -1055,7 +1150,7 @@
 
 
     <!-- Modal para Comentarios de Compliance -->
-    <div class="modal fade" id="modalComentarioCompliance" tabindex="-1" aria-labelledby="modalComentarioComplianceLabel" aria-hidden="true">
+    <div class="modal fade" id="modalComentarioCompliance" tabindex="-1" aria-labelledby="modalComentarioComplianceLabel">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1169,12 +1264,621 @@
 
 
 
-    // Mark all as good functionality
-    const marcarTodosComoBueno = () => {
+    // Confirmation dialog for marking all as good
+    const confirmarMarcarTodosComoBueno = () => {
         const goodButtons = document.querySelectorAll('.btn-compliance.btn-good');
-        goodButtons.forEach(button => {
-            button.click();
-        });
+        const totalButtons = goodButtons.length;
+        
+        if (totalButtons === 0) {
+            showNotification('No hay campos para marcar como buenos', 'info');
+            return;
+        }
+        
+        // Count fields that are not already marked as good
+        let camposPendientes = 0;
+        for (const button of goodButtons) {
+            if (!button.classList.contains('active')) {
+                camposPendientes++;
+            }
+        }
+        
+        if (camposPendientes === 0) {
+            showNotification('Todos los campos ya están marcados como buenos', 'info');
+            return;
+        }
+        
+        // Show confirmation dialog
+        if (confirm(`¿Está seguro que desea marcar ${camposPendientes} campo(s) como buenos?\n\nEsta acción no se puede deshacer.`)) {
+            marcarTodosComoBueno();
+        }
+    };
+
+    // Mark all as good functionality with bulk API support
+    const marcarTodosComoBueno = async () => {
+        const goodButtons = document.querySelectorAll('.btn-compliance.btn-good');
+        const totalButtons = goodButtons.length;
+        
+        if (totalButtons === 0) {
+            showNotification('No hay campos para marcar como buenos', 'info');
+            return;
+        }
+        
+        // Disable the button and show loading state
+        const btnMarcarTodos = document.querySelector('button[onclick="marcarTodosComoBueno()"]');
+        const originalContent = btnMarcarTodos ? btnMarcarTodos.innerHTML : '';
+        
+        if (btnMarcarTodos) {
+            btnMarcarTodos.disabled = true;
+            btnMarcarTodos.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        }
+        
+        try {
+            showNotification(`Iniciando proceso de calificación de ${totalButtons} campos...`, 'info');
+            
+            // Collect fields that need to be marked as good
+            const campos = [];
+            for (const button of goodButtons) {
+                const field = button.getAttribute('data-field');
+                if (!button.classList.contains('active')) {
+                    campos.push(field);
+                }
+            }
+            
+            if (campos.length === 0) {
+                showNotification('Todos los campos ya están marcados como buenos', 'info');
+                return;
+            }
+            
+            // Try bulk API first
+            const solicitudId = getSolicitudIdFromUrl();
+            if (!solicitudId) {
+                throw new Error('No se pudo obtener el ID de la solicitud');
+            }
+            
+            try {
+                // Show progress
+                if (btnMarcarTodos) {
+                    btnMarcarTodos.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>Procesando en lote...`;
+                }
+                
+                const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificar-campos-bulk/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        campos: campos,
+                        estado: 'bueno'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update all button states
+                    campos.forEach(field => {
+                        const button = document.querySelector(`[data-field="${field}"][data-action="bueno"]`);
+                        if (button) {
+                            updateComplianceButtonState(button, 'bueno');
+                        }
+                    });
+                    
+                    const successCount = data.total_procesados;
+                    const errorCount = data.total_errores;
+                    
+                    if (errorCount === 0) {
+                        showNotification(`✅ Todos los campos (${successCount}) fueron marcados como buenos exitosamente`, 'success');
+                    } else {
+                        showNotification(`⚠️ Proceso completado: ${successCount} exitosos, ${errorCount} con errores`, 'warning');
+                        if (data.errores && data.errores.length > 0) {
+                            console.error('Errors during bulk marking:', data.errores);
+                        }
+                    }
+                } else {
+                    throw new Error(data.error || 'Error en la API de lote');
+                }
+                
+            } catch (bulkError) {
+                console.warn('Bulk API failed, falling back to sequential processing:', bulkError);
+                
+                // Fallback to sequential processing
+                if (btnMarcarTodos) {
+                    btnMarcarTodos.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando secuencialmente...';
+                }
+                
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+                
+                for (let i = 0; i < campos.length; i++) {
+                    const field = campos[i];
+                    const button = document.querySelector(`[data-field="${field}"][data-action="bueno"]`);
+                    
+                    if (!button) continue;
+                    
+                    try {
+                        // Show progress
+                        if (btnMarcarTodos) {
+                            btnMarcarTodos.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>Procesando ${i + 1}/${campos.length}...`;
+                        }
+                        
+                        // Add delay to avoid database locks
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        // Call the compliance action directly
+                        await handleComplianceAction(button);
+                        successCount++;
+                        
+                    } catch (error) {
+                        errorCount++;
+                        errors.push(`${field}: ${error.message}`);
+                        console.error(`Error processing field ${field}:`, error);
+                    }
+                }
+                
+                // Show final results
+                if (errorCount === 0) {
+                    showNotification(`✅ Todos los campos (${successCount}) fueron marcados como buenos exitosamente`, 'success');
+                } else if (successCount === 0) {
+                    showNotification(`❌ Error al procesar todos los campos. Revise los errores en la consola.`, 'error');
+                } else {
+                    showNotification(`⚠️ Proceso completado: ${successCount} exitosos, ${errorCount} con errores`, 'warning');
+                    console.error('Errors during sequential marking:', errors);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error in marcarTodosComoBueno:', error);
+            showNotification(`Error general: ${error.message}`, 'error');
+        } finally {
+            // Restore button state
+            if (btnMarcarTodos) {
+                btnMarcarTodos.disabled = false;
+                btnMarcarTodos.innerHTML = originalContent;
+            }
+        }
+    };
+
+    // Compliance button functionality
+    const handleComplianceAction = async (button) => {
+        const field = button.getAttribute('data-field');
+        const action = button.getAttribute('data-action');
+        const solicitudId = getSolicitudIdFromUrl();
+        
+        console.log('Compliance action triggered:', { field, action, solicitudId });
+        
+        if (!solicitudId) {
+            showNotification('Error: No se pudo obtener el ID de la solicitud', 'error');
+            return;
+        }
+
+        if (!field) {
+            console.error('Field attribute not found on button');
+            showNotification('Error: Campo no especificado', 'error');
+            return;
+        }
+
+        // Store original HTML outside try block so it's available in finally
+        const originalHTML = button.innerHTML;
+
+        try {
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            if (action === 'bueno' || action === 'malo') {
+                console.log('Processing good/bad rating for field:', field);
+                
+                // Handle good/bad rating
+                const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificar-campo/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        campo: field,
+                        estado: action === 'bueno' ? 'bueno' : 'malo'
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Rating response:', data);
+                
+                if (data.success) {
+                    // Update button appearance
+                    updateComplianceButtonState(button, action);
+                    showNotification(`Campo calificado como ${action === 'bueno' ? 'bueno' : 'malo'}`, 'success');
+                } else {
+                    throw new Error(data.error || 'Error al calificar campo');
+                }
+            } else if (action === 'comentario') {
+                console.log('Opening comment modal for field:', field);
+                // Handle comment action - don't show spinner for comment modal
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                showCommentModal(field, solicitudId);
+                return; // Exit early for comment action
+            } else {
+                console.error('Unknown action:', action);
+                showNotification('Error: Acción no válida', 'error');
+            }
+
+        } catch (error) {
+            console.error('Error in compliance action:', error);
+            
+            // Handle specific error types
+            if (error.message.includes('database is locked') || error.message.includes('Base de datos ocupada')) {
+                showNotification('Base de datos ocupada. Intente nuevamente en unos segundos.', 'warning');
+            } else {
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        } finally {
+            // Restore button state
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        }
+    };
+
+    // Update compliance button visual state
+    const updateComplianceButtonState = (button, action) => {
+        if (!button) {
+            console.warn('updateComplianceButtonState called with null button');
+            return;
+        }
+        
+        // Handle document fields differently
+        const field = button.getAttribute('data-field');
+        if (field && field.startsWith('doc_')) {
+            // For document fields, find buttons within the same adjunto-item
+            const docRow = button.closest('.adjunto-item');
+            if (!docRow) {
+                console.warn('Could not find adjunto-item for document button:', button);
+                return;
+            }
+            
+            const goodButton = docRow.querySelector('.btn-compliance.btn-good');
+            const badButton = docRow.querySelector('.btn-compliance.btn-bad');
+            
+            if (!goodButton || !badButton) {
+                console.warn('Could not find good/bad buttons in document row:', docRow);
+                return;
+            }
+            
+            // Reset all buttons
+            goodButton.classList.remove('active');
+            badButton.classList.remove('active');
+            
+            // Activate the selected button
+            if (action === 'bueno') {
+                goodButton.classList.add('active');
+            } else if (action === 'malo') {
+                badButton.classList.add('active');
+            }
+        } else {
+            // Handle regular fields
+            const row = button.closest('.info-row-with-check');
+            if (!row) {
+                console.warn('Could not find info-row-with-check for button:', button);
+                return;
+            }
+            
+            const goodButton = row.querySelector('.btn-compliance.btn-good');
+            const badButton = row.querySelector('.btn-compliance.btn-bad');
+            
+            if (!goodButton || !badButton) {
+                console.warn('Could not find good/bad buttons in row:', row);
+                return;
+            }
+            
+            // Reset all buttons
+            goodButton.classList.remove('active');
+            badButton.classList.remove('active');
+            
+            // Activate the selected button
+            if (action === 'bueno') {
+                goodButton.classList.add('active');
+            } else if (action === 'malo') {
+                badButton.classList.add('active');
+            }
+        }
+    };
+
+    // Show comment modal
+    const showCommentModal = async (field, solicitudId) => {
+        const modal = document.getElementById('modalComentarioCompliance');
+        const campoNombre = document.getElementById('campo-nombre');
+        const campoValor = document.getElementById('campo-valor');
+        const comentarioTextarea = document.getElementById('comentario-compliance');
+        
+        if (!modal || !campoNombre || !campoValor || !comentarioTextarea) {
+            console.error('Modal elements not found');
+            showNotification('Error: No se pudo abrir el modal de comentarios', 'error');
+            return;
+        }
+        
+        // Set field information
+        campoNombre.textContent = getFieldDisplayName(field);
+        
+        // Get the field value from the DOM
+        const fieldButton = document.querySelector(`[data-field="${field}"]`);
+        if (!fieldButton) {
+            console.error('Field button not found:', field);
+            showNotification('Error: No se pudo encontrar el campo', 'error');
+            return;
+        }
+        
+        let fieldValue = 'Sin valor';
+        
+        // Handle document fields differently
+        if (field.startsWith('doc_')) {
+            const docRow = fieldButton.closest('.adjunto-item');
+            if (docRow) {
+                const docNameElement = docRow.querySelector('.adjunto-name');
+                if (docNameElement) {
+                    fieldValue = docNameElement.textContent.trim();
+                }
+            }
+        } else {
+            // Handle regular fields
+            const fieldRow = fieldButton.closest('.info-row-with-check');
+            if (fieldRow) {
+                const fieldValueElement = fieldRow.querySelector('.info-value');
+                fieldValue = fieldValueElement ? fieldValueElement.textContent.trim() : 'Sin valor';
+            } else {
+                console.error('Field row not found for field:', field);
+                showNotification('Error: No se pudo encontrar la información del campo', 'error');
+                return;
+            }
+        }
+        
+        campoValor.textContent = fieldValue;
+        
+        // Store field and solicitud ID for the save action
+        modal.setAttribute('data-field', field);
+        modal.setAttribute('data-solicitud-id', solicitudId);
+        
+        console.log('Opening comment modal for field:', field, 'solicitud:', solicitudId);
+        
+        // Load existing comment if any
+        let hasExistingComment = false;
+        try {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Find comment for this specific field
+                    const fieldComment = data.calificaciones.find(cal => cal.campo === field);
+                    if (fieldComment && fieldComment.comentario) {
+                        comentarioTextarea.value = fieldComment.comentario;
+                        hasExistingComment = true;
+                        console.log('Loaded existing comment:', fieldComment.comentario);
+                    } else {
+                        comentarioTextarea.value = '';
+                        console.log('No existing comment found for field:', field);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading existing comment:', error);
+            comentarioTextarea.value = '';
+        }
+        
+        // Update modal title based on whether there's an existing comment
+        const modalTitle = document.getElementById('modalComentarioComplianceLabel');
+        if (modalTitle) {
+            if (hasExistingComment) {
+                modalTitle.innerHTML = '<i class="fas fa-edit me-2"></i>Editar Comentario de Compliance';
+            } else {
+                modalTitle.innerHTML = '<i class="fas fa-comment-dots me-2"></i>Nuevo Comentario de Compliance';
+            }
+        }
+        
+        // Update character count
+        updateCharCount('comentario-compliance', 'char-count-compliance', 500);
+        
+        // Show modal
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+    };
+
+    // Save compliance comment
+    const saveComplianceComment = async () => {
+        console.log('=== saveComplianceComment START ===');
+        
+        const modal = document.getElementById('modalComentarioCompliance');
+        console.log('Modal element:', modal);
+        
+        const field = modal.getAttribute('data-field');
+        const solicitudId = modal.getAttribute('data-solicitud-id');
+        const comentario = document.getElementById('comentario-compliance').value.trim();
+        
+        console.log('Extracted data:', { field, solicitudId, comentario });
+        
+        if (!comentario) {
+            console.log('No comment provided');
+            showNotification('Por favor ingrese un comentario', 'error');
+            return;
+        }
+
+        if (!field || !solicitudId) {
+            console.log('Missing field or solicitudId:', { field, solicitudId });
+            showNotification('Error: Datos del campo o solicitud no encontrados', 'error');
+            return;
+        }
+
+        try {
+            console.log('=== API CALL START ===');
+            console.log('Request URL:', `/workflow/api/solicitudes/${solicitudId}/comentario-compliance/`);
+            console.log('Request data:', { campo: field, comentario: comentario });
+            
+            const csrfToken = getCSRFToken();
+            console.log('CSRF Token:', csrfToken ? 'Present' : 'Missing');
+            
+            const requestBody = JSON.stringify({
+                campo: field,
+                comentario: comentario
+            });
+            console.log('Request body:', requestBody);
+            
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-compliance/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: requestBody
+            });
+
+            console.log('=== API RESPONSE ===');
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Response error text:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                console.log('Parsed response data:', data);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                throw new Error(`Invalid JSON response: ${responseText}`);
+            }
+            
+            if (data.success) {
+                console.log('Success! Comment saved successfully');
+                showNotification('Comentario guardado exitosamente', 'success');
+                
+                // Update visual state of comment button
+                updateCommentButtonState(field, true);
+                
+                // Close modal
+                const bootstrapModal = bootstrap.Modal.getInstance(modal);
+                if (bootstrapModal) {
+                    console.log('Closing modal via Bootstrap instance');
+                    bootstrapModal.hide();
+                } else {
+                    console.log('Bootstrap modal instance not found, using fallback');
+                    // Fallback if bootstrap modal instance not found
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                }
+            } else {
+                console.error('API returned success=false:', data);
+                throw new Error(data.error || 'Error al guardar comentario');
+            }
+
+        } catch (error) {
+            console.error('=== ERROR IN saveComplianceComment ===');
+            console.error('Error type:', error.constructor.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            showNotification(`Error: ${error.message}`, 'error');
+        }
+        
+        console.log('=== saveComplianceComment END ===');
+    };
+
+    // Get field display name
+    const getFieldDisplayName = (field) => {
+        // Handle document fields (doc_*)
+        if (field.startsWith('doc_')) {
+            const docId = field.replace('doc_', '');
+            // Try to find the document name from the DOM
+            const docButton = document.querySelector(`[data-field="${field}"]`);
+            if (docButton) {
+                const docRow = docButton.closest('.adjunto-item');
+                if (docRow) {
+                    const docNameElement = docRow.querySelector('.adjunto-name');
+                    if (docNameElement) {
+                        return `Documento: ${docNameElement.textContent.trim()}`;
+                    }
+                }
+            }
+            return `Documento ID: ${docId}`;
+        }
+        
+        const fieldNames = {
+            'empresa_privada': 'Empresa Privada',
+            'cargo': 'Cargo',
+            'tiempo_servicio': 'Tiempo de Servicio',
+            'salario': 'Salario',
+            'score': 'Score',
+            'valor_equipo': 'Valor del Equipo',
+            'abono': 'Abono',
+            'monto_financiado': 'Monto Financiado',
+            'plazo': 'Plazo',
+            'rentabilidad': 'Rentabilidad',
+            'total_letra': 'Total de Letra',
+            'marca': 'Marca',
+            'modelo': 'Modelo',
+            'año': 'Año',
+            'transmision': 'Transmisión',
+            'kilometraje': 'Kilometraje'
+        };
+        return fieldNames[field] || field;
+    };
+
+    // Get solicitud ID from URL
+    const getSolicitudIdFromUrl = () => {
+        const urlParts = window.location.pathname.split('/');
+        const solicitudIndex = urlParts.indexOf('solicitud');
+        if (solicitudIndex !== -1 && urlParts[solicitudIndex + 1]) {
+            return urlParts[solicitudIndex + 1];
+        }
+        return null;
+    };
+
+    // Get CSRF token
+    const getCSRFToken = () => {
+        console.log('=== getCSRFToken START ===');
+        
+        // Try multiple selectors for CSRF token
+        const selectors = [
+            '[name=csrfmiddlewaretoken]',
+            'input[name="csrfmiddlewaretoken"]',
+            'meta[name="csrf-token"]',
+            '[name="csrfmiddlewaretoken"]'
+        ];
+        
+        let token = null;
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                token = element.value || element.getAttribute('content');
+                console.log(`Found CSRF token with selector "${selector}":`, token ? 'Present' : 'Missing');
+                break;
+            }
+        }
+        
+        if (!token) {
+            console.warn('CSRF token not found with any selector');
+            console.log('Available meta tags:', document.querySelectorAll('meta'));
+            console.log('Available input elements:', document.querySelectorAll('input[name*="csrf"]'));
+        }
+        
+        console.log('=== getCSRFToken END ===');
+        return token || '';
     };
 
     // Character counter for compliance comment modal
@@ -1326,6 +2030,98 @@
         }, 5000);
     };
 
+    // Update comment button visual state
+    const updateCommentButtonState = (field, hasComment) => {
+        console.log('updateCommentButtonState called:', { field, hasComment });
+        
+        const commentButton = document.querySelector(`[data-field="${field}"][data-action="comentario"]`);
+        if (commentButton) {
+            console.log('Found comment button for field:', field);
+            // Always restore the comment icon
+            commentButton.innerHTML = '<i class="fas fa-comment-dots"></i>';
+            
+            if (hasComment) {
+                commentButton.classList.add('has-comment');
+                // Update title based on field type
+                if (field.startsWith('doc_')) {
+                    commentButton.title = 'Ver/editar comentario del documento';
+                } else {
+                    commentButton.title = 'Ver/editar comentario existente';
+                }
+                console.log('Added has-comment class to button');
+            } else {
+                commentButton.classList.remove('has-comment');
+                // Update title based on field type
+                if (field.startsWith('doc_')) {
+                    commentButton.title = 'Comentar documento';
+                } else {
+                    commentButton.title = 'Agregar comentario';
+                }
+                console.log('Removed has-comment class from button');
+            }
+        } else {
+            console.warn('Comment button not found for field:', field);
+        }
+    };
+
+    // Load existing compliance ratings
+    const loadExistingComplianceRatings = async () => {
+        const solicitudId = getSolicitudIdFromUrl();
+        
+        if (!solicitudId) {
+            console.error('No se pudo obtener el ID de la solicitud');
+            return;
+        }
+
+        try {
+            console.log('Loading existing compliance ratings for solicitud:', solicitudId);
+            
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Failed to load compliance ratings:', response.status, response.statusText);
+                return;
+            }
+
+            const data = await response.json();
+            console.log('Compliance ratings response:', data);
+            
+            if (data.success && data.calificaciones) {
+                console.log('Processing', data.calificaciones.length, 'calificaciones');
+                
+                data.calificaciones.forEach(calificacion => {
+                    console.log('Processing calificacion:', calificacion);
+                    
+                    // Update compliance button states
+                    if (calificacion.estado && calificacion.estado !== 'sin_calificar') {
+                        const button = document.querySelector(`[data-field="${calificacion.campo}"][data-action="${calificacion.estado}"]`);
+                        if (button) {
+                            console.log('Found button for', calificacion.campo, calificacion.estado);
+                            updateComplianceButtonState(button, calificacion.estado);
+                        } else {
+                            console.warn('Button not found for', calificacion.campo, calificacion.estado);
+                        }
+                    }
+                    
+                    // Update comment button states
+                    if (calificacion.comentario) {
+                        console.log('Found comment for', calificacion.campo);
+                        updateCommentButtonState(calificacion.campo, true);
+                    }
+                });
+            } else {
+                console.warn('No calificaciones found or API returned success=false');
+            }
+        } catch (error) {
+            console.error('Error loading compliance ratings:', error);
+        }
+    };
+
     // Initialize character counters when DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
         // Initialize compliance comment modal character counter
@@ -1349,6 +2145,30 @@
         if (btnDownloadPDF) {
             btnDownloadPDF.addEventListener('click', downloadMergedPDF);
         }
+
+        // Add event listeners for compliance buttons
+        document.querySelectorAll('.btn-compliance').forEach(button => {
+            button.addEventListener('click', (event) => {
+                handleComplianceAction(event.currentTarget);
+            });
+        });
+
+        // Add event listener for the save compliance comment button
+        const btnGuardarComentarioCompliance = document.getElementById('btn-guardar-comentario-compliance');
+        console.log('Save compliance comment button:', btnGuardarComentarioCompliance);
+        if (btnGuardarComentarioCompliance) {
+            console.log('Adding click event listener to save compliance comment button');
+            btnGuardarComentarioCompliance.addEventListener('click', (event) => {
+                console.log('Save compliance comment button clicked!');
+                console.log('Event:', event);
+                saveComplianceComment();
+            });
+        } else {
+            console.error('Save compliance comment button not found!');
+        }
+
+        // Load existing compliance ratings
+        loadExistingComplianceRatings();
     });
 </script>
 {% endblock %}

@@ -131,6 +131,7 @@ urlpatterns += [
     
     # APIs para calificaciones de compliance
     path('api/solicitudes/<int:solicitud_id>/calificar-campo/', api.api_calificar_campo, name='api_calificar_campo'),
+    path('api/solicitudes/<int:solicitud_id>/calificar-campos-bulk/', api.api_calificar_campos_bulk, name='api_calificar_campos_bulk'),
     path('api/solicitudes/<int:solicitud_id>/comentario-compliance/', api.api_comentario_compliance, name='api_comentario_compliance'),
     path('api/solicitudes/<int:solicitud_id>/calificaciones/', api.api_obtener_calificaciones, name='api_obtener_calificaciones'),
     
