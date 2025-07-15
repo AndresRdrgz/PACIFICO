@@ -13,6 +13,11 @@ from django.db import models
 import os
 import tempfile
 from PyPDF2 import PdfMerger
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.utils import ImageReader
+from PIL import Image
+import io
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -5485,6 +5490,68 @@ def calcular_sla_detallado(solicitud):
     }
 
 
+def convert_image_to_pdf(image_path, output_path):
+    """
+    Convierte una imagen a PDF usando ReportLab
+    """
+    try:
+        # Abrir la imagen con PIL
+        with Image.open(image_path) as img:
+            # Convertir a RGB si es necesario (para PNG con transparencia)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Crear fondo blanco
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            
+            # Obtener dimensiones de la imagen
+            img_width, img_height = img.size
+            
+            # Crear PDF con ReportLab
+            c = canvas.Canvas(output_path, pagesize=A4)
+            page_width, page_height = A4
+            
+            # Calcular escala para que la imagen quepa en la página
+            scale_x = page_width / img_width
+            scale_y = page_height / img_height
+            scale = min(scale_x, scale_y, 1.0)  # No escalar más allá del 100%
+            
+            # Calcular posición centrada
+            scaled_width = img_width * scale
+            scaled_height = img_height * scale
+            x = (page_width - scaled_width) / 2
+            y = (page_height - scaled_height) / 2
+            
+            # Guardar imagen temporalmente para ReportLab
+            temp_img_path = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+            temp_img_path.close()
+            img.save(temp_img_path.name, 'PNG')
+            
+            # Dibujar imagen en el PDF
+            c.drawImage(temp_img_path.name, x, y, width=scaled_width, height=scaled_height)
+            c.save()
+            
+            # Limpiar archivo temporal
+            try:
+                os.unlink(temp_img_path.name)
+            except:
+                pass
+                
+    except Exception as e:
+        raise Exception(f"Error al convertir imagen a PDF: {str(e)}")
+
+
+def is_image_file(file_path):
+    """
+    Verifica si un archivo es una imagen basándose en su extensión
+    """
+    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp'}
+    file_ext = os.path.splitext(file_path)[1].lower()
+    return file_ext in image_extensions
+
+
 @login_required
 @csrf_exempt
 def api_download_merged_pdf(request, solicitud_id):
@@ -5519,14 +5586,28 @@ def api_download_merged_pdf(request, solicitud_id):
             # Agregar cada documento al merger
             for requisito_solicitud in requisitos_con_archivos:
                 if requisito_solicitud.archivo and os.path.exists(requisito_solicitud.archivo.path):
+                    file_path = requisito_solicitud.archivo.path
+                    
                     # Crear archivo temporal para el PDF
                     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
                     temp_files.append(temp_file.name)
-                    
-                    # Copiar el archivo al temporal
-                    with open(requisito_solicitud.archivo.path, 'rb') as source_file:
-                        temp_file.write(source_file.read())
                     temp_file.close()
+                    
+                    # Verificar si es una imagen y convertirla a PDF
+                    if is_image_file(file_path):
+                        try:
+                            convert_image_to_pdf(file_path, temp_file.name)
+                        except Exception as img_error:
+                            # Si falla la conversión de imagen, crear un PDF con mensaje de error
+                            c = canvas.Canvas(temp_file.name, pagesize=A4)
+                            c.drawString(100, 750, f"Error al procesar imagen: {os.path.basename(file_path)}")
+                            c.drawString(100, 730, f"Error: {str(img_error)}")
+                            c.save()
+                    else:
+                        # Para archivos PDF, copiar directamente
+                        with open(file_path, 'rb') as source_file:
+                            with open(temp_file.name, 'wb') as temp_file_write:
+                                temp_file_write.write(source_file.read())
                     
                     # Agregar al merger
                     merger.append(temp_file.name)
