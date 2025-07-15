@@ -56,10 +56,129 @@
             top: 0;
             z-index: 1000;
             box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+        }
+
+        /* Collapsed sidebar state */
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar.collapsed .sidebar-logo img {
+            max-width: 40px;
+        }
+
+        .sidebar.collapsed .user-profile {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .sidebar.collapsed .user-profile-content {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .user-info {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-section-title {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link {
+            padding: 0.6rem;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .nav-link span {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            width: auto;
+            font-size: 1.1rem;
+        }
+
+        /* Ensure scrollbar works in collapsed state */
+        .sidebar.collapsed .sidebar-nav {
+            max-height: calc(100vh - 120px); /* Smaller space needed when collapsed */
+        }
+
+        /* Tooltip for collapsed sidebar */
+        .sidebar.collapsed .nav-link {
+            position: relative;
+        }
+
+        .sidebar.collapsed .nav-link:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 1001;
+            margin-left: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar.collapsed .nav-link:hover::before {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: rgba(0, 0, 0, 0.9);
+            margin-left: 0;
+            z-index: 1001;
+        }
+
+        /* Toggle button */
+        .sidebar-toggle-btn {
+            position: absolute;
+            top: 1rem;
+            right: -12px;
+            background: var(--verde-pacifico);
+            border: 2px solid #1a1a1a;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1002;
+            font-size: 0.7rem;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: var(--verde-hover);
+            transform: scale(1.1);
+        }
+
+        .sidebar.collapsed .sidebar-toggle-btn {
+            right: -12px;
+        }
+
+        /* Main content adjustment */
+        .main-content {
+            margin-left: 192px;
+            min-height: 100vh;
+            background-color: var(--gris-fondo);
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 60px;
         }
 
         /* Logo Section */
@@ -163,23 +282,39 @@
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
+            max-height: calc(100vh - 200px); /* Account for logo and user profile */
         }
 
+
+
+        /* Firefox scrollbar styling */
+        .sidebar-nav {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+        }
+
+        /* Enhanced scrollbar visibility */
         .sidebar-nav::-webkit-scrollbar {
-            width: 6px;
+            width: 8px; /* Slightly wider for better usability */
         }
 
         .sidebar-nav::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin: 4px 0;
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:active {
             background: rgba(255, 255, 255, 0.5);
         }
 
@@ -225,14 +360,6 @@
         .nav-link i {
             width: 18px;
             text-align: center;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 192px;
-            min-height: 100vh;
-            background-color: var(--gris-fondo);
-            transition: margin-left 0.3s ease;
         }
 
         /* Mobile Navbar */
@@ -318,15 +445,51 @@
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
+                width: 192px !important; /* Force full width on mobile */
             }
             
             .sidebar.show {
                 transform: translateX(0);
             }
             
+            .sidebar.collapsed {
+                width: 192px !important; /* Force full width on mobile even when collapsed */
+            }
+            
+            .sidebar.collapsed .user-info {
+                display: block; /* Show user info on mobile */
+            }
+            
+            .sidebar.collapsed .nav-section-title {
+                display: block; /* Show section titles on mobile */
+            }
+            
+            .sidebar.collapsed .nav-link span {
+                display: block; /* Show text on mobile */
+            }
+            
+            .sidebar.collapsed .nav-link {
+                padding: 0.6rem 1rem; /* Restore padding on mobile */
+                justify-content: flex-start; /* Restore alignment on mobile */
+            }
+            
+            .sidebar.collapsed .nav-link i {
+                width: 18px; /* Restore icon width on mobile */
+                font-size: 0.85rem; /* Restore icon size on mobile */
+            }
+            
+            /* Ensure scrollbar works on mobile */
+            .sidebar .sidebar-nav {
+                max-height: calc(100vh - 200px) !important; /* Force scrollable on mobile */
+            }
+            
             .main-content {
-                margin-left: 0;
+                margin-left: 0 !important; /* Force no margin on mobile */
                 padding-top: 80px; /* Space for mobile navbar */
+            }
+            
+            .main-content.sidebar-collapsed {
+                margin-left: 0 !important; /* Force no margin on mobile */
             }
             
             .mobile-navbar {
@@ -335,6 +498,10 @@
             
             .sidebar-toggle {
                 display: none;
+            }
+            
+            .sidebar-toggle-btn {
+                display: none; /* Hide toggle button on mobile */
             }
         }
 
@@ -354,7 +521,7 @@
         /* Cards */
         .card-custom {
             border: none;
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
             background: var(--blanco);
@@ -368,7 +535,7 @@
         .card-header-custom {
             background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
             color: var(--blanco);
-            border-radius: 16px 16px 0 0 !important;
+            border-radius: 12px 12px 0 0 !important;
             border: none;
             padding: 1.25rem;
         }
@@ -738,6 +905,11 @@
 
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
+        <!-- Toggle Button -->
+        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
         <!-- Logo Section -->
         <div class="sidebar-logo">
             <a href="{% url 'workflow:dashboard' %}">
@@ -790,18 +962,21 @@
             <div class="nav-section">
                 <div class="nav-section-title">Navegación Principal</div>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
-                   href="{% url 'workflow:dashboard' %}">
+                   href="{% url 'workflow:dashboard' %}"
+                   data-tooltip="Dashboard">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'vista_mixta_bandejas' %}active{% endif %}" 
-                   href="{% url 'workflow:vista_mixta_bandejas' %}">
+                   href="{% url 'workflow:vista_mixta_bandejas' %}"
+                   data-tooltip="Bandejas de Trabajo">
                     <i class="fas fa-inbox"></i>
                     <span>Bandejas de Trabajo</span>
                 </a>
                
                 <a class="nav-link {% if request.resolver_match.url_name == 'negocios' %}active{% endif %}" 
-                   href="{% url 'workflow:negocios' %}{% if request.session.ultimo_pipeline_id %}?pipeline={{ request.session.ultimo_pipeline_id }}&view=table{% endif %}">
+                   href="{% url 'workflow:negocios' %}{% if request.session.ultimo_pipeline_id %}?pipeline={{ request.session.ultimo_pipeline_id }}&view=table{% endif %}"
+                   data-tooltip="Negocios">
                     <i class="fas fa-briefcase"></i>
                     <span>Negocios</span>
                 </a>
@@ -812,17 +987,17 @@
             {% if user.is_superuser or user.groups.all %}
             <div class="nav-section">
                 <div class="nav-section-title">Administración</div>
-                <a class="nav-link" href="{% url 'workflow:admin_pipelines' %}">
+                <a class="nav-link" href="{% url 'workflow:admin_pipelines' %}" data-tooltip="Pipelines">
                     <i class="fas fa-project-diagram"></i>
                     <span>Pipelines</span>
                 </a>
                 {% if user.is_superuser or user.is_staff %}
-                <a class="nav-link" href="{% url 'workflow:admin_usuarios' %}">
+                <a class="nav-link" href="{% url 'workflow:admin_usuarios' %}" data-tooltip="Usuarios">
                     <i class="fas fa-users"></i>
                     <span>Usuarios</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.namespace == 'proyectos' %}active{% endif %}" 
-                href="/proyectos/">
+                href="/proyectos/" data-tooltip="Proyectos QA">
                  <i class="fas fa-vial"></i>
                  <span>Proyectos QA</span>
              </a>
@@ -833,7 +1008,7 @@
             <!-- Reports -->
             <div class="nav-section">
                 <div class="nav-section-title">Reportes</div>
-                <a class="nav-link" href="{% url 'workflow:reportes' %}">
+                <a class="nav-link" href="{% url 'workflow:reportes' %}" data-tooltip="Reportes">
                     <i class="fas fa-chart-bar"></i>
                     <span>Reportes</span>
                 </a>
@@ -842,11 +1017,11 @@
             <!-- User Actions -->
             <div class="nav-section">
                 <div class="nav-section-title">Usuario</div>
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="#" data-tooltip="Mi Perfil">
                     <i class="fas fa-user-cog"></i>
                     <span>Mi Perfil</span>
                 </a>
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="#" data-tooltip="Cerrar Sesión">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Cerrar Sesión</span>
                 </a>
@@ -856,7 +1031,7 @@
 
     <!-- Main Content -->
     <div class="main-content page-transition" id="mainContent">
-        <div class="p-4">
+        <div class="p-2">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }}-custom alert-custom fade show" role="alert">
@@ -1016,9 +1191,48 @@
                 showToast('Sin conexión - Trabajando offline', 'warning', 5000);
             }
             
+            // Initialize sidebar toggle
+            initializeSidebarToggle();
+            
             // Initialize mobile sidebar toggle
             initializeMobileSidebar();
         });
+
+        // Sidebar toggle functionality
+        function initializeSidebarToggle() {
+            const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            // Check for saved state in localStorage
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+                sidebarToggleBtn.querySelector('i').classList.remove('fa-chevron-left');
+                sidebarToggleBtn.querySelector('i').classList.add('fa-chevron-right');
+            }
+            
+            if (sidebarToggleBtn && sidebar) {
+                sidebarToggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    mainContent.classList.toggle('sidebar-collapsed');
+                    
+                    // Update toggle button icon
+                    const icon = sidebarToggleBtn.querySelector('i');
+                    if (sidebar.classList.contains('collapsed')) {
+                        icon.classList.remove('fa-chevron-left');
+                        icon.classList.add('fa-chevron-right');
+                        localStorage.setItem('sidebarCollapsed', 'true');
+                    } else {
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-left');
+                        localStorage.setItem('sidebarCollapsed', 'false');
+                    }
+                });
+            }
+        }
 
         // Mobile sidebar functionality
         function initializeMobileSidebar() {

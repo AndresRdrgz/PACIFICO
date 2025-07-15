@@ -4,7 +4,99 @@
 {% block title %}Análisis de Solicitud - {{ solicitud.codigo }}{% endblock %}
 
 {% block extra_css %}
+<style>
+    /* Section Toggle Styles */
+    .section-header {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+        user-select: none;
+    }
 
+    .section-header:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .section-header-content {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+    }
+
+    .section-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .section-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .toggle-icon {
+        font-size: 0.8rem;
+        transition: transform 0.3s ease;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .section-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+
+    .section-content {
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+    }
+
+    /* Animation for smooth collapse/expand */
+    .section-content {
+        max-height: 1000px;
+        opacity: 1;
+    }
+
+    .section-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+    }
+
+    /* Compact styles for Motivo de la Consulta section */
+    .observaciones-content {
+        padding: 0.5rem;
+    }
+
+    .observaciones-textarea {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background-color: #f8f9fa;
+        font-family: inherit;
+        line-height: 1.4;
+    }
+
+    .observaciones-empty {
+        padding: 0.5rem;
+    }
+
+    .observaciones-empty .alert {
+        margin: 0;
+        border-radius: 6px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -20,22 +112,16 @@
                                 <i class="fas fa-arrow-left me-1"></i>Volver a Bandejas
                             </a>
                             <div>
-                                <h2 class="mb-1">
+                                <h2 class="mb-1 d-flex align-items-center">
                                     <i class="fas fa-microscope me-2"></i>
                                     Análisis: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
-                                </h2>
-                                <p class="mb-0 opacity-75">
-                                    
-
                                     {% if solicitud.cotizacion and solicitud.cotizacion.NumeroCotizacion %}
-                                    <span class="ms-3">
+                                    <span class="ms-3 opacity-75" style="font-size: 0.9em; font-weight: normal;">
                                         <i class="fas fa-file-invoice me-1"></i>
                                         Cotización: {{ solicitud.cotizacion.NumeroCotizacion }}
                                     </span>
                                     {% endif %}
-
-                                   
-                                </p>
+                                </h2>
                             </div>
                         </div>
                         <div class="dropdown">
@@ -93,16 +179,21 @@
                     </div>
                 </div>
                 <div class="section-content">
-                    <div class="row g-3">
+                    <div class="analysis-grid">
                         <!-- 1. Información de Cliente -->
                         <div class="col-md-4">
                             <div class="section-container">
-                                <div class="section-header">
-                                    <i class="fas fa-user text-info"></i>
-                                    <h3 class="section-title">Información de Cliente</h3>
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-user text-info"></i>
+                                        <h3 class="section-title">Información de Cliente</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
                                 </div>
                                 <div class="section-content">
-                                    <div class="info-row">
+                                    <div class="info-row-with-check">
                                         <div class="info-data">
                                             <span class="info-label">Empresa Privada:</span>
                                             <span class="info-value">{{ solicitud.cotizacion.nombreEmpresa|default:"Sin datos" }}</span>
@@ -138,7 +229,7 @@
                                     </div>
                                     <div class="info-row-with-check">
                                         <div class="info-data">
-                                            <span class="info-label">T/S:</span>
+                                            <span class="info-label">Tiempo de Servicio:</span>
                                             <span class="info-value">{{ solicitud.cotizacion.tiempoServicio|default:"Sin datos" }}</span>
                                         </div>
                                         <div class="compliance-actions">
@@ -202,9 +293,14 @@
                         <!-- 2. Detalle de la Solicitud -->
                         <div class="col-md-4">
                             <div class="section-container">
-                                <div class="section-header">
-                                    <i class="fas fa-calculator text-primary"></i>
-                                    <h3 class="section-title">Detalle de la Solicitud</h3>
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-calculator text-primary"></i>
+                                        <h3 class="section-title">Detalle de la Solicitud</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
@@ -359,9 +455,14 @@
                         <!-- 3. Datos del Vehículo -->
                         <div class="col-md-4">
                             <div class="section-container">
-                                <div class="section-header">
-                                    <i class="fas fa-car text-warning"></i>
-                                    <h3 class="section-title">Datos del Vehículo</h3>
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-car text-warning"></i>
+                                        <h3 class="section-title">Datos del Vehículo</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
@@ -480,7 +581,6 @@
                                 <div class="adjuntos-actions">
                                     <button type="button" class="btn btn-light btn-sm" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF">
                                         <i class="fas fa-download me-1"></i>PDF Completo
-                                        <span class="badge bg-light text-dark ms-1">{{ requisitos_con_archivos }}</span>
                                     </button>
                                 </div>
                             {% endif %}
@@ -500,21 +600,12 @@
                                 </div>
                                 <div class="adjunto-details">
                                     <div class="adjunto-name">{{ requisito_solicitud.requisito.nombre }}</div>
-                                    <div class="adjunto-status-line">
-                                        <div class="adjunto-status-group">
-                                            <div class="adjunto-status">
-                                                {% if requisito_solicitud.cumplido %}
-                                                    <span class="badge bg-success">Cumplido</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning">Pendiente</span>
-                                                {% endif %}
-                                            </div>
-                                            {% if requisito_solicitud.archivo %}
-                                                <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                            {% endif %}
-                                        </div>
+                                    <div class="adjunto-actions">
+                                        {% if requisito_solicitud.archivo %}
+                                            <a href="{{ requisito_solicitud.archivo.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        {% endif %}
                                         <div class="compliance-actions">
                                             <button type="button" class="btn-compliance btn-good" data-field="doc_{{ requisito_solicitud.id }}" data-action="bueno" title="Documento válido">
                                                 <i class="fas fa-check"></i>
@@ -546,27 +637,28 @@
        
     </div>
 
-      <!-- MOTIVO DE LA CONSULTA - OFICIAL DE NEGOCIOS -->
+      <!-- MOTIVO DE LA CONSULTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
       <div class="row mb-4">
-        <div class="col-12">
-            <div class="motivo-consulta-card">
-                <div class="motivo-consulta-header">
-                    <div class="motivo-consulta-icon">
+        <!-- MOTIVO DE LA CONSULTA - OFICIAL DE NEGOCIOS (4/6 del ancho) -->
+        <div class="col-8">
+            <div class="section-container">
+                <div class="resumen-header">
+                    <div class="resumen-icon">
                         <i class="fas fa-comments"></i>
                     </div>
-                    <div class="motivo-consulta-title">
+                    <div class="resumen-title">
                         <h3 class="section-title">Motivo de la Consulta - Oficial de Negocios</h3>
                         <small>Observaciones registradas por el oficial</small>
                     </div>
                 </div>
-                <div class="motivo-consulta-body">
+                <div class="section-content">
                     {% if solicitud.cotizacion and solicitud.cotizacion.observaciones %}
                         <div class="observaciones-content">
-                            <textarea class="form-control observaciones-textarea" readonly rows="4">{{ solicitud.cotizacion.observaciones }}</textarea>
+                            <textarea class="form-control observaciones-textarea" readonly rows="2" style="font-size: 0.875rem; padding: 0.5rem; resize: none;">{{ solicitud.cotizacion.observaciones }}</textarea>
                         </div>
                     {% else %}
                         <div class="observaciones-empty">
-                            <div class="alert alert-light text-center">
+                            <div class="alert alert-light text-center py-2">
                                 <i class="fas fa-info-circle me-2"></i>
                                 <small>No hay observaciones registradas para esta consulta</small>
                             </div>
@@ -575,107 +667,21 @@
                 </div>
             </div>
         </div>
-    </div>
-
-
-    <!-- LAYOUT PRINCIPAL: COMENTARIOS DE ANALISTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
-    <div class="row mb-5">
-        <!-- COMENTARIOS DE ANALISTA (4/6 del ancho) -->
-        <div class="col-lg-8">
-            <div class="comentarios-analista-section-compact">
-                <div class="comentarios-analista-header-compact">
-                    <h6><i class="fas fa-user-md me-2"></i>Comentarios de Analista</h6>
-
-                </div>
-                <div class="comentarios-analista-body-compact" id="comentarios-analista-content">
-                    <!-- Lista de comentarios existentes -->
-                    <div class="comentarios-lista-compact" id="lista-comentarios-analista-credito">
-                        <div class="alert alert-light text-center" id="sin-comentarios-analista">
-                            <i class="fas fa-clipboard-list me-2"></i>
-                            <small>Aún no hay comentarios de analista para esta solicitud</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Formulario compacto fijo en el pie -->
-                <div class="nuevo-comentario-form-compact">
-                    <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
-                        {% csrf_token %}
-                        <div class="form-body-compact">
-                            <!-- Área de análisis unificado -->
-                            <div class="analisis-unificado-container">
-                                <!-- Sección editable del analista -->
-                                <div class="analisis-seccion-editable">
-                                    <label for="comentario-analista-credito-text" class="form-label">
-                                        <i class="fas fa-edit me-2"></i>Análisis General (Editable)
-                                    </label>
-                                    <textarea class="form-control comentario-textarea-compact" 
-                                              id="comentario-analista-credito-text"
-                                              placeholder="Escriba su análisis general aquí..."
-                                              rows="4" 
-                                              maxlength="2000"
-                                              required></textarea>
-                                </div>
-                                
-                                <!-- Sección de bullet points auto-generados -->
-                                <div class="analisis-seccion-bullets">
-                                    <div class="bullets-header">
-                                        <i class="fas fa-list-ul me-2"></i>
-                                        <strong>Comentarios de Campos (Auto-generados)</strong>
-                                    </div>
-                                    <div class="bullets-content" id="bullets-content">
-                                        <div class="bullets-placeholder">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            <small>Los comentarios de campos se generarán automáticamente al guardar</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Preview del resultado final -->
-                                <div class="analisis-preview" id="analisis-preview" style="display: none;">
-                                    <div class="preview-header">
-                                        <i class="fas fa-eye me-2"></i>
-                                        <strong>Vista Previa del Análisis Completo</strong>
-                                    </div>
-                                    <div class="preview-content" id="preview-content">
-                                        <!-- El análisis completo se muestra aquí -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-footer-compact">
-                                <div class="char-counter-compact">
-                                    <span id="char-count-analista-credito">0</span>/2000
-                                </div>
-                                <div class="form-actions-compact">
-                                    <button type="button" class="btn btn-outline-info btn-sm me-2" id="btn-preview-analisis">
-                                        <i class="fas fa-eye me-1"></i>Vista Previa
-                                    </button>
-                                    <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
-                                        <i class="fas fa-save me-1"></i>Guardar Análisis
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
+        
         <!-- SOLICITUDES RELACIONADAS (2/6 del ancho) -->
-        <div class="col-lg-4">
-            <div class="related-requests-section">
-                <div class="related-header">
-                    <div class="related-icon">
+        <div class="col-4">
+            <div class="section-container">
+                <div class="resumen-header">
+                    <div class="resumen-icon">
                         <i class="fas fa-link"></i>
                     </div>
-                    <div class="related-title">
+                    <div class="resumen-title">
                         <h3 class="section-title">Solicitudes Relacionadas</h3>
                         <small>Cédula: {{ solicitud.cliente_cedula|default:"-" }}</small>
                     </div>
                 </div>
                 
-                <div class="related-content">
+                <div class="section-content">
                     {% if mostrar_mensaje_sin_cliente %}
                         <div class="alert alert-warning text-center my-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -765,6 +771,92 @@
     </div>
 
 
+    <!-- COMENTARIOS DE ANALISTA (ancho completo) -->
+    <div class="row mb-5">
+        <!-- COMENTARIOS DE ANALISTA (ancho completo) -->
+        <div class="col-12">
+            <div class="comentarios-analista-section-compact">
+                <div class="comentarios-analista-header-compact">
+                    <h6><i class="fas fa-user-md me-2"></i>Comentarios de Analista</h6>
+
+                </div>
+                <div class="comentarios-analista-body-compact" id="comentarios-analista-content">
+                    <!-- Lista de comentarios existentes -->
+                    <div class="comentarios-lista-compact" id="lista-comentarios-analista-credito">
+                        <div class="alert alert-light text-center" id="sin-comentarios-analista">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            <small>Aún no hay comentarios de analista para esta solicitud</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulario compacto fijo en el pie -->
+                <div class="nuevo-comentario-form-compact">
+                    <form id="form-comentario-analista-credito" method="post" class="comentario-form-compact">
+                        {% csrf_token %}
+                        <div class="form-body-compact">
+                            <!-- Área de análisis unificado -->
+                            <div class="analisis-unificado-container">
+                                <!-- Sección editable del analista -->
+                                <div class="analisis-seccion-editable">
+                                    <label for="comentario-analista-credito-text" class="form-label">
+                                        <i class="fas fa-edit me-2"></i>Análisis General (Editable)
+                                    </label>
+                                    <textarea class="form-control comentario-textarea-compact" 
+                                              id="comentario-analista-credito-text"
+                                              placeholder="Escriba su análisis general aquí..."
+                                              rows="4" 
+                                              maxlength="2000"
+                                              required></textarea>
+                                </div>
+                                
+                                <!-- Sección de bullet points auto-generados -->
+                                <div class="analisis-seccion-bullets">
+                                    <div class="bullets-header">
+                                        <i class="fas fa-list-ul me-2"></i>
+                                        <strong>Comentarios de Campos (Auto-generados)</strong>
+                                    </div>
+                                    <div class="bullets-content" id="bullets-content">
+                                        <div class="bullets-placeholder">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <small>Los comentarios de campos se generarán automáticamente al guardar</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Preview del resultado final -->
+                                <div class="analisis-preview" id="analisis-preview" style="display: none;">
+                                    <div class="preview-header">
+                                        <i class="fas fa-eye me-2"></i>
+                                        <strong>Vista Previa del Análisis Completo</strong>
+                                    </div>
+                                    <div class="preview-content" id="preview-content">
+                                        <!-- El análisis completo se muestra aquí -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-footer-compact">
+                                <div class="char-counter-compact">
+                                    <span id="char-count-analista-credito">0</span>/2000
+                                </div>
+                                <div class="form-actions-compact">
+                                    <button type="button" class="btn btn-outline-info btn-sm me-2" id="btn-preview-analisis">
+                                        <i class="fas fa-eye me-1"></i>Vista Previa
+                                    </button>
+                                    <button type="submit" class="btn btn-primary btn-sm" id="btn-enviar-analista-credito">
+                                        <i class="fas fa-save me-1"></i>Guardar Análisis
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 
 <!-- Modal para Comentarios de Compliance -->
 <div class="modal fade" id="modalComentarioCompliance" tabindex="-1" aria-labelledby="modalComentarioComplianceLabel" aria-hidden="true">
@@ -809,6 +901,52 @@
 <script>
 // Variables globales
 const solicitudId = parseInt('{{ solicitud.id }}');
+
+// Función para alternar secciones
+window.toggleSection = function(headerElement) {
+    const sectionContainer = headerElement.closest('.section-container');
+    const contentElement = sectionContainer.querySelector('.section-content');
+    const toggleIcon = headerElement.querySelector('.toggle-icon');
+    
+    // Toggle collapsed state
+    const isCollapsed = headerElement.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        // Expand section
+        headerElement.classList.remove('collapsed');
+        contentElement.classList.remove('collapsed');
+        toggleIcon.style.transform = 'rotate(0deg)';
+    } else {
+        // Collapse section
+        headerElement.classList.add('collapsed');
+        contentElement.classList.add('collapsed');
+        toggleIcon.style.transform = 'rotate(-90deg)';
+    }
+    
+    // Save state to localStorage
+    const sectionTitle = headerElement.querySelector('.section-title').textContent;
+    localStorage.setItem(`section_${sectionTitle}`, !isCollapsed);
+};
+
+// Función para restaurar estados de secciones al cargar la página
+function restoreSectionStates() {
+    const sectionHeaders = document.querySelectorAll('.section-header');
+    
+    sectionHeaders.forEach(header => {
+        const sectionTitle = header.querySelector('.section-title').textContent;
+        const isCollapsed = localStorage.getItem(`section_${sectionTitle}`) === 'true';
+        
+        if (isCollapsed) {
+            const sectionContainer = header.closest('.section-container');
+            const contentElement = sectionContainer.querySelector('.section-content');
+            const toggleIcon = header.querySelector('.toggle-icon');
+            
+            header.classList.add('collapsed');
+            contentElement.classList.add('collapsed');
+            toggleIcon.style.transform = 'rotate(-90deg)';
+        }
+    });
+}
 
 // Función global para obtener token CSRF
 function getCsrfToken() {
@@ -2394,6 +2532,9 @@ document.addEventListener('DOMContentLoaded', function() {
     inicializarComplianceButtons();
     inicializarValidacionDocumentos();
     cargarSolicitudesRelacionadas();
+    
+    // Restaurar estados de secciones
+    restoreSectionStates();
     
     // Cargar bullet points iniciales
     if (typeof actualizarBulletsPreview === 'function') {
