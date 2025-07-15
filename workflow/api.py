@@ -4,8 +4,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+from django.utils import timezone
+from django.db.models import Q
 from .models import ClienteEntrevista
-from .modelsWorkflow import Solicitud, CalificacionCampo
+from .modelsWorkflow import Solicitud, CalificacionCampo, HistorialSolicitud, PermisoEtapa
+from .views_workflow import notify_solicitud_change
 import json
 
 def entrevistas_json(request):
@@ -444,6 +449,173 @@ def api_obtener_comentarios_analista_credito(request, solicitud_id):
             'success': False,
             'error': f'Error interno: {str(e)}'
         })
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_usuarios_disponibles(request, solicitud_id):
+    """Obtener usuarios disponibles para asignar una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos - solo superusers y staff pueden asignar
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para asignar solicitudes'
+            }, status=403)
+        
+        # Obtener usuarios que tienen acceso a la etapa actual
+        usuarios_disponibles = []
+        
+        if solicitud.etapa_actual:
+            # Buscar usuarios que tienen permisos para esta etapa
+            permisos_etapa = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                puede_ver=True
+            ).select_related('grupo')
+            
+            # Obtener grupos que tienen acceso
+            grupos_con_acceso = [permiso.grupo for permiso in permisos_etapa]
+            
+            # Buscar usuarios que pertenecen a esos grupos O son superusuarios
+            usuarios = User.objects.filter(
+                (Q(groups__in=grupos_con_acceso) | Q(is_superuser=True)),
+                is_active=True
+            ).distinct()
+            
+            for usuario in usuarios:
+                # Obtener grupos del usuario
+                grupos_usuario = usuario.groups.all()
+                
+                # Obtener información del perfil del usuario
+                try:
+                    user_profile = usuario.userprofile
+                    profile_picture_url = user_profile.profile_picture.url if user_profile.profile_picture else None
+                except:
+                    profile_picture_url = None
+                
+                usuarios_disponibles.append({
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'email': usuario.email,
+                    'nombre_completo': usuario.get_full_name() or usuario.username,
+                    'grupos': [grupo.name for grupo in grupos_usuario],
+                    'is_staff': usuario.is_staff,
+                    'is_superuser': usuario.is_superuser,
+                    'profile_picture_url': profile_picture_url
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'usuarios': usuarios_disponibles
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_asignar_usuario(request, solicitud_id):
+    """Asignar una solicitud a un usuario específico"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos - solo superusers y staff pueden asignar
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para asignar solicitudes'
+            }, status=403)
+        
+        # Obtener datos del request
+        data = json.loads(request.body)
+        usuario_id = data.get('usuario_id')
+        
+        if not usuario_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'ID de usuario requerido'
+            }, status=400)
+        
+        # Obtener el usuario
+        try:
+            usuario = User.objects.get(id=usuario_id, is_active=True)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no encontrado o inactivo'
+            }, status=404)
+        
+        # Verificar que el usuario tiene acceso a la etapa
+        if solicitud.etapa_actual:
+            # Los superusuarios siempre tienen acceso
+            if usuario.is_superuser:
+                permisos_usuario = True
+            else:
+                # Verificar permisos de grupo para usuarios normales
+                permisos_usuario = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=usuario.groups.all(),
+                    puede_ver=True
+                ).exists()
+            
+            if not permisos_usuario:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'El usuario no tiene permisos para esta etapa'
+                }, status=403)
+        
+        # Asignar la solicitud al usuario
+        solicitud.asignada_a = usuario
+        solicitud.save()
+        
+        # Crear historial de la asignación
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            usuario_responsable=usuario,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Notificar al usuario asignado
+        notify_solicitud_change(solicitud, 'asignada', usuario)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud asignada exitosamente a {usuario.get_full_name()}',
+            'usuario_asignado': {
+                'id': usuario.id,
+                'nombre': usuario.get_full_name(),
+                'email': usuario.email
+            }
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos JSON inválidos'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
 
 
 @login_required

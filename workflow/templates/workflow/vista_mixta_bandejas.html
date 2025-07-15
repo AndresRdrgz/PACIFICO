@@ -12,8 +12,29 @@
                 <div>
                     <h1 class="h3 mb-0 text-white fw-bold">
                         <i class="fas fa-clipboard-list me-2"></i>
-                        <span id="titulo-bandeja">Vista Mixta</span>
+                        <span id="titulo-bandeja">
+                            {% if etapa_seleccionada %}
+                                {{ etapa_seleccionada.pipeline.nombre }} - {{ etapa_seleccionada.nombre }}
+                            {% else %}
+                                Vista Mixta
+                            {% endif %}
+                        </span>
                     </h1>
+                    {% if etapa_seleccionada %}
+                        <div class="mt-1">
+                            <small class="text-white-50">
+                                <i class="fas fa-users me-1"></i>
+                                Bandeja grupal y tareas personales
+                            </small>
+                        </div>
+                    {% else %}
+                        <div class="mt-1">
+                            <small class="text-white-50">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Todas las etapas con bandeja grupal
+                            </small>
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <!-- Selector de Etapas con Bandeja -->
@@ -23,9 +44,18 @@
                             Etapas con Bandeja
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownEtapas" style="z-index: 99999;">
+                            {% if etapa_seleccionada %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'workflow:vista_mixta_bandejas' %}">
+                                    <i class="fas fa-list me-2"></i>
+                                    Ver todas las etapas
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
                             {% for etapa in etapas_con_bandeja %}
                             <li>
-                                <a class="dropdown-item" href="?etapa={{ etapa.id }}">
+                                <a class="dropdown-item" href="?etapa_id={{ etapa.id }}">
                                     <i class="fas fa-layer-group me-2"></i>
                                     {{ etapa.pipeline.nombre }} - {{ etapa.nombre }}
                                 </a>
@@ -94,7 +124,11 @@
                         <div class="card-header" style="background: var(--verde-pacifico); color: #fff;">
                             <h5 class="mb-0">
                                 <i class="fas fa-users me-2"></i>
-                                Bandeja Grupal
+                                {% if etapa_seleccionada %}
+                                    Bandeja Grupal - {{ etapa_seleccionada.nombre }}
+                                {% else %}
+                                    Bandeja Grupal
+                                {% endif %}
                                 <span class="badge bg-light text-dark ms-2">{{ solicitudes_grupales|length }}</span>
                             </h5>
                         </div>
@@ -143,6 +177,14 @@
                                                             data-codigo="{{ solicitud.codigo }}">
                                                         <i class="fas fa-hand-paper me-1"></i><span class="btn-action-text">Tomar</span>
                                                     </button>
+                                                                                                {% if user.is_superuser or user.is_staff %}
+                                            <button class="btn btn-primary btn-sm asignar-solicitud" 
+                                                    data-solicitud-id="{{ solicitud.id }}"
+                                                    data-codigo="{{ solicitud.codigo }}"
+                                                    data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                                <i class="fas fa-user-plus me-1"></i><span class="btn-action-text">Asignar</span>
+                                            </button>
+                                            {% endif %}
                                                     <button class="btn btn-info btn-sm ver-detalle" 
                                                             data-solicitud-id="{{ solicitud.id }}">
                                                         <i class="fas fa-eye"></i>
@@ -298,6 +340,14 @@
                                                     data-codigo="{{ solicitud.codigo }}">
                                                 <i class="fas fa-hand-paper me-1"></i><span class="btn-action-text">Tomar</span>
                                             </button>
+                                            {% if user.is_superuser or user.is_staff %}
+                                            <button class="btn btn-primary btn-sm asignar-solicitud" 
+                                                    data-solicitud-id="{{ solicitud.id }}"
+                                                    data-codigo="{{ solicitud.codigo }}"
+                                                    data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                                <i class="fas fa-user-plus me-1"></i><span class="btn-action-text">Asignar</span>
+                                            </button>
+                                            {% endif %}
                                             <button class="btn btn-info btn-sm ver-detalle" 
                                                     data-solicitud-id="{{ solicitud.id }}">
                                                 <i class="fas fa-eye"></i>
@@ -564,6 +614,96 @@
     </div>
 </div>
 
+<!-- Modal para Asignar Solicitud -->
+<div class="modal fade" id="modalAsignarSolicitud" tabindex="-1" aria-labelledby="modalAsignarSolicitudLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+                <h5 class="modal-title" id="modalAsignarSolicitudLabel">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Asignar Solicitud
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Solicitud:</strong> <span id="asignar-codigo-solicitud"></span>
+                    <br>
+                    <strong>Etapa:</strong> <span id="asignar-etapa-solicitud"></span>
+                </div>
+                <div class="mb-3">
+                    <h6 class="fw-bold" style="color: #009c3c;">
+                        <i class="fas fa-users me-2"></i>
+                        Usuarios con Acceso a esta Etapa:
+                    </h6>
+                    
+                    <!-- Barra de búsqueda -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="buscar-usuario-asignacion" 
+                                   placeholder="Buscar por nombre, email, grupos o roles..." 
+                                   style="border-left: none;">
+                            <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-usuarios">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Busca por nombre, email, grupos o roles (Staff/Admin)
+                        </small>
+                    </div>
+                    
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover table-striped" id="tabla-usuarios" style="border-radius: 8px; overflow: hidden;">
+                            <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                                <tr>
+                                    <th scope="col" style="width: 50px;">#</th>
+                                    <th scope="col" style="width: 60px;">Avatar</th>
+                                    <th scope="col">Usuario</th>
+                                    <th scope="col">Email</th>
+                                    <th scope="col">Grupos</th>
+                                    <th scope="col" style="width: 120px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-usuarios">
+                                <!-- Lista de usuarios se carga dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Contador de resultados -->
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-users me-1"></i>
+                            <span id="contador-usuarios">0</span> usuarios encontrados
+                        </small>
+                    </div>
+                </div>
+                <div id="asignar-loading" class="text-center" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando usuarios disponibles...</p>
+                </div>
+                <div id="asignar-error" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="asignar-error-mensaje"></span>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: #f0fdfa;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast para notificaciones -->
 <div class="toast-container position-fixed top-0 end-0 p-3">
     <div id="notificacionToast" class="toast" role="alert">
@@ -751,6 +891,52 @@ document.addEventListener('DOMContentLoaded', function() {
         var toast = new bootstrap.Toast(toastElement, {
             autohide: true,
             delay: 5000
+        });
+        toast.show();
+        
+        // Remover elemento después de que se oculte
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
+    }
+    
+    // Función específica para toast de asignación exitosa
+    function mostrarToastExito(mensaje) {
+        console.log('🎉 Mostrando toast de asignación exitosa:', mensaje);
+        
+        // Crear toast personalizado con diseño especial para asignación
+        var toastHTML = `
+            <div class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true" 
+                 style="background: linear-gradient(135deg, #22a650 0%, #009c3c 100%); color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(34, 166, 80, 0.3);">
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center">
+                        <i class="fas fa-user-plus me-2" style="font-size: 1.2em;"></i>
+                        <div>
+                            <strong style="font-size: 1.1em;">¡Asignación Exitosa!</strong><br>
+                            <span style="font-size: 0.95em;">${mensaje}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor
+        var toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        // Mostrar toast
+        var toastElement = toastContainer.lastElementChild;
+        var toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
         });
         toast.show();
         
@@ -953,6 +1139,360 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
         });
     });
+    
+    // BOTONES ASIGNAR SOLICITUD
+    document.querySelectorAll('.asignar-solicitud').forEach(button => {
+        button.addEventListener('click', function() {
+            const solicitudId = this.getAttribute('data-solicitud-id');
+            const codigo = this.getAttribute('data-codigo');
+            const etapaId = this.getAttribute('data-etapa-id');
+            
+            console.log('🔵 Asignando solicitud:', solicitudId, codigo, etapaId);
+            
+            // Guardar el solicitud_id en el modal para uso posterior
+            document.getElementById('modalAsignarSolicitud').setAttribute('data-solicitud-id', solicitudId);
+            
+            // Actualizar información del modal
+            document.getElementById('asignar-codigo-solicitud').textContent = codigo;
+            document.getElementById('asignar-etapa-solicitud').textContent = this.closest('tr').querySelector('.badge').textContent;
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalAsignarSolicitud'));
+            modal.show();
+            
+            // Configurar búsqueda después de que el modal se muestre
+            setTimeout(() => {
+                configurarBusquedaUsuarios();
+            }, 100);
+            
+            // Cargar usuarios disponibles
+            cargarUsuariosDisponibles(solicitudId, etapaId);
+        });
+    });
+    
+    // Función para cargar usuarios disponibles
+    function cargarUsuariosDisponibles(solicitudId, etapaId) {
+        const loadingDiv = document.getElementById('asignar-loading');
+        const errorDiv = document.getElementById('asignar-error');
+        const listaUsuarios = document.getElementById('lista-usuarios');
+        
+        // Mostrar loading
+        loadingDiv.style.display = 'block';
+        errorDiv.style.display = 'none';
+        listaUsuarios.innerHTML = '';
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/usuarios-disponibles/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingDiv.style.display = 'none';
+            
+            if (data.success) {
+                if (data.usuarios && data.usuarios.length > 0) {
+                    renderizarListaUsuarios(data.usuarios);
+                    // Configurar búsqueda después de renderizar usuarios
+                    setTimeout(() => {
+                        configurarBusquedaUsuarios();
+                    }, 50);
+                } else {
+                    listaUsuarios.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No hay usuarios disponibles para asignar esta solicitud.
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loadingDiv.style.display = 'none';
+            errorDiv.style.display = 'block';
+            document.getElementById('asignar-error-mensaje').textContent = error.message;
+        });
+    }
+    
+    // Función para renderizar lista de usuarios
+    function renderizarListaUsuarios(usuarios) {
+        const listaUsuarios = document.getElementById('lista-usuarios');
+        
+        const usuariosHTML = usuarios.map((usuario, index) => `
+            <tr class="usuario-item" 
+                data-usuario-id="${usuario.id}" 
+                data-usuario-nombre="${usuario.nombre_completo}"
+                data-usuario-email="${usuario.email}"
+                data-usuario-grupos="${usuario.grupos ? usuario.grupos.join(',') : ''}"
+                data-usuario-roles="${(usuario.is_staff ? 'staff' : '') + (usuario.is_superuser ? 'admin' : '')}"
+                data-profile-picture="${usuario.profile_picture_url || ''}">
+                <td class="text-center">
+                    <span class="badge bg-secondary">${index + 1}</span>
+                </td>
+                <td class="text-center">
+                    ${usuario.profile_picture_url ? 
+                        `<img src="${usuario.profile_picture_url}" alt="${usuario.nombre_completo}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+                        `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                            ${usuario.nombre_completo.charAt(0).toUpperCase()}
+                        </div>`
+                    }
+                </td>
+                <td>
+                    <div>
+                        <strong class="fw-bold">${usuario.nombre_completo}</strong>
+                        ${usuario.is_staff ? '<span class="badge bg-info ms-1">Staff</span>' : ''}
+                        ${usuario.is_superuser ? '<span class="badge bg-danger ms-1">Admin</span>' : ''}
+                    </div>
+                </td>
+                <td>
+                    <small class="text-muted">${usuario.email}</small>
+                </td>
+                <td>
+                    ${usuario.grupos && usuario.grupos.length > 0 ? 
+                        usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') : 
+                        '<span class="text-muted">Sin grupos</span>'
+                    }
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-success btn-sm asignar-usuario" 
+                            data-usuario-id="${usuario.id}" 
+                            data-usuario-nombre="${usuario.nombre_completo}">
+                        <i class="fas fa-user-plus me-1"></i>
+                        Asignar
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        listaUsuarios.innerHTML = usuariosHTML;
+        
+        // Actualizar contador
+        actualizarContadorUsuarios();
+        
+        // Agregar event listeners a los botones de asignar
+        document.querySelectorAll('.asignar-usuario').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const usuarioId = this.getAttribute('data-usuario-id');
+                const usuarioNombre = this.getAttribute('data-usuario-nombre');
+                const modal = document.getElementById('modalAsignarSolicitud');
+                const solicitudId = modal.getAttribute('data-solicitud-id');
+                
+                console.log('🔵 Asignando usuario:', usuarioId, usuarioNombre, 'a solicitud:', solicitudId);
+                
+                if (!solicitudId) {
+                    mostrarNotificacionError('Error: No se pudo obtener el ID de la solicitud');
+                    return;
+                }
+                
+                asignarSolicitudAUsuario(solicitudId, usuarioId, usuarioNombre);
+            });
+        });
+    }
+    
+    // Función para filtrar usuarios
+    function filtrarUsuarios() {
+        console.log('🔍 Filtrando usuarios...');
+        
+        const buscarInput = document.getElementById('buscar-usuario-asignacion');
+        const contadorElement = document.getElementById('contador-usuarios');
+        
+        if (!buscarInput || !contadorElement) {
+            console.log('❌ Elementos de búsqueda no encontrados');
+            return;
+        }
+        
+        const busqueda = buscarInput.value.toLowerCase().trim();
+        const usuarios = document.querySelectorAll('.usuario-item');
+        let contador = 0;
+        
+        console.log(`🔍 Buscando: "${busqueda}" en ${usuarios.length} usuarios`);
+        
+        usuarios.forEach((usuario, index) => {
+            const nombre = usuario.getAttribute('data-usuario-nombre') || '';
+            const email = usuario.getAttribute('data-usuario-email') || '';
+            const grupos = usuario.getAttribute('data-usuario-grupos') || '';
+            const roles = usuario.getAttribute('data-usuario-roles') || '';
+            
+            const coincide = nombre.toLowerCase().includes(busqueda) || 
+                           email.toLowerCase().includes(busqueda) || 
+                           grupos.toLowerCase().includes(busqueda) || 
+                           roles.toLowerCase().includes(busqueda);
+            
+            if (coincide || !busqueda) {
+                usuario.style.display = '';
+                contador++;
+            } else {
+                usuario.style.display = 'none';
+            }
+        });
+        
+        // Actualizar contador
+        contadorElement.textContent = contador;
+        console.log(`✅ ${contador} usuarios encontrados`);
+        
+        // Mostrar mensaje si no hay resultados
+        const tabla = document.getElementById('tabla-usuarios');
+        if (tabla) {
+            const tbody = tabla.querySelector('tbody');
+            
+            // Remover mensaje anterior si existe
+            const noResultadosAnterior = tbody.querySelector('.no-resultados');
+            if (noResultadosAnterior) {
+                noResultadosAnterior.remove();
+            }
+            
+            if (contador === 0 && busqueda) {
+                const noResultados = document.createElement('tr');
+                noResultados.className = 'no-resultados';
+                noResultados.innerHTML = `
+                    <td colspan="6" class="text-center py-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            No se encontraron usuarios que coincidan con "${busqueda}"
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(noResultados);
+            }
+        }
+    }
+    
+    // Función para actualizar contador de usuarios
+    function actualizarContadorUsuarios() {
+        const usuariosVisibles = document.querySelectorAll('.usuario-item:not([style*="display: none"])').length;
+        const totalUsuarios = document.querySelectorAll('.usuario-item').length;
+        document.getElementById('contador-usuarios').textContent = usuariosVisibles;
+    }
+    
+    // Función para limpiar búsqueda
+    function limpiarBusquedaUsuarios() {
+        document.getElementById('buscar-usuario-asignacion').value = '';
+        filtrarUsuarios();
+    }
+    
+    // Función para configurar búsqueda de usuarios
+    function configurarBusquedaUsuarios() {
+        // Búsqueda en tiempo real
+        const buscarInput = document.getElementById('buscar-usuario-asignacion');
+        if (buscarInput) {
+            // Remover event listeners existentes para evitar duplicados
+            buscarInput.removeEventListener('input', filtrarUsuarios);
+            buscarInput.removeEventListener('keydown', handleEnterKey);
+            
+            // Agregar nuevos event listeners
+            buscarInput.addEventListener('input', filtrarUsuarios);
+            buscarInput.addEventListener('keydown', handleEnterKey);
+        }
+        
+        // Botón limpiar búsqueda
+        const limpiarBtn = document.getElementById('limpiar-busqueda-usuarios');
+        if (limpiarBtn) {
+            // Remover event listeners existentes
+            limpiarBtn.removeEventListener('click', handleLimpiarBusqueda);
+            
+            // Agregar nuevo event listener
+            limpiarBtn.addEventListener('click', handleLimpiarBusqueda);
+        }
+    }
+    
+    // Función para manejar la tecla Enter
+    function handleEnterKey(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            filtrarUsuarios();
+        }
+    }
+    
+    // Función para manejar limpiar búsqueda
+    function handleLimpiarBusqueda() {
+        limpiarBusquedaUsuarios();
+        const buscarInput = document.getElementById('buscar-usuario-asignacion');
+        if (buscarInput) {
+            buscarInput.focus();
+        }
+    }
+    
+    // Función para asignar solicitud a usuario
+    function asignarSolicitudAUsuario(solicitudId, usuarioId, usuarioNombre) {
+        console.log('🔵 Iniciando asignación:', { solicitudId, usuarioId, usuarioNombre });
+        
+        if (!solicitudId || solicitudId === 'null' || solicitudId === 'undefined') {
+            mostrarNotificacionError('Error: ID de solicitud inválido');
+            return;
+        }
+        
+        const boton = document.querySelector(`[data-usuario-id="${usuarioId}"] .asignar-usuario`);
+        if (!boton) {
+            mostrarNotificacionError('Error: No se pudo encontrar el botón de asignación');
+            return;
+        }
+        
+        const originalText = boton.innerHTML;
+        
+        // Deshabilitar botón y mostrar loading
+        boton.disabled = true;
+        boton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Asignando...';
+        
+        const url = `/workflow/api/solicitudes/${solicitudId}/asignar-usuario/`;
+        console.log('🔵 Haciendo request a:', url);
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                usuario_id: usuarioId
+            })
+        })
+        .then(response => {
+            console.log('🔵 Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔵 Response data:', data);
+            if (data.success) {
+                // Mostrar toast de éxito
+                mostrarToastExito(`✅ Solicitud asignada exitosamente a ${usuarioNombre}`);
+                
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAsignarSolicitud'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Recargar página después de 2 segundos para que el usuario vea el toast
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Error al asignar la solicitud');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacionError(`Error: ${error.message}`);
+            
+            // Rehabilitar botón
+            boton.disabled = false;
+            boton.innerHTML = originalText;
+        });
+    }
+    
+
     
     // RECARGA AUTOMÁTICA REMOVIDA - Ya no se recarga automáticamente para evitar expulsar usuarios
     // setInterval(function() {

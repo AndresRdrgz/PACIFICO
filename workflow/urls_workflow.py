@@ -17,6 +17,7 @@ urlpatterns += [
     path('', views_workflow.dashboard_workflow, name='dashboard'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
+    path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),
     path('negocios/', views_workflow.negocios_view, name='negocios'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/v2/', views_workflow.detalle_solicitud_v2, name='detalle_solicitud_v2'),
@@ -139,6 +140,10 @@ urlpatterns += [
     # APIs para comentarios de analista de crédito
     path('api/solicitudes/<int:solicitud_id>/comentario-analista-credito/', api.api_comentario_analista_credito, name='api_comentario_analista_credito'),
     path('api/solicitudes/<int:solicitud_id>/comentarios-analista-credito/', api.api_obtener_comentarios_analista_credito, name='api_obtener_comentarios_analista_credito'),
+    
+    # APIs para asignación de solicitudes
+    path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),
+    path('api/solicitudes/<int:solicitud_id>/asignar-usuario/', api.api_asignar_usuario, name='api_asignar_usuario'),
 ]
 
 

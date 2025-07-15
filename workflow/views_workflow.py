@@ -3180,11 +3180,28 @@ def vista_mixta_bandejas(request):
     from datetime import timedelta
     from .modelsWorkflow import Solicitud, Etapa, Pipeline, PermisoEtapa, HistorialSolicitud
     
+    # Obtener etapa_id del parámetro GET
+    etapa_id = request.GET.get('etapa_id')
+    etapa_seleccionada = None
+    
+    if etapa_id:
+        try:
+            etapa_seleccionada = Etapa.objects.get(id=etapa_id, es_bandeja_grupal=True)
+        except Etapa.DoesNotExist:
+            # Si la etapa no existe o no es bandeja grupal, redirigir sin parámetro
+            return HttpResponseRedirect(request.path)
+    
     # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
     # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
     if request.user.is_superuser or request.user.is_staff:
         # Superuser y super staff ven TODAS las solicitudes en ambas bandejas
-        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        if etapa_seleccionada:
+            # Si hay etapa seleccionada, filtrar solo por esa etapa
+            etapas_grupales = Etapa.objects.filter(id=etapa_seleccionada.id)
+        else:
+            # Si no hay etapa seleccionada, mostrar todas las etapas grupales
+            etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
             asignada_a__isnull=True
@@ -3206,11 +3223,21 @@ def vista_mixta_bandejas(request):
         
         # === BANDEJA GRUPAL ===
         # Obtener etapas grupales donde el usuario tiene permisos
-        etapas_grupales = Etapa.objects.filter(
-            es_bandeja_grupal=True,
-            permisos__grupo__in=grupos_usuario,
-            permisos__puede_autoasignar=True
-        ).distinct()
+        if etapa_seleccionada:
+            # Si hay etapa seleccionada, verificar que el usuario tenga permisos para esa etapa específica
+            etapas_grupales = Etapa.objects.filter(
+                id=etapa_seleccionada.id,
+                es_bandeja_grupal=True,
+                permisos__grupo__in=grupos_usuario,
+                permisos__puede_autoasignar=True
+            ).distinct()
+        else:
+            # Si no hay etapa seleccionada, mostrar todas las etapas donde tiene permisos
+            etapas_grupales = Etapa.objects.filter(
+                es_bandeja_grupal=True,
+                permisos__grupo__in=grupos_usuario,
+                permisos__puede_autoasignar=True
+            ).distinct()
         
         # Solicitudes grupales (sin asignar)
         solicitudes_grupales = Solicitud.objects.filter(
@@ -3388,9 +3415,11 @@ def vista_mixta_bandejas(request):
         'estados_unicos': estados_unicos,
         'etapas_unicas': etapas_unicas,
         'etapas_con_bandeja': etapas_con_bandeja,
+        'etapa_seleccionada': etapa_seleccionada,
         'filtros': {
             'pipeline': filtro_pipeline,
             'estado': filtro_estado,
+            'etapa_id': etapa_id,
         }
     }
     

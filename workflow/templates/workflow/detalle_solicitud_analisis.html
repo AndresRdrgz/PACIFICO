@@ -979,26 +979,29 @@
                                     <h2 class="mb-1 d-flex align-items-center">
                                         <i class="fas fa-microscope me-2"></i>
                                         Análisis: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
-                                        {% if solicitud.cotizacion and solicitud.cotizacion.NumeroCotizacion %}
-                                        <span class="ms-3 opacity-75" style="font-size: 0.9em; font-weight: normal;">
-                                            <i class="fas fa-file-invoice me-1"></i>
-                                            Cotización: {{ solicitud.cotizacion.NumeroCotizacion }}
-                                        </span>
-                                        {% endif %}
                                     </h2>
-                                    {% if solicitud.cotizacion and solicitud.cotizacion.observaciones %}
-                                    <div class="mt-2" style="font-size: 0.85em; opacity: 0.9;">
-                                        <i class="fas fa-comments me-1"></i>
-                                        <strong>Motivo:</strong> 
-                                        <span id="motivo-texto-corto">{{ solicitud.cotizacion.observaciones|truncatechars:100 }}</span>
-                                        <span id="motivo-texto-completo" style="display: none;">{{ solicitud.cotizacion.observaciones }}</span>
-                                        {% if solicitud.cotizacion.observaciones|length > 100 %}
-                                        <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.8em;" onclick="toggleMotivoCompleto()" id="btn-toggle-motivo">
-                                            <i class="fas fa-chevron-down"></i><span> Ver más</span>
-                                        </button>
+                                    <div class="mt-1 d-flex align-items-center gap-4" style="font-size: 0.85em; opacity: 0.9;">
+                                        {% if solicitud.creada_por %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user me-1"></i>
+                                            <strong>Propietario:</strong> 
+                                            <span class="ms-1">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if solicitud.cotizacion and solicitud.cotizacion.observaciones %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-comments me-1"></i>
+                                            <strong>Motivo:</strong> 
+                                            <span class="ms-1" id="motivo-texto-corto">{{ solicitud.cotizacion.observaciones|truncatechars:100 }}</span>
+                                            <span class="ms-1" id="motivo-texto-completo" style="display: none;">{{ solicitud.cotizacion.observaciones }}</span>
+                                            {% if solicitud.cotizacion.observaciones|length > 100 %}
+                                            <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.8em;" onclick="toggleMotivoCompleto()" id="btn-toggle-motivo">
+                                                <i class="fas fa-chevron-down"></i><span> Ver más</span>
+                                            </button>
+                                            {% endif %}
+                                        </div>
                                         {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
                             <div class="dropdown">
@@ -1035,6 +1038,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- BLOCKING ALERT: Solicitud sin asignar -->
+        {% if not solicitud.asignada_a %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning border-warning" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="alert-heading mb-2">
+                                <i class="fas fa-lock me-2"></i>
+                                Solicitud Bloqueada - Pendiente de Asignación
+                            </h5>
+                            <p class="mb-3">
+                                Esta solicitud no ha sido asignada a ningún analista. Para poder realizar el análisis, 
+                                primero debe ser asignada a un usuario autorizado.
+                            </p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-warning mb-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        ¿Qué necesitas hacer?
+                                    </h6>
+                                    <ul class="mb-0">
+                                        <li>Contactar al administrador del sistema</li>
+                                        <li>Solicitar la asignación de esta solicitud</li>
+                                        <li>Esperar a que sea asignada a un analista</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning mb-2">
+                                        <i class="fas fa-user-check me-1"></i>
+                                        Información de la Solicitud
+                                    </h6>
+                                    <ul class="mb-0">
+                                        <li><strong>Código:</strong> {{ solicitud.codigo }}</li>
+                                        <li><strong>Pipeline:</strong> {{ solicitud.pipeline.nombre }}</li>
+                                        <li><strong>Etapa Actual:</strong> {{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</li>
+                                        <li><strong>Fecha Creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Solicitud creada hace {{ solicitud.fecha_creacion|timesince }}
+                                    </small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-arrow-left me-1"></i>
+                                        Volver a Bandejas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
        
 
@@ -2767,6 +2835,41 @@
 
     // Initialize character counters when DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
+        // Check if solicitud is assigned and block content if not
+        const isSolicitudAsignada = {{ solicitud.asignada_a|yesno:"true,false" }};
+        if (!isSolicitudAsignada) {
+            // Block all interactive elements except navigation buttons
+            document.querySelectorAll('.btn-compliance, .btn:not(.btn-outline-warning), textarea, input, select').forEach(element => {
+                // Skip navigation buttons
+                if (element.textContent.includes('Volver a Bandejas') || 
+                    element.classList.contains('btn-outline-warning')) {
+                    return;
+                }
+                element.disabled = true;
+                element.style.opacity = '0.5';
+                element.style.pointerEvents = 'none';
+            });
+            
+            // Add overlay to main content
+            const mainContent = document.querySelector('.main-layout-row');
+            if (mainContent) {
+                const overlay = document.createElement('div');
+                overlay.className = 'position-absolute w-100 h-100 bg-light bg-opacity-75 d-flex align-items-center justify-content-center';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.zIndex = '1000';
+                overlay.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+                        <h5 class="text-warning">Contenido Bloqueado</h5>
+                        <p class="text-muted">La solicitud debe ser asignada antes de poder realizar el análisis</p>
+                    </div>
+                `;
+                mainContent.style.position = 'relative';
+                mainContent.appendChild(overlay);
+            }
+        }
+        
         // Initialize compliance comment modal character counter
         const comentarioCompliance = document.getElementById('comentario-compliance');
         if (comentarioCompliance) {
@@ -2889,6 +2992,8 @@
             }
         });
     });
+
+
 
 
 
