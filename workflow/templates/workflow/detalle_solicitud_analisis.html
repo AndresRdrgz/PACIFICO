@@ -3,6 +3,10 @@
 
 {% block title %}Análisis de Solicitud - {{ solicitud.codigo }}{% endblock %}
 
+{% block extra_css %}
+
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Header de la Solicitud -->
@@ -18,30 +22,24 @@
                             <div>
                                 <h2 class="mb-1">
                                     <i class="fas fa-microscope me-2"></i>
-                                    Análisis de Solicitud: {{ solicitud.codigo }}
+                                    Análisis: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
                                 </h2>
                                 <p class="mb-0 opacity-75">
-                                    <i class="fas fa-user me-1"></i>
-                                    {{ solicitud.cliente_nombre|default:"Sin cliente" }} 
-                                    {% if solicitud.cliente_cedula %}
-                                        - {{ solicitud.cliente_cedula }}
+                                    
+
+                                    {% if solicitud.cotizacion and solicitud.cotizacion.NumeroCotizacion %}
+                                    <span class="ms-3">
+                                        <i class="fas fa-file-invoice me-1"></i>
+                                        Cotización: {{ solicitud.cotizacion.NumeroCotizacion }}
+                                    </span>
                                     {% endif %}
 
-                                    <span class="ms-3">
-                                        <i class="fas fa-calendar me-1"></i>
-                                        <span id="fecha-actual">--/--/----</span>
-                                    </span>
-                                    {% if solicitud.fecha_creacion %}
-                                    <span class="ms-3">
-                                        <i class="fas fa-history me-1"></i>
-                                        Creada: {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}
-                                    </span>
-                                    {% endif %}
+                                   
                                 </p>
                             </div>
                         </div>
                         <div class="dropdown">
-                            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" id="dropdownTransiciones" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownTransiciones" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-arrow-right me-1"></i>Cambiar Etapa
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownTransiciones">
@@ -80,50 +78,31 @@
     <!-- LAYOUT PRINCIPAL: RESUMEN COMPLETO (4/6) + ADJUNTOS (2/6) -->
     <div class="row mb-4">
         <div class="col-8">
-            <div class="unified-info-card">
-                <div class="unified-header">
-                    <div class="unified-icon">
+            <div class="section-container">
+                <div class="resumen-header">
+                    <div class="resumen-icon">
                         <i class="fas fa-chart-line"></i>
                     </div>
-                    <div class="unified-title">
-                        <h3>Resumen Completo de la Solicitud</h3>
+                    <div class="resumen-title">
+                        <h3 class="section-title">Resumen Completo de la Solicitud</h3>
                     </div>
-                    <div class="unified-sla">
-                        <div class="sla-badge sla-{% if sla_info.estado == 'vencido' %}danger{% elif sla_info.estado == 'por_vencer' %}warning{% elif sla_info.estado == 'en_tiempo' %}success{% else %}muted{% endif %}">
-                            {% if sla_info.estado == 'vencido' %}
-                                <i class="fas fa-exclamation-triangle me-1"></i>Vencido
-                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #dc3545; font-weight: bold;">--:--:--</span>
-                            {% elif sla_info.estado == 'por_vencer' %}
-                                <i class="fas fa-hourglass-half me-1"></i>Por Vencer
-                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #fd7e14; font-weight: bold;">--:--:--</span>
-                            {% elif sla_info.estado == 'en_tiempo' %}
-                                <i class="fas fa-check-circle me-1"></i>En Tiempo
-                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #198754; font-weight: bold;">--:--:--</span>
-                                {% if sla_info.tiempo_restante_formateado %}
-                                    - {{ sla_info.tiempo_restante_formateado }}
-                                {% endif %}
-                            {% else %}
-                                <i class="fas fa-question-circle me-1"></i>Sin SLA
-                                <span class="ms-2" id="reloj-tiempo-real" style="font-family: monospace; color: #6c757d; font-weight: bold;">--:--:--</span>
-                            {% endif %}
-                        </div>
-                        <button class="btn btn-light btn-sm ms-2" onclick="marcarTodosComoBueno()">
+                    <div class="resumen-actions">
+                        <button class="btn btn-light btn-sm" onclick="marcarTodosComoBueno()">
                             <i class="fas fa-check-double me-1"></i>Marcar Todos como Bueno
                         </button>
                     </div>
                 </div>
-                
-                <div class="unified-body">
+                <div class="section-content">
                     <div class="row g-3">
                         <!-- 1. Información de Cliente -->
                         <div class="col-md-4">
-                            <div class="info-section">
+                            <div class="section-container">
                                 <div class="section-header">
                                     <i class="fas fa-user text-info"></i>
-                                    <h5>Información de Cliente</h5>
+                                    <h3 class="section-title">Información de Cliente</h3>
                                 </div>
                                 <div class="section-content">
-                                    <div class="info-row-with-check">
+                                    <div class="info-row">
                                         <div class="info-data">
                                             <span class="info-label">Empresa Privada:</span>
                                             <span class="info-value">{{ solicitud.cotizacion.nombreEmpresa|default:"Sin datos" }}</span>
@@ -222,10 +201,10 @@
                         
                         <!-- 2. Detalle de la Solicitud -->
                         <div class="col-md-4">
-                            <div class="info-section">
+                            <div class="section-container">
                                 <div class="section-header">
                                     <i class="fas fa-calculator text-primary"></i>
-                                    <h5>Detalle de la Solicitud</h5>
+                                    <h3 class="section-title">Detalle de la Solicitud</h3>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
@@ -372,33 +351,17 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="info-row-with-check">
-                                        <div class="info-data">
-                                            <span class="info-label">Sector:</span>
-                                            <span class="info-value">-</span>
-                                        </div>
-                                        <div class="compliance-actions">
-                                            <button type="button" class="btn-compliance btn-good" data-field="sector" data-action="bueno" title="Calificar como bueno">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                            <button type="button" class="btn-compliance btn-bad" data-field="sector" data-action="malo" title="Calificar como malo">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                            <button type="button" class="btn-compliance btn-comment" data-field="sector" data-action="comentario" title="Agregar comentario">
-                                                <i class="fas fa-comment-dots"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
                         
                         <!-- 3. Datos del Vehículo -->
                         <div class="col-md-4">
-                            <div class="info-section">
+                            <div class="section-container">
                                 <div class="section-header">
                                     <i class="fas fa-car text-warning"></i>
-                                    <h5>Datos del Vehículo</h5>
+                                    <h3 class="section-title">Datos del Vehículo</h3>
                                 </div>
                                 <div class="section-content">
                                     <div class="info-row-with-check">
@@ -492,29 +455,7 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="info-row-with-check">
-                                        <div class="info-data">
-                                            <span class="info-label">Política:</span>
-                                            <span class="info-value">
-                                                {% if solicitud.cotizacion.aseguradora %}
-                                                    {{ solicitud.cotizacion.aseguradora }}
-                                                {% else %}
-                                                    Sin datos
-                                                {% endif %}
-                                            </span>
-                                        </div>
-                                        <div class="compliance-actions">
-                                            <button type="button" class="btn-compliance btn-good" data-field="politica" data-action="bueno" title="Calificar como bueno">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                            <button type="button" class="btn-compliance btn-bad" data-field="politica" data-action="malo" title="Calificar como malo">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                            <button type="button" class="btn-compliance btn-comment" data-field="politica" data-action="comentario" title="Agregar comentario">
-                                                <i class="fas fa-comment-dots"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -522,23 +463,22 @@
                 </div>
             </div>
         </div>
-        
-        <!-- ADJUNTOS ASOCIADOS (2/6 del ancho) -->
-        <div class="col-4">
+         <!-- ADJUNTOS ASOCIADOS (2/6 del ancho) -->
+         <div class="col-4">
             <div class="adjuntos-container">
                 <div class="adjuntos-header">
                     <div class="adjuntos-icon">
                         <i class="fas fa-paperclip"></i>
                     </div>
                     <div class="adjuntos-title">
-                        <h5>Adjuntos</h5>
-                        <small>Asociados a la solicitud</small>
+                        <h3 class="section-title">Adjuntos</h3>
+                        
                     </div>
                     {% if solicitud.requisitos.all %}
                         {% with requisitos_con_archivos=solicitud.requisitos.all|length %}
                             {% if requisitos_con_archivos > 0 %}
                                 <div class="adjuntos-actions">
-                                    <button type="button" class="btn btn-success btn-sm" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF">
+                                    <button type="button" class="btn btn-light btn-sm" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF">
                                         <i class="fas fa-download me-1"></i>PDF Completo
                                         <span class="badge bg-light text-dark ms-1">{{ requisitos_con_archivos }}</span>
                                     </button>
@@ -601,40 +541,42 @@
         </div>
     </div>
 
+  
+        
+       
+    </div>
 
-
-    <!-- FLUJO DEL PROCESO - Ancho completo 
-    <div class="row mb-4">
+      <!-- MOTIVO DE LA CONSULTA - OFICIAL DE NEGOCIOS -->
+      <div class="row mb-4">
         <div class="col-12">
-            <div class="compact-timeline-section">
-                <div class="timeline-header">
-                    <h5><i class="fas fa-route me-2"></i>Flujo del Proceso</h5>
-                </div>
-                <div class="slim-timeline">
-                    {% for etapa in etapas_pipeline %}
-                    <div class="timeline-step {% if etapa.orden < solicitud.etapa_actual.orden %}completed{% elif etapa == solicitud.etapa_actual %}active{% else %}pending{% endif %}">
-                        <div class="step-dot">
-                            {% if etapa.orden < solicitud.etapa_actual.orden %}
-                                <i class="fas fa-check"></i>
-                            {% elif etapa == solicitud.etapa_actual %}
-                                <i class="fas fa-clock"></i>
-                            {% else %}
-                                <i class="fas fa-circle"></i>
-                            {% endif %}
-                        </div>
-                        <div class="step-label">
-                            <span class="step-name">{{ etapa.nombre }}</span>
-                            <span class="step-sla">
-                                {% if etapa.sla %}{{ etapa.sla_horas }}{% else %}24h{% endif %}
-                            </span>
-                        </div>
+            <div class="motivo-consulta-card">
+                <div class="motivo-consulta-header">
+                    <div class="motivo-consulta-icon">
+                        <i class="fas fa-comments"></i>
                     </div>
-                    {% endfor %}
+                    <div class="motivo-consulta-title">
+                        <h3 class="section-title">Motivo de la Consulta - Oficial de Negocios</h3>
+                        <small>Observaciones registradas por el oficial</small>
+                    </div>
+                </div>
+                <div class="motivo-consulta-body">
+                    {% if solicitud.cotizacion and solicitud.cotizacion.observaciones %}
+                        <div class="observaciones-content">
+                            <textarea class="form-control observaciones-textarea" readonly rows="4">{{ solicitud.cotizacion.observaciones }}</textarea>
+                        </div>
+                    {% else %}
+                        <div class="observaciones-empty">
+                            <div class="alert alert-light text-center">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>No hay observaciones registradas para esta consulta</small>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-    -->
+
 
     <!-- LAYOUT PRINCIPAL: COMENTARIOS DE ANALISTA (4/6) + SOLICITUDES RELACIONADAS (2/6) -->
     <div class="row mb-5">
@@ -680,9 +622,6 @@
                                     <div class="bullets-header">
                                         <i class="fas fa-list-ul me-2"></i>
                                         <strong>Comentarios de Campos (Auto-generados)</strong>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="btn-refresh-bullets" title="Actualizar comentarios">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
                                     </div>
                                     <div class="bullets-content" id="bullets-content">
                                         <div class="bullets-placeholder">
@@ -731,8 +670,8 @@
                         <i class="fas fa-link"></i>
                     </div>
                     <div class="related-title">
-                        <h5>Solicitudes Relacionadas</h5>
-                        <small>Cliente: {{ solicitud.cliente_cedula|default:"-" }}</small>
+                        <h3 class="section-title">Solicitudes Relacionadas</h3>
+                        <small>Cédula: {{ solicitud.cliente_cedula|default:"-" }}</small>
                     </div>
                 </div>
                 
@@ -825,179 +764,7 @@
         </div>
     </div>
 
-    <!-- LAYOUT SECUNDARIO: PESTAÑAS (OCUPAN TODO EL ANCHO) -->
-    <div class="row">
-        <!-- SISTEMA DE PESTAÑAS (ANCHO COMPLETO) -->
-        <div class="col-12">
-            <!-- SISTEMA DE PESTAÑAS -->
-    <div class="tabs-section">
-        <div class="tabs-header">
-            <button class="tab-button active" data-tab="comentarios">
-                <i class="fas fa-comments me-2"></i>Comentarios Generales
-            </button>
-            <button class="tab-button" data-tab="historial">
-                <i class="fas fa-history me-2"></i>Historial
-            </button>
-        </div>
-        
-        <div class="tabs-content">
-            <!-- Tab Comentarios -->
-            <div class="tab-pane active" id="tab-comentarios">
-                <div class="chat-container-general">
-                    <!-- Header del Chat General -->
-                    <div class="chat-header-general">
-                        <div class="chat-title-general">
-                            <i class="fas fa-comments text-primary me-2"></i>
-                            <span>Comentarios Generales</span>
-                        </div>
-                        <div class="chat-info">
-                            <span class="badge bg-primary" id="contador-comentarios-generales">0 comentarios</span>
-                            <span class="status-dot online"></span>
-                            <small>En línea</small>
-                        </div>
-                    </div>
-                    
-                    <!-- Área de Mensajes Generales (con scroll) -->
-                    <div class="chat-messages-general" id="lista-comentarios">
-                        <!-- Los mensajes se cargan dinámicamente via AJAX -->
-                        <div class="chat-welcome-general">
-                            <div class="welcome-avatar-general">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="welcome-message-general">
-                                <p><strong>Chat General</strong></p>
-                                <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Input de Mensaje General (fijo abajo) -->
-                    <div class="chat-input-container-general">
-                        <form id="form-comentario-moderno" method="post" class="chat-form-general">
-                            {% csrf_token %}
-                            <div class="input-group-chat-general">
-                                <div class="user-avatar-chat-general">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div class="input-wrapper-general">
-                                    <textarea class="chat-input-general" 
-                                              placeholder="Escribe tu comentario general..."
-                                              rows="1" 
-                                              id="comentario-text-modern"
-                                              maxlength="1000"></textarea>
-                                    <div class="input-actions-general">
-                                        <button type="button" class="attachment-button" title="Adjuntar archivo">
-                                            <i class="fas fa-paperclip"></i>
-                                        </button>
-                                        <button type="button" class="mention-button" title="Mencionar usuario">
-                                            <i class="fas fa-at"></i>
-                                        </button>
-                                        <span class="char-counter-general">
-                                            <span id="char-count">0</span>/1000
-                                        </span>
-                                        <button type="submit" class="send-button-general" id="btn-enviar-comentario">
-                                            <i class="fas fa-paper-plane"></i>
-                                            <div class="loading-spinner-chat-general" style="display: none;">
-                                                <i class="fas fa-spinner fa-spin"></i>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            
 
-            
-            <!-- Tab Historial -->
-            <div class="tab-pane" id="tab-historial">
-                <div class="historial-content">
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>Consulta</strong>
-                                <span class="historial-date">10/07/2025 16:45</span>
-                            </div>
-                            <div class="historial-info">
-                                Por andresrdrg_
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>Documentación Pendiente</strong>
-                                <span class="historial-date">10/07/2025 16:45</span>
-                            </div>
-                            <div class="historial-info">
-                                Por andresrdrg_
-                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>Nuevo Lead</strong>
-                                <span class="historial-date">10/07/2025 16:45</span>
-                            </div>
-                            <div class="historial-info">
-                                Por andresrdrg
-                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>Documentación Pendiente</strong>
-                                <span class="historial-date">10/07/2025 14:51</span>
-                            </div>
-                            <div class="historial-info">
-                                Por otejeira
-                                <br><span class="text-success">Completado: 10/07/2025 16:45</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="historial-item">
-                        <div class="historial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="historial-details">
-                            <div class="historial-header">
-                                <strong>Nuevo Lead</strong>
-                                <span class="historial-date">10/07/2025 14:15</span>
-                            </div>
-                            <div class="historial-info">
-                                Por otejeira
-                                <br><span class="text-success">Completado: 10/07/2025 14:51</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
 
 <!-- Modal para Comentarios de Compliance -->
 <div class="modal fade" id="modalComentarioCompliance" tabindex="-1" aria-labelledby="modalComentarioComplianceLabel" aria-hidden="true">
@@ -1070,6 +837,203 @@ function getCsrfToken() {
     return '';
 }
 
+// Función para formatear nombres de campos
+function formatearNombreCampo(campo) {
+    const mapeoCampos = {
+        'nombre': 'Nombre del Cliente',
+        'cedula': 'Cédula',
+        'monto': 'Monto del Préstamo',
+        'plazo': 'Plazo de Pago',
+        'ingresos': 'Ingresos',
+        'gastos': 'Gastos',
+        'capacidad_pago': 'Capacidad de Pago',
+        'historial_credito': 'Historial Crediticio',
+        'garantias': 'Garantías',
+        'documentacion': 'Documentación',
+        'apc': 'APC',
+        'css': 'Ficha CSS',
+        'referencias': 'Referencias',
+        'trabajo': 'Información Laboral',
+        'direccion': 'Dirección',
+        'telefono': 'Teléfono',
+        'email': 'Correo Electrónico'
+    };
+    
+    return mapeoCampos[campo] || campo.charAt(0).toUpperCase() + campo.slice(1).replace(/_/g, ' ');
+}
+
+// Función para generar comentario completo con bullet points
+async function generarComentarioCompleto() {
+    const comentarioGeneral = document.getElementById('comentario-analista-credito-text').value.trim();
+    
+    if (!comentarioGeneral) {
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Debe escribir un análisis general antes de guardar', 'error');
+        } else {
+            alert('Debe escribir un análisis general antes de guardar');
+        }
+        return null;
+    }
+    
+    try {
+        // Obtener calificaciones de campos para generar bullet points
+        const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al obtener calificaciones');
+        }
+        
+        // Filtrar solo calificaciones con comentarios
+        const calificacionesConComentarios = data.calificaciones.filter(
+            cal => cal.comentario && cal.comentario.trim() !== ''
+        );
+        
+        // Generar bullet points
+        const bulletPoints = [];
+        calificacionesConComentarios.forEach(cal => {
+            const campoFormateado = formatearNombreCampo(cal.campo);
+            const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
+            bulletPoints.push(`${estadoIcon} ${campoFormateado}: ${cal.comentario}`);
+        });
+        
+        // Combinar comentario general con bullet points
+        let comentarioCompleto = comentarioGeneral;
+        
+        if (bulletPoints.length > 0) {
+            comentarioCompleto += '\n\n' + bulletPoints.join('\n');
+        }
+        
+        return comentarioCompleto;
+        
+    } catch (error) {
+        console.error('❌ Error al generar comentario completo:', error);
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Error al generar comentario completo: ' + error.message, 'error');
+        } else {
+            alert('Error al generar comentario completo: ' + error.message);
+        }
+        return null;
+    }
+}
+
+// Función para mostrar vista previa del análisis completo
+async function mostrarVistaPreviaAnalisis() {
+    const comentarioCompleto = await generarComentarioCompleto();
+    
+    if (!comentarioCompleto) {
+        return;
+    }
+    
+    const previewContainer = document.getElementById('analisis-preview');
+    const previewContent = document.getElementById('preview-content');
+    
+    if (!previewContainer || !previewContent) {
+        console.error('❌ Elementos de preview no encontrados');
+        return;
+    }
+    
+    // Formatear el contenido para mostrar
+    const contenidoFormateado = comentarioCompleto
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    
+    previewContent.innerHTML = `<p>${contenidoFormateado}</p>`;
+    previewContainer.style.display = 'block';
+    
+    // Scroll suave al preview
+    previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    if (typeof mostrarToast === 'function') {
+        mostrarToast('Vista previa generada correctamente', 'success');
+    } else {
+        alert('Vista previa generada correctamente');
+    }
+}
+
+// Función para actualizar preview de bullet points
+async function actualizarBulletsPreview() {
+    const bulletsContent = document.getElementById('bullets-content');
+    
+    if (!bulletsContent) {
+        console.error('❌ Elementos de bullets no encontrados');
+        return;
+    }
+    
+    // Mostrar loading en el contenido
+    bulletsContent.innerHTML = `
+        <div class="bullets-placeholder">
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            <small>Actualizando comentarios...</small>
+        </div>
+    `;
+    
+    try {
+        // Obtener calificaciones de campos
+        const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al obtener calificaciones');
+        }
+        
+        // Filtrar solo calificaciones con comentarios
+        const calificacionesConComentarios = data.calificaciones.filter(
+            cal => cal.comentario && cal.comentario.trim() !== ''
+        );
+        
+        if (calificacionesConComentarios.length === 0) {
+            bulletsContent.innerHTML = `
+                <div class="bullets-placeholder">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>No hay comentarios de campos disponibles</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Generar HTML de bullet points
+        const bulletPointsHTML = calificacionesConComentarios.map(cal => {
+            const estadoClass = cal.estado === 'bueno' ? 'success' : cal.estado === 'malo' ? 'danger' : 'secondary';
+            const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
+            
+            return `
+                <div class="bullet-point-item">
+                    <div class="bullet-point-icon">
+                        <span class="text-${estadoClass}">${estadoIcon}</span>
+                    </div>
+                    <div class="bullet-point-content">
+                        <div class="bullet-point-field">${formatearNombreCampo(cal.campo)}</div>
+                        <div class="bullet-point-comment">${cal.comentario}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        bulletsContent.innerHTML = bulletPointsHTML;
+        if (typeof mostrarToast === 'function') {
+            mostrarToast(`${calificacionesConComentarios.length} comentarios de campos actualizados`, 'success');
+        } else {
+            alert(`${calificacionesConComentarios.length} comentarios de campos actualizados`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al actualizar bullets:', error);
+        if (typeof mostrarToast === 'function') {
+            mostrarToast('Error al actualizar comentarios: ' + error.message, 'error');
+        } else {
+            alert('Error al actualizar comentarios: ' + error.message);
+        }
+        
+        bulletsContent.innerHTML = `
+            <div class="bullets-placeholder">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small>Error al cargar comentarios de campos</small>
+            </div>
+        `;
+    }
+}
+
 // ==========================================
 // FUNCIONES GLOBALES PARA TRANSICIONES
 // ==========================================
@@ -1094,7 +1058,10 @@ window.realizarTransicion = function(etapaDestinoId, etapaDestinoNombre, puedeRe
     }
     
     // Mostrar modal de confirmación con comentarios analista
-    mostrarModalConfirmacion(etapaDestinoId, etapaDestinoNombre);
+    // Agregar un pequeño delay para asegurar que los comentarios estén guardados
+    setTimeout(() => {
+        mostrarModalConfirmacion(etapaDestinoId, etapaDestinoNombre);
+    }, 500);
 };
 
 // Función para mostrar modal de confirmación
@@ -1106,39 +1073,55 @@ window.mostrarModalConfirmacion = function(etapaDestinoId, etapaDestinoNombre) {
         return;
     }
     
-    // Obtener comentarios analista
-    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
+    // Primero refrescar la lista de comentarios para asegurar datos actualizados
+    if (typeof cargarComentariosAnalistaCredito === 'function') {
+        console.log('🔄 Refrescando lista de comentarios antes de mostrar modal...');
+        cargarComentariosAnalistaCredito();
+    }
+    
+    // Obtener comentarios analista de crédito
+    console.log('🔍 Buscando comentarios de analista de crédito para solicitud:', solicitudId);
+    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`)
         .then(response => response.json())
         .then(data => {
+            console.log('📋 Respuesta de comentarios de analista:', data);
             let comentariosHTML = '';
-            let bulletPointsHTML = '';
-            
             if (data.success && data.comentarios.length > 0) {
-                // Generar HTML de comentarios
-                comentariosHTML = data.comentarios.map(comentario => {
-                    return `
-                        <div class="comentario-confirmacion">
-                            <div class="comentario-autor">
-                                <i class="fas fa-user-circle me-1"></i>
-                                ${comentario.usuario_nombre}
-                            </div>
-                            <div class="comentario-fecha">
-                                ${formatearFecha(comentario.fecha_creacion)}
-                            </div>
-                            <div class="comentario-texto">
-                                ${comentario.comentario}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                console.log('✅ Encontrados', data.comentarios.length, 'comentarios de analista');
+                // Tomar solo el comentario más reciente (el último en la lista)
+                const comentario = data.comentarios[data.comentarios.length - 1];
+                console.log('📋 Mostrando comentario más reciente:', comentario);
                 
-                // Generar bullet points
-                bulletPointsHTML = data.comentarios.map(comentario => {
-                    return `<li>${comentario.comentario}</li>`;
-                }).join('');
-            } else {
+                // Generar HTML del comentario más reciente con párrafo y bullet points
+                const lines = (comentario.comentario || '').split('\n');
+                // Find the index of the first bullet point
+                const bulletIdx = lines.findIndex(line => line.trim().match(/^([•\-*]|\d+\.)\s/));
+                let mainParagraph = '';
+                let bulletLines = [];
+                if (bulletIdx === -1) {
+                    mainParagraph = lines.join(' ');
+                } else {
+                    mainParagraph = lines.slice(0, bulletIdx).join(' ');
+                    bulletLines = lines.slice(bulletIdx).filter(line => line.trim().match(/^([•\-*]|\d+\.)\s/));
+                }
+                // Clean up bullet points (remove marker)
+                const bulletHTML = bulletLines.length > 0 ?
+                    `<ul class="mb-0">${bulletLines.map(line => `<li>${line.trim().replace(/^([•\-*]|\d+\.)\s/, '')}</li>`).join('')}</ul>`
+                    : '';
+                
+                comentariosHTML = `
+                    <div class="comentario-confirmacion mb-3">
+                        <div class="comentario-header">
+                            <strong>${comentario.usuario_nombre || 'Analista'}</strong>
+                            <small>${typeof formatearFecha === 'function' ? formatearFecha(comentario.fecha_creacion) : new Date(comentario.fecha_creacion).toLocaleString()}</small>
+                        </div>
+                        <div class="comentario-texto mb-2">${mainParagraph.replace(/\n/g, '<br>')}</div>
+                        ${bulletHTML}
+                    </div>
+                `;
+                        } else {
+                console.log('⚠️ No se encontraron comentarios de analista');
                 comentariosHTML = '<p class="text-muted">No hay comentarios de analista para esta solicitud.</p>';
-                bulletPointsHTML = '<li>Sin comentarios específicos</li>';
             }
             
             // Mostrar modal con la información
@@ -1158,17 +1141,9 @@ window.mostrarModalConfirmacion = function(etapaDestinoId, etapaDestinoNombre) {
                                     <i class="fas fa-info-circle me-2"></i>
                                     La solicitud será enviada a la etapa: <strong>${etapaDestinoNombre}</strong>
                                 </div>
-                                
                                 <div class="comentarios-analista-section">
                                     <h6><i class="fas fa-comments me-2"></i>Comentarios del Analista:</h6>
                                     ${comentariosHTML}
-                                </div>
-                                
-                                <div class="bullet-points-section mt-3">
-                                    <h6><i class="fas fa-list me-2"></i>Resumen para el correo:</h6>
-                                    <ul class="bullet-points-list">
-                                        ${bulletPointsHTML}
-                                    </ul>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -1183,20 +1158,16 @@ window.mostrarModalConfirmacion = function(etapaDestinoId, etapaDestinoNombre) {
                     </div>
                 </div>
             `;
-            
             // Remover modal existente si existe
             const existingModal = document.getElementById('modalConfirmacionTransicion');
             if (existingModal) {
                 existingModal.remove();
             }
-            
             // Agregar modal al DOM
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
             // Mostrar modal
             const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionTransicion'));
             modal.show();
-            
             // Limpiar modal cuando se cierre
             document.getElementById('modalConfirmacionTransicion').addEventListener('hidden.bs.modal', function() {
                 this.remove();
@@ -1204,9 +1175,152 @@ window.mostrarModalConfirmacion = function(etapaDestinoId, etapaDestinoNombre) {
         })
         .catch(error => {
             console.error('❌ Error al obtener comentarios:', error);
-            alert('Error al obtener comentarios del analista');
+            console.error('❌ Error details:', error.message);
+            
+            // Intentar obtener comentarios del DOM como fallback
+            console.log('🔄 Intentando obtener comentarios del DOM como fallback...');
+            const comentariosContainer = document.getElementById('lista-comentarios-analista-credito');
+            if (comentariosContainer && comentariosContainer.children.length > 0) {
+                console.log('✅ Encontrados comentarios en el DOM, usando como fallback');
+                // Tomar solo el comentario más reciente (el último en la lista del DOM)
+                const comentarioItem = comentariosContainer.children[comentariosContainer.children.length - 1];
+                const comentariosHTML = (() => {
+                    const header = comentarioItem.querySelector('.comentario-analista-header');
+                    const text = comentarioItem.querySelector('.comentario-analista-text');
+                    const author = header?.querySelector('.comentario-analista-info strong')?.textContent || 'Analista';
+                    const date = header?.querySelector('.comentario-analista-info small')?.textContent || '';
+                    const content = text?.innerHTML || '';
+                    
+                    // Parsear el contenido para separar párrafo y bullet points
+                    const lines = content.split('<br>');
+                    const bulletIdx = lines.findIndex(line => line.trim().match(/^([•\-*]|\d+\.)\s/));
+                    let mainParagraph = '';
+                    let bulletLines = [];
+                    if (bulletIdx === -1) {
+                        mainParagraph = lines.join(' ');
+                    } else {
+                        mainParagraph = lines.slice(0, bulletIdx).join(' ');
+                        bulletLines = lines.slice(bulletIdx).filter(line => line.trim().match(/^([•\-*]|\d+\.)\s/));
+                    }
+                    
+                    const bulletHTML = bulletLines.length > 0 ?
+                        `<ul class="mb-0">${bulletLines.map(line => `<li>${line.trim().replace(/^([•\-*]|\d+\.)\s/, '')}</li>`).join('')}</ul>`
+                        : '';
+                    
+                    return `
+                        <div class="comentario-confirmacion mb-3">
+                            <div class="comentario-header">
+                                <strong>${author}</strong>
+                                <small>${date}</small>
+                            </div>
+                            <div class="comentario-texto mb-2">${mainParagraph}</div>
+                            ${bulletHTML}
+                        </div>
+                    `;
+                })();
+                
+                // Mostrar modal con comentarios del DOM
+                const modalHTML = `
+                    <div class="modal fade" id="modalConfirmacionTransicion" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-arrow-right me-2"></i>
+                                        Confirmar Transición a: ${etapaDestinoNombre}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        La solicitud será enviada a la etapa: <strong>${etapaDestinoNombre}</strong>
+                                    </div>
+                                    <div class="comentarios-analista-section">
+                                        <h6><i class="fas fa-comments me-2"></i>Último Comentario del Analista:</h6>
+                                        ${comentariosHTML}
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmarTransicion(${etapaDestinoId}, '${etapaDestinoNombre}')">
+                                        <i class="fas fa-check me-1"></i>Confirmar Transición
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Remover modal existente si existe
+                const existingModal = document.getElementById('modalConfirmacionTransicion');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                // Agregar modal al DOM
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionTransicion'));
+                modal.show();
+                // Limpiar modal cuando se cierre
+                document.getElementById('modalConfirmacionTransicion').addEventListener('hidden.bs.modal', function() {
+                    this.remove();
+                });
+            } else {
+                console.log('⚠️ No se encontraron comentarios en el DOM');
+                // Mostrar modal sin comentarios
+                const modalHTML = `
+                    <div class="modal fade" id="modalConfirmacionTransicion" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-arrow-right me-2"></i>
+                                        Confirmar Transición a: ${etapaDestinoNombre}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        La solicitud será enviada a la etapa: <strong>${etapaDestinoNombre}</strong>
+                                    </div>
+                                    <div class="comentarios-analista-section">
+                                        <h6><i class="fas fa-comments me-2"></i>Último Comentario del Analista:</h6>
+                                        <p class="text-muted">No hay comentarios de analista para esta solicitud.</p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="confirmarTransicion(${etapaDestinoId}, '${etapaDestinoNombre}')">
+                                        <i class="fas fa-check me-1"></i>Confirmar Transición
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Remover modal existente si existe
+                const existingModal = document.getElementById('modalConfirmacionTransicion');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                // Agregar modal al DOM
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionTransicion'));
+                modal.show();
+                // Limpiar modal cuando se cierre
+                document.getElementById('modalConfirmacionTransicion').addEventListener('hidden.bs.modal', function() {
+                    this.remove();
+                });
+            }
         });
-};
+    
+
 
 // Función para confirmar transición
 window.confirmarTransicion = function(etapaDestinoId, etapaDestinoNombre) {
@@ -1403,110 +1517,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Sistema de pestañas
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const targetTab = this.dataset.tab;
-            
-            // Remover clase active de todos los botones y panes
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabPanes.forEach(pane => pane.classList.remove('active'));
-            
-            // Activar el botón y pane seleccionado
-            this.classList.add('active');
-            document.getElementById(`tab-${targetTab}`).classList.add('active');
-        });
-    });
 
-    // Formulario comentario moderno con AJAX
-    const formComentarioModerno = document.getElementById('form-comentario-moderno');
-    const comentarioTextModerno = document.getElementById('comentario-text-modern');
-    const charCountSpan = document.getElementById('char-count');
-    const btnEnviar = document.getElementById('btn-enviar-comentario');
-    const btnCancelar = document.getElementById('btn-cancelar-comentario');
-    
-    // Contador de caracteres
-    if (comentarioTextModerno && charCountSpan) {
-        comentarioTextModerno.addEventListener('input', function() {
-            const count = this.value.length;
-            charCountSpan.textContent = count;
-            
-            // Cambiar color según límite
-            if (count > 900) {
-                charCountSpan.parentElement.className = 'text-danger';
-            } else if (count > 700) {
-                charCountSpan.parentElement.className = 'text-warning';
-            } else {
-                charCountSpan.parentElement.className = 'text-muted';
-            }
-        });
-    }
-    
-    // Manejar envío de comentario moderno
-    if (formComentarioModerno) {
-        formComentarioModerno.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const comentarioTexto = comentarioTextModerno.value.trim();
-            if (!comentarioTexto) {
-                alert('Por favor escribe un comentario antes de enviar.');
-                return;
-            }
-            
-            // Deshabilitar botón y mostrar loading
-            btnEnviar.disabled = true;
-            btnEnviar.querySelector('span').style.display = 'none';
-            btnEnviar.querySelector('.loading-spinner').style.display = 'inline-block';
-            
-            // Enviar comentario via AJAX
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/comentarios/crear/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    comentario: comentarioTexto,
-                    tipo: 'analisis'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Agregar comentario a la lista sin recargar
-                    agregarComentarioALista(data.comentario);
-                    
-                    // Limpiar formulario
-                    comentarioTextModerno.value = '';
-                    charCountSpan.textContent = '0';
-                    charCountSpan.parentElement.className = 'text-muted';
-                    
-                    // Mostrar mensaje de éxito
-                    mostrarNotificacionExito('Comentario agregado correctamente');
-                    
-                    // Actualizar contador de comentarios
-                    actualizarContadorComentarios();
-                } else {
-                    mostrarNotificacionError('Error al guardar comentario: ' + (data.error || 'Error desconocido'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                mostrarNotificacionError('Error de red al enviar el comentario');
-            })
-            .finally(() => {
-                // Rehabilitar botón
-                btnEnviar.disabled = false;
-                btnEnviar.querySelector('span').style.display = 'inline-block';
-                btnEnviar.querySelector('.loading-spinner').style.display = 'none';
-            });
-        });
-    }
+
+
     
     // Función para descargar PDF completo con todos los documentos
     function downloadMergedPDF() {
@@ -1552,11 +1565,19 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.removeChild(a);
             
             // Mostrar notificación de éxito
-            mostrarNotificacionExito('PDF generado y descargado correctamente');
+            if (typeof mostrarToast === 'function') {
+                mostrarToast('PDF generado y descargado correctamente', 'success');
+            } else {
+                alert('PDF generado y descargado correctamente');
+            }
         })
         .catch(error => {
             console.error('Error al generar PDF:', error);
-            mostrarNotificacionError('Error al generar el PDF. Intente nuevamente.');
+            if (typeof mostrarToast === 'function') {
+                mostrarToast('Error al generar el PDF. Intente nuevamente.', 'error');
+            } else {
+                alert('Error al generar el PDF. Intente nuevamente.');
+            }
         })
         .finally(() => {
             // Restaurar botón
@@ -1577,195 +1598,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
 
     
-    // Función para formatear nombres de campos
-    function formatearNombreCampo(campo) {
-        const mapeoCampos = {
-            'nombre': 'Nombre del Cliente',
-            'cedula': 'Cédula',
-            'monto': 'Monto del Préstamo',
-            'plazo': 'Plazo de Pago',
-            'ingresos': 'Ingresos',
-            'gastos': 'Gastos',
-            'capacidad_pago': 'Capacidad de Pago',
-            'historial_credito': 'Historial Crediticio',
-            'garantias': 'Garantías',
-            'documentacion': 'Documentación',
-            'apc': 'APC',
-            'css': 'Ficha CSS',
-            'referencias': 'Referencias',
-            'trabajo': 'Información Laboral',
-            'direccion': 'Dirección',
-            'telefono': 'Teléfono',
-            'email': 'Correo Electrónico'
-        };
-        
-        return mapeoCampos[campo] || campo.charAt(0).toUpperCase() + campo.slice(1).replace(/_/g, ' ');
-    }
-    
-    // Función para generar comentario completo con bullet points
-    async function generarComentarioCompleto() {
-        const comentarioGeneral = document.getElementById('comentario-analista-credito-text').value.trim();
-        
-        if (!comentarioGeneral) {
-            mostrarNotificacionError('Debe escribir un análisis general antes de guardar');
-            return null;
-        }
-        
-        try {
-            // Obtener calificaciones de campos para generar bullet points
-            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error al obtener calificaciones');
-            }
-            
-            // Filtrar solo calificaciones con comentarios
-            const calificacionesConComentarios = data.calificaciones.filter(
-                cal => cal.comentario && cal.comentario.trim() !== ''
-            );
-            
-            // Generar bullet points
-            const bulletPoints = [];
-            calificacionesConComentarios.forEach(cal => {
-                const campoFormateado = formatearNombreCampo(cal.campo);
-                const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
-                bulletPoints.push(`${estadoIcon} ${campoFormateado}: ${cal.comentario}`);
-            });
-            
-            // Combinar comentario general con bullet points
-            let comentarioCompleto = comentarioGeneral;
-            
-            if (bulletPoints.length > 0) {
-                comentarioCompleto += '\n\n' + bulletPoints.join('\n');
-            }
-            
-            return comentarioCompleto;
-            
-        } catch (error) {
-            console.error('❌ Error al generar comentario completo:', error);
-            mostrarNotificacionError('Error al generar comentario completo: ' + error.message);
-            return null;
-        }
-    }
+
     
     // Event listeners para botones de análisis unificado
     const btnPreviewAnalisis = document.getElementById('btn-preview-analisis');
-    const btnRefreshBullets = document.getElementById('btn-refresh-bullets');
     
     if (btnPreviewAnalisis) {
         btnPreviewAnalisis.addEventListener('click', mostrarVistaPreviaAnalisis);
     }
     
-    if (btnRefreshBullets) {
-        btnRefreshBullets.addEventListener('click', actualizarBulletsPreview);
-    }
-    
-    // Función para mostrar vista previa del análisis completo
-    async function mostrarVistaPreviaAnalisis() {
-        const comentarioCompleto = await generarComentarioCompleto();
-        
-        if (!comentarioCompleto) {
-            return;
-        }
-        
-        const previewContainer = document.getElementById('analisis-preview');
-        const previewContent = document.getElementById('preview-content');
-        
-        if (!previewContainer || !previewContent) {
-            console.error('❌ Elementos de preview no encontrados');
-            return;
-        }
-        
-        // Formatear el contenido para mostrar
-        const contenidoFormateado = comentarioCompleto
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/\n/g, '<br>');
-        
-        previewContent.innerHTML = `<p>${contenidoFormateado}</p>`;
-        previewContainer.style.display = 'block';
-        
-        // Scroll suave al preview
-        previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
-        mostrarNotificacionExito('Vista previa generada correctamente');
-    }
-    
-    // Función para actualizar preview de bullet points
-    async function actualizarBulletsPreview() {
-        const bulletsContent = document.getElementById('bullets-content');
-        const btnRefresh = document.getElementById('btn-refresh-bullets');
-        
-        if (!bulletsContent || !btnRefresh) {
-            console.error('❌ Elementos de bullets no encontrados');
-            return;
-        }
-        
-        // Mostrar loading
-        btnRefresh.disabled = true;
-        btnRefresh.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        
-        try {
-            // Obtener calificaciones de campos
-            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.error || 'Error al obtener calificaciones');
-            }
-            
-            // Filtrar solo calificaciones con comentarios
-            const calificacionesConComentarios = data.calificaciones.filter(
-                cal => cal.comentario && cal.comentario.trim() !== ''
-            );
-            
-            if (calificacionesConComentarios.length === 0) {
-                bulletsContent.innerHTML = `
-                    <div class="bullets-placeholder">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small>No hay comentarios de campos disponibles</small>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Generar HTML de bullet points
-            const bulletPointsHTML = calificacionesConComentarios.map(cal => {
-                const estadoClass = cal.estado === 'bueno' ? 'success' : cal.estado === 'malo' ? 'danger' : 'secondary';
-                const estadoIcon = cal.estado === 'bueno' ? '+' : cal.estado === 'malo' ? '-' : '•';
-                
-                return `
-                    <div class="bullet-point-item">
-                        <div class="bullet-point-icon">
-                            <span class="text-${estadoClass}">${estadoIcon}</span>
-                        </div>
-                        <div class="bullet-point-content">
-                            <div class="bullet-point-field">${formatearNombreCampo(cal.campo)}</div>
-                            <div class="bullet-point-comment">${cal.comentario}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            bulletsContent.innerHTML = bulletPointsHTML;
-            mostrarNotificacionExito(`${calificacionesConComentarios.length} comentarios de campos actualizados`);
-            
-        } catch (error) {
-            console.error('❌ Error al actualizar bullets:', error);
-            mostrarNotificacionError('Error al actualizar comentarios: ' + error.message);
-            
-            bulletsContent.innerHTML = `
-                <div class="bullets-placeholder">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <small>Error al cargar comentarios de campos</small>
-                </div>
-            `;
-        } finally {
-            // Restaurar botón
-            btnRefresh.disabled = false;
-            btnRefresh.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        }
-    }
+
     
     // Función para agregar comentario a la lista
     function agregarComentarioALista(comentario) {
@@ -1907,14 +1749,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarToast(mensaje, 'error', 4000);
     }
     
-    // Cancelar comentario
-    if (btnCancelar) {
-        btnCancelar.addEventListener('click', function() {
-            comentarioTextModerno.value = '';
-            charCountSpan.textContent = '0';
-            charCountSpan.parentElement.className = 'text-muted';
-        });
-    }
+
 
     // Funciones para botones de acción
     window.ejecutarTransicion = function(transicionId) {
@@ -1967,141 +1802,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // FUNCIÓN PARA REALIZAR TRANSICIONES
     // ==========================================
     
-    // Definir funciones globalmente para que estén disponibles inmediatamente
-    window.realizarTransicion = function(etapaDestinoId, etapaDestinoNombre, puedeRealizar, requisitosFaltantes) {
-        console.log('🔄 Iniciando transición:', {
-            etapaDestinoId: etapaDestinoId,
-            etapaDestino: etapaDestinoNombre,
-            puedeRealizar: puedeRealizar,
-            requisitosFaltantes: requisitosFaltantes
-        });
-        
-        if (!puedeRealizar) {
-            const mensaje = `No puedes realizar esta transición porque faltan ${requisitosFaltantes} requisito(s) obligatorio(s).`;
-            if (typeof mostrarToast === 'function') {
-                mostrarToast(mensaje, 'warning');
-            } else {
-                alert(mensaje);
-            }
-            return;
-        }
-        
-        // Mostrar modal de confirmación con comentarios analista
-        mostrarModalConfirmacion(etapaDestinoId, etapaDestinoNombre);
-    };
+
     
-    // Función para mostrar modal de confirmación
-    window.mostrarModalConfirmacion = function(etapaDestinoId, etapaDestinoNombre) {
-        // Verificar que solicitudId esté disponible
-        if (typeof solicitudId === 'undefined') {
-            console.error('❌ Error: solicitudId no está definido');
-            alert('Error: No se pudo obtener la información de la solicitud');
-            return;
-        }
-        
-        // Obtener comentarios analista
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
-            .then(response => response.json())
-            .then(data => {
-                let comentariosHTML = '';
-                let bulletPointsHTML = '';
-                
-                if (data.success && data.comentarios.length > 0) {
-                    // Generar HTML de comentarios
-                    comentariosHTML = data.comentarios.map(comentario => {
-                        return `
-                            <div class="comentario-confirmacion">
-                                <div class="comentario-header">
-                                    <strong>${comentario.usuario.nombre_completo}</strong>
-                                    <small>${typeof formatearFecha === 'function' ? formatearFecha(comentario.fecha_creacion) : new Date(comentario.fecha_creacion).toLocaleString()}</small>
-                                </div>
-                                <div class="comentario-texto">
-                                    ${comentario.comentario.replace(/\n/g, '<br>')}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    
-                    // Extraer bullet points de los comentarios
-                    const bulletPoints = extraerBulletPoints(data.comentarios);
-                    if (bulletPoints.length > 0) {
-                        bulletPointsHTML = `
-                            <div class="bullet-points-confirmacion">
-                                <h6><i class="fas fa-list-ul me-2"></i>Puntos Clave del Análisis:</h6>
-                                <ul>
-                                    ${bulletPoints.map(point => `<li>${point}</li>`).join('')}
-                                </ul>
-                            </div>
-                        `;
-                    }
-                } else {
-                    comentariosHTML = '<p class="text-muted">No hay comentarios de analista disponibles.</p>';
-                }
-                
-                // Crear y mostrar modal
-                const modalHTML = `
-                    <div class="modal fade" id="modalConfirmacionTransicion" tabindex="-1" aria-labelledby="modalConfirmacionTransicionLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header bg-primary text-white">
-                                    <h5 class="modal-title" id="modalConfirmacionTransicionLabel">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        Confirmar Cambio de Etapa
-                                    </h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <strong>¿Está seguro de cambiar la etapa a "${etapaDestinoNombre}"?</strong>
-                                        <br>
-                                        <small>Esta acción no se puede deshacer y notificará al propietario de la solicitud.</small>
-                                    </div>
-                                    
-                                    <div class="comentarios-section">
-                                        <h6><i class="fas fa-comments me-2"></i>Comentarios del Analista:</h6>
-                                        <div class="comentarios-container">
-                                            ${comentariosHTML}
-                                        </div>
-                                    </div>
-                                    
-                                    ${bulletPointsHTML}
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                        <i class="fas fa-times me-1"></i>Cancelar
-                                    </button>
-                                    <button type="button" class="btn btn-primary" onclick="confirmarTransicion(${etapaDestinoId}, '${etapaDestinoNombre}')">
-                                        <i class="fas fa-check me-1"></i>Confirmar Transición
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Remover modal anterior si existe
-                const modalAnterior = document.getElementById('modalConfirmacionTransicion');
-                if (modalAnterior) {
-                    modalAnterior.remove();
-                }
-                
-                // Agregar modal al DOM
-                document.body.insertAdjacentHTML('beforeend', modalHTML);
-                
-                // Mostrar modal
-                const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionTransicion'));
-                modal.show();
-            })
-            .catch(error => {
-                console.error('❌ Error al cargar comentarios:', error);
-                if (typeof mostrarToast === 'function') {
-                    mostrarToast('Error al cargar comentarios para confirmación', 'error');
-                } else {
-                    alert('Error al cargar comentarios para confirmación');
-                }
-            });
-    }
+
     
     // Función para extraer bullet points de comentarios
     window.extraerBulletPoints = function(comentarios) {
@@ -2127,53 +1830,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return bulletPoints;
     }
     
-    // Función para confirmar la transición
-    window.confirmarTransicion = function(etapaDestinoId, etapaDestinoNombre) {
-        // Cerrar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionTransicion'));
-        modal.hide();
-        
-        // Mostrar indicador de carga
-        const dropdownButton = document.getElementById('dropdownTransiciones');
-        const originalText = dropdownButton.innerHTML;
-        dropdownButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
-        dropdownButton.disabled = true;
-        
-        // Realizar la transición usando la API existente
-        fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                etapa_id: etapaDestinoId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast(`Transición exitosa: ${etapaDestinoNombre}`, 'success');
-                // Mostrar mensaje de éxito sin recargar la página
-                if (typeof mostrarToast === 'function') {
-                    mostrarToast(`Transición exitosa: ${etapaDestinoNombre}`, 'success');
-                } else {
-                    alert(`Transición exitosa: ${etapaDestinoNombre}`);
-                }
-            } else {
-                throw new Error(data.error || 'Error desconocido');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error en transición:', error);
-            mostrarToast(`Error al realizar transición: ${error.message}`, 'error');
-        })
-        .finally(() => {
-            // Restaurar botón
-            dropdownButton.innerHTML = originalText;
-            dropdownButton.disabled = false;
-        });
-    };
+
     
     // Función auxiliar para obtener CSRF token
     function getCookie(name) {
@@ -2234,22 +1891,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Función para configurar chat
-    function configurarChat() {
-        
-        // Configurar textarea general
-        const textareaGeneral = document.getElementById('comentario-text-modern');
-        if (textareaGeneral) {
-            textareaGeneral.addEventListener('input', function() {
-                autoExpandTextarea(this);
-                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
-            });
-            
-            textareaGeneral.addEventListener('keydown', function(event) {
-                handleKeyDown(event, enviarComentarioGeneral);
-            });
-        }
-    }
+
     
     // FUNCIONES PARA COMENTARIOS DE ANALISTA
     
@@ -2426,268 +2068,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
     
-    // FUNCIONES PARA COMENTARIOS GENERALES
+
     
-    // Cargar comentarios generales
-    function cargarComentariosGenerales() {
-        console.log('🔄 Cargando comentarios generales...');
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=general`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('📊 Comentarios generales recibidos:', data);
-                
-                if (data.success) {
-                    const container = document.getElementById('lista-comentarios');
-                    
-                                         // Actualizar contador
-                     const contadorGenerales = document.getElementById('contador-comentarios-generales');
-                     if (contadorGenerales) {
-                         contadorGenerales.textContent = `${data.comentarios.length} comentario${data.comentarios.length !== 1 ? 's' : ''}`;
-                     }
-                     
-                     if (data.comentarios.length === 0) {
-                         container.innerHTML = `
-                             <div class="chat-welcome-general">
-                                 <div class="welcome-avatar-general">
-                                     <i class="fas fa-users"></i>
-                                 </div>
-                                 <div class="welcome-message-general">
-                                     <p><strong>Chat General</strong></p>
-                                     <p>Espacio para comentarios y conversaciones generales sobre esta solicitud. Todos los usuarios pueden participar aquí.</p>
-                                 </div>
-                             </div>
-                         `;
-                     } else {
-                         // Mostrar mensaje de bienvenida + comentarios
-                         const welcomeMessage = `
-                             <div class="chat-welcome-general">
-                                 <div class="welcome-avatar-general">
-                                     <i class="fas fa-users"></i>
-                                 </div>
-                                 <div class="welcome-message-general">
-                                     <p><strong>Chat General</strong></p>
-                                     <p>Historial de conversaciones sobre esta solicitud.</p>
-                                 </div>
-                             </div>
-                         `;
-                         
-                                                   const messages = data.comentarios.map(comentario => {
-                              const esPropio = comentario.usuario.id === usuarioActualId;
-                              return `
-                                  <div class="message-bubble ${esPropio ? 'own' : 'other'}" data-comentario-id="${comentario.id}">
-                                      <div class="message-content">
-                                          ${comentario.comentario}
-                                      </div>
-                                      <div class="message-meta">
-                                          <span class="message-author">${comentario.usuario.nombre_completo}</span>
-                                          <span class="message-time">${formatearFecha(comentario.fecha_creacion)}</span>
-                                          ${comentario.puede_editar ? `
-                                              <div class="message-actions">
-                                                  <button class="action-btn" onclick="editarComentarioGeneral(${comentario.id})" title="Editar">
-                                                      <i class="fas fa-edit"></i>
-                                                  </button>
-                                                  <button class="action-btn" onclick="eliminarComentarioGeneral(${comentario.id})" title="Eliminar">
-                                                      <i class="fas fa-trash"></i>
-                                                  </button>
-                                              </div>
-                                          ` : ''}
-                                      </div>
-                                  </div>
-                              `;
-                          }).join('');
-                          
-                          container.innerHTML = welcomeMessage + messages;
-                          
-                          // Scroll automático al final
-                          setTimeout(() => {
-                              container.scrollTop = container.scrollHeight;
-                          }, 100);
-                    }
-                } else {
-                    console.error('❌ Error al cargar comentarios generales:', data.error);
-                    mostrarToast('Error al cargar comentarios generales: ' + data.error, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error de red:', error);
-                mostrarToast('Error de red al cargar comentarios generales', 'error');
-            });
-    }
+
     
-    // Función para enviar comentario general
-    function enviarComentarioGeneral(evento) {
-        evento.preventDefault();
-        
-        const textarea = document.getElementById('comentario-text-modern');
-        const comentarioTexto = textarea.value.trim();
-        
-        if (!comentarioTexto) {
-            mostrarToast('Por favor ingresa un comentario', 'error');
-            return;
-        }
-        
-        const botonEnviar = document.getElementById('btn-enviar-comentario');
-        const spinner = botonEnviar.querySelector('.loading-spinner-chat-general');
-        const iconoBoton = botonEnviar.querySelector('i:not(.loading-spinner-chat-general i)');
-        
-        // Deshabilitar botón y mostrar spinner
-        botonEnviar.disabled = true;
-        if (spinner) {
-            spinner.style.display = 'inline-block';
-            iconoBoton.style.display = 'none';
-        }
-        
-        console.log('📤 Enviando comentario general:', comentarioTexto);
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify({
-                comentario: comentarioTexto,
-                tipo: 'general'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('✅ Respuesta del servidor:', data);
-            
-            if (data.success) {
-                mostrarToast('Comentario enviado exitosamente');
-                textarea.value = '';
-                actualizarContadorCaracteres('comentario-text-modern', 'char-count');
-                cargarComentariosGenerales();
-            } else {
-                mostrarToast('Error al enviar comentario: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            mostrarToast('Error de red al enviar comentario', 'error');
-        })
-        .finally(() => {
-            // Rehabilitar botón y ocultar spinner
-            botonEnviar.disabled = false;
-            if (spinner) {
-                spinner.style.display = 'none';
-                iconoBoton.style.display = 'inline-block';
-            }
-        });
-    }
-    
-    // Función para editar comentario general
-    window.editarComentarioGeneral = function(comentarioId) {
-        // Similar a la función de analista pero para comentarios generales
-        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
-        const textoElement = comentarioElement.querySelector('.comentario-text-modern');
-        const textoOriginal = textoElement.textContent.trim();
-        
-        // Crear campo de edición
-        const textarea = document.createElement('textarea');
-        textarea.className = 'form-control-modern';
-        textarea.value = textoOriginal;
-        textarea.style.minHeight = '80px';
-        
-        // Crear botones
-        const botonesContainer = document.createElement('div');
-        botonesContainer.className = 'comentario-actions mt-2';
-        botonesContainer.innerHTML = `
-            <button class="btn-action-mini" onclick="guardarEdicionGeneral(${comentarioId}, this)">
-                <i class="fas fa-save"></i>
-            </button>
-            <button class="btn-action-mini" onclick="cancelarEdicionGeneral(${comentarioId})">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        // Reemplazar contenido
-        textoElement.innerHTML = '';
-        textoElement.appendChild(textarea);
-        textoElement.appendChild(botonesContainer);
-        
-        // Ocultar botones originales
-        const accionesOriginales = comentarioElement.querySelector('.comentario-actions:not(.mt-2)');
-        if (accionesOriginales) {
-            accionesOriginales.style.display = 'none';
-        }
-        
-        // Enfocar textarea
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    };
-    
-    // Función para guardar edición de comentario general
-    window.guardarEdicionGeneral = function(comentarioId, botonElement) {
-        const comentarioElement = document.querySelector(`[data-comentario-id="${comentarioId}"]`);
-        const textarea = comentarioElement.querySelector('textarea');
-        const nuevoTexto = textarea.value.trim();
-        
-        if (!nuevoTexto) {
-            mostrarToast('El comentario no puede estar vacío', 'error');
-            return;
-        }
-        
-        console.log('💾 Guardando edición comentario general:', comentarioId, nuevoTexto);
-        
-        fetch(`/workflow/api/comentarios/${comentarioId}/editar/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify({ comentario: nuevoTexto })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('Comentario actualizado exitosamente');
-                cargarComentariosGenerales();
-            } else {
-                mostrarToast('Error al actualizar comentario: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            mostrarToast('Error de red al actualizar comentario', 'error');
-        });
-    };
-    
-    // Función para cancelar edición de comentario general
-    window.cancelarEdicionGeneral = function(comentarioId) {
-        cargarComentariosGenerales();
-    };
-    
-    // Función para eliminar comentario general
-    window.eliminarComentarioGeneral = function(comentarioId) {
-        if (!confirm('¿Estás seguro de eliminar este comentario?')) {
-            return;
-        }
-        
-        console.log('🗑️ Eliminando comentario general:', comentarioId);
-        
-        fetch(`/workflow/api/comentarios/${comentarioId}/eliminar/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCsrfToken()
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                mostrarToast('Comentario eliminado exitosamente');
-                cargarComentariosGenerales();
-            } else {
-                mostrarToast('Error al eliminar comentario: ' + data.error, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error:', error);
-            mostrarToast('Error de red al eliminar comentario', 'error');
-        });
-    };
+
     
     // FUNCIONES AUXILIARES
     
@@ -2703,23 +2088,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // EVENT LISTENERS
     
-    // Formulario de comentarios generales
-    document.getElementById('form-comentario-moderno').addEventListener('submit', enviarComentarioGeneral);
-    
-    // Contador de caracteres para comentarios generales
-    document.getElementById('comentario-text-modern').addEventListener('input', function() {
-        actualizarContadorCaracteres('comentario-text-modern', 'char-count');
-    });
+
     
     // INICIALIZACIÓN
     console.log('🚀 Inicializando sistema de comentarios completo...');
     
-    // Configurar funcionalidades de chat
-    configurarChat();
-    
     // Cargar comentarios al cargar la página
     cargarComentariosAnalista();
-    cargarComentariosGenerales();
     
     // Comentarios se cargan una vez al inicio
     // Auto-refresh removido para evitar interrupciones del usuario
@@ -2920,6 +2295,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 mostrarToast('Comentario guardado exitosamente', 'success');
                 marcarComentarioEnBoton(field, true);
+                // Auto-refresh bullet points after saving comentario
+                if (typeof actualizarBulletsPreview === 'function') {
+                    actualizarBulletsPreview();
+                }
             } else {
                 mostrarToast('Error al guardar comentario: ' + data.error, 'error');
             }
@@ -3016,6 +2395,11 @@ document.addEventListener('DOMContentLoaded', function() {
     inicializarValidacionDocumentos();
     cargarSolicitudesRelacionadas();
     
+    // Cargar bullet points iniciales
+    if (typeof actualizarBulletsPreview === 'function') {
+        actualizarBulletsPreview();
+    }
+    
     // Asegurar que el DOM esté completamente cargado antes de inicializar comentarios
     function inicializarCuandoEsteListo() {
         setTimeout(() => {
@@ -3041,36 +2425,7 @@ document.addEventListener('DOMContentLoaded', function() {
         inicializarCuandoEsteListo();
     }
     
-    // Función para marcar todos los campos como bueno
-    window.marcarTodosComoBueno = function() {
-        if (!confirm('¿Está seguro de marcar todos los campos como "bueno"?')) {
-            return;
-        }
-        
-        const todosLosBotones = document.querySelectorAll('.btn-compliance.btn-good');
-        let contador = 0;
-        let promesas = [];
-        
-        todosLosBotones.forEach((boton) => {
-            const field = boton.dataset.field;
-            const action = boton.dataset.action;
-            
-            if (field && action === 'bueno') {
-                // Crear promesa para calificar campo sin mostrar toast individual
-                const promesa = calificarCampoSinToast(field, 'bueno');
-                promesas.push(promesa);
-                contador++;
-            }
-        });
-        
-        // Esperar a que todas las calificaciones se completen
-        Promise.all(promesas).then(() => {
-            mostrarToast(`${contador} campos marcados como "bueno"`, 'success');
-        }).catch(error => {
-            console.error('Error al marcar campos como bueno:', error);
-            mostrarToast('Error al marcar algunos campos como "bueno"', 'error');
-        });
-    };
+
     
     // Función para calificar campo sin mostrar toast (versión interna)
     function calificarCampoSinToast(field, estado) {
@@ -3104,6 +2459,10 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     actualizarEstadoBoton(field, estado);
+                    // Auto-refresh bullet points after field qualification
+                    if (typeof actualizarBulletsPreview === 'function') {
+                        actualizarBulletsPreview();
+                    }
                     resolve(data);
                 } else {
                     console.error('❌ Error del servidor:', data.error);
@@ -3564,4232 +2923,6 @@ function mostrarComentariosAnalistaCredito(comentarios) {
 }
 </script>
 
-<style>
-/* ============================== */
-/* ESTILOS ÉPICOS DE ANÁLISIS    */
-/* ============================== */
+{% include 'workflow/partials/analisis_styles.html' %}
 
-/* Animaciones para toast notifications */
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-/* Estilos para toast notifications */
-.toast-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1080;
-    max-width: 400px;
-    min-width: 300px;
-    border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
-    animation: slideInRight 0.3s ease-out;
-}
-
-.toast-notification.toast-success {
-    background: linear-gradient(135deg, #d4edda, #c3e6cb);
-    color: #155724;
-    border-left: 4px solid #28a745;
-}
-
-.toast-notification.toast-error {
-    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
-    color: #721c24;
-    border-left: 4px solid #dc3545;
-}
-
-.toast-notification.toast-warning {
-    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-    color: #856404;
-    border-left: 4px solid #ffc107;
-}
-
-.toast-notification.toast-info {
-    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
-    color: #0c5460;
-    border-left: 4px solid #17a2b8;
-}
-
-.toast-content {
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.toast-content .btn-close {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.toast-content .btn-close:hover {
-    opacity: 1;
-}
-
-/* Variables de colores - TONALIDADES AZULES */
-:root {
-    --color-blue-primary: #3b82f6;
-    --color-blue-light: #dbeafe;
-    --color-blue-dark: #1e40af;
-    --color-blue-darker: #1e3a8a;
-    --color-blue-accent: #60a5fa;
-    --color-blue-soft: #93c5fd;
-    --color-warning: #3b82f6;
-    --color-danger: #ef4444;
-    --color-success: #3b82f6;
-    --shadow-epic: 0 10px 40px rgba(0, 0, 0, 0.1);
-    --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.15);
-    --border-radius: 16px;
-    --gradient-blue-primary: linear-gradient(135deg, #3b82f6, #1e40af);
-    --gradient-blue-light: linear-gradient(135deg, #60a5fa, #3b82f6);
-    --gradient-blue-dark: linear-gradient(135deg, #1e40af, #1e3a8a);
-}
-
-/* Timeline Horizontal Épico */
-.workflow-timeline-section {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    border: 1px solid #e2e8f0;
-    position: relative;
-    overflow: hidden;
-}
-
-.workflow-timeline-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--gradient-blue-primary);
-}
-
-.timeline-icon-main {
-    width: 64px;
-    height: 64px;
-    background: var(--gradient-blue-primary);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-    box-shadow: var(--shadow-epic);
-}
-
-.horizontal-timeline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: relative;
-    overflow-x: auto;
-    padding: 2rem 0;
-    gap: 1rem;
-}
-
-.timeline-track {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: #e2e8f0;
-    z-index: 1;
-    transform: translateY(-50%);
-}
-
-.timeline-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 2;
-    min-width: 120px;
-}
-
-.step-circle {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.timeline-step.completed .step-circle {
-    background: var(--gradient-green);
-    color: white;
-    box-shadow: 0 8px 30px rgba(34, 197, 94, 0.3);
-    transform: scale(1.1);
-}
-
-.timeline-step.active .step-circle {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: white;
-    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4);
-    transform: scale(1.15);
-    animation: pulse 2s infinite;
-}
-
-.timeline-step.pending .step-circle {
-    background: #f1f5f9;
-    color: #64748b;
-    border: 3px solid #e2e8f0;
-}
-
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4); }
-    50% { box-shadow: 0 8px 40px rgba(251, 191, 36, 0.6); }
-}
-
-.step-icon {
-    font-size: 1.5rem;
-}
-
-.step-number {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 24px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f2937;
-    border-radius: 50%;
-    font-size: 0.75rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.step-content {
-    text-align: center;
-}
-
-.step-title {
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-}
-
-.step-sla {
-    color: #64748b;
-    font-size: 0.75rem;
-}
-
-/* Epic Cards */
-.epic-card {
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-epic);
-    border: none;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    height: 100%;
-}
-
-.epic-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-hover);
-}
-
-.epic-card.card-green {
-    border-top: 4px solid var(--color-green);
-}
-
-.epic-card.card-blue {
-    border-top: 4px solid var(--color-blue);
-}
-
-.epic-card.card-orange {
-    border-top: 4px solid var(--color-orange);
-}
-
-.epic-card-header {
-    display: flex;
-    align-items: center;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.epic-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    color: white;
-    margin-right: 1rem;
-    flex-shrink: 0;
-}
-
-.card-green .epic-icon {
-    background: var(--gradient-green);
-}
-
-.card-blue .epic-icon {
-    background: var(--gradient-blue);
-}
-
-.card-orange .epic-icon {
-    background: var(--gradient-orange);
-}
-
-.epic-title h6 {
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.25rem;
-    font-size: 1rem;
-}
-
-.epic-title small {
-    color: #64748b;
-    font-size: 0.875rem;
-}
-
-.epic-card-body {
-    padding: 1.5rem;
-}
-
-.epic-item {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 1.25rem;
-    padding: 0.75rem;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.epic-item:hover {
-    background: #f8fafc;
-}
-
-.epic-item:last-child {
-    margin-bottom: 0;
-}
-
-.epic-item i {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 0.75rem;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.epic-item .label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
-}
-
-.epic-item strong {
-    color: #1f2937;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-/* SLA Status Card */
-.sla-status-card {
-    background: linear-gradient(135deg, #ffffff, #f8fafc);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-epic);
-    border: 1px solid #e2e8f0;
-    position: relative;
-    overflow: hidden;
-}
-
-.sla-status-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-}
-
-.sla-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.sla-icon {
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-    margin-right: 1rem;
-}
-
-.sla-info h5 {
-    color: #1f2937;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.sla-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.sla-badge.sla-success {
-    background: var(--color-green-light);
-    color: var(--color-success);
-}
-
-.sla-badge.sla-warning {
-    background: #fef3c7;
-    color: var(--color-warning);
-}
-
-.sla-badge.sla-danger {
-    background: #fecaca;
-    color: var(--color-danger);
-}
-
-.sla-badge.sla-muted {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-.sla-progress {
-    background: #f1f5f9;
-    border-radius: 10px;
-    height: 8px;
-    position: relative;
-    margin: 1rem 0;
-    overflow: hidden;
-}
-
-.progress-bar-epic {
-    height: 100%;
-    background: linear-gradient(135deg, #06b6d4, #0891b2);
-    border-radius: 10px;
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    font-size: 0.75rem;
-    color: #64748b;
-    text-align: center;
-    margin-top: 0.5rem;
-    display: block;
-}
-
-.sla-details {
-    color: #64748b;
-    font-size: 0.875rem;
-    margin-top: 1rem;
-}
-
-/* Sidebar Epic Cards */
-.epic-card-sidebar {
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-epic);
-    border: none;
-    overflow: hidden;
-    border-top: 4px solid var(--color-warning);
-}
-
-.epic-card-header-sidebar {
-    display: flex;
-    align-items: center;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.epic-icon-sidebar {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    color: white;
-    margin-right: 1rem;
-}
-
-.epic-title-sidebar h6 {
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.25rem;
-}
-
-.epic-title-sidebar small {
-    color: #64748b;
-}
-
-.epic-card-body-sidebar {
-    padding: 1.5rem;
-}
-
-/* Comment Form Epic */
-.comment-form-epic {
-    margin-bottom: 2rem;
-}
-
-.form-group-epic {
-    margin-bottom: 1rem;
-}
-
-.form-label-epic {
-    display: block;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.form-control-epic {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-    background: #fafafa;
-}
-
-.form-control-epic:focus {
-    outline: none;
-    border-color: var(--color-warning);
-    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
-    background: white;
-}
-
-.btn-epic {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-epic.btn-success {
-    background: var(--gradient-green);
-    color: white;
-}
-
-.btn-epic.btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
-}
-
-/* Comments Epic */
-.comments-epic {
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-}
-
-.comment-epic {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
-}
-
-.comment-epic:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-}
-
-.comment-header-epic {
-    display: flex;
-    justify-content: between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-
-.comment-author-epic {
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
-
-.author-avatar-epic {
-    width: 32px;
-    height: 32px;
-    background: var(--gradient-blue);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.875rem;
-    margin-right: 0.75rem;
-}
-
-.author-info-epic strong {
-    display: block;
-    color: #1f2937;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.author-info-epic small {
-    color: #64748b;
-    font-size: 0.75rem;
-}
-
-.comment-actions-epic {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.btn-icon-epic {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    color: #64748b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-icon-epic:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #374151;
-}
-
-.btn-icon-epic.btn-danger:hover {
-    background: #fecaca;
-    color: #dc2626;
-}
-
-.comment-content-epic {
-    color: #374151;
-    font-size: 0.875rem;
-    line-height: 1.6;
-}
-
-.empty-state-epic {
-    text-align: center;
-    padding: 2rem;
-    color: #9ca3af;
-}
-
-.empty-state-epic i {
-    margin-bottom: 0.5rem;
-    opacity: 0.6;
-}
-
-/* Text Colors */
-.text-blue { color: var(--color-blue) !important; }
-.text-orange { color: var(--color-orange) !important; }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .horizontal-timeline {
-        flex-direction: column;
-        gap: 2rem;
-    }
-    
-    .timeline-track {
-        display: none;
-    }
-    
-    .epic-card-header {
-        padding: 1rem;
-    }
-    
-    .epic-card-body {
-        padding: 1rem;
-    }
-    
-    .step-circle {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .step-icon {
-        font-size: 1.25rem;
-    }
-}
-
-/* Scrollbar personalizada */
-.comments-epic::-webkit-scrollbar {
-    width: 6px;
-}
-
-.comments-epic::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 3px;
-}
-
-.comments-epic::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.comments-epic::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* ========================================
-   ESTILOS PARA LA NUEVA ESTRUCTURA
-   ======================================== */
-
-/* TARJETA UNIFICADA */
-.unified-info-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-    height: 420px;
-    display: flex;
-    flex-direction: column;
-}
-
-.unified-header {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: white;
-    padding: 0.6rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.unified-icon {
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    margin-right: 0.75rem;
-}
-
-.unified-title h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.unified-sla {
-    text-align: right;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.unified-sla .sla-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-}
-
-.unified-body {
-    padding: 1.5rem;
-    flex: 1;
-    overflow-y: auto;
-}
-
-.info-section {
-    height: 100%;
-}
-
-/* Encabezados sticky para las secciones principales */
-.section-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid #f3f4f6;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(15px);
-    position: sticky;
-    top: -25px;
-    z-index: 200;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-top: 3px solid #1e40af;
-}
-
-.section-header i {
-    font-size: 1.25rem;
-    margin-right: 0.75rem;
-}
-
-.section-header h5 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    color: #1f2937;
-}
-
-.adjuntos-title h5 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: white;
-}
-
-.section-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-}
-
-.info-label {
-    font-size: 0.875rem;
-    color: #6b7280;
-    font-weight: 500;
-    flex: 1;
-}
-
-.info-value {
-    font-size: 0.875rem;
-    color: #111827;
-    font-weight: 600;
-    text-align: right !important;
-    flex: 1;
-    direction: ltr;
-}
-
-/* TIMELINE SÚPER ANGOSTO HORIZONTALMENTE */
-.compact-timeline-section {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-    /* Mismo formato que unified-info-card */
-}
-
-.timeline-header {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: white;
-    padding: 0.4rem 0.8rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0;
-}
-
-.timeline-header h5 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    color: white;
-}
-
-.timeline-header h5 i {
-    margin-right: 0.4rem;
-    font-size: 0.85rem;
-}
-
-.timeline-header h5::after {
-    display: none; /* Quitar la línea decorativa */
-}
-
-/* TIMELINE SÚPER DELGADO Y HORIZONTAL */
-.slim-timeline {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    padding: 0.4rem 1.2rem;
-    margin: 0 auto;
-    gap: 0;
-    max-width: 100%;
-}
-
-/* LÍNEA CONECTORA SÚPER DELGADA */
-.slim-timeline::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 1.5rem;
-    right: 1.5rem;
-    height: 1px;
-    background: linear-gradient(90deg, 
-        #22c55e 0%, 
-        #22c55e 30%, 
-        #f59e0b 30%, 
-        #f59e0b 60%, 
-        #94a3b8 60%, 
-        #94a3b8 100%
-    );
-    z-index: 1;
-    transform: translateY(-50%);
-}
-
-/* PASO DEL TIMELINE */
-.timeline-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 2;
-    flex: 1;
-    transition: all 0.3s ease;
-}
-
-.timeline-step:hover {
-    transform: translateY(-2px);
-}
-
-/* PUNTO/ICONO DEL PASO */
-.step-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6rem;
-    margin-bottom: 0.25rem;
-    position: relative;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
-
-/* ESTADOS DE LOS PUNTOS */
-.timeline-step.completed .step-dot {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: white;
-    box-shadow: 0 3px 12px rgba(34, 197, 94, 0.3);
-}
-
-.timeline-step.active .step-dot {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
-    animation: activePulse 2s ease-in-out infinite alternate;
-}
-
-.timeline-step.pending .step-dot {
-    background: #f8fafc;
-    color: #9ca3af;
-    border-color: #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-@keyframes activePulse {
-    0% {
-        box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4);
-    }
-    100% {
-        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
-    }
-}
-
-/* ETIQUETA DEL PASO */
-.step-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.05rem;
-}
-
-.step-name {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #374151;
-    line-height: 1.1;
-    word-break: break-word;
-    max-width: 70px;
-}
-
-.step-sla {
-    font-size: 0.55rem;
-    font-weight: 400;
-    color: #9ca3af;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 0.05rem 0.25rem;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    white-space: nowrap;
-}
-
-/* COLORES PARA DIFERENTES ESTADOS */
-.timeline-step.completed .step-name {
-    color: #166534;
-}
-
-.timeline-step.completed .step-sla {
-    color: #166534;
-    background: rgba(34, 197, 94, 0.1);
-    border-color: rgba(34, 197, 94, 0.2);
-}
-
-.timeline-step.active .step-name {
-    color: #92400e;
-    font-weight: 700;
-}
-
-.timeline-step.active .step-sla {
-    color: #92400e;
-    background: rgba(245, 158, 11, 0.1);
-    border-color: rgba(245, 158, 11, 0.2);
-}
-
-.timeline-step.pending .step-name {
-    color: #9ca3af;
-}
-
-.timeline-step.pending .step-sla {
-    color: #9ca3af;
-    background: rgba(0, 0, 0, 0.02);
-    border-color: rgba(0, 0, 0, 0.05);
-}
-
-
-
-/* SISTEMA DE PESTAÑAS */
-.tabs-section {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-}
-
-.tabs-header {
-    display: flex;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.tab-button {
-    flex: 1;
-    padding: 1rem 1.5rem;
-    background: none;
-    border: none;
-    color: #6b7280;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-bottom: 3px solid transparent;
-}
-
-.tab-button:hover {
-    color: #374151;
-    background: #f3f4f6;
-}
-
-.tab-button.active {
-    color: #1f2937;
-    background: white;
-    border-bottom-color: #3b82f6;
-    font-weight: 600;
-}
-
-.tabs-content {
-    background: white;
-}
-
-.tab-pane {
-    display: none;
-    padding: 1.5rem;
-    min-height: 400px;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-/* CONTENIDO DE PESTAÑAS */
-.historial-content,
-.comentarios-content,
-.documentos-content {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.historial-item,
-.comentario-item,
-.documento-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px solid #f3f4f6;
-}
-
-.historial-item:last-child,
-.comentario-item:last-child,
-.documento-item:last-child {
-    border-bottom: none;
-}
-
-.historial-avatar,
-.comentario-avatar,
-.documento-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.historial-avatar,
-.comentario-avatar {
-    background: #e5e7eb;
-    color: #6b7280;
-}
-
-.documento-icon {
-    background: #fee2e2;
-    color: #dc2626;
-    border-radius: 8px;
-}
-
-.historial-details,
-.comentario-details,
-.documento-details {
-    flex: 1;
-}
-
-.historial-header,
-.comentario-header,
-.documento-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.historial-header strong,
-.comentario-header strong,
-.documento-header strong {
-    color: #1f2937;
-    font-weight: 600;
-}
-
-.historial-date,
-.comentario-date,
-.documento-size {
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.historial-info,
-.comentario-text,
-.documento-obs {
-    color: #374151;
-    font-size: 0.875rem;
-    line-height: 1.5;
-}
-
-.documento-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.comentario-form {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.comentario-form .form-group {
-    margin-bottom: 1rem;
-}
-
-.comentario-form .form-control {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    resize: vertical;
-}
-
-.comentario-form .form-control:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.documento-upload {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #9ca3af;
-}
-
-.empty-state i {
-    margin-bottom: 1rem;
-    opacity: 0.6;
-}
-
-.empty-state p {
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-/* BOTONES DE ACCIÓN */
-.action-buttons-section {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    padding: 1.5rem;
-    border: 1px solid #e5e7eb;
-}
-
-.action-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1rem;
-}
-
-.action-btn {
-    padding: 0.875rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.action-btn.btn-success {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: white;
-}
-
-.action-btn.btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
-}
-
-.action-btn.btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-}
-
-.action-btn.btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-}
-
-.action-btn.btn-outline-primary {
-    background: white;
-    color: #3b82f6;
-    border: 2px solid #3b82f6;
-}
-
-.action-btn.btn-outline-primary:hover {
-    background: #3b82f6;
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* RESPONSIVE */
-@media (max-width: 1024px) {
-    .compact-timeline {
-        margin: 0 1rem;
-    }
-    
-    .compact-timeline::before {
-        left: 2rem;
-        right: 2rem;
-    }
-    
-    .timeline-item {
-        max-width: 160px;
-    }
-    
-    .timeline-stage {
-        padding: 1rem 0.75rem;
-    }
-    
-    .timeline-dot {
-        width: 48px;
-        height: 48px;
-        font-size: 1rem;
-    }
-    
-    .timeline-title {
-        font-size: 0.875rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .unified-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .unified-body {
-        padding: 1rem;
-    }
-    
-    .compact-timeline-section {
-        padding: 2rem 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .timeline-header h5 {
-        font-size: 1.3rem;
-    }
-    
-    .compact-timeline {
-        flex-direction: column;
-        align-items: stretch;
-        margin: 0 auto;
-        gap: 1rem;
-        padding: 1rem 0;
-        max-width: 80%;
-    }
-    
-    .compact-timeline::before {
-        display: none;
-    }
-    
-    .timeline-item {
-        max-width: 100%;
-        transform: none !important;
-    }
-    
-    .timeline-item:hover {
-        transform: none;
-    }
-    
-    .timeline-stage {
-        padding: 1.5rem 1rem;
-    }
-    
-    .timeline-dot {
-        width: 56px;
-        height: 56px;
-        font-size: 1.25rem;
-    }
-    
-    .timeline-title {
-        font-size: 1rem;
-    }
-    
-    /* Mobile Timeline Connector */
-    .timeline-item:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        bottom: -1rem;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 2px;
-        height: 1.5rem;
-        background: linear-gradient(180deg, transparent 0%, #e5e7eb 50%, transparent 100%);
-    }
-    
-    .timeline-item.completed:not(:last-child)::after {
-        background: linear-gradient(180deg, transparent 0%, #22c55e 50%, transparent 100%);
-    }
-    
-    .timeline-item.active:not(:last-child)::after {
-        background: linear-gradient(180deg, transparent 0%, #f59e0b 50%, transparent 100%);
-    }
-    
-    .tabs-header {
-        flex-direction: column;
-    }
-    
-    .tab-button {
-        text-align: left;
-    }
-    
-    .action-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .historial-item,
-    .comentario-item,
-    .documento-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .historial-avatar,
-    .comentario-avatar,
-    .documento-icon {
-        align-self: center;
-    }
-}
-
-/* ANIMACIONES */
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-/* SCROLLBAR PERSONALIZADA */
-.historial-content::-webkit-scrollbar,
-.comentarios-content::-webkit-scrollbar,
-.documentos-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.historial-content::-webkit-scrollbar-track,
-.comentarios-content::-webkit-scrollbar-track,
-.documentos-content::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 3px;
-}
-
-.historial-content::-webkit-scrollbar-thumb,
-.comentarios-content::-webkit-scrollbar-thumb,
-.documentos-content::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.historial-content::-webkit-scrollbar-thumb:hover,
-.comentarios-content::-webkit-scrollbar-thumb:hover,
-.documentos-content::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* ========================================
-   ESTILOS MODERNOS PARA COMENTARIOS
-   ======================================== */
-
-/* Header de comentarios */
-.comentarios-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 0 1.5rem 0;
-    border-bottom: 2px solid #f1f5f9;
-    margin-bottom: 1.5rem;
-}
-
-.header-info h6 {
-    color: #1f2937;
-    font-weight: 700;
-    margin: 0;
-}
-
-.header-info small {
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.comentarios-count .badge {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-}
-
-/* Formulario moderno de comentarios */
-.comentario-form-modern {
-    background: white;
-    border: 2px solid #e5e7eb;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.comentario-form-modern:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
-}
-
-.form-header {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1rem;
-    margin-right: 0.75rem;
-}
-
-.user-info strong {
-    display: block;
-    color: #1f2937;
-    font-weight: 600;
-}
-
-.user-info small {
-    color: #6b7280;
-    font-size: 0.75rem;
-}
-
-.form-body {
-    padding: 1.5rem;
-}
-
-.form-control-modern {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #f1f5f9;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    line-height: 1.6;
-    resize: vertical;
-    transition: all 0.3s ease;
-    background: #fafbfc;
-}
-
-.form-control-modern:focus {
-    outline: none;
-    border-color: #3b82f6;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.char-counter {
-    text-align: right;
-    margin-top: 0.5rem;
-}
-
-.form-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: #fafbfc;
-    border-top: 1px solid #e5e7eb;
-}
-
-.form-actions-left,
-.form-actions-right {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.btn-action-secondary {
-    padding: 0.5rem 1rem;
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    color: #6b7280;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-action-secondary:hover {
-    background: #f3f4f6;
-    border-color: #9ca3af;
-    color: #374151;
-}
-
-.btn-cancel {
-    padding: 0.5rem 1rem;
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    color: #6b7280;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-cancel:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
-}
-
-.btn-enviar {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-enviar:hover:not(:disabled) {
-    background: linear-gradient(135deg, #16a34a, #15803d);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-}
-
-.btn-enviar:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.loading-spinner {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Lista de comentarios moderna */
-.comentarios-lista {
-    max-height: 600px;
-    overflow-y: auto;
-}
-
-.comentario-item-modern {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-bottom: 1px solid #f1f5f9;
-    transition: all 0.2s ease;
-}
-
-.comentario-item-modern:hover {
-    background: #fafbfc;
-}
-
-.comentario-item-modern:last-child {
-    border-bottom: none;
-}
-
-.comentario-avatar-modern {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6b7280;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.comentario-content-modern {
-    flex: 1;
-}
-
-.comentario-header-modern {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-
-.author-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.author-name {
-    color: #1f2937;
-    font-weight: 600;
-}
-
-.author-role {
-    background: #e0f2fe;
-    color: #0277bd;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.comentario-date-modern {
-    color: #9ca3af;
-    font-size: 0.875rem;
-}
-
-.comentario-actions {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.btn-action-mini {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: none;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-action-mini:hover {
-    background: #f3f4f6;
-    color: #6b7280;
-}
-
-.btn-action-mini.text-danger:hover {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.comentario-text-modern {
-    color: #374151;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-    font-size: 0.875rem;
-}
-
-.comentario-footer-modern {
-    display: flex;
-    gap: 1rem;
-}
-
-.btn-reaction {
-    background: none;
-    border: none;
-    color: #9ca3af;
-    font-size: 0.875rem;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-}
-
-.btn-reaction:hover {
-    background: #f3f4f6;
-    color: #6b7280;
-}
-
-/* Estado vacío moderno */
-.empty-state-modern {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: #9ca3af;
-}
-
-.empty-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #f1f5f9, #e5e7eb);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.5rem;
-    font-size: 2rem;
-    color: #d1d5db;
-}
-
-.empty-state-modern h6 {
-    color: #6b7280;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.empty-state-modern p {
-    color: #9ca3af;
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-/* Notificaciones toast */
-.toast-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    color: white;
-    font-weight: 500;
-    z-index: 99999;
-    transform: translateX(400px);
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    max-width: 400px;
-    word-wrap: break-word;
-}
-
-.toast-notification.show {
-    transform: translateX(0);
-}
-
-.toast-success {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-}
-
-.toast-error {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-
-.toast-content {
-    display: flex;
-    align-items: center;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .comentarios-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-    
-    .form-footer {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .form-actions-left,
-    .form-actions-right {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .form-actions-right {
-        flex-direction: row-reverse;
-    }
-    
-    .comentario-item-modern {
-        padding: 1rem;
-    }
-    
-    .author-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-    }
-    
-    .toast-notification {
-        left: 20px;
-        right: 20px;
-        transform: translateY(-100px);
-    }
-    
-    .toast-notification.show {
-        transform: translateY(0);
-    }
-}
-
-
-
-/* ==========================================
-   CHAT MODERNO - COMENTARIOS GENERALES
-   ========================================== */
-
-.chat-container-general {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e9ecef;
-    height: 400px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* Header del Chat General */
-.chat-header-general {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 16px 16px 0 0;
-}
-
-.chat-title-general {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.chat-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.8rem;
-}
-
-/* Área de Mensajes Generales */
-.chat-messages-general {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    display: flex;
-    flex-direction: column;
-}
-
-.chat-welcome-general {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    background: #e8f5e9;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border-left: 4px solid #4caf50;
-}
-
-.welcome-avatar-general {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #4caf50, #388e3c);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
-.welcome-message-general p {
-    margin: 0;
-    color: #2e7d32;
-    font-size: 0.8rem;
-    line-height: 1.3;
-}
-
-.welcome-message-general p:first-child {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-/* Input Container General */
-.chat-input-container-general {
-    background: white;
-    border-top: 1px solid #e9ecef;
-    padding: 12px 16px;
-    border-radius: 0 0 16px 16px;
-}
-
-.chat-form-general {
-    margin: 0;
-}
-
-.input-group-chat-general {
-    display: flex;
-    align-items: flex-end;
-    gap: 12px;
-}
-
-.user-avatar-chat-general {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.input-wrapper-general {
-    flex: 1;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 20px;
-    padding: 8px 16px;
-    transition: all 0.2s ease;
-}
-
-.input-wrapper-general:focus-within {
-    border-color: #28a745;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
-}
-
-.chat-input-general {
-    width: 100%;
-    border: none;
-    background: transparent;
-    resize: none;
-    outline: none;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.input-actions-general {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.attachment-button,
-.mention-button {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.attachment-button:hover,
-.mention-button:hover {
-    background: #e9ecef;
-    color: #28a745;
-}
-
-.char-counter-general {
-    font-size: 0.75rem;
-    color: #6c757d;
-    margin-left: auto;
-    margin-right: 8px;
-}
-
-.send-button-general {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.send-button-general:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.send-button-general:active {
-    transform: scale(0.95);
-}
-
-.loading-spinner-chat-general {
-    display: none;
-}
-
-/* Scrollbar personalizado para chat general */
-.chat-messages-general::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages-general::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.chat-messages-general::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 3px;
-}
-
-.chat-messages-general::-webkit-scrollbar-thumb:hover {
-    background: #adb5bd;
-}
-
-/* Animaciones y efectos */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-.message-bubble {
-    animation: fadeInUp 0.3s ease;
-}
-
-.message-bubble.own {
-    animation: slideInRight 0.3s ease;
-}
-
-.message-bubble.other {
-    animation: slideInLeft 0.3s ease;
-}
-
-/* Mejoras responsive */
-@media (max-width: 1199px) {
-    .chat-container-analista {
-        height: calc(100vh - 250px);
-    }
-}
-
-@media (max-width: 991px) {
-    .chat-container-analista {
-        position: static;
-        height: 420px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .chat-container-general {
-        height: 400px;
-    }
-    
-    .message-bubble {
-        max-width: 90%;
-    }
-    
-    .chat-header,
-    .chat-header-general {
-        padding: 12px 16px;
-    }
-    
-    .chat-title,
-    .chat-title-general {
-        font-size: 0.9rem;
-    }
-    
-    .chat-input-container,
-    .chat-input-container-general {
-        padding: 12px 16px;
-    }
-    
-    .input-group-chat,
-    .input-group-chat-general {
-        gap: 8px;
-    }
-    
-    .user-avatar-chat,
-    .user-avatar-chat-general {
-        width: 32px;
-        height: 32px;
-        font-size: 0.9rem;
-    }
-    
-    .send-button,
-    .send-button-general {
-        width: 32px;
-        height: 32px;
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 767px) {
-    .chat-container-analista,
-    .chat-container-general {
-        height: 350px;
-    }
-    
-    .message-bubble {
-        max-width: 95%;
-    }
-    
-    .message-content {
-        padding: 10px 14px;
-        font-size: 0.85rem;
-    }
-    
-    .message-meta {
-        font-size: 0.7rem;
-    }
-    
-    .chat-welcome-general {
-        padding: 12px;
-        margin-bottom: 16px;
-    }
-    
-    .welcome-avatar-general {
-        width: 32px;
-        height: 32px;
-        font-size: 1rem;
-    }
-    
-    .welcome-message-general p {
-        font-size: 0.8rem;
-    }
-}
-
-/* ===============================================
-   ESTILOS PARA LAS NUEVAS FUNCIONALIDADES
-   =============================================== */
-
-/* Estilos para botones de compliance */
-.info-row-with-check {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    padding: 8px;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
-}
-
-.compliance-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: 16px;
-    flex-shrink: 0;
-}
-
-.info-row-with-check:hover {
-    background-color: #f8f9fa;
-}
-
-.info-data {
-    flex: 1;
-}
-
-.info-data .info-label {
-    font-weight: 500;
-    color: #6c757d;
-    font-size: 0.85rem;
-    text-align: left;
-}
-
-.info-data .info-value {
-    font-weight: 600;
-    color: #212529;
-    font-size: 0.9rem;
-    text-align: left;
-}
-
-.compliance-actions {
-    display: flex;
-    gap: 4px;
-    margin-left: 16px;
-    flex-shrink: 0;
-}
-
-.btn-compliance {
-    width: 24px;
-    height: 24px;
-    border: 2px solid #dee2e6;
-    border-radius: 50%;
-    background: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.7rem;
-    color: #6c757d;
-    position: relative;
-}
-
-.btn-compliance:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-compliance.btn-good {
-    border-color: #3b82f6;
-    color: #3b82f6;
-}
-
-.btn-compliance.btn-good:hover {
-    background: #3b82f6;
-    color: white;
-}
-
-.btn-compliance.btn-good.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-.btn-compliance.btn-bad {
-    border-color: #dc3545;
-    color: #dc3545;
-}
-
-.btn-compliance.btn-bad:hover {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-compliance.btn-bad.active {
-    background: #dc3545;
-    color: white;
-    border-color: #dc3545;
-}
-
-.btn-compliance.btn-comment {
-    border-color: #1e40af;
-    color: #1e40af;
-}
-
-.btn-compliance.btn-comment:hover {
-    background: #1e40af;
-    color: white;
-}
-
-.btn-compliance.btn-comment.has-comment {
-    background: #1e40af;
-    color: white;
-    border-color: #1e40af;
-}
-
-.btn-compliance.btn-comment.has-comment::after {
-    content: '';
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 6px;
-    height: 6px;
-    background: #ffc107;
-    border-radius: 50%;
-    border: 1px solid white;
-}
-
-/* Animaciones para botones de compliance */
-@keyframes pulseGreen {
-    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-}
-
-@keyframes pulseRed {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-}
-
-@keyframes pulseBlue {
-    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
-}
-
-.btn-compliance.btn-good.active {
-    animation: pulseGreen 1s;
-}
-
-.btn-compliance.btn-bad.active {
-    animation: pulseRed 1s;
-}
-
-.btn-compliance.btn-comment.has-comment {
-    animation: pulseBlue 1s;
-}
-
-/* Estilos para el modal de comentarios */
-.modal-dialog.modal-lg {
-    max-width: 600px;
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #3b82f6, #1e40af);
-    color: white;
-    border-radius: 0.5rem 0.5rem 0 0;
-}
-
-/* Estilos para compliance en adjuntos */
-.adjunto-status-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
-    gap: 8px;
-}
-
-.adjunto-status-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.adjunto-status-line .compliance-actions {
-    margin-left: 0;
-    gap: 4px;
-}
-
-.adjunto-status-line .btn-compliance {
-    width: 18px;
-    height: 18px;
-    font-size: 0.6rem;
-}
-
-.modal-title {
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-.btn-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: white;
-    opacity: 0.8;
-}
-
-.btn-close:hover {
-    opacity: 1;
-}
-
-.modal-body .form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
-
-.modal-body .fw-bold {
-    padding: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-}
-
-.modal-body .text-primary {
-    color: #3b82f6 !important;
-}
-
-.modal-body .form-control {
-    border: 2px solid #dee2e6;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-}
-
-.modal-body .form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.modal-body .form-text {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-top: 0.25rem;
-}
-
-.modal-footer {
-    border-top: 1px solid #dee2e6;
-    padding: 1rem 1.5rem;
-}
-
-.modal-footer .btn {
-    padding: 0.5rem 1.5rem;
-    font-weight: 600;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
-}
-
-.modal-footer .btn-secondary {
-    background: #6c757d;
-    border-color: #6c757d;
-}
-
-.modal-footer .btn-secondary:hover {
-    background: #5a6268;
-    border-color: #545b62;
-}
-
-.modal-footer .btn-primary {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border-color: #007bff;
-}
-
-.modal-footer .btn-primary:hover {
-    background: linear-gradient(135deg, #0056b3, #004085);
-    border-color: #0056b3;
-}
-
-/* Tooltips para los botones */
-.btn-compliance[title]:hover::after {
-    content: attr(title);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    z-index: 1000;
-    margin-bottom: 0.25rem;
-}
-
-/* Responsive para botones de compliance */
-@media (max-width: 768px) {
-    .btn-compliance {
-        width: 22px;
-        height: 22px;
-        font-size: 0.65rem;
-    }
-    
-    .compliance-actions {
-        gap: 3px;
-    }
-    
-    .info-row-with-check {
-        padding: 6px;
-    }
-    
-    .info-data .info-label,
-    .info-data .info-value {
-        font-size: 0.8rem;
-    }
-}
-
-/* Estilos para la sección de upload de documentos */
-.upload-section {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    border: 1px solid #e9ecef;
-}
-
-.upload-header h6 {
-    color: #495057;
-    margin-bottom: 16px;
-    font-weight: 600;
-}
-
-.upload-zone {
-    border: 2px dashed #dee2e6;
-    border-radius: 8px;
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: white;
-}
-
-.upload-zone:hover {
-    border-color: #28a745;
-    background: #f8fff9;
-}
-
-.upload-zone.drag-over {
-    border-color: #28a745;
-    background: #f8fff9;
-    border-style: solid;
-}
-
-.upload-icon {
-    font-size: 2rem;
-    color: #6c757d;
-    margin-bottom: 12px;
-}
-
-.upload-text {
-    color: #495057;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-}
-
-.upload-link {
-    color: #28a745;
-    text-decoration: underline;
-    cursor: pointer;
-}
-
-.upload-hint {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-
-/* Estilos para lista de documentos */
-.documentos-list {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    overflow: hidden;
-}
-
-.documento-item {
-    display: flex;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #f1f3f4;
-    transition: background-color 0.2s ease;
-}
-
-.documento-item:last-child {
-    border-bottom: none;
-}
-
-.documento-item:hover {
-    background-color: #f8f9fa;
-}
-
-.documento-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 8px;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 16px;
-    font-size: 1.5rem;
-}
-
-.documento-details {
-    flex: 1;
-}
-
-.documento-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 4px;
-}
-
-.documento-header strong {
-    color: #212529;
-    font-size: 0.95rem;
-}
-
-.documento-size {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-
-.documento-status {
-    margin-top: 4px;
-}
-
-.documento-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.documento-validation {
-    display: flex;
-    gap: 4px;
-}
-
-.validation-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.8rem;
-}
-
-.validation-btn.valid {
-    background: #e8f5e9;
-    color: #2e7d32;
-}
-
-.validation-btn.valid:hover {
-    background: #2e7d32;
-    color: white;
-}
-
-.validation-btn.invalid {
-    background: #ffebee;
-    color: #c62828;
-}
-
-.validation-btn.invalid:hover {
-    background: #c62828;
-    color: white;
-}
-
-.validation-btn.active.valid {
-    background: #2e7d32;
-    color: white;
-}
-
-.validation-btn.active.invalid {
-    background: #c62828;
-    color: white;
-}
-
-/* Estilos para solicitudes relacionadas */
-.related-requests-section {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    height: 420px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-}
-
-.related-header {
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid #f1f3f4;
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: white;
-    border-radius: 12px 12px 0 0;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.related-header h5 {
-    color: white;
-    margin-bottom: 4px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.related-header small {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.8rem;
-    display: block;
-}
-
-.related-icon {
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.related-title {
-    flex: 1;
-}
-
-.related-content {
-    padding: 16px 20px;
-    flex: 1;
-    overflow-y: auto;
-}
-
-.search-info {
-    display: flex;
-    align-items: center;
-    color: #6c757d;
-    font-size: 0.85rem;
-    margin-bottom: 16px;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-}
-
-.search-info i {
-    color: #28a745;
-}
-
-.related-list {
-    margin-bottom: 20px;
-}
-
-.related-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #f1f3f4;
-    margin-bottom: 8px;
-    transition: all 0.2s ease;
-}
-
-.related-item:hover {
-    background: #f8f9fa;
-    border-color: #dee2e6;
-}
-
-.related-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-.related-details {
-    flex: 1;
-}
-
-.related-header-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.related-header-item strong {
-    color: #212529;
-    font-size: 0.9rem;
-}
-
-.related-date {
-    color: #6c757d;
-    font-size: 0.75rem;
-}
-
-.related-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-}
-
-.related-amount {
-    color: #495057;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.related-description {
-    color: #6c757d;
-    font-size: 0.8rem;
-    line-height: 1.3;
-}
-
-.related-actions {
-    flex-shrink: 0;
-}
-
-.related-summary {
-    border-top: 1px solid #f1f3f4;
-    padding-top: 16px;
-}
-
-.summary-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.summary-label {
-    color: #6c757d;
-    font-size: 0.85rem;
-}
-
-.summary-value {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #212529;
-}
-
-/* SECCIÓN COMPACTA DE COMENTARIOS DE ANALISTA */
-.comentarios-analista-section-compact {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e5e7eb;
-    min-height: 500px;
-    max-height: 700px;
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1rem;
-    position: relative;
-    z-index: 10;
-}
-
-.comentarios-analista-header-compact {
-    background: linear-gradient(135deg, #3b82f6, #1e40af);
-    color: white;
-    padding: 0.75rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 12px 12px 0 0;
-    flex-shrink: 0;
-}
-
-.comentarios-analista-header-compact h6 {
-    margin: 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.analista-actions .btn {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-}
-
-.comentarios-analista-body-compact {
-    padding: 1rem;
-    flex: 1;
-    overflow-y: auto;
-    min-height: 100px;
-    max-height: 200px; /* Altura máxima para la lista de comentarios */
-}
-
-.comentarios-lista-compact {
-    margin-bottom: 0;
-}
-
-.nuevo-comentario-form-compact {
-    border-top: 1px solid #e5e7eb;
-    padding: 1rem;
-    background: #f8fafc;
-    border-radius: 0 0 12px 12px;
-    flex-shrink: 0;
-}
-
-.comentario-form-compact .form-body-compact {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.comentario-textarea-compact {
-    border: 1px solid #d1d5db;
-    border-radius: 20px;
-    padding: 0.75rem 1rem;
-    font-size: 0.85rem;
-    resize: none;
-    background: white;
-    transition: border-color 0.2s ease;
-}
-
-.comentario-textarea-compact:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-footer-compact {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.char-counter-compact {
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-.form-actions-compact {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.form-actions-compact .btn {
-    border-radius: 20px;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.form-actions-compact .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Estilos para preview de bullet points */
-.bullet-points-preview {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    overflow: hidden;
-}
-
-.preview-header {
-    background: #e9ecef;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #dee2e6;
-    display: flex;
-    align-items: center;
-    font-size: 0.9rem;
-}
-
-.preview-header strong {
-    color: #495057;
-    margin-right: auto;
-}
-
-.preview-content {
-    padding: 1rem;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.bullet-point-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    padding: 0.5rem;
-    background: white;
-    border-radius: 6px;
-    border-left: 3px solid #007bff;
-}
-
-.bullet-point-item:last-child {
-    margin-bottom: 0;
-}
-
-.bullet-point-icon {
-    color: #007bff;
-    font-size: 0.8rem;
-    margin-top: 0.2rem;
-    flex-shrink: 0;
-}
-
-.bullet-point-content {
-    flex: 1;
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-.bullet-point-field {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.25rem;
-}
-
-.bullet-point-comment {
-    color: #6c757d;
-}
-
-.bullet-point-status {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-}
-
-.bullet-point-status .badge {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
-}
-
-.no-bullet-points {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-    padding: 1rem;
-}
-
-/* Responsive para bullet points */
-@media (max-width: 768px) {
-    .bullet-points-preview {
-        margin-bottom: 0.75rem;
-    }
-    
-    .preview-header {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-    }
-    
-    .preview-content {
-        padding: 0.75rem;
-        max-height: 150px;
-    }
-    
-    .bullet-point-item {
-        padding: 0.4rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .bullet-point-content {
-        font-size: 0.8rem;
-    }
-    
-    .bullet-point-status {
-        font-size: 0.7rem;
-    }
-    
-    .form-actions-compact {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .form-actions-compact .btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-/* ==========================================
-   ESTILOS PARA ANÁLISIS UNIFICADO
-   ========================================== */
-
-.analisis-unificado-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.analisis-seccion-editable {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1rem;
-}
-
-.analisis-seccion-editable .form-label {
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.analisis-seccion-bullets {
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1rem;
-}
-
-.bullets-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
-    color: #374151;
-}
-
-.bullets-header strong {
-    margin-right: auto;
-}
-
-.bullets-content {
-    max-height: 150px;
-    overflow-y: auto;
-    background: white;
-    border-radius: 6px;
-    padding: 0.75rem;
-}
-
-.bullets-placeholder {
-    text-align: center;
-    color: #6b7280;
-    padding: 1rem;
-    font-style: italic;
-}
-
-.analisis-preview {
-    background: #f0f9ff;
-    border: 1px solid #0ea5e9;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 0.5rem;
-}
-
-.analisis-preview .preview-header {
-    background: #0ea5e9;
-    color: white;
-    margin: -1rem -1rem 1rem -1rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px 8px 0 0;
-    font-size: 0.9rem;
-}
-
-.analisis-preview .preview-content {
-    background: white;
-    border-radius: 6px;
-    padding: 1rem;
-    max-height: 200px;
-    overflow-y: auto;
-    line-height: 1.6;
-    font-size: 0.9rem;
-}
-
-.analisis-preview .preview-content p {
-    margin-bottom: 1rem;
-}
-
-.analisis-preview .preview-content p:last-child {
-    margin-bottom: 0;
-}
-
-/* Estilos para bullet points en el análisis unificado */
-.bullet-point-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border-left: 3px solid #28a745;
-}
-
-.bullet-point-item:last-child {
-    margin-bottom: 0;
-}
-
-.bullet-point-icon {
-    font-size: 0.9rem;
-    margin-top: 0.1rem;
-    flex-shrink: 0;
-    font-weight: bold;
-}
-
-.bullet-point-content {
-    flex: 1;
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-.bullet-point-field {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.25rem;
-}
-
-.bullet-point-comment {
-    color: #6c757d;
-}
-
-/* Responsive para análisis unificado */
-@media (max-width: 768px) {
-    .comentarios-analista-section-compact {
-        min-height: 400px;
-        max-height: 600px;
-    }
-    
-    .analisis-unificado-container {
-        gap: 0.75rem;
-    }
-    
-    .analisis-seccion-editable,
-    .analisis-seccion-bullets {
-        padding: 0.75rem;
-    }
-    
-    .bullets-content {
-        max-height: 120px;
-    }
-    
-    .analisis-preview .preview-content {
-        max-height: 150px;
-        font-size: 0.85rem;
-    }
-    
-    .comentarios-analista-body-compact {
-        max-height: 150px;
-    }
-}
-
-/* ==========================================
-   ESTILOS PARA TABS SECTION
-   ========================================== */
-
-.tabs-section {
-    position: relative;
-    z-index: 5;
-    margin-top: 1rem;
-}
-
-/* ==========================================
-   ESTILOS PARA MODAL DE CONFIRMACIÓN
-   ========================================== */
-
-.comentarios-section {
-    margin-bottom: 1.5rem;
-}
-
-.comentarios-container {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 1rem;
-    background: #f8f9fa;
-}
-
-.comentario-confirmacion {
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-left: 4px solid #007bff;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.comentario-confirmacion:last-child {
-    margin-bottom: 0;
-}
-
-.comentario-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.comentario-header strong {
-    color: #007bff;
-    font-size: 0.9rem;
-}
-
-.comentario-header small {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-
-.comentario-texto {
-    color: #495057;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-.bullet-points-confirmacion {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
-}
-
-.bullet-points-confirmacion h6 {
-    color: #495057;
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-}
-
-.bullet-points-confirmacion ul {
-    margin: 0;
-    padding-left: 1.5rem;
-}
-
-.bullet-points-confirmacion li {
-    color: #6c757d;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    margin-bottom: 0.25rem;
-}
-
-.bullet-points-confirmacion li:last-child {
-    margin-bottom: 0;
-}
-
-/* Responsive para modal de confirmación */
-@media (max-width: 768px) {
-    .comentarios-container {
-        max-height: 200px;
-        padding: 0.75rem;
-    }
-    
-    .comentario-confirmacion {
-        padding: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-    
-    .comentario-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-    }
-    
-    .bullet-points-confirmacion {
-        padding: 0.75rem;
-    }
-    
-    .bullet-points-confirmacion ul {
-        padding-left: 1rem;
-    }
-}
-
-/* Estilos para el mensaje de bienvenida del chat de analista */
-.chat-welcome {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
-    border-left: 4px solid #3b82f6;
-}
-
-.welcome-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
-.welcome-message p {
-    margin: 0;
-    color: #0056b3;
-    font-size: 0.8rem;
-    line-height: 1.3;
-}
-
-.welcome-message p:first-child {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-/* Mejoras responsive para nuevas secciones */
-@media (max-width: 991px) {
-    .related-requests-section {
-        margin-top: 20px;
-    }
-    
-    .comentarios-analista-body-compact {
-        max-height: calc(350px - 120px); /* Altura reducida en móviles */
-    }
-    
-    .comentario-textarea-compact {
-        border-radius: 12px; /* Menos redondeado en móviles */
-        padding: 0.6rem 0.8rem;
-    }
-    
-    .form-actions-compact .btn {
-        border-radius: 12px;
-        padding: 0.4rem 0.8rem;
-    }
-}
-
-@media (max-width: 991px) {
-    .documento-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-    
-    .documento-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .related-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .related-header-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-}
-
-@media (max-width: 767px) {
-    .info-row-with-check {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .compliance-check {
-        margin-left: 0;
-        align-self: flex-end;
-    }
-    
-    .upload-zone {
-        padding: 16px;
-    }
-    
-    .upload-icon {
-        font-size: 1.5rem;
-    }
-    
-    .documento-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 1.2rem;
-    }
-    
-    .validation-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 0.7rem;
-    }
-    
-    .related-icon {
-        width: 28px;
-        height: 28px;
-        font-size: 0.9rem;
-    }
-}
-
-/* ===============================================
-   ESTILOS PARA ADJUNTOS ASOCIADOS
-   =============================================== */
-
-.adjuntos-container {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    height: 420px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-}
-
-.adjuntos-header {
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid #f1f3f4;
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: white;
-    border-radius: 12px 12px 0 0;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.adjuntos-icon {
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.adjuntos-title {
-    flex: 1;
-}
-
-.adjuntos-title h5 {
-    margin: 0;
-}
-
-.adjuntos-title small {
-    display: block;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.adjuntos-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.adjuntos-actions .btn {
-    border-radius: 20px;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    transition: all 0.2s ease;
-}
-
-.adjuntos-actions .btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.adjuntos-actions .btn-success {
-    background: rgba(40, 167, 69, 0.9);
-    border-color: rgba(40, 167, 69, 0.9);
-}
-
-    .adjuntos-actions .btn-success:hover {
-        background: rgba(40, 167, 69, 1);
-        border-color: rgba(40, 167, 69, 1);
-    }
-
-/* Responsive para adjuntos-actions */
-@media (max-width: 768px) {
-    .adjuntos-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .adjuntos-actions {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .adjuntos-actions .btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-.adjuntos-content {
-    padding: 16px 20px;
-    flex: 1;
-    overflow-y: auto;
-}
-
-.adjunto-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px;
-    border-radius: 8px;
-    border: 1px solid #f1f3f4;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
-}
-
-.adjunto-item:hover {
-    background: #f8f9fa;
-    border-color: #dee2e6;
-}
-
-.adjunto-item:last-child {
-    margin-bottom: 0;
-}
-
-.adjunto-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-.adjunto-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.adjunto-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #212529;
-    margin-bottom: 6px;
-    line-height: 1.3;
-    word-wrap: break-word;
-}
-
-.adjunto-status {
-    margin-bottom: 8px;
-}
-
-.adjunto-actions {
-    display: flex;
-    gap: 4px;
-}
-
-.adjunto-actions .btn {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-}
-
-/* ===============================================
-   ESTILOS PARA COMENTARIOS DE ANALISTA SECCIÓN
-   =============================================== */
-
-.comentarios-analista-section {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-}
-
-.comentarios-analista-header {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    color: white;
-    padding: 1rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.comentarios-analista-header h5 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0;
-    color: white;
-}
-
-.analista-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.analista-info .badge {
-    background: rgba(255, 255, 255, 0.2) !important;
-    color: white;
-    font-weight: 600;
-}
-
-.comentarios-analista-body {
-    padding: 1.5rem;
-}
-
-.comentarios-lista {
-    max-height: 300px;
-    overflow-y: auto;
-    margin-bottom: 1.5rem;
-    padding-right: 0.5rem;
-}
-
-.comentario-analista-item {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-left: 4px solid #dc3545;
-    transition: all 0.2s ease;
-}
-
-.comentario-analista-item:hover {
-    background: #f1f3f4;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.comentario-analista-item:last-child {
-    margin-bottom: 0;
-}
-
-.comentario-analista-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-
-.comentario-analista-author {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.comentario-analista-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.9rem;
-}
-
-.comentario-analista-info strong {
-    color: #dc3545;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.comentario-analista-info small {
-    color: #6c757d;
-    font-size: 0.75rem;
-    display: block;
-}
-
-.comentario-analista-numero {
-    background: #dc3545;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.comentario-analista-text {
-    color: #374151;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    background: white;
-    padding: 0.75rem;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.nuevo-comentario-form {
-    border-top: 2px solid #f1f3f4;
-    padding-top: 1.5rem;
-}
-
-.nuevo-comentario-form .form-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 1rem;
-}
-
-.analista-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.form-title strong {
-    color: #dc3545;
-    font-size: 1rem;
-}
-
-.form-title small {
-    color: #6c757d;
-    font-size: 0.85rem;
-    display: block;
-}
-
-.comentario-textarea {
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 1rem;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    resize: vertical;
-    transition: all 0.2s ease;
-}
-
-.comentario-textarea:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
-}
-
-.form-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-}
-
-.char-counter {
-    font-size: 0.8rem;
-    color: #6c757d;
-}
-
-.form-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.loading-spinner-analista {
-    display: none;
-}
-
-/* Ajustes para layout horizontal de 3 columnas */
-@media (min-width: 1200px) {
-    .info-section .section-header h5 {
-        font-size: 1rem;
-    }
-    
-    .info-row-with-check .info-label,
-    .info-row-with-check .info-value {
-        font-size: 0.85rem;
-    }
-    
-    .btn-compliance {
-        width: 22px;
-        height: 22px;
-        font-size: 0.65rem;
-    }
-    
-    .compliance-actions {
-        gap: 3px;
-    }
-}
-
-/* Estilos para el reloj en tiempo real */
-#reloj-tiempo-real {
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    color: #ffd700;
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-}
-
-#fecha-actual {
-    font-weight: 600;
-    color: #e0e7ff;
-}
-
-.card-header .opacity-75 .ms-3 {
-    display: inline-flex;
-    align-items: center;
-    white-space: nowrap;
-}
-
-/* Animación sutil para el reloj */
-#reloj-tiempo-real {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Colores personalizados para íconos de secciones */
-.section-header .text-info {
-    color: #0dcaf0 !important;
-    background: rgba(13, 202, 240, 0.1);
-    padding: 8px;
-    border-radius: 50%;
-}
-
-.section-header .text-primary {
-    color: #3b82f6 !important;
-    background: rgba(59, 130, 246, 0.1);
-    padding: 8px;
-    border-radius: 50%;
-}
-
-.section-header .text-warning {
-    color: #f59e0b !important;
-    background: rgba(245, 158, 11, 0.1);
-    padding: 8px;
-    border-radius: 50%;
-}
-
-/* Estilos para encabezados sticky */
-.section-content {
-    padding-top: 0.5rem;
-}
-
-.info-section {
-    margin-bottom: 1rem;
-}
-
-/* Ajuste para evitar superposición con encabezados sticky */
-.info-row-with-check:first-child {
-    margin-top: 0.25rem;
-}
-
-/* Transición suave para el sticky header */
-.section-header {
-    transition: all 0.3s ease;
-}
-
-.section-header:hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-    transform: translateY(-1px);
-}
-
-
-
-
-
-/* Responsive para adjuntos y comentarios de analista */
-@media (max-width: 1199px) {
-    .adjuntos-container {
-        margin-top: 20px;
-    }
-}
-
-/* Ajustes para encabezados sticky en responsive */
-@media (max-width: 768px) {
-    .section-header {
-        padding: 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .section-header i {
-        font-size: 1rem;
-        margin-right: 0.5rem;
-    }
-    
-    .section-header h5 {
-        font-size: 0.9rem;
-    }
-    
-    /* Ajustes para el reloj en móviles */
-    .card-header .opacity-75 .ms-3 {
-        margin-left: 0.5rem !important;
-        font-size: 0.8rem;
-    }
-    
-    #reloj-tiempo-real {
-        font-size: 0.8rem;
-    }
-    
-    #fecha-actual {
-        font-size: 0.8rem;
-    }
-    
-    /* Ajustes para headers sticky en móviles */
-    .section-header {
-        z-index: 250;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* Ajustes para el unified-sla en móviles */
-    .unified-sla {
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 0.25rem;
-    }
-    
-    .unified-sla .btn {
-        font-size: 0.7rem;
-        padding: 0.25rem 0.5rem;
-    }
-}
-
-/* Ajustes para pantallas muy pequeñas */
-@media (max-width: 576px) {
-    .card-header .opacity-75 .ms-3:nth-child(4) {
-        display: none; /* Ocultar fecha de creación en móviles muy pequeños */
-    }
-    
-    .card-header .opacity-75 {
-        flex-wrap: wrap;
-    }
-}
-
-@media (max-width: 991px) {
-    /* En pantallas medianas, cambiar a 1 columna por fila pero manteniendo 3 filas */
-    .unified-body .row .col-md-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-        margin-bottom: 1rem;
-    }
-}
-
-@media (max-width: 767px) {
-    /* En móviles, apilar verticalmente */
-    .unified-body .row .col-md-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-        margin-bottom: 1rem;
-    }
-    
-    /* En móviles, resumen y adjuntos se apilan verticalmente */
-    .row.mb-4 .col-8,
-    .row.mb-4 .col-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    
-    .row.mb-4 .col-4 {
-        margin-top: 1rem;
-    }
-    
-    /* Ajustes para comentarios de analista y solicitudes relacionadas en móviles */
-    .row.mb-4 .col-lg-8,
-    .row.mb-4 .col-lg-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    
-    .row.mb-4 .col-lg-4 {
-        margin-top: 1.5rem;
-    }
-    
-    /* Ajustes específicos para comentarios de analista en móviles */
-    .comentarios-analista-section-compact {
-        height: auto;
-        max-height: 350px;
-    }
-    
-    /* Ajustes específicos para solicitudes relacionadas en móviles */
-    .related-requests-section {
-        height: auto;
-        max-height: 300px;
-    }
-    
-    .related-header {
-        padding: 0.5rem;
-    }
-    
-    .related-header h5 {
-        font-size: 1rem;
-    }
-    
-    .related-icon {
-        width: 28px;
-        height: 28px;
-        font-size: 0.9rem;
-    }
-    
-    .adjunto-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .adjunto-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-    
-    .comentarios-analista-header {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-    }
-    
-    .analista-info {
-        justify-content: center;
-    }
-    
-    .comentario-analista-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .form-footer {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-    
-    .form-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-}
-</style>
 {% endblock %} 

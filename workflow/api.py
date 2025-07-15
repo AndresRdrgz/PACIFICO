@@ -344,7 +344,7 @@ def api_obtener_comentarios_analista_credito(request, solicitud_id):
         comentarios = CalificacionCampo.objects.filter(
             solicitud=solicitud,
             campo__startswith='comentario_analista_credito_'
-        ).order_by('fecha_creacion')
+        ).order_by('-fecha_creacion')  # Ordenar por fecha descendente (más reciente primero)
         
         # Formatear respuesta
         data = []
