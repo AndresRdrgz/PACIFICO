@@ -24,7 +24,7 @@ from .modelsWorkflow import (
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
     RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja
 )
-from .models import ClienteEntrevista
+from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
 from datetime import datetime, timedelta
@@ -2843,6 +2843,16 @@ def api_cambiar_etapa(request, solicitud_id):
                 'mensaje': f'Faltan {len(requisitos_faltantes)} requisito(s) obligatorio(s) para continuar a "{nueva_etapa.nombre}"'
             }, status=400)
         
+        # NUEVO: Verificar que todos los campos de compliance estén calificados
+        campos_sin_calificar = verificar_campos_compliance(solicitud)
+        if campos_sin_calificar:
+            return JsonResponse({
+                'error': 'Campos sin calificar',
+                'tipo_error': 'campos_sin_calificar',
+                'campos_sin_calificar': campos_sin_calificar,
+                'mensaje': f'Hay {len(campos_sin_calificar)} campo(s) sin calificar. Todos los campos deben estar marcados como "Bueno" o "Malo" antes de cambiar de etapa.'
+            }, status=400)
+        
         # Cerrar el historial actual si existe
         if solicitud.etapa_actual:
             historial_actual = HistorialSolicitud.objects.filter(
@@ -2975,6 +2985,91 @@ def verificar_requisitos_transicion(solicitud, transicion):
             })
     
     return requisitos_faltantes
+
+
+def verificar_campos_compliance(solicitud):
+    """
+    Verificar que todos los campos de compliance estén calificados (bueno o malo)
+    """
+    from workflow.models import CalificacionCampo
+    
+    # Definir todos los campos que deben estar calificados
+    campos_requeridos = [
+        # Campos de información del cliente
+        'empresa_privada', 'cargo', 'tiempo_servicio', 'salario', 'score',
+        # Campos de detalle de la solicitud
+        'valor_equipo', 'abono', 'monto_financiado', 'plazo', 'rentabilidad', 'total_letra',
+        # Campos del vehículo
+        'marca', 'modelo', 'año', 'transmision', 'kilometraje'
+    ]
+    
+    # Obtener calificaciones existentes
+    calificaciones = CalificacionCampo.objects.filter(
+        solicitud=solicitud
+    ).values_list('campo', 'estado')
+    
+    # Crear diccionario de calificaciones
+    calificaciones_dict = dict(calificaciones)
+    
+    # Verificar campos de documentos
+    requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud)
+    for requisito in requisitos_solicitud:
+        campo_doc = f'doc_{requisito.id}'
+        campos_requeridos.append(campo_doc)
+    
+    # Verificar campos sin calificar
+    campos_sin_calificar = []
+    
+    for campo in campos_requeridos:
+        estado = calificaciones_dict.get(campo)
+        if not estado or estado == 'sin_calificar':
+            # Obtener nombre legible del campo
+            nombre_campo = obtener_nombre_campo_legible(campo, solicitud)
+            campos_sin_calificar.append({
+                'campo': campo,
+                'nombre': nombre_campo,
+                'tipo': 'documento' if campo.startswith('doc_') else 'campo'
+            })
+    
+    return campos_sin_calificar
+
+
+def obtener_nombre_campo_legible(campo, solicitud):
+    """
+    Obtener el nombre legible de un campo para mostrar en errores
+    """
+    nombres_campos = {
+        'empresa_privada': 'Empresa Privada',
+        'cargo': 'Cargo',
+        'tiempo_servicio': 'Tiempo de Servicio',
+        'salario': 'Salario',
+        'score': 'Score',
+        'valor_equipo': 'Valor del Equipo',
+        'abono': 'Abono',
+        'monto_financiado': 'Monto Financiado',
+        'plazo': 'Plazo',
+        'rentabilidad': 'Rentabilidad',
+        'total_letra': 'Total de Letra',
+        'marca': 'Marca',
+        'modelo': 'Modelo',
+        'año': 'Año',
+        'transmision': 'Transmisión',
+        'kilometraje': 'Kilometraje'
+    }
+    
+    # Si es un campo de documento
+    if campo.startswith('doc_'):
+        try:
+            doc_id = int(campo.replace('doc_', ''))
+            requisito_solicitud = RequisitoSolicitud.objects.get(
+                id=doc_id, 
+                solicitud=solicitud
+            )
+            return f"Documento: {requisito_solicitud.requisito.nombre}"
+        except RequisitoSolicitud.DoesNotExist:
+            return f"Documento ID: {doc_id}"
+    
+    return nombres_campos.get(campo, campo)
 
 
 @login_required
