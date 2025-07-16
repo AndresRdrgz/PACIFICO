@@ -1,0 +1,883 @@
+<!-- ============================================
+     KANBAN VIEW PARTIAL TEMPLATE
+     ============================================ -->
+
+{% load workflow_filters %}
+
+<!-- Filtros Compactos para Kanban -->
+<div class="card card-custom mb-2">
+    <div class="card-body py-2">
+        <div class="row g-1 align-items-center">
+            <div class="col-6 col-md-3">
+                <select id="kanbanFiltroEtapa" class="form-select form-select-sm">
+                    <option value="">Todas las etapas</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <select id="kanbanFiltroSLA" class="form-select form-select-sm">
+                    <option value="">Todos los SLA</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-5">
+                <input type="text" id="kanbanBusquedaGlobal" class="form-control form-control-sm" 
+                       placeholder="Buscar...">
+            </div>
+            <div class="col-12 col-md-1">
+                <button type="button" class="btn btn-sm btn-outline-info w-100" id="kanbanLimpiarFiltros">
+                    <i class="fas fa-filter-circle-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenedor Kanban con scroll horizontal -->
+<div class="kanban-container" style="height: calc(100vh - 280px); overflow-y: hidden; min-height: 700px;">
+    <div class="kanban-board d-flex" style="overflow-x: auto; gap: 0.75rem; padding-bottom: 1rem;">
+        {% for etapa in pipeline.etapas.all %}
+        <div class="kanban-column" style="min-width: 320px; width: 320px; flex-shrink: 0;">
+            <div class="card shadow h-100" style="border: 2px solid #e9ecef; border-radius: 12px; background: #ffffff;">
+                <!-- Header de etapa con búsqueda -->
+                <div class="card-header text-white" style="background: #28a745; border-radius: 12px 12px 0 0; border: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold text-white">
+                            <i class="fas fa-list-ul me-2 text-white"></i>
+                            {{ etapa.nombre }}
+                        </h6>
+                        <span class="badge bg-white text-success fw-bold" id="count-etapa-{{ etapa.id }}">
+                            {{ solicitudes_por_etapa|get_item:etapa.id|length }}
+                        </span>
+                    </div>
+                    <input type="text" class="form-control form-control-sm etapa-search" 
+                           placeholder="Buscar en {{ etapa.nombre }}..." 
+                           data-etapa-id="{{ etapa.id }}"
+                           style="background: rgba(255,255,255,0.9); border: none;">
+                </div>
+                
+                <!-- Cuerpo de etapa con scroll -->
+                <div class="card-body p-3 kanban-column-body" 
+                     style="height: calc(100vh - 380px); overflow-y: auto; background: #f8f9fa;"
+                     data-etapa-id="{{ etapa.id }}">
+                    
+                    {% for s in solicitudes_por_etapa|get_item:etapa.id %}
+                    <div class="kanban-card mb-3" 
+                         draggable="true" 
+                         data-solicitud-id="{{ s.id }}"
+                         data-etapa-id="{{ etapa.id }}"
+                         data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
+                         data-estado="{{ s.estado_actual|default:'Sin estado' }}"
+                         data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
+                         data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
+                         data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}"
+                         data-codigo="{{ s.codigo }}"
+                         data-monto="{{ s.monto_formateado }}"
+                         data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
+                         data-sla-texto="{{ s.sla_restante }}"
+                         style="cursor: grab;">
+                         
+                        <div class="card shadow-sm border-0 kanban-card-inner {% if s.sla_color == 'text-danger' %}kanban-card-border-danger{% elif s.sla_color == 'text-warning' %}kanban-card-border-warning{% elif s.sla_color == 'text-success' %}kanban-card-border-success{% else %}kanban-card-border-secondary{% endif %}" 
+                             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
+                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
+                             onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'">
+                            <div class="card-body p-2" style="height: 100%;">
+                                <!-- Header compacto -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0" style="font-size: 0.9rem;">
+                                        <span class="text-decoration-none fw-bold text-primary solicitud-link-kanban" 
+                                           title="Ver detalles">
+                                            {{ s.codigo }}
+                                        </span>
+                                    </h6>
+                                    
+                                    <!-- Botón de cambio de etapa eliminado por solicitud del usuario -->
+                                </div>
+                                
+                                <!-- Contenido en 2 columnas -->
+                                <div class="row g-1" style="height: calc(100% - 35px);">
+                                    <!-- Columna izquierda -->
+                                    <div class="col-7">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-user text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                            <span style="font-size: 0.75rem; color: #495057;">{{ s.cliente_nombre|truncatechars:12 }}</span>
+                                        </div>
+                                        
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-dollar-sign text-success me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                            <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto_formateado }}</span>
+                                        </div>
+                                        
+                                        <div class="d-flex align-items-center">
+                                            {% if s.asignado_a != 'Sin asignar' %}
+                                                {% if s.asignado_a_user.userprofile.profile_picture %}
+                                                    <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}" 
+                                                         alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
+                                                         class="w-4 h-4 rounded-full object-cover me-1">
+                                                {% else %}
+                                                    <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
+                                                        {{ s.asignado_a_user.first_name|first|default:s.asignado_a_user.username|first|upper }}
+                                                    </div>
+                                                {% endif %}
+                                                <span style="font-size: 0.7rem; color: #6c757d;">{{ s.asignado_a|truncatechars:10 }}</span>
+                                            {% else %}
+                                                <i class="fas fa-user-slash text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                                <span style="font-size: 0.7rem; color: #6c757d;"><em>Sin asignar</em></span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Columna derecha -->
+                                    <div class="col-5">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-clock text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
+                                            <span class="{{ s.sla_color }} fw-bold" style="font-size: 0.7rem;">{{ s.sla_restante }}</span>
+                                        </div>
+                                        
+                                        <div class="mb-1">
+                                            <span class="badge bg-{{ s.estado_color }}" style="font-size: 0.6rem; padding: 2px 5px;">{{ s.estado_actual }}</span>
+                                        </div>
+                                        
+                                        <div class="d-flex align-items-center">
+                                            {% if s.prioridad %}
+                                            <span class="badge {% if s.prioridad == 'Alta' %}badge-prioridad-alta{% elif s.prioridad == 'Media' %}badge-prioridad-media{% elif s.prioridad == 'Baja' %}badge-prioridad-baja{% else %}badge-prioridad-sin{% endif %}">
+                                                {{ s.prioridad }}
+                                            </span>
+                                            {% endif %}
+                                            <small class="text-muted ms-auto" style="font-size: 0.65rem;">{{ s.fecha_inicio }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox text-muted mb-2"></i>
+                        <p class="text-muted small">Sin solicitudes</p>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Mensaje cuando no hay solicitudes -->
+                    <div class="no-solicitudes text-center py-4" style="display: none;">
+                        <i class="fas fa-inbox text-muted mb-2"></i>
+                        <p class="text-muted small">Sin solicitudes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Kanban Styles -->
+<style>
+/* Kanban Container Styles */
+.kanban-container {
+    position: relative;
+}
+
+.kanban-board {
+    min-height: 100%;
+}
+
+.kanban-column {
+    background: transparent;
+}
+
+.kanban-column-body {
+    position: relative;
+}
+
+/* Kanban Card Styles */
+.kanban-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.kanban-card-inner {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-height: 120px;
+}
+
+.kanban-card-border-danger {
+    border-left: 4px solid #dc3545;
+}
+
+.kanban-card-border-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.kanban-card-border-success {
+    border-left: 4px solid #28a745;
+}
+
+.kanban-card-border-secondary {
+    border-left: 4px solid #6c757d;
+}
+
+/* Drag and Drop Visual Effects */
+.drop-zone-active {
+    background: rgba(40, 167, 69, 0.1);
+    border: 2px dashed #28a745;
+}
+
+.drop-zone-hover {
+    background: rgba(40, 167, 69, 0.2);
+    border: 2px solid #28a745;
+}
+
+.drop-zone-valid {
+    background: rgba(40, 167, 69, 0.15);
+    border: 2px solid #28a745;
+}
+
+.drop-zone-invalid {
+    background: rgba(220, 53, 69, 0.15);
+    border: 2px solid #dc3545;
+}
+
+/* Kanban Column Header Styles */
+.kanban-column .card-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Requisitos Faltantes Indicator */
+.kanban-card.requisitos-faltantes {
+    position: relative;
+}
+
+.kanban-card.requisitos-faltantes::before {
+    content: "⚠️";
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #ffc107;
+    color: #212529;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Priority Badge Styles */
+.badge-prioridad-alta {
+    background-color: #dc3545;
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+}
+
+.badge-prioridad-media {
+    background-color: #ffc107;
+    color: #212529;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+}
+
+.badge-prioridad-baja {
+    background-color: #28a745;
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+}
+
+.badge-prioridad-sin {
+    background-color: #6c757d;
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+}
+
+/* Responsive Kanban */
+@media (max-width: 768px) {
+    .kanban-container {
+        height: calc(100vh - 320px) !important;
+    }
+    
+    .kanban-column {
+        min-width: 280px !important;
+        width: 280px !important;
+    }
+    
+    .kanban-column-body {
+        height: calc(100vh - 420px) !important;
+    }
+}
+
+/* Updating State for Cards */
+.kanban-card.updating {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.kanban-card.updating::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.kanban-card.updating::before {
+    content: "⏳";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 21;
+    font-size: 24px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+</style>
+
+<!-- Kanban JavaScript -->
+<script>
+$(document).ready(function() {
+    // ============================================
+    // FUNCIONALIDAD KANBAN
+    // ============================================
+    
+    // Solo ejecutar si estamos en vista Kanban
+    if ($('.kanban-board').length === 0) return;
+    
+    console.log('🎯 Inicializando funcionalidad Kanban');
+    
+    // Configurar filtros Kanban
+    function configurarFiltrosKanban() {
+        console.log('Configurando filtros Kanban...');
+        
+        // Obtener valores únicos de todas las tarjetas
+        var clientes = new Set();
+        var estados = new Set();
+        var asignados = new Set();
+        var slas = new Set();
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            
+            var cliente = $card.attr('data-cliente');
+            var estado = $card.attr('data-estado');
+            var asignado = $card.attr('data-asignado');
+            var sla = $card.attr('data-sla');
+            
+            if (cliente && cliente !== 'Sin cliente') clientes.add(cliente);
+            if (estado && estado !== 'Sin estado') estados.add(estado);
+            if (asignado && asignado !== 'Sin asignar') asignados.add(asignado);
+            if (sla && sla !== 'sin sla') slas.add(sla);
+        });
+        
+        // Poblar filtros
+        var $filtroCliente = $('#kanbanFiltroCliente');
+        var $filtroEstado = $('#kanbanFiltroEstado');
+        var $filtroAsignado = $('#kanbanFiltroAsignado');
+        var $filtroSLA = $('#kanbanFiltroSLA');
+        
+        // Limpiar opciones existentes (excepto la primera)
+        $filtroCliente.find('option:not(:first)').remove();
+        $filtroEstado.find('option:not(:first)').remove();
+        $filtroAsignado.find('option:not(:first)').remove();
+        $filtroSLA.find('option:not(:first)').remove();
+        
+        // Agregar nuevas opciones
+        Array.from(clientes).sort().forEach(function(cliente) {
+            $filtroCliente.append(`<option value="${cliente}">${cliente}</option>`);
+        });
+        
+        Array.from(estados).sort().forEach(function(estado) {
+            $filtroEstado.append(`<option value="${estado}">${estado}</option>`);
+        });
+        
+        Array.from(asignados).sort().forEach(function(asignado) {
+            $filtroAsignado.append(`<option value="${asignado}">${asignado}</option>`);
+        });
+        
+        Array.from(slas).sort().forEach(function(sla) {
+            var texto = sla === 'vencido' ? 'Vencido' : 
+                       sla === 'por vencer' ? 'Por vencer' : 
+                       sla === 'en tiempo' ? 'En tiempo' : sla;
+            $filtroSLA.append(`<option value="${sla}">${texto}</option>`);
+        });
+        
+        console.log('Filtros Kanban configurados:', {
+            clientes: clientes.size,
+            estados: estados.size,
+            asignados: asignados.size,
+            slas: slas.size
+        });
+        
+        // Actualizar contadores
+        actualizarContadoresKanban();
+    }
+    
+    // Aplicar filtros Kanban
+    function aplicarFiltrosKanban() {
+        if ($('.kanban-card').length === 0) return;
+        
+        var filtroCliente = $('#kanbanFiltroCliente').val();
+        var filtroEstado = $('#kanbanFiltroEstado').val();
+        var filtroAsignado = $('#kanbanFiltroAsignado').val();
+        var filtroSLA = $('#kanbanFiltroSLA').val();
+        var busquedaGlobal = $('#kanbanBusquedaGlobal').val().toLowerCase();
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            var mostrar = true;
+            
+            // Filtro cliente
+            if (filtroCliente && $card.attr('data-cliente') !== filtroCliente) {
+                mostrar = false;
+            }
+            
+            // Filtro estado
+            if (filtroEstado && $card.attr('data-estado') !== filtroEstado) {
+                mostrar = false;
+            }
+            
+            // Filtro asignado
+            if (filtroAsignado && $card.attr('data-asignado') !== filtroAsignado) {
+                mostrar = false;
+            }
+            
+            // Filtro SLA
+            if (filtroSLA && $card.attr('data-sla') !== filtroSLA) {
+                mostrar = false;
+            }
+            
+            // Búsqueda global
+            if (busquedaGlobal && !$card.attr('data-search').includes(busquedaGlobal)) {
+                mostrar = false;
+            }
+            
+            $card.toggle(mostrar);
+        });
+        
+        // Actualizar contadores y mostrar mensajes cuando no hay solicitudes
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    }
+    
+    // Actualizar contadores de etapas
+    function actualizarContadoresKanban() {
+        $('.kanban-column').each(function() {
+            var $column = $(this);
+            var etapaId = $column.find('.kanban-column-body').attr('data-etapa-id');
+            var count = $column.find('.kanban-card:visible').length;
+            $('#count-etapa-' + etapaId).text(count);
+        });
+    }
+    
+    // Mostrar mensajes cuando no hay solicitudes visibles
+    function mostrarMensajesVacios() {
+        $('.kanban-column-body').each(function() {
+            var $body = $(this);
+            var hasVisible = $body.find('.kanban-card:visible').length > 0;
+            $body.find('.no-solicitudes').toggle(!hasVisible);
+        });
+    }
+    
+    // Búsqueda por etapa
+    $('.etapa-search').on('input', function() {
+        var $input = $(this);
+        var etapaId = $input.attr('data-etapa-id');
+        var searchTerm = $input.val().toLowerCase();
+        
+        $('.kanban-column-body[data-etapa-id="' + etapaId + '"] .kanban-card').each(function() {
+            var $card = $(this);
+            var searchData = $card.attr('data-search');
+            var shouldShow = !searchTerm || searchData.includes(searchTerm);
+            $card.toggle(shouldShow);
+        });
+        
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    });
+    
+    // Event listeners para filtros Kanban
+    $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').on('change', aplicarFiltrosKanban);
+    $('#kanbanBusquedaGlobal').on('input', aplicarFiltrosKanban);
+    
+    // Limpiar filtros Kanban
+    $('#kanbanLimpiarFiltros').on('click', function() {
+        $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').val('');
+        $('#kanbanBusquedaGlobal').val('');
+        $('.etapa-search').val('');
+        $('.kanban-card').show();
+        actualizarContadoresKanban();
+        mostrarMensajesVacios();
+    });
+    
+    // Cambio de etapa desde dropdown en Kanban
+    $(document).on('click', '.cambiar-etapa-kanban', function(e) {
+        e.preventDefault();
+        
+        var $link = $(this);
+        var solicitudId = $link.data('solicitud-id');
+        var etapaId = $link.data('etapa-id');
+        var etapaNombre = $link.data('etapa-nombre');
+        
+        // Confirmar cambio con modal personalizado
+        mostrarModalConfirmacion(etapaNombre, function() {
+            // Función que se ejecuta al confirmar - AJAX directo para Kanban
+            console.log('Ejecutando cambio de etapa Kanban:', solicitudId, etapaId);
+            
+            // Usar función unificada
+            if (typeof window.ejecutarCambioEtapa === 'function') {
+                window.ejecutarCambioEtapa(solicitudId, etapaId, null, null, true, etapaNombre);
+            } else {
+                console.error('Función ejecutarCambioEtapa no disponible');
+            }
+        });
+    });
+    
+    // ============================================
+    // DRAG & DROP FUNCIONALIDAD
+    // ============================================
+    
+    function inicializarDragAndDrop() {
+        // Evitar inicialización múltiple
+        if ($('.kanban-card').data('drag-initialized')) {
+            console.log('Drag and drop ya inicializado, saltando...');
+            return;
+        }
+        
+        console.log('Configurando eventos de drag and drop...');
+        console.log('Tarjetas Kanban encontradas:', $('.kanban-card').length);
+        console.log('Columnas Kanban encontradas:', $('.kanban-column-body').length);
+        
+        // Marcar como inicializado
+        $('.kanban-card').data('drag-initialized', true);
+        
+        // Marcar tarjetas con requisitos faltantes
+        marcarTarjetasConRequisitosFaltantes();
+        
+        // Configurar eventos de drag para las tarjetas
+        $('.kanban-card').on('dragstart', function(e) {
+            var solicitudId = $(this).attr('data-solicitud-id');
+            var etapaActual = $(this).attr('data-etapa-id');
+            
+            console.log('🔄 Iniciando drag de solicitud:', solicitudId, 'desde etapa:', etapaActual);
+            
+            var dragData = JSON.stringify({
+                solicitudId: solicitudId,
+                etapaActual: etapaActual
+            });
+            
+            e.originalEvent.dataTransfer.setData('text/plain', dragData);
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            
+            console.log('📦 Datos de drag configurados:', dragData);
+            
+            $(this).addClass('dragging');
+            
+            // Agregar efecto visual a las zonas de drop
+            $('.kanban-column-body').addClass('drop-zone-active');
+        });
+        
+        $('.kanban-card').on('dragend', function(e) {
+            $(this).removeClass('dragging');
+            $('.kanban-column-body').removeClass('drop-zone-active');
+        });
+        
+        // Configurar eventos de drop para las columnas
+        $('.kanban-column-body').on('dragover', function(e) {
+            e.preventDefault();
+            $(this).addClass('drop-zone-hover');
+        });
+        
+        $('.kanban-column-body').on('dragleave', function(e) {
+            $(this).removeClass('drop-zone-hover drop-zone-valid drop-zone-invalid');
+        });
+        
+        $('.kanban-column-body').on('drop', function(e) {
+            e.preventDefault();
+            
+            var $dropZone = $(this);
+            var nuevaEtapaId = $dropZone.attr('data-etapa-id');
+            
+            console.log('🎯 Drop detectado en etapa:', nuevaEtapaId);
+            
+            // Remover clases de hover
+            $dropZone.removeClass('drop-zone-hover drop-zone-active');
+            $('.kanban-column-body').removeClass('drop-zone-active');
+            
+            try {
+                var data = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
+                var solicitudId = data.solicitudId;
+                var etapaActual = data.etapaActual;
+                
+                console.log('📥 Datos de drop recibidos:', data);
+                
+                // Verificar si es un movimiento válido
+                if (nuevaEtapaId === etapaActual) {
+                    console.log('Movimiento cancelado: misma etapa');
+                    return;
+                }
+                
+                // Validar transición antes de permitir el drop
+                if (typeof validarTransicionKanban === 'function') {
+                    validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje, requisitosFaltantes) {
+                        if (!esValida) {
+                            // Si hay requisitos faltantes, mostrar el modal de requisitos
+                            if (requisitosFaltantes && requisitosFaltantes.length > 0) {
+                                console.log('📋 Mostrando modal de requisitos faltantes:', requisitosFaltantes);
+                                
+                                // Obtener nombre de la nueva etapa
+                                var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
+                                nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
+                                
+                                // Usar la función global correcta que maneja la carga de requisitos
+                                if (typeof window.mostrarModalRequisitosFaltantes === 'function') {
+                                    console.log('✅ Función disponible, llamando con parámetros correctos');
+                                    try {
+                                        window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nuevaEtapaNombre, function() {
+                                            // Callback de éxito - proceder con el cambio
+                                            console.log('✅ Requisitos completados, procediendo con cambio de etapa');
+                                            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
+                                        }, function() {
+                                            // Callback de cancelación
+                                            console.log('❌ Cambio de etapa cancelado');
+                                        });
+                                    } catch (error) {
+                                        console.error('❌ Error al llamar mostrarModalRequisitosFaltantes:', error);
+                                        if (typeof showToast !== 'undefined') {
+                                            showToast('Error al mostrar modal de requisitos: ' + error.message, 'error', 6000);
+                                        } else {
+                                            alert('Error al mostrar modal de requisitos: ' + error.message);
+                                        }
+                                    }
+                                } else {
+                                    console.error('❌ Función mostrarModalRequisitosFaltantes no disponible');
+                                    if (typeof showToast !== 'undefined') {
+                                        showToast('Error: Función de requisitos no disponible', 'error', 6000);
+                                    } else {
+                                        alert('Error: Función de requisitos no disponible');
+                                    }
+                                }
+                            } else {
+                                // Mostrar error y cancelar movimiento
+                                if (typeof showToast !== 'undefined') {
+                                    showToast(mensaje, 'error', 5000);
+                                } else {
+                                    alert(mensaje);
+                                }
+                            }
+                            return;
+                        }
+                        
+                        // Obtener nombre de la nueva etapa
+                        var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
+                        nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
+                        
+                        // Confirmar movimiento con modal personalizado
+                        if (typeof window.mostrarModalConfirmacion === 'function') {
+                            window.mostrarModalConfirmacion(nuevaEtapaNombre, function() {
+                                // Función que se ejecuta al confirmar - usar función unificada
+                                console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
+                                window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
+                            });
+                        } else {
+                            console.error('Función mostrarModalConfirmacion no disponible');
+                        }
+                    });
+                } else {
+                    console.error('Función validarTransicionKanban no disponible');
+                }
+                
+            } catch (error) {
+                console.error('Error al procesar drop:', error);
+            }
+        });
+    }
+    
+    // Función para marcar tarjetas con requisitos faltantes
+    function marcarTarjetasConRequisitosFaltantes() {
+        console.log('🔍 Marcando tarjetas con requisitos faltantes...');
+        
+        $('.kanban-card').each(function() {
+            var $card = $(this);
+            var solicitudId = $card.attr('data-solicitud-id');
+            
+            // Verificar requisitos faltantes para cada tarjeta
+            $.ajax({
+                url: `/workflow/api/solicitudes/${solicitudId}/requisitos-faltantes-detallado/`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.requisitos_faltantes && response.requisitos_faltantes.length > 0) {
+                        $card.addClass('requisitos-faltantes');
+                        console.log('⚠️ Tarjeta marcada con requisitos faltantes:', solicitudId);
+                    }
+                },
+                error: function() {
+                    // Silenciar errores para no afectar la experiencia del usuario
+                    console.log('No se pudo verificar requisitos para tarjeta:', solicitudId);
+                }
+            });
+        });
+    }
+    
+    // Función para validar transiciones en Kanban
+    function validarTransicionKanban(solicitudId, nuevaEtapaId, callback) {
+        console.log('🔍 Validando transición Kanban:', solicitudId, nuevaEtapaId);
+        
+        // Validar parámetros
+        if (!solicitudId || !nuevaEtapaId || typeof callback !== 'function') {
+            console.error('❌ Parámetros inválidos para validarTransicionKanban');
+            callback(false, 'Parámetros inválidos', []);
+            return;
+        }
+        
+        try {
+            fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
+            .then(response => {
+                // Verificar si la respuesta es exitosa
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Verificar si el contenido es JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('La respuesta no es JSON válido');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Buscar si la transición es válida
+                    var transicionValida = data.transiciones.find(function(t) {
+                        return t.etapa_destino.id == nuevaEtapaId;
+                    });
+                    
+                    if (transicionValida) {
+                        if (transicionValida.puede_realizar) {
+                            callback(true, 'Transición válida', []);
+                        } else {
+                            var mensaje = `No puedes mover a "${transicionValida.etapa_destino.nombre}" porque faltan ${transicionValida.total_requisitos_faltantes} requisito(s) obligatorio(s)`;
+                            callback(false, mensaje, transicionValida.requisitos_faltantes);
+                        }
+                    } else {
+                        callback(false, 'No existe una transición válida hacia esta etapa', []);
+                    }
+                } else {
+                    callback(false, 'Error al validar transición: ' + (data.error || 'Error desconocido'), []);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error validando transición Kanban:', error);
+                let mensajeError = 'Error de conexión al validar transición';
+                if (error.message.includes('404')) {
+                    mensajeError = 'No se encontró la solicitud';
+                } else if (error.message.includes('403')) {
+                    mensajeError = 'No tienes permisos para esta solicitud';
+                } else if (error.message.includes('500')) {
+                    mensajeError = 'Error interno del servidor';
+                } else if (error.message.includes('JSON')) {
+                    mensajeError = 'Error en el formato de respuesta';
+                }
+                
+                // Usar callback en lugar de mostrar notificación directamente
+                callback(false, mensajeError, []);
+            });
+        } catch (error) {
+            console.error('❌ Error crítico en validarTransicionKanban:', error);
+            callback(false, 'Error interno en la validación', []);
+        }
+    }
+    
+    // Nueva función para actualizar kanban tras movimiento sin recargar página
+    window.actualizarKanbanTrasMovimiento = function(solicitudId, nuevaEtapaId, etapaNombre) {
+        console.log('🔄 Actualizando kanban tras movimiento', {
+            solicitudId: solicitudId,
+            nuevaEtapaId: nuevaEtapaId,
+            etapaNombre: etapaNombre
+        });
+        
+        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
+        
+        if ($card.length && $nuevaColumna.length) {
+            // Animar movimiento suave
+            $card.fadeOut(300, function() {
+                // Actualizar atributos
+                $card.attr('data-etapa-id', nuevaEtapaId);
+                
+                // Mover a nueva columna
+                $card.appendTo($nuevaColumna);
+                
+                // Mostrar con animación
+                $card.fadeIn(400);
+                
+                // Actualizar contadores
+                actualizarContadoresKanban();
+                
+                console.log('✅ Kanban actualizado dinámicamente');
+            });
+        } else {
+            console.warn('⚠️ No se pudo encontrar la tarjeta o columna para actualizar');
+            // Fallback: recargar página después de un breve delay
+            setTimeout(() => {
+                console.log('🔄 Recargando página como fallback...');
+                location.reload();
+            }, 1500);
+        }
+    }
+    
+    // Inicializar drag and drop
+    console.log('Inicializando drag and drop para Kanban...');
+    inicializarDragAndDrop();
+    
+    // Solo configurar filtros si existen los elementos de filtro
+    if ($('#kanbanFiltroSLA').length > 0) {
+        configurarFiltrosKanban();
+    }
+    
+    // Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
+    setTimeout(function() {
+        if ($('.kanban-board').length > 0 && $('.kanban-card').length > 0) {
+            console.log('Fallback: Verificando drag and drop...');
+            if (!$('.kanban-card').data('drag-initialized')) {
+                console.log('Fallback: Inicializando drag and drop...');
+                inicializarDragAndDrop();
+                $('.kanban-card').data('drag-initialized', true);
+            }
+        }
+    }, 1000);
+    
+    // Exponer funciones globalmente
+    window.configurarFiltrosKanban = configurarFiltrosKanban;
+    window.aplicarFiltrosKanban = aplicarFiltrosKanban;
+    window.actualizarContadoresKanban = actualizarContadoresKanban;
+    window.mostrarMensajesVacios = mostrarMensajesVacios;
+    window.marcarTarjetasConRequisitosFaltantes = marcarTarjetasConRequisitosFaltantes;
+    window.validarTransicionKanban = validarTransicionKanban;
+    window.inicializarDragAndDrop = inicializarDragAndDrop;
+});
+</script>
