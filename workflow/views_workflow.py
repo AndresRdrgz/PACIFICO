@@ -785,6 +785,7 @@ def nueva_solicitud(request):
                 archivo_key = f'archivo_requisito_{req_pipeline.requisito.id}'
                 if archivo_key in request.FILES:
                     requisito_solicitud.archivo = request.FILES[archivo_key]
+                    requisito_solicitud.cumplido = True  # Marcar como cumplido cuando se sube archivo
                     requisito_solicitud.save()
             
             # Guardar campos personalizados
