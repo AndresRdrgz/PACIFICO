@@ -207,21 +207,119 @@ Puedes usar viñetas, números, o escribir los pasos como prefieras.">{{ prueba.
                             <label for="archivos_adjuntos" class="form-label">
                                 <strong>Archivos Adjuntos</strong>
                             </label>
-                            <input type="file" 
-                                   class="form-control form-control-custom" 
-                                   id="archivos_adjuntos" 
-                                   name="archivos_adjuntos" 
-                                   accept="image/*,.pdf,.doc,.docx,.txt,.log">
-                            <div class="form-text">
-                                Puedes adjuntar screenshots, logs, documentos PDF, o archivos de texto. 
-                                Formatos soportados: JPG, PNG, GIF, PDF, DOC, DOCX, TXT, LOG
-                            </div>
-                            {% if prueba and prueba.archivos_adjuntos %}
+                            
+                            <!-- Enhanced file upload zone -->
+                            <div class="file-upload-zone border border-2 border-dashed rounded p-4 text-center" 
+                                 id="fileUploadZone" 
+                                 style="border-color: #dee2e6; transition: all 0.3s ease;">
+                                <div class="mb-3">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                    <h6 class="text-muted">Arrastra y suelta archivos aquí o haz clic para seleccionar</h6>
+                                </div>
+                                
+                                <!-- Multiple hidden file inputs for each selection -->
+                                <div id="fileInputContainer">
+                                    <input type="file" 
+                                           class="form-control form-control-custom d-none file-input" 
+                                           id="archivos_adjuntos_0" 
+                                           name="archivos_adjuntos" 
+                                           multiple
+                                           accept="image/*,.pdf,.doc,.docx,.txt,.log">
+                                </div>
+                                
+                                <button type="button" 
+                                        class="btn btn-outline-primary"
+                                        onclick="triggerFileSelect()">
+                                    <i class="fas fa-folder-open me-2"></i>Seleccionar Archivos
+                                </button>
+                                
                                 <div class="mt-3">
                                     <small class="text-muted">
-                                        <i class="fas fa-paperclip me-1"></i>
-                                        Archivo actual: {{ prueba.nombre_archivo }}
+                                        Formatos soportados: JPG, PNG, GIF, PDF, DOC, DOCX, TXT, LOG<br>
+                                        <strong>Puedes seleccionar múltiples archivos en diferentes sesiones</strong>
                                     </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Show existing attachments if editing -->
+                            {% if prueba and prueba.archivos_adjuntos.exists %}
+                                <div class="mt-4">
+                                    <h6 class="text-muted mb-3">
+                                        <i class="fas fa-paperclip me-1"></i>
+                                        Archivos actuales ({{ prueba.total_archivos }})
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="5%"><i class="fas fa-file"></i></th>
+                                                    <th width="30%">Nombre</th>
+                                                    <th width="25%">Descripción</th>
+                                                    <th width="20%">Subido por</th>
+                                                    <th width="15%">Fecha</th>
+                                                    <th width="5%" class="text-center">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for archivo in prueba.archivos_adjuntos.all %}
+                                                <tr>
+                                                    <td class="text-center">
+                                                        <i class="{{ archivo.icono_archivo }} text-primary"></i>
+                                                    </td>
+                                                    <td>
+                                                        <strong class="text-dark">{{ archivo.nombre_original }}</strong>
+                                                        {% if archivo.es_imagen %}
+                                                            <span class="badge bg-info ms-1">Imagen</span>
+                                                        {% elif archivo.extension == 'pdf' %}
+                                                            <span class="badge bg-danger ms-1">PDF</span>
+                                                        {% elif archivo.extension in 'doc,docx' %}
+                                                            <span class="badge bg-primary ms-1">Word</span>
+                                                        {% elif archivo.extension in 'txt,log' %}
+                                                            <span class="badge bg-secondary ms-1">Texto</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if archivo.descripcion %}
+                                                            <small class="text-muted">{{ archivo.descripcion|truncatewords:8 }}</small>
+                                                        {% else %}
+                                                            <small class="text-muted fst-italic">Sin descripción</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            {{ archivo.subido_por.get_full_name|default:archivo.subido_por.username }}
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">
+                                                            {{ archivo.fecha_subida|date:"d/m/Y" }}<br>
+                                                            <span class="text-muted">{{ archivo.fecha_subida|date:"H:i" }}</span>
+                                                        </small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{{ archivo.archivo.url }}" 
+                                                               class="btn btn-sm btn-outline-primary" 
+                                                               target="_blank" 
+                                                               title="Ver/Descargar archivo"
+                                                               data-bs-toggle="tooltip">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <button type="button" 
+                                                                    class="btn btn-sm btn-outline-danger" 
+                                                                    onclick="eliminarArchivo({{ archivo.id }})"
+                                                                    title="Eliminar archivo"
+                                                                    data-bs-toggle="tooltip">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>
@@ -291,4 +389,276 @@ Puedes usar viñetas, números, o escribir los pasos como prefieras.">{{ prueba.
         </div>
     </div>
 </div>
+
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Initialize drag and drop
+    initializeDragAndDrop();
+    
+    // Initialize file input change listener
+    initializeFileInputs();
+});
+
+// Global variables to track files
+let selectedFiles = [];
+let fileInputCounter = 0;
+
+function initializeDragAndDrop() {
+    const fileUploadZone = document.getElementById('fileUploadZone');
+    
+    // Drag and drop events
+    fileUploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileUploadZone.style.borderColor = '#007bff';
+        fileUploadZone.style.backgroundColor = '#f8f9fa';
+    });
+    
+    fileUploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        fileUploadZone.style.borderColor = '#dee2e6';
+        fileUploadZone.style.backgroundColor = 'transparent';
+    });
+    
+    fileUploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileUploadZone.style.borderColor = '#dee2e6';
+        fileUploadZone.style.backgroundColor = 'transparent';
+        
+        const files = Array.from(e.dataTransfer.files);
+        addFilesToSelection(files);
+    });
+    
+    // Click event for the upload zone
+    fileUploadZone.addEventListener('click', function(e) {
+        if (e.target.type !== 'file' && e.target.tagName !== 'BUTTON') {
+            triggerFileSelect();
+        }
+    });
+}
+
+function triggerFileSelect() {
+    // Create a new file input for this selection
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/*,.pdf,.doc,.docx,.txt,.log';
+    fileInput.style.display = 'none';
+    fileInput.name = 'archivos_adjuntos';
+    fileInput.id = `archivos_adjuntos_${fileInputCounter}`;
+    
+    // Add event listener
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            addFilesToSelection(files);
+        }
+    });
+    
+    // Add to container and click
+    document.getElementById('fileInputContainer').appendChild(fileInput);
+    fileInput.click();
+    fileInputCounter++;
+}
+
+function addFilesToSelection(newFiles) {
+    // Filter out duplicates
+    const uniqueFiles = newFiles.filter(newFile => {
+        return !selectedFiles.some(existingFile => 
+            existingFile.name === newFile.name && 
+            existingFile.size === newFile.size &&
+            existingFile.lastModified === newFile.lastModified
+        );
+    });
+    
+    // Add to selected files
+    selectedFiles = [...selectedFiles, ...uniqueFiles];
+    
+    // Update preview
+    updateFilePreview();
+}
+
+function updateFilePreview() {
+    let preview = document.getElementById('file-preview');
+    
+    if (selectedFiles.length === 0) {
+        if (preview) {
+            preview.remove();
+        }
+        return;
+    }
+    
+    // Create or update preview
+    if (!preview) {
+        preview = document.createElement('div');
+        preview.id = 'file-preview';
+        preview.className = 'mt-3';
+        
+        const uploadZone = document.getElementById('fileUploadZone');
+        uploadZone.parentNode.insertBefore(preview, uploadZone.nextSibling);
+    }
+    
+    // Clear and rebuild
+    preview.innerHTML = '';
+    
+    const title = document.createElement('h6');
+    title.className = 'text-muted mb-2';
+    title.innerHTML = `<i class="fas fa-upload me-1"></i>Archivos seleccionados (${selectedFiles.length}):`;
+    preview.appendChild(title);
+    
+    const table = document.createElement('table');
+    table.className = 'table table-sm table-striped';
+    
+    const thead = document.createElement('thead');
+    thead.className = 'table-light';
+    thead.innerHTML = `
+        <tr>
+            <th width="5%"><i class="fas fa-file"></i></th>
+            <th width="50%">Nombre</th>
+            <th width="15%">Tamaño</th>
+            <th width="15%">Tipo</th>
+            <th width="15%" class="text-center">Acción</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+    
+    const tbody = document.createElement('tbody');
+    
+    selectedFiles.forEach((file, index) => {
+        const row = document.createElement('tr');
+        
+        // Get file icon
+        let icon = 'fas fa-file';
+        if (file.type.startsWith('image/')) {
+            icon = 'fas fa-image text-info';
+        } else if (file.type === 'application/pdf') {
+            icon = 'fas fa-file-pdf text-danger';
+        } else if (file.type.includes('document') || file.type.includes('word')) {
+            icon = 'fas fa-file-word text-primary';
+        } else if (file.type.includes('text')) {
+            icon = 'fas fa-file-alt text-secondary';
+        }
+        
+        // Format file size
+        const formatFileSize = (bytes) => {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+        
+        row.innerHTML = `
+            <td class="text-center"><i class="${icon}"></i></td>
+            <td><strong>${file.name}</strong></td>
+            <td><small class="text-muted">${formatFileSize(file.size)}</small></td>
+            <td><small class="text-muted">${file.type.split('/')[1] || 'unknown'}</small></td>
+            <td class="text-center">
+                <button type="button" 
+                        class="btn btn-sm btn-outline-danger" 
+                        onclick="removeFileFromSelection(${index})"
+                        title="Quitar archivo">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    preview.appendChild(table);
+}
+
+function removeFileFromSelection(index) {
+    selectedFiles.splice(index, 1);
+    updateFilePreview();
+}
+
+function initializeFileInputs() {
+    // Add event listener to the initial file input
+    const initialInput = document.getElementById('archivos_adjuntos_0');
+    if (initialInput) {
+        initialInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const files = Array.from(e.target.files);
+                addFilesToSelection(files);
+            }
+        });
+    }
+}
+
+// Override form submission to handle multiple file inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Clear existing file inputs
+            const container = document.getElementById('fileInputContainer');
+            container.innerHTML = '';
+            
+            // Create new file inputs for each selected file
+            selectedFiles.forEach((file, index) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.name = 'archivos_adjuntos';
+                input.style.display = 'none';
+                
+                // Create a new FileList with just this file
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+                
+                container.appendChild(input);
+            });
+        });
+    }
+});
+
+function eliminarArchivo(archivoId) {
+    if (confirm('¿Estás seguro de que quieres eliminar este archivo?')) {
+        // Show loading state
+        const button = document.querySelector(`button[onclick="eliminarArchivo(${archivoId})"]`);
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        fetch(`/proyectos/api/archivo/${archivoId}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fade out the row before removing
+                const row = button.closest('tr');
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 300);
+            } else {
+                alert('Error al eliminar el archivo: ' + data.error);
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al eliminar el archivo.');
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+        });
+    }
+}
+</script>
+
 {% endblock %} 

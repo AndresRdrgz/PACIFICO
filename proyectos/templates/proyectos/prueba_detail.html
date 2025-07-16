@@ -207,44 +207,59 @@
             {% endif %}
 
             <!-- Attached Files -->
-            {% if prueba.archivos_adjuntos %}
+            {% if prueba.archivos_adjuntos.exists %}
             <div class="card-custom mb-4">
                 <div class="card-header-custom">
                     <h5 class="mb-0">
                         <i class="fas fa-paperclip me-2"></i>
-                        Archivos Adjuntos
+                        Archivos Adjuntos ({{ prueba.total_archivos }})
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <div class="file-attachment">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <i class="{{ prueba.archivos_adjuntos.name|get_file_icon }} fa-3x text-primary me-3"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-2">{{ prueba.nombre_archivo }}</h6>
-                                <p class="text-muted mb-3">
-                                    <small>
-                                        <i class="fas fa-calendar me-1"></i>
-                                        Subido el {{ prueba.fecha_creacion|date:"d/m/Y H:i" }}
-                                    </small>
-                                </p>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ prueba.archivos_adjuntos.url }}" 
-                                       class="btn btn-outline-primary btn-sm" 
-                                       target="_blank">
-                                        <i class="fas fa-download me-1"></i>Descargar
-                                    </a>
-                                    {% if prueba.archivos_adjuntos.name|is_image_file %}
-                                        <a href="{{ prueba.archivos_adjuntos.url }}" 
-                                           class="btn btn-outline-info btn-sm" 
-                                           target="_blank">
-                                            <i class="fas fa-eye me-1"></i>Ver Imagen
-                                        </a>
-                                    {% endif %}
+                    <div class="row">
+                        {% for archivo in prueba.archivos_adjuntos.all %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card card-sm">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="{{ archivo.icono_archivo }} fa-2x text-primary me-3"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ archivo.nombre_original }}</h6>
+                                            {% if archivo.descripcion %}
+                                                <p class="text-muted mb-2 small">{{ archivo.descripcion }}</p>
+                                            {% endif %}
+                                            <p class="text-muted mb-2 small">
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ archivo.subido_por.get_full_name|default:archivo.subido_por.username }}
+                                            </p>
+                                            <p class="text-muted mb-3 small">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ archivo.fecha_subida|date:"d/m/Y H:i" }}
+                                            </p>
+                                            <div class="btn-group w-100" role="group">
+                                                <a href="{{ archivo.archivo.url }}" 
+                                                   class="btn btn-outline-primary btn-sm" 
+                                                   target="_blank"
+                                                   title="Descargar archivo">
+                                                    <i class="fas fa-download me-1"></i>Descargar
+                                                </a>
+                                                {% if archivo.es_imagen %}
+                                                    <a href="{{ archivo.archivo.url }}" 
+                                                       class="btn btn-outline-info btn-sm" 
+                                                       target="_blank"
+                                                       title="Ver imagen">
+                                                        <i class="fas fa-eye me-1"></i>Ver
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -486,6 +501,14 @@
     }
     
     function showCommentModal(action, title) {
+        // Create confirmation message for revision request
+        const confirmationMessage = action === 'solicitud_revision' 
+            ? `<div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Nota:</strong> Se enviará un correo electrónico al tester notificando que se ha solicitado una revisión de esta prueba.
+               </div>` 
+            : '';
+        
         // Create modal HTML
         const modalHtml = `
             <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
@@ -496,6 +519,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
+                            ${confirmationMessage}
                             <div class="mb-3">
                                 <label for="commentText" class="form-label">
                                     <strong>Comentario (opcional)</strong>

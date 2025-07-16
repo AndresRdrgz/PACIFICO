@@ -141,14 +141,6 @@ class Prueba(models.Model):
     fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Resolución")
     comentarios = models.TextField(blank=True, verbose_name="Comentarios")
     resuelto = models.BooleanField(default=False, verbose_name="Resuelto")
-    # New field for file attachments
-    archivos_adjuntos = models.FileField(
-        upload_to='proyectos/pruebas/archivos/',
-        blank=True,
-        null=True,
-        verbose_name="Archivos Adjuntos",
-        help_text="Screenshots, logs, o documentos relacionados con la prueba"
-    )
     
     class Meta:
         verbose_name = "Prueba"
@@ -176,14 +168,80 @@ class Prueba(models.Model):
     @property
     def tiene_archivos(self):
         """Check if the test case has attached files"""
-        return bool(self.archivos_adjuntos)
+        return self.archivos_adjuntos.exists()
+    
+    @property
+    def total_archivos(self):
+        """Get the total number of attached files"""
+        return self.archivos_adjuntos.count()
+
+class ArchivoAdjunto(models.Model):
+    """Model for file attachments to test cases"""
+    prueba = models.ForeignKey(
+        Prueba,
+        on_delete=models.CASCADE,
+        related_name='archivos_adjuntos',
+        verbose_name="Prueba"
+    )
+    archivo = models.FileField(
+        upload_to='proyectos/pruebas/archivos/',
+        verbose_name="Archivo",
+        help_text="Screenshots, logs, o documentos relacionados con la prueba"
+    )
+    nombre_original = models.CharField(
+        max_length=255,
+        verbose_name="Nombre Original",
+        help_text="Nombre original del archivo"
+    )
+    descripcion = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Descripción",
+        help_text="Descripción opcional del archivo"
+    )
+    fecha_subida = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Subida")
+    subido_por = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Subido por"
+    )
+    
+    class Meta:
+        verbose_name = "Archivo Adjunto"
+        verbose_name_plural = "Archivos Adjuntos"
+        ordering = ['-fecha_subida']
+    
+    def __str__(self):
+        return f"{self.nombre_original} - {self.prueba.titulo}"
     
     @property
     def nombre_archivo(self):
         """Get the filename of the attached file"""
-        if self.archivos_adjuntos:
-            return self.archivos_adjuntos.name.split('/')[-1]
-        return None
+        return self.archivo.name.split('/')[-1]
+    
+    @property
+    def extension(self):
+        """Get the file extension"""
+        return self.nombre_original.split('.')[-1].lower() if '.' in self.nombre_original else ''
+    
+    @property
+    def es_imagen(self):
+        """Check if the file is an image"""
+        return self.extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+    
+    @property
+    def icono_archivo(self):
+        """Get the appropriate icon for the file type"""
+        if self.es_imagen:
+            return 'fas fa-image'
+        elif self.extension == 'pdf':
+            return 'fas fa-file-pdf'
+        elif self.extension in ['doc', 'docx']:
+            return 'fas fa-file-word'
+        elif self.extension in ['txt', 'log']:
+            return 'fas fa-file-alt'
+        else:
+            return 'fas fa-file'
 
 class ProyectoUsuario(models.Model):
     """Model for project user invitations and roles"""
