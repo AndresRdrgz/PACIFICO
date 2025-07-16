@@ -56,15 +56,30 @@
             top: 0;
             z-index: 1000;
             box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
+            transition: width 0.3s ease, transform 0.3s ease;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
+            /* Prevent flash during initialization */
+            opacity: 0;
+            animation: fadeInSidebar 0.3s ease forwards;
+        }
+
+        @keyframes fadeInSidebar {
+            to {
+                opacity: 1;
+            }
         }
 
         /* Collapsed sidebar state */
         .sidebar.collapsed {
             width: 60px;
+        }
+
+        /* Prevent transitions during initialization */
+        .sidebar.no-transition,
+        .main-content.no-transition {
+            transition: none !important;
         }
 
         .sidebar.collapsed .sidebar-logo img {
@@ -144,29 +159,46 @@
         .sidebar-toggle-btn {
             position: absolute;
             top: 1rem;
-            right: -12px;
+            right: -15px;
             background: var(--verde-pacifico);
-            border: 2px solid #1a1a1a;
+            border: 3px solid #1a1a1a;
             color: white;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            z-index: 1002;
-            font-size: 0.7rem;
+            z-index: 1003;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .sidebar-toggle-btn:hover {
             background: var(--verde-hover);
             transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .sidebar-toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Ensure button is always clickable */
+        .sidebar-toggle-btn::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            z-index: -1;
         }
 
         .sidebar.collapsed .sidebar-toggle-btn {
-            right: -12px;
+            right: -15px;
         }
 
         /* Main content adjustment */
@@ -175,6 +207,17 @@
             min-height: 100vh;
             background-color: var(--gris-fondo);
             transition: margin-left 0.3s ease;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            /* Prevent flash during initialization */
+            opacity: 0;
+            animation: fadeInContent 0.3s ease 0.1s forwards;
+        }
+
+        @keyframes fadeInContent {
+            to {
+                opacity: 1;
+            }
         }
 
         .main-content.sidebar-collapsed {
@@ -443,6 +486,15 @@
 
         /* Mobile responsive */
         @media (max-width: 768px) {
+            /* Ensure sidebar toggle button is properly hidden on mobile */
+            .sidebar-toggle-btn {
+                display: none !important;
+            }
+            
+            /* Ensure sidebar doesn't interfere with main content */
+            .sidebar {
+                z-index: 999;
+            }
             .sidebar {
                 transform: translateX(-100%);
                 width: 192px !important; /* Force full width on mobile */
@@ -502,6 +554,13 @@
             
             .sidebar-toggle-btn {
                 display: none; /* Hide toggle button on mobile */
+            }
+            
+            /* Ensure main content doesn't overlap with sidebar on mobile */
+            .main-content {
+                margin-left: 0 !important;
+                padding-left: 1rem;
+                padding-right: 1rem;
             }
         }
 
@@ -1186,6 +1245,13 @@
 
         // Check network status on load
         document.addEventListener('DOMContentLoaded', function() {
+            // Add no-transition class initially to prevent flash
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (sidebar) sidebar.classList.add('no-transition');
+            if (mainContent) mainContent.classList.add('no-transition');
+            
             // Show initial network status
             if (!navigator.onLine) {
                 showToast('Sin conexión - Trabajando offline', 'warning', 5000);
@@ -1196,6 +1262,12 @@
             
             // Initialize mobile sidebar toggle
             initializeMobileSidebar();
+            
+            // Remove no-transition class after initialization
+            setTimeout(() => {
+                if (sidebar) sidebar.classList.remove('no-transition');
+                if (mainContent) mainContent.classList.remove('no-transition');
+            }, 150);
         });
 
         // Sidebar toggle functionality
@@ -1204,16 +1276,41 @@
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             
+            // Temporarily disable transitions during initialization
+            if (sidebar) {
+                sidebar.style.transition = 'none';
+            }
+            if (mainContent) {
+                mainContent.style.transition = 'none';
+            }
+            
             // Check for saved state in localStorage
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
             
-            if (isCollapsed) {
+            // Apply initial state without animation
+            if (isCollapsed && sidebar && mainContent) {
                 sidebar.classList.add('collapsed');
                 mainContent.classList.add('sidebar-collapsed');
-                sidebarToggleBtn.querySelector('i').classList.remove('fa-chevron-left');
-                sidebarToggleBtn.querySelector('i').classList.add('fa-chevron-right');
+                if (sidebarToggleBtn) {
+                    const icon = sidebarToggleBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-left');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                }
             }
             
+            // Re-enable transitions after a short delay
+            setTimeout(() => {
+                if (sidebar) {
+                    sidebar.style.transition = '';
+                }
+                if (mainContent) {
+                    mainContent.style.transition = '';
+                }
+            }, 100);
+            
+            // Add click event listener
             if (sidebarToggleBtn && sidebar) {
                 sidebarToggleBtn.addEventListener('click', function() {
                     sidebar.classList.toggle('collapsed');
@@ -1240,6 +1337,11 @@
             const sidebar = document.getElementById('sidebar');
             
             if (sidebarToggle && sidebar) {
+                // Ensure sidebar starts hidden on mobile
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('show');
+                }
+                
                 sidebarToggle.addEventListener('click', function() {
                     sidebar.classList.toggle('show');
                 });
@@ -1250,6 +1352,13 @@
                         if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                             sidebar.classList.remove('show');
                         }
+                    }
+                });
+                
+                // Handle window resize
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth > 768) {
+                        sidebar.classList.remove('show');
                     }
                 });
             }
