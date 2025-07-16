@@ -12,6 +12,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
+import json
 try:
     import xlsxwriter
     XLSXWRITER_AVAILABLE = True
@@ -19,7 +20,7 @@ except ImportError:
     XLSXWRITER_AVAILABLE = False
 from io import BytesIO
 from datetime import datetime
-from .models import Proyecto, Modulo, Prueba, ProyectoUsuario
+from .models import Proyecto, Modulo, Prueba, ProyectoUsuario, ArchivoAdjunto
 
 @login_required
 def dashboard(request):
@@ -261,8 +262,8 @@ def prueba_create(request, proyecto_id):
             if desarrollador_id:
                 desarrollador = User.objects.get(id=desarrollador_id)
             
-            # Handle file upload
-            archivos_adjuntos = request.FILES.get('archivos_adjuntos')
+            # Handle multiple file uploads
+            archivos_adjuntos = request.FILES.getlist('archivos_adjuntos')
             
             # Create the test case
             prueba = Prueba.objects.create(
@@ -276,9 +277,18 @@ def prueba_create(request, proyecto_id):
                 resultado=resultado,
                 tester=tester,
                 desarrollador=desarrollador,
-                comentarios=comentarios,
-                archivos_adjuntos=archivos_adjuntos
+                comentarios=comentarios
             )
+            
+            # Create file attachments
+            for archivo in archivos_adjuntos:
+                ArchivoAdjunto.objects.create(
+                    prueba=prueba,
+                    archivo=archivo,
+                    nombre_original=archivo.name,
+                    descripcion=request.POST.get(f'descripcion_{archivo.name}', ''),
+                    subido_por=request.user
+                )
             
             messages.success(request, f'Prueba "{prueba.titulo}" creada exitosamente.')
             return redirect('proyectos:prueba_detail', prueba_id=prueba.id)
@@ -355,8 +365,8 @@ def prueba_edit(request, prueba_id):
             if desarrollador_id:
                 desarrollador = User.objects.get(id=desarrollador_id)
             
-            # Handle file upload
-            archivos_adjuntos = request.FILES.get('archivos_adjuntos')
+            # Handle multiple file uploads
+            archivos_adjuntos = request.FILES.getlist('archivos_adjuntos')
             
             # Update the test case
             prueba.titulo = titulo
@@ -369,9 +379,17 @@ def prueba_edit(request, prueba_id):
             prueba.tester = tester
             prueba.desarrollador = desarrollador
             prueba.comentarios = comentarios
-            if archivos_adjuntos:
-                prueba.archivos_adjuntos = archivos_adjuntos
             prueba.save()
+            
+            # Create new file attachments
+            for archivo in archivos_adjuntos:
+                ArchivoAdjunto.objects.create(
+                    prueba=prueba,
+                    archivo=archivo,
+                    nombre_original=archivo.name,
+                    descripcion=request.POST.get(f'descripcion_{archivo.name}', ''),
+                    subido_por=request.user
+                )
             
             messages.success(request, f'Prueba "{prueba.titulo}" actualizada exitosamente.')
             return redirect('proyectos:prueba_detail', prueba_id=prueba.id)
@@ -656,9 +674,15 @@ def api_update_result(request, prueba_id):
         prueba.save()
         
         # Send email notifications
-        if nuevo_resultado == 'solicitud_revision' and rol_usuario == 'desarrollador':
+        if nuevo_resultado == 'solicitud_revision' and (rol_usuario == 'desarrollador' or rol_usuario == 'admin'):
+            print(f"🔔 Email notification triggered for revision request")
+            print(f"   - Prueba: {prueba.titulo} (ID: {prueba.id})")
+            print(f"   - Developer: {request.user.get_full_name() or request.user.username}")
+            print(f"   - Tester: {prueba.tester.get_full_name() if prueba.tester else 'No tester assigned'}")
+            
             # Notify tester about review request
             if prueba.tester and prueba.tester.email:
+                print(f"   - Tester email: {prueba.tester.email}")
                 try:
                     context = {
                         'prueba': prueba,
@@ -670,8 +694,13 @@ def api_update_result(request, prueba_id):
                     }
                     
                     subject = f'Solicitud de Revisión - Prueba: {prueba.titulo}'
+                    print(f"   - Email subject: {subject}")
+                    
                     html_message = render_to_string('proyectos/emails/solicitud_revision.html', context)
                     plain_message = render_to_string('proyectos/emails/solicitud_revision.txt', context)
+                    print(f"   - Email templates rendered successfully")
+                    print(f"   - HTML template length: {len(html_message)} characters")
+                    print(f"   - Plain template length: {len(plain_message)} characters")
                     
                     send_mail(
                         subject=subject,
@@ -681,8 +710,27 @@ def api_update_result(request, prueba_id):
                         html_message=html_message,
                         fail_silently=False,
                     )
+                    print(f"✅ Email sent successfully to {prueba.tester.email}")
+                    print(f"   - From: {settings.DEFAULT_FROM_EMAIL}")
+                    print(f"   - Comment included: {'Yes' if comentario else 'No'}")
+                    
                 except Exception as e:
-                    print(f"Error sending review request email: {e}")
+                    print(f"❌ Error sending review request email: {e}")
+                    print(f"   - Error type: {type(e).__name__}")
+                    print(f"   - Error details: {str(e)}")
+            else:
+                print(f"⚠️  Cannot send email - tester not assigned or no email address")
+                if not prueba.tester:
+                    print(f"   - No tester assigned to this prueba")
+                elif not prueba.tester.email:
+                    print(f"   - Tester {prueba.tester.username} has no email address")
+        else:
+            print(f"📧 No email notification sent:")
+            print(f"   - Resultado: {nuevo_resultado}")
+            print(f"   - User role: {rol_usuario}")
+            print(f"   - Condition met: {nuevo_resultado == 'solicitud_revision' and (rol_usuario == 'desarrollador' or rol_usuario == 'admin')}")
+            print(f"   - Resultado is solicitud_revision: {nuevo_resultado == 'solicitud_revision'}")
+            print(f"   - Role is developer or admin: {rol_usuario == 'desarrollador' or rol_usuario == 'admin'}")
         
         return JsonResponse({
             'success': True,
@@ -985,3 +1033,33 @@ def export_pruebas_excel(request, proyecto_id):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
+
+@login_required
+@require_POST
+@csrf_exempt
+def api_eliminar_archivo(request, archivo_id):
+    """API endpoint para eliminar un archivo adjunto"""
+    try:
+        archivo = get_object_or_404(ArchivoAdjunto, id=archivo_id)
+        prueba = archivo.prueba
+        
+        # Check if user has access to this test case
+        if not request.user.is_superuser:
+            try:
+                proyecto_usuario = prueba.proyecto.usuarios_invitados.get(usuario=request.user, activo=True)
+                if proyecto_usuario.rol != 'tester' and archivo.subido_por != request.user:
+                    return JsonResponse({'success': False, 'error': 'No tienes permisos para eliminar este archivo.'})
+            except ProyectoUsuario.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'No tienes acceso a este archivo.'})
+        
+        # Delete the file from storage
+        if archivo.archivo:
+            archivo.archivo.delete()
+        
+        # Delete the record
+        archivo.delete()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
