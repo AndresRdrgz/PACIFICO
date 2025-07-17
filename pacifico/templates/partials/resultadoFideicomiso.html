@@ -7,9 +7,31 @@
         </span>
         <div class="ml-auto flex space-x-2">
             {% if resultado.numero_cotizacion %}
-                <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
-                    Reporte de Consulta 📄
-                </a>
+                <!-- Dropdown button for report options -->
+                <div class="relative inline-block text-left">
+                    <button type="button" class="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 inline-flex items-center" id="reportDropdown" onclick="toggleDropdown()">
+                        Reporte de Consulta 📄
+                        <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 hidden" id="dropdownMenu">
+                        <div class="py-1">
+                            <a href="{% url 'generate_report_excel' resultado.numero_cotizacion %}" 
+                               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <img src="{% static 'excel.svg' %}" alt="Excel" class="w-4 h-4 mr-2" onerror="this.style.display='none'">
+                                📊 Descargar como Excel
+                            </a>
+                            <a href="{% url 'generate_report_pdf' resultado.numero_cotizacion %}" 
+                               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <img src="{% static 'pdf.svg' %}" alt="PDF" class="w-4 h-4 mr-2" onerror="this.style.display='none'">
+                                📄 Descargar como PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
                 {% if pruebaFuncionalidades %}
                     <a href="{% url 'download_merged_pdf' resultado.numero_cotizacion %}" class="bg-[#f57722] text-white px-4 py-2 rounded border border-black hover:bg-[#f57722] inline-block">
                         <img src="{% static 'pdf.svg' %}" alt="PDF Icon" class="inline-block w-4 h-4 mr-2">
@@ -312,3 +334,20 @@
     </div>
     
 {% endif %}
+
+<script>
+function toggleDropdown() {
+    const dropdown = document.getElementById('dropdownMenu');
+    dropdown.classList.toggle('hidden');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('dropdownMenu');
+    const button = document.getElementById('reportDropdown');
+    
+    if (dropdown && button && !button.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
+</script>

@@ -8,7 +8,8 @@ from .views import CustomPasswordChangeView, CustomPasswordChangeDoneView
 from .usuarios.vistasUsuarios import edit_profile
 from django.conf import settings
 from django.conf.urls.static import static
-from .viewsFideicomiso.reportesExcel import generate_report,generate_report_pp
+from .viewsFideicomiso.reportesExcel import generate_report
+from .viewsFideicomiso.reportGenerator import generate_report_excel, generate_report_pdf
 from .viewsPersonal.cotizadorPersonal import cotizacionPrestamoPersonal
 from .viewsCotizadorAuto import cotizadorPrestAuto
 from workflow.views_workflow import sitio_construccion
@@ -24,7 +25,8 @@ urlpatterns = [
     path('cotizacionPP/<int:pk>/', cotizacionPrestamoPersonal, name='cotizacionDetail_pp_with_pk'),  # With pk
     path('get_lineas/', views.get_lineas, name='get_lineas'),
     path('generate_report/<int:numero_cotizacion>/', generate_report, name='generate_report'),
-    path('generate_report_pp/<int:numero_cotizacion>/', generate_report_pp, name='generate_report_pp'),
+    path('generate_report_excel/<int:numero_cotizacion>/', generate_report_excel, name='generate_report_excel'),
+    path('generate_report_pdf/<int:numero_cotizacion>/', generate_report_pdf, name='generate_report_pdf'),
     path('cotizacion_seguro_auto/', cotizacion_seguro_auto, name='cotizacion_seguro_auto'),
     path('cotizaciones/prestAuto/', cotizacionesList, name="cotizacionesList"),
     path('cotizaciones/descargar/', download_cotizaciones_excel, name='download_cotizaciones_excel'),

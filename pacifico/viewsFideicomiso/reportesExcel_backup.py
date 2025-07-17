@@ -775,8 +775,6 @@ def generate_report_temp(numero_cotizacion):
     # Save the PDF to a temporary file
     temp_pdf_file = os.path.join(settings.BASE_DIR, 'static', 'temp_consultaFideicomiso.pdf')
     pdf.output(temp_pdf_file)
-    print("PDF generated successfully.")
-    
 
     return temp_pdf_file
 
@@ -1514,20 +1512,18 @@ def generate_report_excel(request, numero_cotizacion):
 def generate_report_pdf(request, numero_cotizacion):
     """Generate PDF report from Excel template"""
     try:
-        print('generando PDF de consulta')
         # First generate the Excel file with all data
         cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
         
         # Get the populated Excel workbook using the same logic as generate_report
         excel_workbook = _create_populated_excel(cotizacion, numero_cotizacion)
-        print('excel creado')
+        
         # Save to temporary file
         with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp_excel:
             excel_workbook.save(temp_excel.name)
             temp_excel_path = temp_excel.name
         
         # Convert Excel to PDF using openpyxl and reportlab for better formatting
-        print('convirtiendo a PDF')
         pdf_path = _convert_excel_to_pdf(temp_excel_path, cotizacion.nombreCliente, numero_cotizacion)
         
         # Return PDF as response
@@ -1542,7 +1538,7 @@ def generate_report_pdf(request, numero_cotizacion):
             os.unlink(pdf_path)
         except:
             pass
-            
+        print(f"PDF generated successfully for {numero_cotizacion}")
         return response
         
     except Exception as e:
@@ -1555,7 +1551,7 @@ def _create_populated_excel(cotizacion, numero_cotizacion):
     """Helper function to create populated Excel workbook"""
     # This contains the same logic as the current generate_report function
     # but returns the workbook instead of an HTTP response
-    print('creando excel')
+    
     resultado = {
         'oficial': cotizacion.oficial,
         'nombreCliente': cotizacion.nombreCliente,
@@ -2196,7 +2192,12 @@ def _create_populated_excel(cotizacion, numero_cotizacion):
             response['Content-Disposition'] = f'attachment; filename={filename}'
             return response
     
-   
+    except Exception as e:
+        error_message = str(e)
+        # Log the error
+        print(f"Error: {error_message}, User: {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': str(e), 'resultado': resultado}, status=500)
+
 def _convert_excel_to_pdf(excel_path, client_name, numero_cotizacion):
     """Convert Excel file to PDF using reportlab"""
     from reportlab.lib.pagesizes import letter, A4
@@ -2261,8 +2262,6 @@ def _convert_excel_to_pdf(excel_path, client_name, numero_cotizacion):
     
     # Build PDF
     doc.build(content)
-
-    print(f"PDF generated at: {pdf_path}")
     
     return pdf_path
 
