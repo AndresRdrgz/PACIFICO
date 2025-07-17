@@ -229,4 +229,91 @@ def api_historial_participaciones(request, solicitud_id):
     except Solicitud.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
     except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_escalar_comite(request, solicitud_id):
+    """
+    API para escalar una solicitud a un nivel superior del comité.
+    """
+    try:
+        # Obtener la solicitud
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        
+        # Verificar que el usuario pertenece a algún nivel del comité
+        usuario_nivel = UsuarioNivelComite.objects.filter(
+            usuario=request.user, 
+            activo=True
+        ).first()
+        
+        if not usuario_nivel and not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para escalar solicitudes.'}, status=403)
+        
+        # Parsear los datos del POST
+        data = json.loads(request.body)
+        nivel_solicitado_id = data.get('nivel_solicitado')
+        comentario = data.get('comentario', '')
+        
+        if not nivel_solicitado_id:
+            return JsonResponse({'success': False, 'error': 'Debe especificar el nivel al que desea escalar.'}, status=400)
+        
+        # Obtener el nivel solicitado
+        try:
+            nivel_solicitado = NivelComite.objects.get(id=nivel_solicitado_id)
+        except NivelComite.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Nivel del comité no encontrado.'}, status=404)
+        
+        # Verificar que el escalamiento sea hacia un nivel superior (menor orden = mayor jerarquía)
+        if usuario_nivel and nivel_solicitado.orden >= usuario_nivel.nivel.orden:
+            return JsonResponse({'success': False, 'error': 'Solo puedes escalar a niveles superiores.'}, status=400)
+        
+        # Verificar que no existe ya un escalamiento pendiente al mismo nivel
+        escalamiento_existente = SolicitudEscalamientoComite.objects.filter(
+            solicitud=solicitud,
+            nivel_solicitado=nivel_solicitado,
+            atendido=False
+        ).exists()
+        
+        if escalamiento_existente:
+            return JsonResponse({'success': False, 'error': 'Ya existe un escalamiento pendiente a este nivel.'}, status=400)
+        
+        # Crear el escalamiento
+        escalamiento = SolicitudEscalamientoComite.objects.create(
+            solicitud=solicitud,
+            solicitado_por=request.user,
+            nivel_solicitado=nivel_solicitado,
+            comentario=comentario
+        )
+        
+        # Crear una participación automática del usuario actual si no existe
+        if usuario_nivel:
+            participacion, created = ParticipacionComite.objects.get_or_create(
+                solicitud=solicitud,
+                usuario=request.user,
+                nivel=usuario_nivel.nivel,
+                defaults={
+                    'comentario': f'Escalado a {nivel_solicitado.nombre}: {comentario}',
+                    'resultado': 'OBSERVACIONES'
+                }
+            )
+            
+            if not created:
+                # Actualizar la participación existente
+                participacion.comentario = f'Escalado a {nivel_solicitado.nombre}: {comentario}'
+                participacion.resultado = 'OBSERVACIONES'
+                participacion.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Solicitud escalada exitosamente a {nivel_solicitado.nombre}.',
+            'escalamiento_id': escalamiento.id
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500) 

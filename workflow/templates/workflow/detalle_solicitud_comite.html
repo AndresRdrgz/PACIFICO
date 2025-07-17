@@ -1,0 +1,1049 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+{% load file_icon_filters %}
+
+{% block title %}Comité de Crédito - {{ solicitud.codigo }}{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/analisis_styles.html' %}
+<style>
+    /* Estilos específicos del comité */
+    .comite-header {
+        background: linear-gradient(135deg, #047857, #059669);
+        color: white;
+    }
+    
+    .participaciones-table {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .participacion-row {
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .participacion-row:last-child {
+        border-bottom: none;
+    }
+    
+    .nivel-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+    }
+    
+    .resultado-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+    }
+    
+    .resultado-APROBADO { background-color: #dcfce7; color: #166534; }
+    .resultado-RECHAZADO { background-color: #fef2f2; color: #991b1b; }
+    .resultado-OBSERVACIONES { background-color: #fef3c7; color: #92400e; }
+    .resultado-PENDIENTE { background-color: #f3f4f6; color: #374151; }
+    
+    .participacion-form {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-comite {
+        background: linear-gradient(135deg, #047857, #059669);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-comite:hover {
+        background: linear-gradient(135deg, #065f46, #047857);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-escalar {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-escalar:hover {
+        background: linear-gradient(135deg, #1e40af, #1d4ed8);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .section-header {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+        user-select: none;
+    }
+
+    .section-header:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .section-header-content {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+    }
+
+    .section-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .section-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .toggle-icon {
+        font-size: 0.8rem;
+        transition: transform 0.3s ease;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .section-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+
+    .section-content {
+        transition: all 0.3s ease;
+        overflow: hidden;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        background-color: white;
+        margin-top: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        overflow: hidden;
+    }
+    
+    /* Estilos para comentarios */
+    .comentarios-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .comentarios-section {
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 1rem;
+    }
+    
+    .comentarios-section:last-child {
+        border-bottom: none;
+    }
+    
+    .comentario-item {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .comentario-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .comentario-header {
+        margin-bottom: 0.5rem;
+    }
+    
+    .comentario-author {
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .comentario-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+    }
+    
+    .comentario-date {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    
+    .comentario-content {
+        color: #374151;
+        line-height: 1.5;
+    }
+    
+    .comentario-tipo-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .comentarios-section-unified {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+    
+    .comentarios-section-unified::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .comentarios-section-unified::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+    
+    .comentarios-section-unified::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+    
+    .comentarios-section-unified::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="comite-container">
+    <div class="container-fluid">
+        <!-- Header de la Solicitud -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header comite-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <a href="{% url 'workflow:bandeja_comite' %}" class="btn btn-light btn-sm">
+                                    <i class="fas fa-arrow-left me-1"></i>Volver al Comité
+                                </a>
+                                <div>
+                                    <h2 class="mb-1 d-flex align-items-center">
+                                        <i class="fas fa-users me-2"></i>
+                                        Comité: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
+                                    </h2>
+                                    <div class="mt-1 d-flex align-items-center gap-4" style="font-size: 0.85em; opacity: 0.9;">
+                                        {% if solicitud.creada_por %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user me-1"></i>
+                                            <strong>Propietario:</strong> 
+                                            <span class="ms-1">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-code me-1"></i>
+                                            <strong>Código:</strong> 
+                                            <span class="ms-1">{{ solicitud.codigo }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            <strong>Monto:</strong> 
+                                            <span class="ms-1">{{ solicitud.monto_formateado }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark">{{ solicitud.pipeline.nombre }}</span>
+                                <span class="badge bg-success">{{ solicitud.etapa_actual.nombre }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Principal de la Solicitud -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="main-section-content">
+                    <div class="analysis-grid">
+                        <!-- 1. Información de Cliente -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-user text-info"></i>
+                                        <h3 class="section-title">Información de Cliente</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Nombre:</span>
+                                        <span class="info-value">{{ solicitud.cliente_nombre|default:"Sin datos" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Cédula:</span>
+                                        <span class="info-value">{{ solicitud.cliente_cedula|default:"Sin datos" }}</span>
+                                    </div>
+                                    {% if solicitud.cotizacion.telefono %}
+                                    <div class="info-row">
+                                        <span class="info-label">Teléfono:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.telefono }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if solicitud.cotizacion.email %}
+                                    <div class="info-row">
+                                        <span class="info-label">Email:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.email }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if solicitud.cotizacion.fechaNacimiento %}
+                                    <div class="info-row">
+                                        <span class="info-label">Fecha de Nacimiento:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.fechaNacimiento|date:"d/m/Y" }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Información Financiera -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-dollar-sign text-success"></i>
+                                        <h3 class="section-title">Información Financiera</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Salario:</span>
+                                        <span class="info-value">
+                                            {% if solicitud.cotizacion.salarioBaseMensual %}
+                                                B/. {{ solicitud.cotizacion.salarioBaseMensual|floatformat:2 }}
+                                            {% elif solicitud.cotizacion.ingresos %}
+                                                B/. {{ solicitud.cotizacion.ingresos|floatformat:2 }}
+                                            {% else %}
+                                                Sin datos
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Empresa:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.empresa|default:"Sin datos" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Monto Solicitado:</span>
+                                        <span class="info-value">{{ solicitud.monto_formateado }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Plazo:</span>
+                                        <span class="info-value">
+                                            {% if solicitud.cotizacion.plazoPago %}
+                                                {{ solicitud.cotizacion.plazoPago }} meses
+                                            {% else %}
+                                                Sin datos
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Cuota Mensual:</span>
+                                        <span class="info-value">
+                                            {% if solicitud.cotizacion.cuotaMensual %}
+                                                B/. {{ solicitud.cotizacion.cuotaMensual|floatformat:2 }}
+                                            {% else %}
+                                                Sin datos
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Información del Producto -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-box text-warning"></i>
+                                        <h3 class="section-title">Información del Producto</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row">
+                                        <span class="info-label">Tipo:</span>
+                                        <span class="info-value">{{ solicitud.producto_descripcion|default:"Sin datos" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Rentabilidad:</span>
+                                        <span class="info-value">
+                                            {% if solicitud.cotizacion.r_deseada %}
+                                                {{ solicitud.cotizacion.r_deseada|floatformat:2 }}%
+                                            {% elif solicitud.cotizacion.r1 %}
+                                                {{ solicitud.cotizacion.r1|floatformat:2 }}%
+                                            {% else %}
+                                                Sin datos
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    {% if solicitud.cotizacion.tipoPrestamo == 'auto' %}
+                                    <div class="info-row">
+                                        <span class="info-label">Marca:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.marca|default:"Sin datos" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Modelo:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.modelo|default:"Sin datos" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Año:</span>
+                                        <span class="info-value">{{ solicitud.cotizacion.año|default:"Sin datos" }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="info-row">
+                                        <span class="info-label">Prima Inicial:</span>
+                                        <span class="info-value">
+                                            {% if solicitud.cotizacion.primaInicial %}
+                                                B/. {{ solicitud.cotizacion.primaInicial|floatformat:2 }}
+                                            {% else %}
+                                                Sin datos
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Participación del Usuario -->
+        {% if nivel_usuario %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comment-dots me-2"></i>
+                            Mi Participación - {{ nivel_usuario.nivel.nombre }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="participacion-form">
+                            <form id="form-participacion-comite">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label for="resultado" class="form-label">Resultado</label>
+                                        <select class="form-select" id="resultado" name="resultado" required>
+                                            <option value="">Seleccione...</option>
+                                            <option value="APROBADO" {% if participacion_usuario.resultado == 'APROBADO' %}selected{% endif %}>Aprobado</option>
+                                            <option value="RECHAZADO" {% if participacion_usuario.resultado == 'RECHAZADO' %}selected{% endif %}>Rechazado</option>
+                                            <option value="OBSERVACIONES" {% if participacion_usuario.resultado == 'OBSERVACIONES' %}selected{% endif %}>Con Observaciones</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <label for="comentario" class="form-label">Comentario</label>
+                                        <textarea class="form-control" id="comentario" name="comentario" rows="3" placeholder="Escriba su comentario o análisis..." required>{% if participacion_usuario %}{{ participacion_usuario.comentario }}{% endif %}</textarea>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-12 d-flex gap-2">
+                                        <button type="submit" class="btn btn-comite">
+                                            <i class="fas fa-save me-1"></i>
+                                            {% if participacion_usuario %}Actualizar Participación{% else %}Participar en Comité{% endif %}
+                                        </button>
+                                        <button type="button" class="btn btn-escalar" onclick="mostrarModalEscalar()">
+                                            <i class="fas fa-arrow-up me-1"></i>
+                                            Escalar a Nivel Superior
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabla de Participaciones -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>
+                            Participaciones del Comité
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="participaciones-table">
+                            {% if participaciones %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nivel</th>
+                                            <th>Usuario</th>
+                                            <th>Resultado</th>
+                                            <th>Comentario</th>
+                                            <th>Fecha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for participacion in participaciones %}
+                                        <tr class="participacion-row">
+                                            <td>
+                                                <span class="nivel-badge bg-primary text-white">
+                                                    {{ participacion.nivel.nombre }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <strong>{{ participacion.usuario.get_full_name|default:participacion.usuario.username }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="resultado-badge resultado-{{ participacion.resultado }}">
+                                                    {{ participacion.get_resultado_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div style="max-width: 300px;">
+                                                    {{ participacion.comentario|truncatechars:100 }}
+                                                    {% if participacion.comentario|length > 100 %}
+                                                        <button class="btn btn-sm btn-link p-0" onclick="mostrarComentarioCompleto('{{ participacion.comentario }}')">
+                                                            Ver más...
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay participaciones aún</h5>
+                                <p class="text-muted">Esta solicitud aún no tiene participaciones del comité.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de Comentarios -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Historial de Comentarios
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="comentarios-container">
+                            <!-- Comentarios Combinados: Comité y Analista -->
+                            <div class="comentarios-section-unified">
+                                <!-- Comentarios del Comité -->
+                                {% if participaciones %}
+                                    {% for participacion in participaciones %}
+                                        <div class="comentario-item mb-3">
+                                            <div class="comentario-header">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="comentario-avatar me-2">
+                                                            <i class="fas fa-user-circle fa-lg text-primary"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="comentario-author">
+                                                                {{ participacion.usuario.get_full_name|default:participacion.usuario.username }}
+                                                                <span class="comentario-tipo-badge bg-primary text-white ms-2">COMITÉ</span>
+                                                            </div>
+                                                            <div class="comentario-meta">
+                                                                <span class="nivel-badge bg-primary text-white">
+                                                                    {{ participacion.nivel.nombre }}
+                                                                </span>
+                                                                <span class="resultado-badge resultado-{{ participacion.resultado }}">
+                                                                    {{ participacion.get_resultado_display }}
+                                                                </span>
+                                                                <span class="comentario-date">
+                                                                    {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="comentario-content">
+                                                {{ participacion.comentario|linebreaks }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <!-- Comentarios del Analista -->
+                                <div id="comentarios-analista-container">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando comentarios...</span>
+                                        </div>
+                                        <p class="text-muted mt-2">Cargando comentarios del analista...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentos Adjuntos -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-paperclip me-2"></i>
+                            Documentos Adjuntos
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="adjuntos-content">
+                            {% if solicitud.requisitos.all %}
+                                {% for requisito_solicitud in solicitud.requisitos.all %}
+                                    <div class="adjunto-item" {% if requisito_solicitud.archivo %}title="{{ requisito_solicitud.archivo|get_file_name }}"{% endif %}>
+                                        <div class="adjunto-icon">
+                                            <i class="{{ requisito_solicitud.archivo|get_file_icon }}"></i>
+                                        </div>
+                                        <div class="adjunto-details">
+                                            <div class="adjunto-name">
+                                                {{ requisito_solicitud.requisito.nombre }}
+                                                {% if requisito_solicitud.archivo %}
+                                                    <span class="adjunto-extension">({{ requisito_solicitud.archivo|get_file_extension }})</span>
+                                                    <span class="adjunto-size">{{ requisito_solicitud.archivo|get_file_size }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if requisito_solicitud.observaciones %}
+                                                <div class="adjunto-observaciones">
+                                                    <strong>Observaciones:</strong> {{ requisito_solicitud.observaciones }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% if requisito_solicitud.archivo %}
+                                            <div class="adjunto-actions">
+                                                <a href="{{ requisito_solicitud.archivo.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                    <i class="fas fa-eye me-1"></i>Ver
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No hay documentos adjuntos</h5>
+                                    <p class="text-muted">Esta solicitud no tiene documentos adjuntos.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solicitudes Relacionadas -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-link me-2"></i>
+                            Solicitudes Relacionadas
+                            <small class="text-muted">(Cédula: {{ solicitud.cliente_cedula|default:"-" }})</small>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if mostrar_mensaje_sin_cliente %}
+                            <div class="alert alert-warning text-center my-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Esta solicitud no tiene cédula de cliente asignada, no se pueden mostrar solicitudes relacionadas.
+                            </div>
+                        {% else %}
+                            {% if solicitudes_relacionadas %}
+                                <div class="row">
+                                    {% for s in solicitudes_relacionadas %}
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card border-left-primary">
+                                                <div class="card-body">
+                                                    <div class="related-header-item">
+                                                        <strong>{{ s.codigo }}</strong>
+                                                        <span class="related-date">{{ s.fecha_creacion|date:"d/m/Y" }}</span>
+                                                    </div>
+                                                    <div class="related-info">
+                                                        <span class="badge 
+                                                            {% if s.etapa_actual and 'Aprobad' in s.etapa_actual.nombre %}bg-success
+                                                            {% elif s.etapa_actual and 'Rechazad' in s.etapa_actual.nombre %}bg-danger
+                                                            {% else %}bg-warning{% endif %}">
+                                                            {% if s.etapa_actual %}{{ s.etapa_actual.nombre }}{% else %}Sin estado{% endif %}
+                                                        </span>
+                                                        <span class="related-amount">
+                                                            B/. {% if s.cotizacion and s.cotizacion.montoPrestamo %}{{ s.cotizacion.montoPrestamo|floatformat:2 }}{% else %}0.00{% endif %}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No hay solicitudes relacionadas</h5>
+                                    <p class="text-muted">No se encontraron otras solicitudes para este cliente.</p>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Escalar -->
+<div class="modal fade" id="modalEscalar" tabindex="-1" aria-labelledby="modalEscalarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEscalarLabel">
+                    <i class="fas fa-arrow-up me-2"></i>
+                    Escalar a Nivel Superior
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-escalar">
+                    <div class="mb-3">
+                        <label for="nivel-escalar" class="form-label">Nivel de Destino</label>
+                        <select class="form-select" id="nivel-escalar" name="nivel_solicitado" required>
+                            <option value="">Seleccione un nivel...</option>
+                            {% for nivel in niveles_comite %}
+                                {% if not nivel_usuario or nivel.orden < nivel_usuario.nivel.orden %}
+                                    <option value="{{ nivel.id }}">{{ nivel.nombre }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comentario-escalar" class="form-label">Motivo del Escalamiento</label>
+                        <textarea class="form-control" id="comentario-escalar" name="comentario" rows="3" placeholder="Explique por qué necesita escalar esta solicitud..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-escalar" onclick="procesarEscalamiento()">
+                    <i class="fas fa-arrow-up me-1"></i>
+                    Escalar Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Comentario Completo -->
+<div class="modal fade" id="modalComentario" tabindex="-1" aria-labelledby="modalComentarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalComentarioLabel">
+                    <i class="fas fa-comment me-2"></i>
+                    Comentario Completo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="comentario-completo-texto"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    const solicitudId = {{ solicitud.id }};
+    const csrfToken = '{{ csrf_token }}';
+    const nivelUsuarioId = {{ nivel_usuario.nivel.id|default:"null" }};
+    
+    // Función para toggle de secciones
+    function toggleSection(header) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.toggle-icon');
+        
+        if (content.classList.contains('collapsed')) {
+            content.classList.remove('collapsed');
+            header.classList.remove('collapsed');
+        } else {
+            content.classList.add('collapsed');
+            header.classList.add('collapsed');
+        }
+    }
+    
+    // Función para mostrar modal de escalar
+    function mostrarModalEscalar() {
+        const modal = new bootstrap.Modal(document.getElementById('modalEscalar'));
+        modal.show();
+    }
+    
+    // Función para mostrar comentario completo
+    function mostrarComentarioCompleto(comentario) {
+        document.getElementById('comentario-completo-texto').textContent = comentario;
+        const modal = new bootstrap.Modal(document.getElementById('modalComentario'));
+        modal.show();
+    }
+    
+    // Función para procesar escalamiento
+    function procesarEscalamiento() {
+        const form = document.getElementById('form-escalar');
+        const formData = new FormData(form);
+        
+        const data = {
+            nivel_solicitado: formData.get('nivel_solicitado'),
+            comentario: formData.get('comentario')
+        };
+        
+        fetch(`/workflow/api/comite/solicitudes/${solicitudId}/escalar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Solicitud escalada exitosamente', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalEscalar')).hide();
+                // Recargar página después de 1 segundo
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                mostrarToast(data.error || 'Error al escalar la solicitud', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'error');
+        });
+    }
+    
+    // Función para mostrar toast
+    function mostrarToast(mensaje, tipo) {
+        // Crear el toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white border-0 ${tipo === 'success' ? 'bg-success' : 'bg-danger'}`;
+        toast.role = 'alert';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${tipo === 'success' ? 'fa-check' : 'fa-exclamation-triangle'} me-2"></i>
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Agregar al container de toasts
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Mostrar el toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remover después de que se oculte
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+    
+    // Manejar formulario de participación
+    document.getElementById('form-participacion-comite').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = {
+            resultado: formData.get('resultado'),
+            comentario: formData.get('comentario'),
+            nivel_id: nivelUsuarioId
+        };
+        
+        fetch(`/workflow/api/comite/solicitudes/${solicitudId}/participar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Participación registrada exitosamente', 'success');
+                // Recargar página después de 1 segundo
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                mostrarToast(data.error || 'Error al registrar la participación', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'error');
+        });
+    });
+    
+    // Cargar comentarios del analista
+    function cargarComentariosAnalista() {
+        const container = document.getElementById('comentarios-analista-container');
+        
+        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.comentarios.length > 0) {
+                    let comentariosHTML = '';
+                    
+                    data.comentarios.forEach(comentario => {
+                        comentariosHTML += `
+                            <div class="comentario-item mb-3">
+                                <div class="comentario-header">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="comentario-avatar me-2">
+                                                <i class="fas fa-user-circle fa-lg text-success"></i>
+                                            </div>
+                                            <div>
+                                                <div class="comentario-author">
+                                                    ${comentario.usuario.nombre_completo}
+                                                    <span class="comentario-tipo-badge bg-success text-white ms-2">ANALISTA</span>
+                                                </div>
+                                                <div class="comentario-meta">
+                                                    <span class="comentario-date">
+                                                        ${formatearFecha(comentario.fecha_creacion)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="comentario-content">
+                                    ${comentario.comentario.replace(/\n/g, '<br>')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = comentariosHTML;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay comentarios del analista</h5>
+                            <p class="text-muted">Esta solicitud aún no tiene comentarios del analista.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar comentarios del analista:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar los comentarios del analista
+                    </div>
+                `;
+            });
+    }
+    
+    // Función para formatear fecha
+    function formatearFecha(fechaString) {
+        const fecha = new Date(fechaString);
+        return fecha.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    // Cargar comentarios del analista cuando se carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarComentariosAnalista();
+    });
+</script>
+{% endblock %} 

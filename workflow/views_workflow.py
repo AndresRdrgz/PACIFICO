@@ -2846,6 +2846,121 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         print(f"❌ Error al enviar correo de cambio de etapa para solicitud {solicitud.codigo}: {str(e)}")
 
 
+def enviar_correo_comite_credito(solicitud, etapa):
+    """
+    Función para enviar correo automático cuando una solicitud entra a la etapa del Comité de Crédito.
+    """
+    try:
+        # Destinatarios específicos para el comité de crédito
+        destinatarios = [
+            "jacastillo@fpacifico.com",
+            "arodriguez@fpacifico.com"
+        ]
+        
+        # Construir la URL específica de la bandeja del comité
+        bandeja_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/comite/"
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        cliente_cedula = solicitud.cliente_cedula or "Sin cédula"
+        monto_formateado = solicitud.monto_formateado or "$ 0.00"
+        
+        # Obtener el analista revisor (último usuario que procesó la solicitud)
+        analista_revisor = ""
+        try:
+            ultimo_historial = solicitud.historial.exclude(
+                etapa__nombre__iexact="Comité de Crédito"
+            ).order_by('-fecha_fin').first()
+            
+            if ultimo_historial and ultimo_historial.usuario_responsable:
+                analista_revisor = ultimo_historial.usuario_responsable.get_full_name() or ultimo_historial.usuario_responsable.username
+            else:
+                analista_revisor = "No asignado"
+        except Exception as e:
+            print(f"⚠️ Error obteniendo analista revisor: {e}")
+            analista_revisor = "Error al obtener analista"
+        
+        # Contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa': etapa,
+            'cliente_nombre': cliente_nombre,
+            'cliente_cedula': cliente_cedula,
+            'monto_formateado': monto_formateado,
+            'analista_revisor': analista_revisor,
+            'bandeja_url': bandeja_url,
+        }
+        
+        # Cargar el template HTML específico del comité
+        html_content = render_to_string('workflow/emails/comite_credito_notification.html', context)
+        
+        # Crear el asunto específico del comité
+        subject = f"🏛️ Nueva Solicitud en Comité de Crédito - {solicitud.codigo}"
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+        Nueva Solicitud en Comité de Crédito
+        
+        Estimado equipo del Comité de Crédito,
+        
+        Una solicitud ha ingresado al Comité de Crédito y requiere su revisión y aprobación:
+        
+        • Código: {solicitud.codigo}
+        • Cliente: {cliente_nombre}
+        • Cédula: {cliente_cedula}
+        • Monto: {monto_formateado}
+        • Producto: {solicitud.producto_descripcion}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Analista Revisor: {analista_revisor}
+        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        Para revisar la solicitud, haz clic en el siguiente enlace:
+        {bandeja_url}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        print(f"✅ Correo del comité enviado correctamente para solicitud {solicitud.codigo}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo del comité para solicitud {solicitud.codigo}: {str(e)}")
+
+
 @login_required
 @csrf_exempt
 def api_cambiar_etapa(request, solicitud_id):
@@ -2958,10 +3073,16 @@ def api_cambiar_etapa(request, solicitud_id):
         # 🚨 CRÍTICO: Notificar cambio de etapa en tiempo real a TODAS las vistas
         notify_solicitud_change(solicitud, 'solicitud_cambio_etapa', request.user)
         
-        # 📧 NUEVO: Enviar correo automático si la nueva etapa es bandeja grupal
+        # 📧 NUEVO: Enviar correo automático según el tipo de etapa
         print(f"🔍 DEBUG: Verificando etapa {nueva_etapa.nombre} - es_bandeja_grupal: {nueva_etapa.es_bandeja_grupal}")
-        if nueva_etapa.es_bandeja_grupal:
-            print(f"📧 ACTIVANDO envío de correo para solicitud {solicitud.codigo} en etapa {nueva_etapa.nombre}")
+        
+        # Enviar correo específico del comité si la nueva etapa es "Comité de Crédito"
+        if nueva_etapa.nombre.lower() == "comité de crédito":
+            print(f"📧 ACTIVANDO envío de correo del comité para solicitud {solicitud.codigo}")
+            enviar_correo_comite_credito(solicitud, nueva_etapa)
+        elif nueva_etapa.es_bandeja_grupal:
+            # Solo enviar correo de bandeja grupal para etapas que NO sean el comité
+            print(f"📧 ACTIVANDO envío de correo de bandeja grupal para solicitud {solicitud.codigo} en etapa {nueva_etapa.nombre}")
             enviar_correo_bandeja_grupal(solicitud, nueva_etapa)
         else:
             print(f"ℹ️ No se envía correo - la etapa {nueva_etapa.nombre} no es bandeja grupal")
