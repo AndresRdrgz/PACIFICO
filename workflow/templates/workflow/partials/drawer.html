@@ -86,6 +86,49 @@
                     </div>
                 </div>
 
+                <!-- Observaciones de la cotización -->
+                <div id="observacionesSection" class="form-section" style="display: none;">
+                    <h6 class="form-section-title">
+                        <i class="fas fa-comment-alt me-2"></i>
+                        Observaciones de la cotización
+                    </h6>
+                    <div class="form-group">
+                        <div id="observacionesSelected" class="selected-item auto-populated" style="display: none;">
+                            <div class="selected-item-content">
+                                <div class="selected-item-info">
+                                    <div class="observaciones-text" style="white-space: pre-wrap; line-height: 1.5;"></div>
+                                </div>
+                            </div>
+                            <small class="auto-populated-indicator">
+                                <i class="fas fa-magic me-1"></i>Auto-completado desde cotización
+                            </small>
+                        </div>
+                        <div id="observacionesPlaceholder" class="text-muted text-center py-3">
+                            <i class="fas fa-comment-alt"></i>
+                            Selecciona una cotización para ver las observaciones asociadas
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Motivo de la consulta -->
+                <div id="motivoConsultaSection" class="form-section" style="display: none;">
+                    <h6 class="form-section-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Motivo de la consulta
+                    </h6>
+                    <div class="form-group">
+                        <textarea id="motivoConsulta" name="motivo_consulta" 
+                                  class="form-control" 
+                                  rows="4" 
+                                  placeholder="Describe el motivo de la consulta o las observaciones del cliente..."
+                                  style="resize: vertical; min-height: 100px;"></textarea>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Esta información se utilizará para documentar el propósito de la solicitud
+                        </small>
+                    </div>
+                </div>
+
                 <!-- Campos Personalizados -->
                 <div id="camposPersonalizados" class="form-section">
                     <h6 class="form-section-title">
@@ -390,7 +433,7 @@
 .selected-item-content {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .selected-item-info {
@@ -408,6 +451,24 @@
     color: #5a7a5a;
     font-size: 0.875rem;
     margin-top: 2px;
+}
+
+/* Observaciones specific styles */
+.observaciones-text {
+    color: #2d5a2d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.auto-populated-indicator {
+    display: block;
+    color: #28a745;
+    font-size: 0.75rem;
+    margin-top: 8px;
+    font-style: italic;
 }
 
 .btn-remove {
@@ -596,6 +657,15 @@
     border-bottom: 1px solid #e0e0e0;
 }
 
+/* Ensure motivo consulta section is hidden by default */
+#motivoConsultaSection {
+    display: none !important;
+}
+
+#motivoConsultaSection.show {
+    display: block !important;
+}
+
 .session-warning-content {
     display: flex;
     align-items: center;
@@ -656,6 +726,22 @@ window.resetForm = function() {
     document.getElementById('clienteId').value = '';
     document.getElementById('cotizacionSelected').style.display = 'none';
     document.getElementById('clienteSelected').style.display = 'none';
+    
+    // Reset observaciones section
+    const observacionesSection = document.getElementById('observacionesSection');
+    if (observacionesSection) {
+        observacionesSection.style.display = 'none';
+    }
+    
+    // Reset motivo de consulta section
+    const motivoSection = document.getElementById('motivoConsultaSection');
+    const motivoTextarea = document.getElementById('motivoConsulta');
+    if (motivoSection) {
+        motivoSection.classList.remove('show');
+    }
+    if (motivoTextarea) {
+        motivoTextarea.value = '';
+    }
     
     // Reset campos personalizados
     document.getElementById('camposContainer').innerHTML = `
@@ -883,10 +969,8 @@ function showSearchResults(type, results) {
             
             if (type === 'cotizacion') {
                 // Use montoFinanciado as "Monto Financiado" instead 
-                console.log('🔧 Processing cotización item:', item);
                 const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                 const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
-                console.log('🔧 montoFinanciado:', montoFinanciado, 'montoFormateado:', montoFormateado);
                 resultItem.innerHTML = `
                     <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
                     <div class="search-result-details">
@@ -927,6 +1011,54 @@ function selectItem(type, item) {
         const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
         nameElement.textContent = item.nombreCliente || 'Sin nombre';
         detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
+        
+        // Show observaciones section and populate with observaciones from cotización
+        const observacionesSection = document.getElementById('observacionesSection');
+        const observacionesSelected = document.getElementById('observacionesSelected');
+        const observacionesPlaceholder = document.getElementById('observacionesPlaceholder');
+        const observacionesText = document.querySelector('.observaciones-text');
+        
+        if (observacionesSection && observacionesSelected && observacionesPlaceholder && observacionesText) {
+            observacionesSection.style.display = 'block';
+            
+                                const observaciones = item.observaciones || '';
+            
+            if (observaciones.trim()) {
+                // Show the observaciones content
+                observacionesText.textContent = observaciones;
+                observacionesSelected.style.display = 'block';
+                observacionesPlaceholder.style.display = 'none';
+            } else {
+                // Show placeholder if no observaciones
+                observacionesSelected.style.display = 'none';
+                observacionesPlaceholder.style.display = 'block';
+            }
+        }
+        
+        // Show motivo de consulta section and populate with observaciones
+        const motivoSection = document.getElementById('motivoConsultaSection');
+        const motivoTextarea = document.getElementById('motivoConsulta');
+        
+        if (motivoSection && motivoTextarea) {
+            motivoSection.classList.add('show');
+            
+                                // Set the observaciones from the cotización
+                    const observaciones = item.observaciones || '';
+            
+            motivoTextarea.value = observaciones;
+            
+            // Trigger input event to ensure any listeners are notified
+            motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+            
+
+            
+            // If observaciones is empty, focus on the textarea for user input
+            if (!observaciones.trim()) {
+                setTimeout(() => {
+                    motivoTextarea.focus();
+                }, 100);
+            }
+
     } else {
         nameElement.textContent = item.nombreCliente || 'Sin nombre';
         detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.edad || 'Sin edad'} años`;
@@ -950,6 +1082,56 @@ function selectCotizacion(cotizacion) {
     nameElement.textContent = cotizacion.nombreCliente || 'Sin nombre';
     detailsElement.textContent = `${cotizacion.cedulaCliente || 'Sin cédula'} • ${cotizacion.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
     
+    // Show observaciones section and populate with observaciones from cotización
+    const observacionesSection = document.getElementById('observacionesSection');
+    const observacionesSelected = document.getElementById('observacionesSelected');
+    const observacionesPlaceholder = document.getElementById('observacionesPlaceholder');
+    const observacionesText = document.querySelector('.observaciones-text');
+    
+    if (observacionesSection && observacionesSelected && observacionesPlaceholder && observacionesText) {
+        observacionesSection.style.display = 'block';
+        
+        const observaciones = cotizacion.observaciones || '';
+        console.log('🔧 Observaciones from cotización (selectCotizacion):', observaciones);
+        console.log('🔧 Full cotización data:', cotizacion);
+        
+        if (observaciones.trim()) {
+            // Show the observaciones content
+            observacionesText.textContent = observaciones;
+            observacionesSelected.style.display = 'block';
+            observacionesPlaceholder.style.display = 'none';
+        } else {
+            // Show placeholder if no observaciones
+            observacionesSelected.style.display = 'none';
+            observacionesPlaceholder.style.display = 'block';
+        }
+    }
+    
+    // Show motivo de consulta section and populate with observaciones
+    const motivoSection = document.getElementById('motivoConsultaSection');
+    const motivoTextarea = document.getElementById('motivoConsulta');
+    
+    if (motivoSection && motivoTextarea) {
+        motivoSection.style.display = 'block';
+        
+        // Set the observaciones from the cotización
+        const observaciones = cotizacion.observaciones || '';
+        
+        motivoTextarea.value = observaciones;
+        
+        // Trigger input event to ensure any listeners are notified
+        motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+
+        
+        // If observaciones is empty, focus on the textarea for user input
+        if (!observaciones.trim()) {
+            setTimeout(() => {
+                motivoTextarea.focus();
+            }, 100);
+        }
+    }
+    
     selectedContainer.style.display = 'block';
     hideSearchResults('cotizacion');
 }
@@ -972,6 +1154,24 @@ function selectCliente(cliente) {
 window.clearCotizacion = function() {
     document.getElementById('cotizacionId').value = '';
     document.getElementById('cotizacionSelected').style.display = 'none';
+    
+    // Hide observaciones section
+    const observacionesSection = document.getElementById('observacionesSection');
+    if (observacionesSection) {
+        observacionesSection.style.display = 'none';
+    }
+    
+    // Hide motivo de consulta section and clear the textarea
+    const motivoSection = document.getElementById('motivoConsultaSection');
+    const motivoTextarea = document.getElementById('motivoConsulta');
+    
+    if (motivoSection) {
+        motivoSection.classList.remove('show');
+    }
+    
+    if (motivoTextarea) {
+        motivoTextarea.value = '';
+    }
 }
 
 window.clearCliente = function() {
@@ -1433,4 +1633,6 @@ function extendSession() {
 }
 
 // Global function to open drawer with context - defined in negocios.html to avoid conflicts
+
+
 </script>
