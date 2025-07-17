@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -226,3 +226,54 @@ class SolicitudComentarioAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('solicitud', 'usuario')
+
+
+# ==========================================
+# ADMINISTRACIÓN DEL COMITÉ DE CRÉDITO
+# ==========================================
+
+@admin.register(NivelComite)
+class NivelComiteAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'orden')
+    list_display_links = ('nombre',)
+    search_fields = ('nombre',)
+    ordering = ('orden',)
+    list_per_page = 25
+
+
+@admin.register(UsuarioNivelComite)
+class UsuarioNivelComiteAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'nivel', 'fecha_asignacion', 'activo')
+    list_display_links = ('usuario',)
+    search_fields = ('usuario__username', 'usuario__first_name', 'usuario__last_name', 'nivel__nombre')
+    list_filter = ('nivel', 'activo', 'fecha_asignacion')
+    ordering = ('nivel__orden', 'usuario__username')
+    list_per_page = 25
+
+
+@admin.register(ParticipacionComite)
+class ParticipacionComiteAdmin(admin.ModelAdmin):
+    list_display = ('solicitud', 'usuario', 'nivel', 'resultado', 'fecha_modificacion')
+    list_display_links = ('solicitud',)
+    search_fields = ('solicitud__codigo', 'usuario__username', 'comentario')
+    list_filter = ('nivel', 'resultado', 'fecha_modificacion')
+    ordering = ('-fecha_modificacion',)
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    list_per_page = 25
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('solicitud', 'usuario', 'nivel')
+
+
+@admin.register(SolicitudEscalamientoComite)
+class SolicitudEscalamientoComiteAdmin(admin.ModelAdmin):
+    list_display = ('solicitud', 'solicitado_por', 'nivel_solicitado', 'atendido', 'fecha_solicitud', 'fecha_atencion')
+    list_display_links = ('solicitud',)
+    search_fields = ('solicitud__codigo', 'solicitado_por__username', 'comentario')
+    list_filter = ('nivel_solicitado', 'atendido', 'fecha_solicitud')
+    ordering = ('-fecha_solicitud',)
+    readonly_fields = ('fecha_solicitud', 'fecha_atencion')
+    list_per_page = 25
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('solicitud', 'solicitado_por', 'nivel_solicitado', 'atendido_por')

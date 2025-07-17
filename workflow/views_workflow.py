@@ -661,8 +661,8 @@ def bandeja_trabajo(request):
             'creada_por', 'asignada_a'
         )
         
-        # Superuser y super staff ven TODAS las bandejas grupales
-        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        # Superuser y super staff ven TODAS las bandejas grupales (excluir Comité de Crédito)
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito")
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
             asignada_a__isnull=True
@@ -680,13 +680,13 @@ def bandeja_trabajo(request):
             'creada_por', 'asignada_a'
         )
         
-        # Obtener bandejas grupales
+        # Obtener bandejas grupales (excluir Comité de Crédito)
         grupos_usuario = request.user.groups.all()
         etapas_grupales = Etapa.objects.filter(
             es_bandeja_grupal=True,
             permisos__grupo__in=grupos_usuario,
             permisos__puede_autoasignar=True
-        )
+        ).exclude(nombre__iexact="Comité de Crédito")
         
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
@@ -3210,8 +3210,8 @@ def vista_mixta_bandejas(request):
             # Si hay etapa seleccionada, filtrar solo por esa etapa
             etapas_grupales = Etapa.objects.filter(id=etapa_seleccionada.id)
         else:
-            # Si no hay etapa seleccionada, mostrar todas las etapas grupales
-            etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+            # Si no hay etapa seleccionada, mostrar todas las etapas grupales excepto Comité de Crédito
+            etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito")
         
         solicitudes_grupales = Solicitud.objects.filter(
             etapa_actual__in=etapas_grupales,
@@ -3243,12 +3243,12 @@ def vista_mixta_bandejas(request):
                 permisos__puede_autoasignar=True
             ).distinct()
         else:
-            # Si no hay etapa seleccionada, mostrar todas las etapas donde tiene permisos
+            # Si no hay etapa seleccionada, mostrar todas las etapas donde tiene permisos excepto Comité de Crédito
             etapas_grupales = Etapa.objects.filter(
                 es_bandeja_grupal=True,
                 permisos__grupo__in=grupos_usuario,
                 permisos__puede_autoasignar=True
-            ).distinct()
+            ).exclude(nombre__iexact="Comité de Crédito").distinct()
         
         # Solicitudes grupales (sin asignar)
         solicitudes_grupales = Solicitud.objects.filter(
@@ -3411,8 +3411,8 @@ def vista_mixta_bandejas(request):
     estados_unicos = sorted(list(estados_unicos))
     etapas_unicas = sorted(list(etapas_unicas))
     
-    # Obtener todas las etapas con bandeja habilitada (para el dropdown)
-    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).select_related('pipeline')
+    # Obtener todas las etapas con bandeja habilitada (para el dropdown) excepto Comité de Crédito
+    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline')
     
     context = {
         'solicitudes_grupales': solicitudes_grupales,
