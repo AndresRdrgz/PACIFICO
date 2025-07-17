@@ -39,21 +39,6 @@ urlpatterns += [
     path('api/comite/niveles-usuario/', apicomite.api_niveles_usuario_comite, name='api_niveles_usuario_comite'),
     path('api/comite/solicitudes/<int:solicitud_id>/historial/', apicomite.api_historial_participaciones, name='api_historial_participaciones'),
     
-<<<<<<< Updated upstream
-    # APIs para gestión completa del comité
-    path('api/comite/niveles/', apicomite.api_obtener_niveles_comite, name='api_obtener_niveles_comite'),
-    path('api/comite/niveles/crear/', apicomite.api_crear_nivel_comite, name='api_crear_nivel_comite'),
-    path('api/comite/niveles/<int:nivel_id>/actualizar/', apicomite.api_actualizar_nivel_comite, name='api_actualizar_nivel_comite'),
-    path('api/comite/niveles/<int:nivel_id>/eliminar/', apicomite.api_eliminar_nivel_comite, name='api_eliminar_nivel_comite'),
-    path('api/comite/asignaciones/', apicomite.api_obtener_asignaciones_comite, name='api_obtener_asignaciones_comite'),
-    path('api/comite/asignaciones/crear/', apicomite.api_crear_asignacion_comite, name='api_crear_asignacion_comite'),
-    path('api/comite/asignaciones/<int:asignacion_id>/estado/', apicomite.api_cambiar_estado_asignacion_comite, name='api_cambiar_estado_asignacion_comite'),
-    path('api/comite/asignaciones/<int:asignacion_id>/eliminar/', apicomite.api_eliminar_asignacion_comite, name='api_eliminar_asignacion_comite'),
-    path('api/comite/estadisticas/', apicomite.api_estadisticas_comite, name='api_estadisticas_comite'),
-    path('api/comite/test-email/', apicomite.api_test_email_comite, name='api_test_email_comite'),
-    path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
-    path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
-=======
     # APIs para gestión de niveles de comité
     path('api/comite/niveles/', views_workflow.api_obtener_niveles_comite, name='api_obtener_niveles_comite'),
     path('api/comite/niveles/crear/', views_workflow.api_crear_nivel_comite, name='api_crear_nivel_comite'),
@@ -64,7 +49,6 @@ urlpatterns += [
     path('api/comite/usuarios-disponibles/', views_workflow.api_obtener_usuarios_disponibles_comite, name='api_obtener_usuarios_disponibles_comite'),
     path('api/comite/asignar-usuario/', views_workflow.api_asignar_usuario_nivel_comite, name='api_asignar_usuario_nivel_comite'),
     path('api/comite/usuarios/<int:usuario_id>/niveles/<int:nivel_id>/desasignar/', views_workflow.api_desasignar_usuario_nivel_comite, name='api_desasignar_usuario_nivel_comite'),
->>>>>>> Stashed changes
     
     # APIs para bandeja mixta
     path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),
