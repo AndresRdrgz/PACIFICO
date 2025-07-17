@@ -120,6 +120,11 @@
                                 <i class="fas fa-layer-group me-2"></i>Grupos
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="comite-tab" data-bs-toggle="tab" data-bs-target="#comite" type="button" role="tab">
+                                <i class="fas fa-university me-2"></i>Permisos Comité
+                            </button>
+                        </li>
                     </ul>
                 </div>
                 <div class="card-body p-4">
@@ -285,6 +290,104 @@
                                 {% endfor %}
                             </div>
                         </div>
+
+                        <!-- Tab Permisos Comité -->
+                        <div class="tab-pane fade" id="comite" role="tabpanel" aria-labelledby="comite-tab">
+
+                            <!-- Sección de Niveles -->
+                            <div class="card-custom mb-4">
+                                <div class="card-header-custom">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-layer-group me-2"></i>Niveles del Comité
+                                        </h5>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="limpiarFiltrosNiveles()">
+                                                <i class="fas fa-filter me-2"></i>Limpiar Filtros
+                                            </button>
+                                            <button class="btn btn-pacifico btn-sm" onclick="mostrarModalNuevoNivel()">
+                                                <i class="fas fa-plus me-2"></i>Nuevo Nivel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Orden</th>
+                                                    <th>Nombre del Nivel</th>
+                                                    <th>Usuarios Asignados</th>
+                                                    <th>Estado</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tablaNiveles">
+                                                <!-- Los niveles se cargarán aquí dinámicamente -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección de Asignaciones -->
+                            <div class="card-custom">
+                                <div class="card-header-custom">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-users me-2"></i>Asignaciones de Usuarios
+                                        </h5>
+                                        <button class="btn btn-pacifico btn-sm" onclick="mostrarModalAsignarUsuario()">
+                                            <i class="fas fa-user-plus me-2"></i>Asignar Usuario
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-4">
+                                    <!-- Filtros -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <select class="form-control form-control-custom" id="filtroNivel">
+                                                <option value="">Todos los niveles</option>
+                                                <!-- Los niveles se cargarán dinámicamente -->
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select class="form-control form-control-custom" id="filtroEstado">
+                                                <option value="">Todos los estados</option>
+                                                <option value="activo">Activos</option>
+                                                <option value="inactivo">Inactivos</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-search"></i>
+                                                </span>
+                                                <input type="text" class="form-control form-control-custom" id="buscarAsignacion" placeholder="Buscar usuario...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Usuario</th>
+                                                    <th>Nivel Asignado</th>
+                                                    <th>Fecha Asignación</th>
+                                                    <th>Estado</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tablaAsignaciones">
+                                                <!-- Las asignaciones se cargarán aquí dinámicamente -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -400,6 +503,137 @@
     </div>
 </div>
 
+<!-- Modal Nuevo Nivel Comité -->
+<div class="modal fade" id="modalNuevoNivel" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-layer-group me-2"></i>Nuevo Nivel de Comité
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoNivel">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Nivel *</label>
+                        <input type="text" class="form-control form-control-custom" name="nombre" required placeholder="Ej: Supervisor de Crédito">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Orden de Jerarquía *</label>
+                        <input type="number" class="form-control form-control-custom" name="orden" required min="1" placeholder="1 = Más bajo, números mayores = Más altos">
+                        <div class="form-text">Menor número = Mayor autoridad en el comité</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control form-control-custom" name="descripcion" rows="3" placeholder="Descripción del nivel y sus responsabilidades..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-pacifico" onclick="guardarNivel()">
+                    <i class="fas fa-save me-2"></i>Guardar Nivel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Usuario a Comité -->
+<div class="modal fade" id="modalAsignarUsuario" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Asignar Usuario al Comité
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAsignarUsuario">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Usuario *</label>
+                                <select class="form-control form-control-custom" name="usuario_id" required id="selectUsuario">
+                                    <option value="">Seleccione un usuario...</option>
+                                    <!-- Los usuarios se cargarán dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nivel del Comité *</label>
+                                <select class="form-control form-control-custom" name="nivel_id" required id="selectNivel">
+                                    <option value="">Seleccione un nivel...</option>
+                                    <!-- Los niveles se cargarán dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="activo" checked id="checkboxActivo">
+                            <label class="form-check-label" for="checkboxActivo">
+                                Usuario activo en el comité
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control form-control-custom" name="observaciones" rows="3" placeholder="Observaciones sobre esta asignación..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-pacifico" onclick="guardarAsignacion()">
+                    <i class="fas fa-user-check me-2"></i>Asignar Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Nivel -->
+<div class="modal fade" id="modalEditarNivel" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Editar Nivel de Comité
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarNivel">
+                    <input type="hidden" name="nivel_id" id="editNivelId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Nivel *</label>
+                        <input type="text" class="form-control form-control-custom" name="nombre" required id="editNivelNombre">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Orden de Jerarquía *</label>
+                        <input type="number" class="form-control form-control-custom" name="orden" required min="1" id="editNivelOrden">
+                        <div class="form-text">Menor número = Mayor autoridad en el comité</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control form-control-custom" name="descripcion" rows="3" id="editNivelDescripcion"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-pacifico" onclick="actualizarNivel()">
+                    <i class="fas fa-save me-2"></i>Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -426,6 +660,20 @@ function mostrarModalNuevoGrupo() {
     new bootstrap.Modal(document.getElementById('modalNuevoGrupo')).show();
 }
 
+function mostrarModalNuevoNivel() {
+    document.getElementById('formNuevoNivel').reset();
+    new bootstrap.Modal(document.getElementById('modalNuevoNivel')).show();
+}
+
+function mostrarModalAsignarUsuario() {
+    document.getElementById('formAsignarUsuario').reset();
+    
+    // Cargar usuarios y niveles antes de mostrar el modal
+    cargarUsuariosParaAsignacion();
+    
+    new bootstrap.Modal(document.getElementById('modalAsignarUsuario')).show();
+}
+
 function guardarUsuario() {
     const form = document.getElementById('formNuevoUsuario');
     const formData = new FormData(form);
@@ -448,6 +696,94 @@ function guardarGrupo() {
     // Aquí iría la lógica para guardar el grupo
     showToast('Grupo guardado exitosamente', 'success');
     bootstrap.Modal.getInstance(document.getElementById('modalNuevoGrupo')).hide();
+}
+
+function guardarNivel() {
+    const form = document.getElementById('formNuevoNivel');
+    const formData = new FormData(form);
+    const nivelNombre = formData.get('nombre');
+    const nivelOrden = formData.get('orden');
+    const nivelDescripcion = formData.get('descripcion');
+
+    if (!nivelNombre || !nivelOrden) {
+        showToast('Nombre y Orden de Jerarquía son obligatorios', 'error');
+        return;
+    }
+
+    const data = {
+        nombre: nivelNombre,
+        orden: parseInt(nivelOrden),
+        descripcion: nivelDescripcion || ''
+    };
+
+    fetch('/workflow/api/comite/niveles/crear/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Nivel guardado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoNivel')).hide();
+            cargarNiveles(); // Recargar la tabla de niveles
+            cargarEstadisticas(); // Actualizar estadísticas
+        } else {
+            showToast('Error al guardar nivel: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al guardar el nivel', 'error');
+    });
+}
+
+function guardarAsignacion() {
+    const form = document.getElementById('formAsignarUsuario');
+    const formData = new FormData(form);
+    const usuarioId = formData.get('usuario_id');
+    const nivelId = formData.get('nivel_id');
+    const activo = formData.get('activo') === 'on';
+    const observaciones = formData.get('observaciones');
+
+    if (!usuarioId || !nivelId) {
+        showToast('Usuario y Nivel son obligatorios', 'error');
+        return;
+    }
+
+    const data = {
+        usuario_id: parseInt(usuarioId),
+        nivel_id: parseInt(nivelId),
+        activo: activo,
+        observaciones: observaciones || ''
+    };
+
+    fetch('/workflow/api/comite/asignaciones/crear/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Usuario asignado al comité exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalAsignarUsuario')).hide();
+            cargarAsignaciones(); // Recargar la tabla de asignaciones
+            cargarEstadisticas(); // Actualizar estadísticas
+        } else {
+            showToast('Error al asignar usuario: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al asignar el usuario', 'error');
+    });
 }
 
 function editarUsuario(userId) {
@@ -486,6 +822,442 @@ function verMiembrosGrupo(grupoId) {
 
 function exportarUsuarios() {
     showToast('Función de exportación en desarrollo', 'info');
+}
+
+// === FUNCIONES PARA GESTIÓN DEL COMITÉ ===
+
+// Variables globales para el comité
+let nivelesComite = [];
+let asignacionesComite = [];
+
+// Inicializar datos del comité cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar datos del comité cuando se selecciona el tab
+    document.getElementById('comite-tab').addEventListener('click', function() {
+        cargarDatosComite();
+    });
+});
+
+function cargarDatosComite() {
+    cargarNiveles();
+    cargarAsignaciones();
+    cargarEstadisticas();
+}
+
+function cargarNiveles() {
+    // Mostrar loading
+    document.getElementById('tablaNiveles').innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando niveles...</td></tr>';
+    
+    fetch('/workflow/api/comite/niveles/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                nivelesComite = data.niveles;
+                renderNiveles(data.niveles);
+                actualizarSelectoresNiveles(data.niveles);
+            } else {
+                showToast('Error al cargar niveles: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error al cargar niveles del comité', 'error');
+        });
+}
+
+function renderNiveles(niveles) {
+    const tbody = document.getElementById('tablaNiveles');
+    
+    if (niveles.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay niveles configurados</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = niveles.map(nivel => `
+        <tr>
+            <td>
+                <span class="badge badge-pacifico">${nivel.orden}</span>
+            </td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-layer-group me-2 text-primary"></i>
+                    <strong>${nivel.nombre}</strong>
+                </div>
+            </td>
+            <td>
+                <span class="badge bg-info">${nivel.usuarios_count || 0} usuarios</span>
+            </td>
+            <td>
+                <span class="badge bg-warning text-dark">Activo</span>
+            </td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarNivel(${nivel.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="verUsuariosNivel(${nivel.id})" title="Ver usuarios">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarNivel(${nivel.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function cargarAsignaciones() {
+    // Mostrar loading
+    document.getElementById('tablaAsignaciones').innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando asignaciones...</td></tr>';
+    
+    fetch('/workflow/api/comite/asignaciones/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                asignacionesComite = data.asignaciones;
+                renderAsignaciones(data.asignaciones);
+            } else {
+                showToast('Error al cargar asignaciones: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error al cargar asignaciones del comité', 'error');
+        });
+}
+
+function renderAsignaciones(asignaciones) {
+    const tbody = document.getElementById('tablaAsignaciones');
+    
+    if (asignaciones.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay usuarios asignados al comité</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = asignaciones.map(asignacion => `
+        <tr>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-2">
+                        ${asignacion.usuario.profile_picture ? 
+                            `<img src="${asignacion.usuario.profile_picture}" class="rounded-circle" width="32" height="32">` :
+                            `<div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                ${asignacion.usuario.username.charAt(0).toUpperCase()}
+                            </div>`
+                        }
+                    </div>
+                    <div>
+                        <strong>${asignacion.usuario.username}</strong>
+                        <div class="text-muted small">${asignacion.usuario.full_name || 'Sin nombre'}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="badge badge-pacifico">${asignacion.nivel.nombre}</span>
+                <div class="text-muted small">Orden: ${asignacion.nivel.orden}</div>
+            </td>
+            <td>
+                <span class="text-muted">${asignacion.fecha_asignacion}</span>
+            </td>
+            <td>
+                ${asignacion.activo ? 
+                    '<span class="badge badge-success-custom">Activo</span>' : 
+                    '<span class="badge badge-warning-custom">Inactivo</span>'
+                }
+            </td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarAsignacion(${asignacion.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    ${asignacion.activo ? 
+                        `<button class="btn btn-sm btn-outline-warning" onclick="desactivarAsignacion(${asignacion.id})" title="Desactivar">
+                            <i class="fas fa-user-times"></i>
+                        </button>` :
+                        `<button class="btn btn-sm btn-outline-success" onclick="activarAsignacion(${asignacion.id})" title="Activar">
+                            <i class="fas fa-user-check"></i>
+                        </button>`
+                    }
+                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarAsignacion(${asignacion.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function cargarEstadisticas() {
+    fetch('/workflow/api/comite/estadisticas/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('totalNiveles').textContent = data.estadisticas.total_niveles;
+                document.getElementById('usuariosAsignados').textContent = data.estadisticas.usuarios_asignados;
+                document.getElementById('usuariosActivos').textContent = data.estadisticas.usuarios_activos;
+                document.getElementById('nivelMasAlto').textContent = data.estadisticas.nivel_mas_alto || '--';
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar estadísticas:', error);
+        });
+}
+
+function actualizarSelectoresNiveles(niveles) {
+    const selectNivel = document.getElementById('selectNivel');
+    const filtroNivel = document.getElementById('filtroNivel');
+    
+    // Limpiar opciones existentes (excepto la primera)
+    selectNivel.innerHTML = '<option value="">Seleccione un nivel...</option>';
+    filtroNivel.innerHTML = '<option value="">Todos los niveles</option>';
+    
+    // Agregar niveles ordenados por jerarquía
+    const nivelesOrdenados = niveles.sort((a, b) => a.orden - b.orden);
+    nivelesOrdenados.forEach(nivel => {
+        selectNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre} (${nivel.orden})</option>`;
+        filtroNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre}</option>`;
+    });
+}
+
+// Funciones para gestión de niveles
+function editarNivel(nivelId) {
+    const nivel = nivelesComite.find(n => n.id === nivelId);
+    if (!nivel) {
+        showToast('Nivel no encontrado', 'error');
+        return;
+    }
+    
+    // Llenar el formulario con los datos del nivel
+    document.getElementById('editNivelId').value = nivel.id;
+    document.getElementById('editNivelNombre').value = nivel.nombre;
+    document.getElementById('editNivelOrden').value = nivel.orden;
+    document.getElementById('editNivelDescripcion').value = nivel.descripcion || '';
+    
+    new bootstrap.Modal(document.getElementById('modalEditarNivel')).show();
+}
+
+function actualizarNivel() {
+    const form = document.getElementById('formEditarNivel');
+    const formData = new FormData(form);
+    const nivelId = formData.get('nivel_id');
+    
+    if (!nivelId) {
+        showToast('Error: ID del nivel no encontrado', 'error');
+        return;
+    }
+    
+    const data = {
+        nombre: formData.get('nombre'),
+        orden: parseInt(formData.get('orden')),
+        descripcion: formData.get('descripcion')
+    };
+    
+    fetch(`/workflow/api/comite/niveles/${nivelId}/actualizar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Nivel actualizado exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalEditarNivel')).hide();
+            cargarNiveles();
+        } else {
+            showToast('Error al actualizar nivel: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al actualizar el nivel', 'error');
+    });
+}
+
+function eliminarNivel(nivelId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este nivel del comité? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    fetch(`/workflow/api/comite/niveles/${nivelId}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Nivel eliminado exitosamente', 'success');
+            cargarNiveles();
+        } else {
+            showToast('Error al eliminar nivel: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al eliminar el nivel', 'error');
+    });
+}
+
+function verUsuariosNivel(nivelId) {
+    // Filtrar la tabla de asignaciones por nivel
+    const filtroNivel = document.getElementById('filtroNivel');
+    filtroNivel.value = nivelId;
+    filtrarAsignaciones();
+    
+    showToast('Filtro aplicado para mostrar usuarios del nivel seleccionado', 'info');
+}
+
+// Funciones para gestión de asignaciones
+function editarAsignacion(asignacionId) {
+    showToast('Función de edición de asignación en desarrollo', 'info');
+}
+
+function activarAsignacion(asignacionId) {
+    cambiarEstadoAsignacion(asignacionId, true);
+}
+
+function desactivarAsignacion(asignacionId) {
+    cambiarEstadoAsignacion(asignacionId, false);
+}
+
+function cambiarEstadoAsignacion(asignacionId, activo) {
+    const accion = activo ? 'activar' : 'desactivar';
+    
+    if (!confirm(`¿Estás seguro de que quieres ${accion} esta asignación?`)) {
+        return;
+    }
+    
+    fetch(`/workflow/api/comite/asignaciones/${asignacionId}/estado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ activo: activo })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Asignación ${activo ? 'activada' : 'desactivada'} exitosamente`, 'success');
+            cargarAsignaciones();
+        } else {
+            showToast(`Error al ${accion} asignación: ` + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast(`Error al ${accion} la asignación`, 'error');
+    });
+}
+
+function eliminarAsignacion(asignacionId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta asignación? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    fetch(`/workflow/api/comite/asignaciones/${asignacionId}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Asignación eliminada exitosamente', 'success');
+            cargarAsignaciones();
+        } else {
+            showToast('Error al eliminar asignación: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al eliminar la asignación', 'error');
+    });
+}
+
+// Filtros para las asignaciones
+function filtrarAsignaciones() {
+    const filtroNivel = document.getElementById('filtroNivel').value;
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const busqueda = document.getElementById('buscarAsignacion').value.toLowerCase();
+    
+    let asignacionesFiltradas = asignacionesComite;
+    
+    // Filtrar por nivel
+    if (filtroNivel) {
+        asignacionesFiltradas = asignacionesFiltradas.filter(a => a.nivel.id == filtroNivel);
+    }
+    
+    // Filtrar por estado
+    if (filtroEstado) {
+        asignacionesFiltradas = asignacionesFiltradas.filter(a => {
+            if (filtroEstado === 'activo') return a.activo;
+            if (filtroEstado === 'inactivo') return !a.activo;
+            return true;
+        });
+    }
+    
+    // Filtrar por búsqueda
+    if (busqueda) {
+        asignacionesFiltradas = asignacionesFiltradas.filter(a => 
+            a.usuario.username.toLowerCase().includes(busqueda) ||
+            (a.usuario.full_name && a.usuario.full_name.toLowerCase().includes(busqueda)) ||
+            a.nivel.nombre.toLowerCase().includes(busqueda)
+        );
+    }
+    
+    renderAsignaciones(asignacionesFiltradas);
+}
+
+// Event listeners para filtros
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        document.getElementById('filtroNivel')?.addEventListener('change', filtrarAsignaciones);
+        document.getElementById('filtroEstado')?.addEventListener('change', filtrarAsignaciones);
+        document.getElementById('buscarAsignacion')?.addEventListener('input', filtrarAsignaciones);
+    }, 1000);
+});
+
+// Cargar usuarios en el selector del modal
+function cargarUsuariosParaAsignacion() {
+    fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const selectUsuario = document.getElementById('selectUsuario');
+                selectUsuario.innerHTML = '<option value="">Seleccione un usuario...</option>';
+                
+                data.usuarios.forEach(usuario => {
+                    selectUsuario.innerHTML += `<option value="${usuario.id}">${usuario.username} - ${usuario.full_name || 'Sin nombre'}</option>`;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar usuarios:', error);
+            showToast('Error al cargar usuarios', 'error');
+        });
+}
+
+// Función para obtener CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Búsqueda y filtros

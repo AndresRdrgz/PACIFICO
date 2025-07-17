@@ -72,9 +72,16 @@ def api_solicitudes_comite(request):
     
     # Obtener etapa del comité
     try:
-        etapa_comite = Etapa.objects.get(nombre__iexact="Comité de Crédito")
-    except Etapa.DoesNotExist:
-        return JsonResponse({'success': False, 'solicitudes': [], 'total_count': 0, 'error': 'Etapa "Comité de Crédito" no encontrada.'})
+        # Buscar todas las etapas con nombre "Comité de Crédito" y tomar la primera
+        etapas_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").order_by('id')
+        if not etapas_comite.exists():
+            return JsonResponse({'success': False, 'solicitudes': [], 'total_count': 0, 'error': 'Etapa "Comité de Crédito" no encontrada.'})
+        
+        # Tomar la primera etapa (la más antigua)
+        etapa_comite = etapas_comite.first()
+        print(f"DEBUG: Usando etapa Comité de Crédito ID: {etapa_comite.id}")
+    except Exception as e:
+        return JsonResponse({'success': False, 'solicitudes': [], 'total_count': 0, 'error': f'Error al obtener etapa del comité: {str(e)}'})
         
     # Filtrar solicitudes en la etapa del comité
     solicitudes_qs = Solicitud.objects.filter(etapa_actual=etapa_comite)
@@ -315,5 +322,404 @@ def api_escalar_comite(request, solicitud_id):
         return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500) 
+
+
+# ==========================================
+# APIs PARA GESTIÓN COMPLETA DEL COMITÉ
+# ==========================================
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_niveles_comite(request):
+    """
+    API para obtener todos los niveles del comité
+    """
+    try:
+        # Solo superusuarios pueden gestionar niveles
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para gestionar niveles del comité.'}, status=403)
+        
+        # Obtener niveles con conteo de usuarios
+        niveles = NivelComite.objects.all().order_by('orden')
+        
+        data = []
+        for nivel in niveles:
+            usuarios_count = UsuarioNivelComite.objects.filter(nivel=nivel, activo=True).count()
+            data.append({
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden,
+                'descripcion': getattr(nivel, 'descripcion', ''),
+                'usuarios_count': usuarios_count
+            })
+        
+        return JsonResponse({'success': True, 'niveles': data})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_crear_nivel_comite(request):
+    """
+    API para crear un nuevo nivel del comité
+    """
+    try:
+        # Solo superusuarios pueden crear niveles
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para crear niveles del comité.'}, status=403)
+        
+        data = json.loads(request.body)
+        nombre = data.get('nombre', '').strip()
+        orden = data.get('orden')
+        descripcion = data.get('descripcion', '').strip()
+        
+        # Validaciones
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre del nivel es obligatorio.'}, status=400)
+        
+        if not orden or not isinstance(orden, int) or orden < 1:
+            return JsonResponse({'success': False, 'error': 'El orden debe ser un número positivo.'}, status=400)
+        
+        # Verificar que no exista un nivel con el mismo nombre u orden
+        if NivelComite.objects.filter(nombre=nombre).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese nombre.'}, status=400)
+        
+        if NivelComite.objects.filter(orden=orden).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese orden.'}, status=400)
+        
+        # Crear el nivel
+        nivel = NivelComite.objects.create(
+            nombre=nombre,
+            orden=orden
+        )
+        
+        # Si necesitamos descripción, la agregamos (no está en el modelo actual)
+        # nivel.descripcion = descripcion
+        # nivel.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Nivel creado exitosamente.',
+            'nivel': {
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_actualizar_nivel_comite(request, nivel_id):
+    """
+    API para actualizar un nivel del comité
+    """
+    try:
+        # Solo superusuarios pueden actualizar niveles
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para actualizar niveles del comité.'}, status=403)
+        
+        nivel = NivelComite.objects.get(id=nivel_id)
+        data = json.loads(request.body)
+        
+        nombre = data.get('nombre', '').strip()
+        orden = data.get('orden')
+        descripcion = data.get('descripcion', '').strip()
+        
+        # Validaciones
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre del nivel es obligatorio.'}, status=400)
+        
+        if not orden or not isinstance(orden, int) or orden < 1:
+            return JsonResponse({'success': False, 'error': 'El orden debe ser un número positivo.'}, status=400)
+        
+        # Verificar que no exista otro nivel con el mismo nombre u orden
+        if NivelComite.objects.filter(nombre=nombre).exclude(id=nivel_id).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe otro nivel con ese nombre.'}, status=400)
+        
+        if NivelComite.objects.filter(orden=orden).exclude(id=nivel_id).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe otro nivel con ese orden.'}, status=400)
+        
+        # Actualizar el nivel
+        nivel.nombre = nombre
+        nivel.orden = orden
+        nivel.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Nivel actualizado exitosamente.',
+            'nivel': {
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden
+            }
+        })
+        
+    except NivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Nivel no encontrado.'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_nivel_comite(request, nivel_id):
+    """
+    API para eliminar un nivel del comité
+    """
+    try:
+        # Solo superusuarios pueden eliminar niveles
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para eliminar niveles del comité.'}, status=403)
+        
+        nivel = NivelComite.objects.get(id=nivel_id)
+        
+        # Verificar que no tenga usuarios asignados
+        usuarios_asignados = UsuarioNivelComite.objects.filter(nivel=nivel).count()
+        if usuarios_asignados > 0:
+            return JsonResponse({
+                'success': False, 
+                'error': f'No se puede eliminar el nivel porque tiene {usuarios_asignados} usuario(s) asignado(s). Primero elimine o reasigne a los usuarios.'
+            }, status=400)
+        
+        # Eliminar el nivel
+        nivel_nombre = nivel.nombre
+        nivel.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Nivel "{nivel_nombre}" eliminado exitosamente.'
+        })
+        
+    except NivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Nivel no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_asignaciones_comite(request):
+    """
+    API para obtener todas las asignaciones de usuarios al comité
+    """
+    try:
+        # Solo superusuarios pueden gestionar asignaciones
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para gestionar asignaciones del comité.'}, status=403)
+        
+        asignaciones = UsuarioNivelComite.objects.select_related('usuario', 'nivel').all().order_by('nivel__orden', 'usuario__username')
+        
+        data = []
+        for asignacion in asignaciones:
+            # Obtener información del perfil del usuario si existe
+            try:
+                profile_picture = asignacion.usuario.userprofile.profile_picture.url if asignacion.usuario.userprofile.profile_picture else None
+            except:
+                profile_picture = None
+            
+            data.append({
+                'id': asignacion.id,
+                'usuario': {
+                    'id': asignacion.usuario.id,
+                    'username': asignacion.usuario.username,
+                    'full_name': asignacion.usuario.get_full_name(),
+                    'email': asignacion.usuario.email,
+                    'profile_picture': profile_picture
+                },
+                'nivel': {
+                    'id': asignacion.nivel.id,
+                    'nombre': asignacion.nivel.nombre,
+                    'orden': asignacion.nivel.orden
+                },
+                'fecha_asignacion': asignacion.fecha_asignacion.strftime('%d-%m-%Y %H:%M'),
+                'activo': asignacion.activo
+            })
+        
+        return JsonResponse({'success': True, 'asignaciones': data})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_crear_asignacion_comite(request):
+    """
+    API para crear una nueva asignación de usuario al comité
+    """
+    try:
+        # Solo superusuarios pueden crear asignaciones
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para crear asignaciones del comité.'}, status=403)
+        
+        data = json.loads(request.body)
+        usuario_id = data.get('usuario_id')
+        nivel_id = data.get('nivel_id')
+        activo = data.get('activo', True)
+        observaciones = data.get('observaciones', '').strip()
+        
+        # Validaciones
+        if not usuario_id or not nivel_id:
+            return JsonResponse({'success': False, 'error': 'Usuario y Nivel son obligatorios.'}, status=400)
+        
+        try:
+            usuario = User.objects.get(id=usuario_id, is_active=True)
+            nivel = NivelComite.objects.get(id=nivel_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Usuario no encontrado o inactivo.'}, status=404)
+        except NivelComite.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Nivel del comité no encontrado.'}, status=404)
+        
+        # Verificar que el usuario no esté ya asignado a este nivel
+        if UsuarioNivelComite.objects.filter(usuario=usuario, nivel=nivel).exists():
+            return JsonResponse({'success': False, 'error': 'El usuario ya está asignado a este nivel del comité.'}, status=400)
+        
+        # Crear la asignación
+        asignacion = UsuarioNivelComite.objects.create(
+            usuario=usuario,
+            nivel=nivel,
+            activo=activo
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Usuario "{usuario.username}" asignado exitosamente al nivel "{nivel.nombre}".',
+            'asignacion': {
+                'id': asignacion.id,
+                'usuario': usuario.username,
+                'nivel': nivel.nombre,
+                'activo': asignacion.activo
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_cambiar_estado_asignacion_comite(request, asignacion_id):
+    """
+    API para activar/desactivar una asignación de usuario al comité
+    """
+    try:
+        # Solo superusuarios pueden cambiar estado de asignaciones
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para cambiar estado de asignaciones del comité.'}, status=403)
+        
+        asignacion = UsuarioNivelComite.objects.get(id=asignacion_id)
+        data = json.loads(request.body)
+        
+        nuevo_estado = data.get('activo', True)
+        
+        # Actualizar el estado
+        asignacion.activo = nuevo_estado
+        asignacion.save()
+        
+        estado_texto = 'activada' if nuevo_estado else 'desactivada'
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Asignación {estado_texto} exitosamente.',
+            'asignacion': {
+                'id': asignacion.id,
+                'activo': asignacion.activo
+            }
+        })
+        
+    except UsuarioNivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asignación no encontrada.'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_asignacion_comite(request, asignacion_id):
+    """
+    API para eliminar una asignación de usuario al comité
+    """
+    try:
+        # Solo superusuarios pueden eliminar asignaciones
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para eliminar asignaciones del comité.'}, status=403)
+        
+        asignacion = UsuarioNivelComite.objects.get(id=asignacion_id)
+        
+        usuario_nombre = asignacion.usuario.username
+        nivel_nombre = asignacion.nivel.nombre
+        
+        # Verificar si el usuario tiene participaciones pendientes
+        participaciones_pendientes = ParticipacionComite.objects.filter(
+            usuario=asignacion.usuario,
+            nivel=asignacion.nivel,
+            resultado='PENDIENTE'
+        ).count()
+        
+        if participaciones_pendientes > 0:
+            return JsonResponse({
+                'success': False, 
+                'error': f'No se puede eliminar la asignación porque el usuario tiene {participaciones_pendientes} participación(es) pendiente(s) en el comité.'
+            }, status=400)
+        
+        # Eliminar la asignación
+        asignacion.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Asignación de "{usuario_nombre}" al nivel "{nivel_nombre}" eliminada exitosamente.'
+        })
+        
+    except UsuarioNivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asignación no encontrada.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_estadisticas_comite(request):
+    """
+    API para obtener estadísticas del comité
+    """
+    try:
+        # Solo superusuarios pueden ver estadísticas completas
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos para ver estadísticas del comité.'}, status=403)
+        
+        # Calcular estadísticas
+        total_niveles = NivelComite.objects.count()
+        usuarios_asignados = UsuarioNivelComite.objects.count()
+        usuarios_activos = UsuarioNivelComite.objects.filter(activo=True).count()
+        
+        # Obtener el nivel más alto (menor orden)
+        nivel_mas_alto = NivelComite.objects.order_by('orden').first()
+        nivel_mas_alto_nombre = nivel_mas_alto.nombre if nivel_mas_alto else None
+        
+        estadisticas = {
+            'total_niveles': total_niveles,
+            'usuarios_asignados': usuarios_asignados,
+            'usuarios_activos': usuarios_activos,
+            'nivel_mas_alto': nivel_mas_alto_nombre
+        }
+        
+        return JsonResponse({'success': True, 'estadisticas': estadisticas})
+        
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500) 
