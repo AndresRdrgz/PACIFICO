@@ -387,7 +387,7 @@ class ParticipacionComite(models.Model):
         ('PENDIENTE', 'Pendiente'),
         ('APROBADO', 'Aprobado'),
         ('RECHAZADO', 'Rechazado'),
-        ('OBSERVACIONES', 'Con Observaciones'),
+        ('OBSERVACIONES', 'Alternativa'),
     ]
     
     solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='participaciones_comite')

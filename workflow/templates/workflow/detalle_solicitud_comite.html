@@ -86,6 +86,29 @@
         transform: translateY(-1px);
     }
     
+    .btn-avanzar {
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-avanzar:hover {
+        background: linear-gradient(135deg, #047857, #059669);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-avanzar:disabled {
+        background: #9ca3af;
+        color: #6b7280;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
     .section-header {
         cursor: pointer;
         display: flex;
@@ -1118,7 +1141,7 @@
                                             <option value="">Seleccione...</option>
                                             <option value="APROBADO" {% if participacion_usuario.resultado == 'APROBADO' %}selected{% endif %}>Aprobado</option>
                                             <option value="RECHAZADO" {% if participacion_usuario.resultado == 'RECHAZADO' %}selected{% endif %}>Rechazado</option>
-                                            <option value="OBSERVACIONES" {% if participacion_usuario.resultado == 'OBSERVACIONES' %}selected{% endif %}>Con Observaciones</option>
+                                            <option value="OBSERVACIONES" {% if participacion_usuario.resultado == 'OBSERVACIONES' %}selected{% endif %}>Alternativa</option>
                                         </select>
                                     </div>
                                     <div class="col-md-9">
@@ -1135,6 +1158,10 @@
                                         <button type="button" class="btn btn-escalar" onclick="mostrarModalEscalar()">
                                             <i class="fas fa-arrow-up me-1"></i>
                                             Escalar a Nivel Superior
+                                        </button>
+                                        <button type="button" class="btn btn-avanzar" id="btnAvanzarEtapa" onclick="mostrarModalAvanzarEtapa()" disabled>
+                                            <i class="fas fa-forward me-1"></i>
+                                            Avanzar Etapa
                                         </button>
                                     </div>
                                 </div>
@@ -1364,10 +1391,14 @@
                             <option value="">Seleccione un nivel...</option>
                             {% for nivel in niveles_comite %}
                                 {% if not nivel_usuario or nivel.orden < nivel_usuario.nivel.orden %}
-                                    <option value="{{ nivel.id }}">{{ nivel.nombre }}</option>
+                                    <option value="{{ nivel.id }}">{{ nivel.nombre }} (Orden: {{ nivel.orden }})</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Solo se muestran niveles superiores a su nivel actual. Menor orden = Mayor jerarquía.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="comentario-escalar" class="form-label">Motivo del Escalamiento</label>
@@ -1432,8 +1463,54 @@
     
     // Función para mostrar modal de escalar
     function mostrarModalEscalar() {
+        // Cargar niveles disponibles dinámicamente
+        cargarNivelesDisponibles();
+        
         const modal = new bootstrap.Modal(document.getElementById('modalEscalar'));
         modal.show();
+    }
+    
+    // Función para cargar niveles disponibles
+    function cargarNivelesDisponibles() {
+        const selectNivel = document.getElementById('nivel-escalar');
+        
+        // Mostrar loading en el select
+        selectNivel.innerHTML = '<option value="">Cargando niveles...</option>';
+        
+        fetch(`/workflow/api/comite/niveles/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectNivel.innerHTML = '<option value="">Seleccione un nivel...</option>';
+                    
+                    // Filtrar niveles superiores al nivel actual del usuario
+                    const nivelesDisponibles = data.niveles.filter(nivel => {
+                        return !nivelUsuarioId || nivel.orden < nivelUsuarioId;
+                    });
+                    
+                    if (nivelesDisponibles.length === 0) {
+                        selectNivel.innerHTML = '<option value="">No hay niveles superiores disponibles</option>';
+                        return;
+                    }
+                    
+                    // Ordenar por orden (menor = mayor jerarquía)
+                    nivelesDisponibles.sort((a, b) => a.orden - b.orden);
+                    
+                    nivelesDisponibles.forEach(nivel => {
+                        const option = document.createElement('option');
+                        option.value = nivel.id;
+                        option.textContent = `${nivel.nombre} (Orden: ${nivel.orden})`;
+                        selectNivel.appendChild(option);
+                    });
+                } else {
+                    selectNivel.innerHTML = '<option value="">Error al cargar niveles</option>';
+                    console.error('Error cargando niveles:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                selectNivel.innerHTML = '<option value="">Error de conexión</option>';
+            });
     }
     
     // Función para mostrar comentario completo
@@ -1448,9 +1525,29 @@
         const form = document.getElementById('form-escalar');
         const formData = new FormData(form);
         
+        const nivelSolicitado = formData.get('nivel_solicitado');
+        const comentario = formData.get('comentario');
+        
+        // Validaciones
+        if (!nivelSolicitado) {
+            mostrarToast('Debe seleccionar un nivel de destino', 'error');
+            return;
+        }
+        
+        if (!comentario || comentario.trim() === '') {
+            mostrarToast('Debe especificar el motivo del escalamiento', 'error');
+            return;
+        }
+        
+        // Mostrar loading
+        const btnEscalar = document.querySelector('#modalEscalar .btn-escalar');
+        const originalText = btnEscalar.innerHTML;
+        btnEscalar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        btnEscalar.disabled = true;
+        
         const data = {
-            nivel_solicitado: formData.get('nivel_solicitado'),
-            comentario: formData.get('comentario')
+            nivel_solicitado: nivelSolicitado,
+            comentario: comentario.trim()
         };
         
         fetch(`/workflow/api/comite/solicitudes/${solicitudId}/escalar/`, {
@@ -1464,19 +1561,24 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                mostrarToast('Solicitud escalada exitosamente', 'success');
+                mostrarToast('Solicitud escalada exitosamente. Se ha enviado notificación al nivel superior.', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('modalEscalar')).hide();
-                // Recargar página después de 1 segundo
+                // Recargar página después de 2 segundos
                 setTimeout(() => {
                     location.reload();
-                }, 1000);
+                }, 2000);
             } else {
                 mostrarToast(data.error || 'Error al escalar la solicitud', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            mostrarToast('Error de conexión', 'error');
+            mostrarToast('Error de conexión al procesar el escalamiento', 'error');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnEscalar.innerHTML = originalText;
+            btnEscalar.disabled = false;
         });
     }
     
@@ -1916,6 +2018,165 @@
         if (btnDownloadPDF) {
             btnDownloadPDF.addEventListener('click', downloadMergedPDF);
         }
+        
+        // Habilitar/deshabilitar botón de avanzar etapa según el resultado seleccionado
+        const resultadoSelect = document.getElementById('resultado');
+        const btnAvanzarEtapa = document.getElementById('btnAvanzarEtapa');
+        
+        if (resultadoSelect && btnAvanzarEtapa) {
+            resultadoSelect.addEventListener('change', function() {
+                btnAvanzarEtapa.disabled = !this.value;
+            });
+            
+            // Verificar estado inicial
+            btnAvanzarEtapa.disabled = !resultadoSelect.value;
+        }
     });
+    
+    // Función para mostrar modal de avanzar etapa
+    function mostrarModalAvanzarEtapa() {
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarEtapa'));
+        cargarEtapasDisponibles();
+        modal.show();
+    }
+    
+    // Función para cargar etapas disponibles
+    function cargarEtapasDisponibles() {
+        const selectEtapas = document.getElementById('selectEtapaDestino');
+        selectEtapas.innerHTML = '<option value="">Cargando etapas...</option>';
+        
+        fetch(`/workflow/api/comite/solicitudes/${solicitudId}/etapas-disponibles/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectEtapas.innerHTML = '<option value="">Seleccione una etapa...</option>';
+                    data.etapas.forEach(etapa => {
+                        selectEtapas.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
+                    });
+                } else {
+                    selectEtapas.innerHTML = '<option value="">Error al cargar etapas</option>';
+                    mostrarToast('Error al cargar etapas disponibles', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                selectEtapas.innerHTML = '<option value="">Error al cargar etapas</option>';
+                mostrarToast('Error al cargar etapas disponibles', 'error');
+            });
+    }
+    
+    // Función para avanzar etapa
+    function avanzarEtapa() {
+        const selectEtapa = document.getElementById('selectEtapaDestino');
+        const etapaId = selectEtapa.value;
+        
+        if (!etapaId) {
+            mostrarToast('Por favor seleccione una etapa', 'error');
+            return;
+        }
+        
+        const btnAvanzar = document.getElementById('btnConfirmarAvanzar');
+        const originalText = btnAvanzar.innerHTML;
+        
+        btnAvanzar.disabled = true;
+        btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        
+        fetch(`/workflow/api/comite/solicitudes/${solicitudId}/avanzar-etapa/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                etapa_destino_id: etapaId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Solicitud avanzada exitosamente', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa')).hide();
+                
+                // Redirigir después de un breve delay
+                setTimeout(() => {
+                    window.location.href = '/workflow/comite/';
+                }, 1500);
+            } else {
+                mostrarToast('Error al avanzar etapa: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error al avanzar etapa', 'error');
+        })
+        .finally(() => {
+            btnAvanzar.disabled = false;
+            btnAvanzar.innerHTML = originalText;
+        });
+    }
+    
+    // Función para obtener CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Función para mostrar toast
+    function mostrarToast(mensaje, tipo = 'info') {
+        // Implementar función de toast si no existe
+        if (typeof showToast === 'function') {
+            showToast(mensaje, tipo);
+        } else {
+            alert(mensaje);
+        }
+    }
 </script>
+
+<!-- Modal para Avanzar Etapa -->
+<div class="modal fade" id="modalAvanzarEtapa" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-forward me-2"></i>Avanzar Etapa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Confirmación:</strong> Al avanzar la etapa, se enviará un correo automático con todos los comentarios del comité ordenados por nivel de jerarquía.
+                </div>
+                
+                <div class="mb-3">
+                    <label for="selectEtapaDestino" class="form-label">Etapa Destino *</label>
+                    <select class="form-control" id="selectEtapaDestino" required>
+                        <option value="">Seleccione una etapa...</option>
+                    </select>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Importante:</strong> Esta acción no se puede deshacer. La solicitud avanzará a la etapa seleccionada y se enviará la notificación correspondiente.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarAvanzar" onclick="avanzarEtapa()">
+                    <i class="fas fa-forward me-1"></i>Avanzar Etapa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %} 
