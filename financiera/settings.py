@@ -299,10 +299,10 @@ EMAIL_BACKEND = 'workflow.email_backend.CustomSMTPEmailBackend'
 EMAIL_HOST = 'mail.fpacifico.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'makito@fpacifico.com'
+EMAIL_HOST_USER = 'makito@fpacifico.com'  # Cuenta de autenticación que funciona
 EMAIL_HOST_PASSWORD = 'aFihr73B'
 EMAIL_DEBUG = True
-DEFAULT_FROM_EMAIL = 'workflow@fpacifico.com'
+DEFAULT_FROM_EMAIL = 'workflow@fpacifico.com'  # Remitente oficial de la aplicación
 SITE_URL = 'http://localhost:8000'  # Cambiar por tu dominio en producción
 
 # SSL Context para manejar certificados autofirmados
@@ -310,6 +310,12 @@ import ssl
 EMAIL_SSL_CONTEXT = ssl.create_default_context()
 EMAIL_SSL_CONTEXT.check_hostname = False
 EMAIL_SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
+# Configuración de respaldo para desarrollo (si el correo principal falla)
+if DEBUG:
+    # Configuración de respaldo para desarrollo
+    EMAIL_BACKEND_FALLBACK = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_FROM_FALLBACK = 'workflow@fpacifico.com'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
