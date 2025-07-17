@@ -342,6 +342,95 @@ class CalificacionCampo(models.Model):
 
 
 # --------------------------------------
+# SISTEMA DE COMITÉ DE CRÉDITO
+# --------------------------------------
+
+class NivelComite(models.Model):
+    """
+    Define los distintos niveles jerárquicos que pueden participar en el comité
+    """
+    nombre = models.CharField(max_length=100)
+    orden = models.PositiveIntegerField(help_text="Jerarquía (menor = más bajo)")
+    
+    class Meta:
+        ordering = ['orden']
+        verbose_name = "Nivel de Comité"
+        verbose_name_plural = "Niveles de Comité"
+    
+    def __str__(self):
+        return f"{self.nombre} (Orden: {self.orden})"
+
+
+class UsuarioNivelComite(models.Model):
+    """
+    Relaciona usuarios con niveles de comité
+    """
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    nivel = models.ForeignKey(NivelComite, on_delete=models.CASCADE)
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('usuario', 'nivel')
+        verbose_name = "Usuario Nivel Comité"
+        verbose_name_plural = "Usuarios Niveles Comité"
+    
+    def __str__(self):
+        return f"{self.usuario.get_full_name()} - {self.nivel.nombre}"
+
+
+class ParticipacionComite(models.Model):
+    """
+    Registra la opinión de cada usuario que participa en una solicitud del comité
+    """
+    RESULTADO_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+        ('OBSERVACIONES', 'Con Observaciones'),
+    ]
+    
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='participaciones_comite')
+    nivel = models.ForeignKey(NivelComite, on_delete=models.PROTECT)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    comentario = models.TextField()
+    resultado = models.CharField(max_length=20, choices=RESULTADO_CHOICES, default='PENDIENTE')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('solicitud', 'nivel', 'usuario')
+        ordering = ['-fecha_modificacion']
+        verbose_name = "Participación en Comité"
+        verbose_name_plural = "Participaciones en Comité"
+    
+    def __str__(self):
+        return f"{self.solicitud.codigo} - {self.usuario.get_full_name()} - {self.get_resultado_display()}"
+
+
+class SolicitudEscalamientoComite(models.Model):
+    """
+    Permite registrar que un usuario sugiere participación de un nivel superior
+    """
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='escalamientos_comite')
+    solicitado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='escalamientos_solicitados')
+    nivel_solicitado = models.ForeignKey(NivelComite, on_delete=models.PROTECT)
+    comentario = models.TextField()
+    atendido = models.BooleanField(default=False)
+    atendido_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='escalamientos_atendidos')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_atencion = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-fecha_solicitud']
+        verbose_name = "Escalamiento de Comité"
+        verbose_name_plural = "Escalamientos de Comité"
+    
+    def __str__(self):
+        return f"{self.solicitud.codigo} - Escalamiento a {self.nivel_solicitado.nombre}"
+
+
+# --------------------------------------
 # GESTIÓN DE ACCESO A PIPELINES Y BANDEJAS
 # --------------------------------------
 

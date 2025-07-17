@@ -4,6 +4,8 @@ from django.conf import settings
 from . import views_workflow
 from . import views
 from . import api
+from . import views_comite
+from . import apicomite
 import os
 
 app_name = 'workflow'
@@ -27,6 +29,15 @@ urlpatterns += [
     path('solicitud/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campos_personalizados'),
     path('solicitud/<int:solicitud_id>/analisis/', views_workflow.detalle_solicitud_analisis, name='detalle_solicitud_analisis'),
     path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
+    
+    # Comité de Crédito URLs
+    path('comite/', views_comite.bandeja_comite_view, name='bandeja_comite'),
+    path('comite/solicitud/<int:solicitud_id>/', views_comite.detalle_solicitud_comite, name='detalle_solicitud_comite'),
+    path('api/comite/solicitudes/', apicomite.api_solicitudes_comite, name='api_solicitudes_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/participar/', apicomite.api_participar_comite, name='api_participar_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/escalar/', apicomite.api_escalar_comite, name='api_escalar_comite'),
+    path('api/comite/niveles-usuario/', apicomite.api_niveles_usuario_comite, name='api_niveles_usuario_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/historial/', apicomite.api_historial_participaciones, name='api_historial_participaciones'),
     
     # APIs para bandeja mixta
     path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),

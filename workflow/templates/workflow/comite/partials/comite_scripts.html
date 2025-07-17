@@ -1,0 +1,254 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const API_URL = "{% url 'workflow:api_solicitudes_comite' %}";
+    let currentPage = 1;
+    let currentSearch = '';
+    let isLoading = false; // Prevenir múltiples llamadas simultáneas
+
+    const tablaBody = document.getElementById('tablaComiteBody');
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('searchInput');
+    const btnRefrescar = document.getElementById('btnRefrescar');
+    const paginationNav = document.getElementById('pagination');
+    const rowCountDiv = document.getElementById('rowCount');
+
+    function renderizarPaginacion(numPages, currentPage) {
+        if (!paginationNav) return;
+        
+        paginationNav.innerHTML = '';
+        
+        if (numPages <= 1) return;
+        
+        const ul = document.createElement('ul');
+        ul.className = 'pagination mb-0';
+        
+        for (let i = 1; i <= numPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = i;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (i !== currentPage && !isLoading) {
+                    cargarSolicitudes(i, currentSearch);
+                }
+            });
+            
+            li.appendChild(a);
+            ul.appendChild(li);
+        }
+        
+        paginationNav.appendChild(ul);
+    }
+
+    function mostrarEstadoCarga() {
+        if (tablaBody) tablaBody.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'block';
+    }
+
+    function ocultarEstadoCarga() {
+        if (loadingState) loadingState.style.display = 'none';
+        if (tablaBody) tablaBody.style.display = 'table-row-group';
+    }
+
+    function mostrarEstadoVacio() {
+        if (tablaBody) tablaBody.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
+    }
+
+    function cargarSolicitudes(page = 1, search = '') {
+        // Prevenir múltiples llamadas simultáneas
+        if (isLoading) {
+            console.log('Ya hay una carga en progreso, ignorando...');
+            return;
+        }
+        
+        isLoading = true;
+        currentPage = page;
+        currentSearch = search;
+        
+        console.log('Cargando solicitudes - Página:', page, 'Búsqueda:', search);
+        
+        mostrarEstadoCarga();
+        
+        const params = new URLSearchParams({
+            page: page,
+            search: encodeURIComponent(search)
+        });
+        
+        fetch(`${API_URL}?${params}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos:', data);
+                
+                // Limpiar tabla completamente antes de agregar datos
+                if (tablaBody) {
+                    tablaBody.innerHTML = '';
+                    console.log('Tabla limpiada');
+                }
+                
+                if (data.success && data.solicitudes && data.solicitudes.length > 0) {
+                    // Crear un fragmento para insertar todas las filas de una vez
+                    const fragment = document.createDocumentFragment();
+                    
+                    data.solicitudes.forEach(solicitud => {
+                        const row = document.createElement('tr');
+                        
+                        // Construir el HTML de la fila
+                        row.innerHTML = `
+                            <td>
+                                <a href="/workflow/comite/solicitud/${solicitud.id}/" class="text-primary fw-bold text-decoration-none">
+                                    ${solicitud.codigo}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-bold">${solicitud.cliente_nombre}</div>
+                                <div class="text-muted small">${solicitud.cliente_cedula}</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">${solicitud.monto_formateado}</div>
+                            </td>
+                            <td>
+                                <span class="product-badge product-${solicitud.producto_descripcion.toLowerCase()}">
+                                    ${solicitud.producto_descripcion}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="analyst-info">
+                                    <div class="analyst-avatar">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small">${solicitud.analista_revisor.nombre}</div>
+                                        <div class="text-muted small">${solicitud.analista_revisor.etapa}</div>
+                                        <div class="text-muted small">${solicitud.analista_revisor.fecha}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="small">${solicitud.creada_por}</span>
+                            </td>
+                            <td>
+                                <span class="small text-muted">${solicitud.fecha_creacion}</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="/workflow/detalle/${solicitud.id}/" class="btn-action btn-view" title="Ver Detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="btn-action btn-participate" onclick="abrirModalParticipacion(${solicitud.id})" title="Participar">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        
+                        fragment.appendChild(row);
+                    });
+                    
+                    // Insertar todas las filas de una vez
+                    if (tablaBody) {
+                        tablaBody.appendChild(fragment);
+                    }
+                    
+                    ocultarEstadoCarga();
+                    
+                    // Actualizar información de paginación
+                    if (rowCountDiv) {
+                        const totalCount = data.total_count || data.solicitudes.length;
+                        rowCountDiv.textContent = `Mostrando ${data.solicitudes.length} de ${totalCount} solicitudes.`;
+                    }
+                    
+                    // Renderizar paginación
+                    renderizarPaginacion(data.num_pages || 1, currentPage);
+                    
+                } else {
+                    // No hay solicitudes
+                    mostrarEstadoVacio();
+                    
+                    if (rowCountDiv) {
+                        rowCountDiv.textContent = 'No hay solicitudes.';
+                    }
+                    
+                    if (paginationNav) {
+                        paginationNav.innerHTML = '';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar solicitudes:', error);
+                mostrarEstadoVacio();
+                
+                if (rowCountDiv) {
+                    rowCountDiv.textContent = 'Error al cargar solicitudes.';
+                }
+                
+                if (paginationNav) {
+                    paginationNav.innerHTML = '';
+                }
+            })
+            .finally(() => {
+                isLoading = false;
+                console.log('Carga completada');
+            });
+    }
+
+    // Configurar búsqueda con debouncing
+    let searchTimeout;
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (!isLoading) {
+                    cargarSolicitudes(1, this.value);
+                }
+            }, 300);
+        });
+    }
+
+    // Botón de refrescar
+    if (btnRefrescar) {
+        btnRefrescar.addEventListener('click', function() {
+            if (!isLoading) {
+                cargarSolicitudes(currentPage, currentSearch);
+            }
+        });
+    }
+
+    // Botones de filtros y exportación con mensajes informativos
+    const btnFiltros = document.getElementById('btnFiltrosAvanzados');
+    const btnExportar = document.getElementById('btnExportar');
+    
+    if (btnFiltros) {
+        btnFiltros.addEventListener('click', function() {
+            alert('Funcionalidad de filtros avanzados en desarrollo');
+        });
+    }
+    
+    if (btnExportar) {
+        btnExportar.addEventListener('click', function() {
+            alert('Funcionalidad de exportación en desarrollo');
+        });
+    }
+
+    // Cargar solicitudes al inicializar
+    console.log('Inicializando carga de solicitudes...');
+    cargarSolicitudes();
+});
+
+// Función global para abrir modal de participación
+function abrirModalParticipacion(solicitudId) {
+    alert(`Abrir modal de participación para solicitud ID: ${solicitudId}`);
+}
+</script> 
