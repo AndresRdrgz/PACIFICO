@@ -761,6 +761,9 @@ def nueva_solicitud(request):
             if cotizacion_id:
                 cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
             
+            # Obtener motivo de consulta del formulario
+            motivo_consulta = request.POST.get('motivo_consulta', '')
+            
             # Crear solicitud
             solicitud = Solicitud.objects.create(
                 codigo=codigo,
@@ -768,7 +771,8 @@ def nueva_solicitud(request):
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
                 cliente=cliente,
-                cotizacion=cotizacion
+                cotizacion=cotizacion,
+                motivo_consulta=motivo_consulta
             )
             
             # Crear historial inicial
@@ -2129,15 +2133,20 @@ def api_buscar_cotizaciones_drawer(request):
         # Serializar resultados
         resultados = []
         for cotizacion in cotizaciones:
-            resultados.append({
+            resultado = {
                 'id': cotizacion.id,
                 'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
                 'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
                 'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
                 'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
                 'oficial': cotizacion.oficial or 'Sin oficial',
+                'observaciones': cotizacion.observaciones or '',  # Campo observaciones
                 'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
-            })
+            }
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            resultados.append(resultado)
         
         return JsonResponse({'success': True, 'cotizaciones': resultados})
     

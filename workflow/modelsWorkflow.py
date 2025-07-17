@@ -102,6 +102,9 @@ class Solicitud(models.Model):
     # Relaciones con Cliente y Cotización
     cliente = models.ForeignKey('pacifico.Cliente', on_delete=models.CASCADE, related_name='solicitudes', null=True, blank=True)
     cotizacion = models.ForeignKey('pacifico.Cotizacion', on_delete=models.CASCADE, related_name='solicitudes', null=True, blank=True)
+    
+    # Motivo de la consulta
+    motivo_consulta = models.TextField(blank=True, null=True, help_text="Motivo de la consulta o observaciones del cliente")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"

@@ -53,7 +53,7 @@
                         </div>
                         
                         {% if pipeline %}
-                        <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext({{ pipeline.id }})">
+                        <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext('{{ pipeline.id }}')">
                             <i class="fas fa-plus me-1"></i>Nueva Solicitud
                         </a>
                         {% else %}
@@ -250,7 +250,7 @@
                                             <i class="fas fa-arrow-right mr-2"></i>Cambiar Etapa
                                         </a>
                                         {% if s.acciones.eliminar %}
-                                        <button onclick="eliminarSolicitud({{ s.id }})" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                        <button onclick="eliminarSolicitud('{{ s.id }}')" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                             <i class="fas fa-trash mr-2"></i>Eliminar
                                         </button>
                                         {% endif %}
@@ -263,7 +263,14 @@
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Cliente</p>
-                                <p class="text-sm font-semibold text-gray-900 truncate">{{ s.cliente_nombre }}</p>
+                                <p class="text-sm font-semibold text-gray-900 truncate">
+                                    <a href="{% url 'workflow:detalle_solicitud' s.id %}" 
+                                       class="text-decoration-none text-success solicitud-link" 
+                                       title="Ver detalles de {{ s.cliente_nombre }}"
+                                       onclick="event.stopPropagation();">
+                                        {{ s.cliente_nombre }}
+                                    </a>
+                                </p>
                             </div>
                             <div>
                                 <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Monto</p>
@@ -378,7 +385,7 @@
                                 <i class="fas fa-arrow-right mr-1"></i>Etapa
                             </a>
                             {% if s.acciones.eliminar %}
-                            <button onclick="eliminarSolicitud({{ s.id }})" 
+                            <button onclick="eliminarSolicitud('{{ s.id }}')" 
                                     class="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -467,12 +474,10 @@
                         <table class="table table-hover workflow-table mb-0" id="tablaSolicitudes" style="border: none;">
                             <thead class="table-light sticky-top">
                                 <tr>
-                                    <th class="fw-bold" style="width: 80px;">Nº</th>
                                     <th class="fw-bold" style="width: 200px;">Cliente</th>
                                     <th class="fw-bold" style="width: 150px;">Producto</th>
                                     <th class="fw-bold" style="width: 120px;">Monto</th>
                                     <th class="fw-bold" style="width: 150px;">Propietario</th>
-                                    <th class="fw-bold" style="width: 200px;">Asignado a</th>
                                     <th class="fw-bold" style="width: 120px;">Etapa</th>
                                     <th class="fw-bold" style="width: 100px;">Estado</th>
                                     <th class="fw-bold" style="width: 200px;">Fecha<br>SLA</th>
@@ -490,17 +495,15 @@
                                     onclick="handleRowClick(event, {{ s.id }})"
                                     style="cursor: pointer;">
                                     <td class="text-dark">
-                                        <div class="d-flex align-items-center">
-                                            <!-- Número clickeable -->
-                                            <span class="text-decoration-none fw-bold solicitud-link" 
-                                                  title="Ver detalles">
-                                                {{ s.codigo }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="text-dark">
                                         <div>
-                                            <div class="fw-semibold">{{ s.cliente_nombre }}</div>
+                                            <div class="fw-semibold">
+                                                <a href="{% url 'workflow:detalle_solicitud' s.id %}" 
+                                                   class="text-decoration-none text-success solicitud-link" 
+                                                   title="Ver detalles de {{ s.cliente_nombre }}"
+                                                   onclick="event.stopPropagation();">
+                                                    {{ s.cliente_nombre }}
+                                                </a>
+                                            </div>
                                             <small class="text-muted">{{ s.cliente_cedula }}</small>
                                         </div>
                                     </td>
@@ -511,19 +514,6 @@
                                             <i class="fas fa-user me-1 text-muted"></i>
                                             <span class="small">{{ s.propietario }}</span>
                                         </div>
-                                    </td>
-                                    <td style="max-width: 200px;">
-                                        {% if s.asignado_a != 'Sin asignar' %}
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-check me-1 text-success"></i>
-                                                <span class="text-dark small" style="word-wrap: break-word; line-height: 1.2;">{{ s.asignado_a }}</span>
-                                            </div>
-                                        {% else %}
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-slash me-1 text-muted" style="min-width: 12px;"></i> 
-                                                <span class="text-muted" style="word-wrap: break-word; line-height: 1.2;">{{ s.asignado_a }}</span>
-                                            </div>
-                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if s.etapa_actual and s.etapa_actual.es_bandeja_grupal %}
@@ -632,7 +622,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="12" class="text-center py-4">
+                                    <td colspan="10" class="text-center py-4">
                                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                         <p class="text-muted">No hay solicitudes para mostrar</p>
                                     </td>
@@ -759,10 +749,12 @@
                                         <div>
                                             <h6 class="mb-0" style="font-size: 0.9rem;">
                                                 <i class="fas fa-user text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                <span class="text-decoration-none fw-bold text-primary solicitud-link-kanban" 
-                                                   title="Ver detalles - {{ s.codigo }}">
+                                                <a href="{% url 'workflow:detalle_solicitud' s.id %}" 
+                                                   class="text-decoration-none fw-bold text-success solicitud-link-kanban" 
+                                                   title="Ver detalles de {{ s.cliente_nombre }}"
+                                                   onclick="event.stopPropagation();">
                                                     {{ s.cliente_nombre|truncatechars:15 }}
-                                                </span>
+                                                </a>
                                             </h6>
                                             <small class="text-muted" style="font-size: 0.65rem;">{{ s.codigo }}</small>
                                         </div>
@@ -1125,19 +1117,17 @@ $(document).ready(function() {
                     }
                 },
                 columnDefs: [
-                    { orderable: false, targets: [10, 11] }, // Etiquetas y Prioridad no ordenables
-                    { width: '80px', targets: 0 }, // Nº
-                    { width: '200px', targets: 1 }, // Cliente
-                    { width: '150px', targets: 2 }, // Producto
-                    { width: '120px', targets: 3 }, // Monto
-                    { width: '150px', targets: 4 }, // Propietario
-                    { width: '150px', targets: 5 }, // Asignado a
-                    { width: '120px', targets: 6 }, // Etapa
-                    { width: '100px', targets: 7 }, // Estado
-                    { width: '150px', targets: 8 }, // Fecha SLA
-                    { width: '120px', targets: 9 }, // SLA
-                    { width: '180px', targets: 10 }, // Etiquetas
-                    { width: '100px', targets: 11 }, // Prioridad
+                    { orderable: false, targets: [8, 9] }, // Etiquetas y Prioridad no ordenables
+                    { width: '200px', targets: 0 }, // Cliente
+                    { width: '150px', targets: 1 }, // Producto
+                    { width: '120px', targets: 2 }, // Monto
+                    { width: '150px', targets: 3 }, // Propietario
+                    { width: '120px', targets: 4 }, // Etapa
+                    { width: '100px', targets: 5 }, // Estado
+                    { width: '150px', targets: 6 }, // Fecha SLA
+                    { width: '120px', targets: 7 }, // SLA
+                    { width: '180px', targets: 8 }, // Etiquetas
+                    { width: '100px', targets: 9 }, // Prioridad
                 ],
                 autoWidth: false,
                 pageLength: 25,
@@ -1150,7 +1140,7 @@ $(document).ready(function() {
                     // Verificar si la tabla está vacía y mostrar mensaje personalizado
                     if (this.api().data().length === 0) {
                         var tbody = this.api().table().body();
-                        $(tbody).html('<tr><td colspan="12" class="text-center py-4"><i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No hay solicitudes para mostrar</p></td></tr>');
+                        $(tbody).html('<tr><td colspan="10" class="text-center py-4"><i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No hay solicitudes para mostrar</p></td></tr>');
                     }
                 }
             });
@@ -3396,6 +3386,15 @@ document.addEventListener('DOMContentLoaded', function() {
     transform: translateX(0);
 }
 
+/* Ensure motivo consulta section is hidden by default */
+#motivoConsultaSection {
+    display: none !important;
+}
+
+#motivoConsultaSection.show {
+    display: block !important;
+}
+
 .toast-notification.success {
     background: #28a745;
 }
@@ -3954,6 +3953,63 @@ function selectItem(type, item) {
                 const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                 const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
                 detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
+                
+                // Show observaciones section and populate with observaciones from cotización
+                const observacionesSection = document.getElementById('observacionesSection');
+                const observacionesSelected = document.getElementById('observacionesSelected');
+                const observacionesPlaceholder = document.getElementById('observacionesPlaceholder');
+                const observacionesText = document.querySelector('.observaciones-text');
+                
+                if (observacionesSection && observacionesSelected && observacionesPlaceholder && observacionesText) {
+                    observacionesSection.style.display = 'block';
+                    
+                    const observaciones = item.observaciones || '';
+                    
+                    if (observaciones.trim()) {
+                        // Show the observaciones content
+                        observacionesText.textContent = observaciones;
+                        observacionesSelected.style.display = 'block';
+                        observacionesPlaceholder.style.display = 'none';
+                    } else {
+                        // Show placeholder if no observaciones
+                        observacionesSelected.style.display = 'none';
+                        observacionesPlaceholder.style.display = 'block';
+                    }
+                }
+                
+                // Show motivo de consulta section and populate with observaciones
+                const motivoSection = document.getElementById('motivoConsultaSection');
+                const motivoTextarea = document.getElementById('motivoConsulta');
+                
+                if (motivoSection && motivoTextarea) {
+                    motivoSection.classList.add('show');
+                    
+                    // Set the observaciones from the cotización
+                    const observaciones = item.observaciones || '';
+                    
+                    motivoTextarea.value = observaciones;
+                    
+                    // Trigger input event to ensure any listeners are notified
+                    motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // Show debug indicator if observaciones were populated
+                    const debugIndicator = document.getElementById('motivoConsultaDebug');
+                    if (debugIndicator) {
+                        if (observaciones.trim()) {
+                            debugIndicator.style.display = 'block';
+                            debugIndicator.innerHTML = `<small><i class="fas fa-check-circle me-1"></i>Debug: Textarea populated with "${observaciones.substring(0, 50)}${observaciones.length > 50 ? '...' : ''}"</small>`;
+                        } else {
+                            debugIndicator.style.display = 'none';
+                        }
+                    }
+                    
+                    // If observaciones is empty, focus on the textarea for user input
+                    if (!observaciones.trim()) {
+                        setTimeout(() => {
+                            motivoTextarea.focus();
+                        }, 100);
+                    }
+                
             } else {
                 detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
             }
