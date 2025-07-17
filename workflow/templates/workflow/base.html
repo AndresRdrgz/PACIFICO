@@ -15,12 +15,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    {% block extra_css %}{% endblock %}
     
     <style>
         :root {
@@ -58,172 +54,10 @@
             top: 0;
             z-index: 1000;
             box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-            transition: width 0.3s ease, transform 0.3s ease;
+            transition: transform 0.3s ease;
             display: flex;
             flex-direction: column;
-            overflow: visible;
-            /* Prevent flash during initialization */
-            opacity: 0;
-            animation: fadeInSidebar 0.3s ease forwards;
-        }
-
-        @keyframes fadeInSidebar {
-            to {
-                opacity: 1;
-            }
-        }
-
-        /* Collapsed sidebar state */
-        .sidebar.collapsed {
-            width: 60px;
-        }
-
-        /* Prevent transitions during initialization */
-        .sidebar.no-transition,
-        .main-content.no-transition {
-            transition: none !important;
-        }
-
-        .sidebar.collapsed .sidebar-logo img {
-            max-width: 40px;
-        }
-
-        .sidebar.collapsed .user-profile {
-            padding: 0.75rem 0.5rem;
-        }
-
-        .sidebar.collapsed .user-profile-content {
-            justify-content: center;
-        }
-
-        .sidebar.collapsed .user-info {
-            display: none;
-        }
-
-        .sidebar.collapsed .nav-section-title {
-            display: none;
-        }
-
-        .sidebar.collapsed .nav-link {
-            padding: 0.6rem;
-            justify-content: center;
-        }
-
-        .sidebar.collapsed .nav-link span {
-            display: none;
-        }
-
-        .sidebar.collapsed .nav-link i {
-            width: auto;
-            font-size: 1.1rem;
-        }
-
-        /* Ensure scrollbar works in collapsed state */
-        .sidebar.collapsed .sidebar-nav {
-            max-height: calc(100vh - 120px); /* Smaller space needed when collapsed */
-        }
-
-        /* Tooltip for collapsed sidebar */
-        .sidebar.collapsed .nav-link {
-            position: relative;
-        }
-
-        .sidebar.collapsed .nav-link:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            z-index: 1001;
-            margin-left: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .sidebar.collapsed .nav-link:hover::before {
-            content: '';
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 5px solid transparent;
-            border-right-color: rgba(0, 0, 0, 0.9);
-            margin-left: 0;
-            z-index: 1001;
-        }
-
-        /* Toggle button */
-        .sidebar-toggle-btn {
-            position: absolute;
-            top: 1rem;
-            right: -15px;
-            background: var(--verde-pacifico);
-            border: 3px solid #1a1a1a;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1003;
-            font-size: 0.8rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .sidebar-toggle-btn:hover {
-            background: var(--verde-hover);
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-        }
-
-        .sidebar-toggle-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* Ensure button is always clickable */
-        .sidebar-toggle-btn::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            z-index: -1;
-        }
-
-        .sidebar.collapsed .sidebar-toggle-btn {
-            right: -15px;
-        }
-
-        /* Main content adjustment */
-        .main-content {
-            margin-left: 192px;
-            min-height: 100vh;
-            background-color: var(--gris-fondo);
-            transition: margin-left 0.3s ease;
-            padding-left: 1rem;
-            padding-right: 1rem;
-            /* Prevent flash during initialization */
-            opacity: 0;
-            animation: fadeInContent 0.3s ease 0.1s forwards;
-        }
-
-        @keyframes fadeInContent {
-            to {
-                opacity: 1;
-            }
-        }
-
-        .main-content.sidebar-collapsed {
-            margin-left: 60px;
+            overflow: hidden;
         }
 
         /* Logo Section */
@@ -327,39 +161,23 @@
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
-            max-height: calc(100vh - 200px); /* Account for logo and user profile */
         }
 
-
-
-        /* Firefox scrollbar styling */
-        .sidebar-nav {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
-        }
-
-        /* Enhanced scrollbar visibility */
         .sidebar-nav::-webkit-scrollbar {
-            width: 8px; /* Slightly wider for better usability */
+            width: 6px;
         }
 
         .sidebar-nav::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .sidebar-nav::-webkit-scrollbar-thumb:active {
             background: rgba(255, 255, 255, 0.5);
         }
 
@@ -405,6 +223,14 @@
         .nav-link i {
             width: 18px;
             text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 192px;
+            min-height: 100vh;
+            background-color: var(--gris-fondo);
+            transition: margin-left 0.3s ease;
         }
 
         /* Mobile Navbar */
@@ -488,62 +314,17 @@
 
         /* Mobile responsive */
         @media (max-width: 768px) {
-            /* Ensure sidebar toggle button is properly hidden on mobile */
-            .sidebar-toggle-btn {
-                display: none !important;
-            }
-            
-            /* Ensure sidebar doesn't interfere with main content */
-            .sidebar {
-                z-index: 999;
-            }
             .sidebar {
                 transform: translateX(-100%);
-                width: 192px !important; /* Force full width on mobile */
             }
             
             .sidebar.show {
                 transform: translateX(0);
             }
             
-            .sidebar.collapsed {
-                width: 192px !important; /* Force full width on mobile even when collapsed */
-            }
-            
-            .sidebar.collapsed .user-info {
-                display: block; /* Show user info on mobile */
-            }
-            
-            .sidebar.collapsed .nav-section-title {
-                display: block; /* Show section titles on mobile */
-            }
-            
-            .sidebar.collapsed .nav-link span {
-                display: block; /* Show text on mobile */
-            }
-            
-            .sidebar.collapsed .nav-link {
-                padding: 0.6rem 1rem; /* Restore padding on mobile */
-                justify-content: flex-start; /* Restore alignment on mobile */
-            }
-            
-            .sidebar.collapsed .nav-link i {
-                width: 18px; /* Restore icon width on mobile */
-                font-size: 0.85rem; /* Restore icon size on mobile */
-            }
-            
-            /* Ensure scrollbar works on mobile */
-            .sidebar .sidebar-nav {
-                max-height: calc(100vh - 200px) !important; /* Force scrollable on mobile */
-            }
-            
             .main-content {
-                margin-left: 0 !important; /* Force no margin on mobile */
+                margin-left: 0;
                 padding-top: 80px; /* Space for mobile navbar */
-            }
-            
-            .main-content.sidebar-collapsed {
-                margin-left: 0 !important; /* Force no margin on mobile */
             }
             
             .mobile-navbar {
@@ -552,17 +333,6 @@
             
             .sidebar-toggle {
                 display: none;
-            }
-            
-            .sidebar-toggle-btn {
-                display: none; /* Hide toggle button on mobile */
-            }
-            
-            /* Ensure main content doesn't overlap with sidebar on mobile */
-            .main-content {
-                margin-left: 0 !important;
-                padding-left: 1rem;
-                padding-right: 1rem;
             }
         }
 
@@ -582,7 +352,7 @@
         /* Cards */
         .card-custom {
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
             background: var(--blanco);
@@ -596,7 +366,7 @@
         .card-header-custom {
             background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
             color: var(--blanco);
-            border-radius: 12px 12px 0 0 !important;
+            border-radius: 16px 16px 0 0 !important;
             border: none;
             padding: 1.25rem;
         }
@@ -966,11 +736,6 @@
 
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
-        <!-- Toggle Button -->
-        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
         <!-- Logo Section -->
         <div class="sidebar-logo">
             <a href="{% url 'workflow:dashboard' %}">
@@ -1023,21 +788,18 @@
             <div class="nav-section">
                 <div class="nav-section-title">Navegación Principal</div>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
-                   href="{% url 'workflow:dashboard' %}"
-                   data-tooltip="Dashboard">
+                   href="{% url 'workflow:dashboard' %}">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.url_name == 'vista_mixta_bandejas' %}active{% endif %}" 
-                   href="{% url 'workflow:vista_mixta_bandejas' %}"
-                   data-tooltip="Bandejas de Trabajo">
+                   href="{% url 'workflow:vista_mixta_bandejas' %}">
                     <i class="fas fa-inbox"></i>
                     <span>Bandejas de Trabajo</span>
                 </a>
                
                 <a class="nav-link {% if request.resolver_match.url_name == 'negocios' %}active{% endif %}" 
-                   href="{% url 'workflow:negocios' %}{% if request.session.ultimo_pipeline_id %}?pipeline={{ request.session.ultimo_pipeline_id }}&view=table{% endif %}"
-                   data-tooltip="Negocios">
+                   href="{% url 'workflow:negocios' %}{% if request.session.ultimo_pipeline_id %}?pipeline={{ request.session.ultimo_pipeline_id }}&view=table{% endif %}">
                     <i class="fas fa-briefcase"></i>
                     <span>Negocios</span>
                 </a>
@@ -1048,17 +810,17 @@
             {% if user.is_superuser or user.groups.all %}
             <div class="nav-section">
                 <div class="nav-section-title">Administración</div>
-                <a class="nav-link" href="{% url 'workflow:admin_pipelines' %}" data-tooltip="Pipelines">
+                <a class="nav-link" href="{% url 'workflow:admin_pipelines' %}">
                     <i class="fas fa-project-diagram"></i>
                     <span>Pipelines</span>
                 </a>
                 {% if user.is_superuser or user.is_staff %}
-                <a class="nav-link" href="{% url 'workflow:admin_usuarios' %}" data-tooltip="Usuarios">
+                <a class="nav-link" href="{% url 'workflow:admin_usuarios' %}">
                     <i class="fas fa-users"></i>
                     <span>Usuarios</span>
                 </a>
                 <a class="nav-link {% if request.resolver_match.namespace == 'proyectos' %}active{% endif %}" 
-                href="/proyectos/" data-tooltip="Proyectos QA">
+                href="/proyectos/">
                  <i class="fas fa-vial"></i>
                  <span>Proyectos QA</span>
              </a>
@@ -1069,7 +831,7 @@
             <!-- Reports -->
             <div class="nav-section">
                 <div class="nav-section-title">Reportes</div>
-                <a class="nav-link" href="{% url 'workflow:reportes' %}" data-tooltip="Reportes">
+                <a class="nav-link" href="{% url 'workflow:reportes' %}">
                     <i class="fas fa-chart-bar"></i>
                     <span>Reportes</span>
                 </a>
@@ -1078,11 +840,11 @@
             <!-- User Actions -->
             <div class="nav-section">
                 <div class="nav-section-title">Usuario</div>
-                <a class="nav-link" href="#" data-tooltip="Mi Perfil">
+                <a class="nav-link" href="#">
                     <i class="fas fa-user-cog"></i>
                     <span>Mi Perfil</span>
                 </a>
-                <a class="nav-link" href="#" data-tooltip="Cerrar Sesión">
+                <a class="nav-link" href="#">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Cerrar Sesión</span>
                 </a>
@@ -1092,7 +854,7 @@
 
     <!-- Main Content -->
     <div class="main-content page-transition" id="mainContent">
-        <div class="p-2">
+        <div class="p-4">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }}-custom alert-custom fade show" role="alert">
@@ -1247,91 +1009,14 @@
 
         // Check network status on load
         document.addEventListener('DOMContentLoaded', function() {
-            // Add no-transition class initially to prevent flash
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            
-            if (sidebar) sidebar.classList.add('no-transition');
-            if (mainContent) mainContent.classList.add('no-transition');
-            
             // Show initial network status
             if (!navigator.onLine) {
                 showToast('Sin conexión - Trabajando offline', 'warning', 5000);
             }
             
-            // Initialize sidebar toggle
-            initializeSidebarToggle();
-            
             // Initialize mobile sidebar toggle
             initializeMobileSidebar();
-            
-            // Remove no-transition class after initialization
-            setTimeout(() => {
-                if (sidebar) sidebar.classList.remove('no-transition');
-                if (mainContent) mainContent.classList.remove('no-transition');
-            }, 150);
         });
-
-        // Sidebar toggle functionality
-        function initializeSidebarToggle() {
-            const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            
-            // Temporarily disable transitions during initialization
-            if (sidebar) {
-                sidebar.style.transition = 'none';
-            }
-            if (mainContent) {
-                mainContent.style.transition = 'none';
-            }
-            
-            // Check for saved state in localStorage
-            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            
-            // Apply initial state without animation
-            if (isCollapsed && sidebar && mainContent) {
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('sidebar-collapsed');
-                if (sidebarToggleBtn) {
-                    const icon = sidebarToggleBtn.querySelector('i');
-                    if (icon) {
-                        icon.classList.remove('fa-chevron-left');
-                        icon.classList.add('fa-chevron-right');
-                    }
-                }
-            }
-            
-            // Re-enable transitions after a short delay
-            setTimeout(() => {
-                if (sidebar) {
-                    sidebar.style.transition = '';
-                }
-                if (mainContent) {
-                    mainContent.style.transition = '';
-                }
-            }, 100);
-            
-            // Add click event listener
-            if (sidebarToggleBtn && sidebar) {
-                sidebarToggleBtn.addEventListener('click', function() {
-                    sidebar.classList.toggle('collapsed');
-                    mainContent.classList.toggle('sidebar-collapsed');
-                    
-                    // Update toggle button icon
-                    const icon = sidebarToggleBtn.querySelector('i');
-                    if (sidebar.classList.contains('collapsed')) {
-                        icon.classList.remove('fa-chevron-left');
-                        icon.classList.add('fa-chevron-right');
-                        localStorage.setItem('sidebarCollapsed', 'true');
-                    } else {
-                        icon.classList.remove('fa-chevron-right');
-                        icon.classList.add('fa-chevron-left');
-                        localStorage.setItem('sidebarCollapsed', 'false');
-                    }
-                });
-            }
-        }
 
         // Mobile sidebar functionality
         function initializeMobileSidebar() {
@@ -1339,11 +1024,6 @@
             const sidebar = document.getElementById('sidebar');
             
             if (sidebarToggle && sidebar) {
-                // Ensure sidebar starts hidden on mobile
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('show');
-                }
-                
                 sidebarToggle.addEventListener('click', function() {
                     sidebar.classList.toggle('show');
                 });
@@ -1356,40 +1036,15 @@
                         }
                     }
                 });
-                
-                // Handle window resize
-                window.addEventListener('resize', function() {
-                    if (window.innerWidth > 768) {
-                        sidebar.classList.remove('show');
-                    }
-                });
             }
         }
 
         // Función para mostrar loading (backward compatibility)
         function showLoading(element) {
             if (typeof element === 'string' || !element) {
-                // Use the main showLoading function for text-based loading
-                const overlay = document.getElementById('loadingOverlay');
-                if (overlay) {
-                    const textEl = overlay.querySelector('.loading-text');
-                    const subtextEl = overlay.querySelector('.loading-subtext');
-                    
-                    if (textEl) textEl.textContent = element || 'Cargando...';
-                    if (subtextEl) subtextEl.textContent = 'Por favor espere';
-                    
-                    overlay.classList.add('show');
-                }
+                showLoading(element);
             } else {
                 element.innerHTML = '<div class="spinner-custom mx-auto"></div>';
-            }
-        }
-
-        // Función para ocultar loading (backward compatibility)
-        function hideLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.remove('show');
             }
         }
 
@@ -1450,7 +1105,11 @@
             window.fetch = function(...args) {
                 return originalFetch.apply(this, args)
                     .then(response => {
-                        // Just return the response without automatic logout
+                        // Check for authentication errors
+                        if (response.status === 401 || response.status === 403) {
+                            console.warn('Authentication error detected:', response.status);
+                            handleAuthenticationError();
+                        }
                         return response;
                     })
                     .catch(error => {
@@ -1487,11 +1146,28 @@
         //     });
         // }
         
+        function handleAuthenticationError() {
+            console.log('Handling authentication error - redirecting to login');
+            
+            // Show user-friendly message
+            showToast('Tu sesión ha expirado. Redirigiendo al login...', 'warning', 3000);
+            
+            // Redirect to login after a short delay
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 2000);
+        }
+        
         // Enhanced error handling for AJAX requests
         function handleAjaxError(xhr, status, error) {
             console.error('AJAX Error:', {xhr, status, error});
             
-            // Show generic error message without automatic logout
+            if (xhr.status === 401 || xhr.status === 403) {
+                handleAuthenticationError();
+                return;
+            }
+            
+            // Show generic error message
             showToast('Error en la petición. Intenta de nuevo.', 'error', 5000);
         }
     </script>
