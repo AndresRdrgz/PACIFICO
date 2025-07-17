@@ -2906,23 +2906,37 @@ def api_cambiar_etapa(request, solicitud_id):
             }, status=400)
         
         # NUEVO: Verificar que todos los campos de compliance estén calificados
-        campos_sin_calificar = verificar_campos_compliance(solicitud)
-        if campos_sin_calificar:
-            return JsonResponse({
-                'error': 'Campos sin calificar',
-                'tipo_error': 'campos_sin_calificar',
-                'campos_sin_calificar': campos_sin_calificar,
-                'mensaje': f'Hay {len(campos_sin_calificar)} campo(s) sin calificar. Todos los campos deben estar marcados como "Bueno" o "Malo" antes de cambiar de etapa.'
-            }, status=400)
+        # Solo aplicar esta verificación para etapas que requieren compliance
+        etapas_que_requieren_compliance = ['Comité', 'Aprobación', 'Análisis de Crédito', 'Revisión Final']
+        requiere_compliance = nueva_etapa.nombre in etapas_que_requieren_compliance
+        
+        print(f"🔍 DEBUG: Etapa destino: {nueva_etapa.nombre}, requiere compliance: {requiere_compliance}")
+        
+        if requiere_compliance:
+            campos_sin_calificar = verificar_campos_compliance(solicitud)
+            if campos_sin_calificar:
+                return JsonResponse({
+                    'error': 'Campos sin calificar',
+                    'tipo_error': 'campos_sin_calificar',
+                    'campos_sin_calificar': campos_sin_calificar,
+                    'mensaje': f'Hay {len(campos_sin_calificar)} campo(s) sin calificar. Todos los campos deben estar marcados como "Bueno" o "Malo" antes de cambiar a la etapa "{nueva_etapa.nombre}".'
+                }, status=400)
         
         # NUEVO: Verificar que existe al menos un comentario de analista
-        tiene_comentario_analista = verificar_comentario_analista(solicitud)
-        if not tiene_comentario_analista:
-            return JsonResponse({
-                'error': 'Análisis general requerido',
-                'tipo_error': 'analisis_general_faltante',
-                'mensaje': 'Debe completar el análisis general antes de cambiar de etapa. Agregue su análisis en la sección "Comentarios de Analista".'
-            }, status=400)
+        # Solo requerir comentarios de analista para etapas específicas
+        etapas_que_requieren_analisis = ['Comité', 'Aprobación', 'Análisis de Crédito']
+        requiere_analisis = nueva_etapa.nombre in etapas_que_requieren_analisis
+        
+        print(f"🔍 DEBUG: Etapa destino: {nueva_etapa.nombre}, requiere análisis: {requiere_analisis}")
+        
+        if requiere_analisis:
+            tiene_comentario_analista = verificar_comentario_analista(solicitud)
+            if not tiene_comentario_analista:
+                return JsonResponse({
+                    'error': 'Análisis general requerido',
+                    'tipo_error': 'analisis_general_faltante',
+                    'mensaje': f'Debe completar el análisis general antes de cambiar a la etapa "{nueva_etapa.nombre}". Agregue su análisis en la sección "Comentarios de Analista".'
+                }, status=400)
         
         # Cerrar el historial actual si existe
         if solicitud.etapa_actual:
@@ -3068,15 +3082,21 @@ def verificar_requisitos_transicion(solicitud, transicion):
             requisito=req_transicion.requisito
         ).first()
         
-        # Si no existe o no está cumplido o no tiene archivo
-        if not requisito_solicitud or not requisito_solicitud.cumplido or not requisito_solicitud.archivo:
+        # Considerar un requisito como cumplido si:
+        # 1. Existe el RequisitoSolicitud Y
+        # 2. (Tiene archivo O está marcado como cumplido)
+        # Esto permite que archivos subidos desde el drawer se consideren válidos
+        esta_cumplido = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
+        
+        # Si no está cumplido, agregarlo a requisitos faltantes
+        if not esta_cumplido:
             requisitos_faltantes.append({
                 'id': req_transicion.requisito.id,
                 'nombre': req_transicion.requisito.nombre,
                 'descripcion': req_transicion.requisito.descripcion,
                 'mensaje_personalizado': req_transicion.mensaje_personalizado,
                 'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
-                'esta_cumplido': bool(requisito_solicitud and requisito_solicitud.cumplido),
+                'esta_cumplido': esta_cumplido,
                 'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None
             })
     
@@ -5022,8 +5042,11 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 requisito=req_transicion.requisito
             ).first()
             
-            # Determinar si está completo
-            esta_completo = bool(requisito_solicitud and requisito_solicitud.cumplido and requisito_solicitud.archivo)
+            # Determinar si está completo - considerar archivos subidos desde drawer
+            # Un requisito está completo si:
+            # 1. Existe el RequisitoSolicitud Y 
+            # 2. (Tiene archivo O está marcado como cumplido)
+            esta_completo = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
             if esta_completo:
                 requisitos_completos += 1
             

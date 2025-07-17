@@ -4256,16 +4256,22 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     console.log('🔍 Mostrando modal de requisitos faltantes');
     console.log('📋 Parámetros recibidos:', { solicitudId, nuevaEtapaId, nombreEtapa, callbackExito: typeof callbackExito, callbackCancelacion: typeof callbackCancelacion });
     
-    // Validar parámetros
+    // Validar parámetros con early return
     if (!solicitudId || !nuevaEtapaId || !nombreEtapa) {
         console.error('❌ Parámetros inválidos:', { solicitudId, nuevaEtapaId, nombreEtapa });
+        const errorMessage = 'Error: Parámetros inválidos para mostrar modal de requisitos';
+        
         if (typeof showToast !== 'undefined') {
-            showToast('Error: Parámetros inválidos para mostrar modal de requisitos', 'error', 6000);
+            showToast(errorMessage, 'error', 6000);
         } else {
-            alert('Error: Parámetros inválidos para mostrar modal de requisitos');
+            alert(errorMessage);
         }
         return;
     }
+    
+    // Set current solicitud ID for file uploads
+    window.currentSolicitudId = solicitudId;
+    console.log('🔧 currentSolicitudId establecido:', window.currentSolicitudId);
     
     // Resetear estado del modal
     window.resetearEstadoModal();
@@ -4344,6 +4350,13 @@ window.llenarListaRequisitosFaltantes = function(requisitos, totalRequisitos, re
         return;
     }
     
+    // Store the data globally for use by verification function
+    window.currentRequisitosData = {
+        requisitos: requisitos,
+        total_requisitos: totalRequisitos,
+        requisitos_completos: requisitosCompletos
+    };
+    
     // Limpiar contenedor
     listaContainer.innerHTML = '';
     
@@ -4380,58 +4393,76 @@ window.llenarListaRequisitosFaltantes = function(requisitos, totalRequisitos, re
     }
     
     requisitos.forEach(requisito => {
+        const isCompleto = requisito.esta_cumplido;
+        const tituloClass = isCompleto ? 'text-success' : 'text-danger';
+        const tituloIcon = isCompleto ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        const badgeClass = isCompleto ? 'bg-success' : 'bg-danger';
+        const badgeText = isCompleto ? 'Completo' : 'Faltante';
+        const cardClass = isCompleto ? 'border-success' : 'border-danger';
+        
         const requisitoHtml = `
-            <div class="card mb-3 requisito-card" data-requisito-id="${requisito.id}">
+            <div class="card mb-3 requisito-card ${cardClass}" data-requisito-id="${requisito.id}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h6 class="card-title text-danger mb-1">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
+                            <h6 class="card-title ${tituloClass} mb-1">
+                                <i class="fas ${tituloIcon} me-2"></i>
                                 ${requisito.nombre}
                             </h6>
                             ${requisito.descripcion ? `<p class="text-muted small mb-2">${requisito.descripcion}</p>` : ''}
                             ${requisito.mensaje_personalizado ? `<p class="text-info small mb-2"><i class="fas fa-info-circle me-1"></i>${requisito.mensaje_personalizado}</p>` : ''}
                         </div>
                         <div class="text-end">
-                            <span class="badge ${requisito.archivo_actual ? 'bg-success' : 'bg-danger'}">${requisito.archivo_actual ? 'Completo' : 'Faltante'}</span>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
                         </div>
                     </div>
                     
                     ${requisito.archivo_actual ? `
-                        <div class="alert alert-info mb-3">
+                        <div class="alert alert-success mb-3">
                             <div class="d-flex align-items-start">
-                                <i class="fas fa-file-alt me-2 mt-1"></i>
+                                <i class="fas fa-file-check me-2 mt-1 text-success"></i>
                                 <div class="flex-grow-1">
-                                    <strong>Archivo actual:</strong> 
+                                    <strong>Archivo subido:</strong> 
                                     <a href="${requisito.archivo_actual.url}" target="_blank" class="text-decoration-none">
                                         ${requisito.archivo_actual.nombre}
                                     </a>
-                                    <div class="mt-2 d-flex gap-2">
-                                        <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="mostrarUploadParaReemplazo(${requisito.id})" aria-label="Reemplazar archivo">
-                                            <i class="fas fa-upload me-1"></i>Reemplazar archivo
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" style="display:none;" id="cancelar-upload-btn-${requisito.id}" onclick="cancelarUploadParaReemplazo(${requisito.id})" aria-label="Cancelar reemplazo">
-                                            <i class="fas fa-times me-1"></i>Cancelar
-                                        </button>
-                                    </div>
+                                    ${!isCompleto ? `
+                                        <div class="mt-2 d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="mostrarUploadParaReemplazo(${requisito.id})" aria-label="Reemplazar archivo">
+                                                <i class="fas fa-upload me-1"></i>Reemplazar archivo
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" style="display:none;" id="cancelar-upload-btn-${requisito.id}" onclick="cancelarUploadParaReemplazo(${requisito.id})" aria-label="Cancelar reemplazo">
+                                                <i class="fas fa-times me-1"></i>Cancelar
+                                            </button>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
                     ` : ''}
                     
-                    <div class="upload-section" style="${requisito.archivo_actual ? 'display: none;' : ''}" id="upload-section-${requisito.id}">
-                        <div class="mb-3">
-                            <label class="form-label">
-                                ${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'} 
-                                <span class="text-danger">*</span>
-                            </label>
-                            <input type="file" class="form-control requisito-file-input" 
-                                   data-requisito-id="${requisito.id}" 
-                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                   aria-label="${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'}">
-                            <small class="text-muted">El archivo se subirá automáticamente cuando hagas clic en 'Validar y Continuar'</small>
+                    ${!isCompleto ? `
+                        <div class="upload-section" style="${requisito.archivo_actual ? 'display: none;' : ''}" id="upload-section-${requisito.id}">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    ${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'} 
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="file" class="form-control requisito-file-input" 
+                                       data-requisito-id="${requisito.id}" 
+                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                                       aria-label="${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'}">
+                                <small class="text-muted">El archivo se subirá automáticamente cuando hagas clic en 'Validar y Continuar'</small>
+                            </div>
                         </div>
-                    </div>
+                    ` : `
+                        <div class="alert alert-light border-success">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span class="text-success fw-semibold">Requisito completado</span>
+                            </div>
+                        </div>
+                    `}
                 </div>
             </div>
         `;
@@ -4541,19 +4572,30 @@ window.resetearEstadoModal = function() {
 
 // Función unificada para subir archivos secuencialmente
 window.subirArchivosSecuencialmente = function(archivos, index, callback) {
+    // Early return if all files processed
     if (index >= archivos.length) {
-        // Todos los archivos subidos
         console.log('✅ Todos los archivos procesados');
-        callback();
+        if (typeof callback === 'function') {
+            callback(true); // Pass success flag
+        }
         return;
     }
     
-    // Actualizar progreso en el loading overlay
+    // Update progress in loading overlay
     if (typeof showLoading === 'function') {
         showLoading('Subiendo archivos...', `Procesando archivo ${index + 1} de ${archivos.length}`);
     }
     
     const archivo = archivos[index];
+    
+    // Validate required data
+    if (!archivo.requisitoId || !archivo.file) {
+        console.error('❌ Datos de archivo inválidos:', archivo);
+        // Continue with next file
+        window.subirArchivosSecuencialmente(archivos, index + 1, callback);
+        return;
+    }
+    
     const formData = new FormData();
     formData.append('requisito_id', archivo.requisitoId);
     formData.append('archivo', archivo.file);
@@ -4562,12 +4604,27 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
     
     if (!solicitudId) {
         console.error('❌ No se encontró solicitudId para subir archivo');
-        // Continuar con el siguiente archivo
+        // Continue with next file
         window.subirArchivosSecuencialmente(archivos, index + 1, callback);
         return;
     }
     
     console.log(`📤 Subiendo archivo ${index + 1}/${archivos.length} para requisito ${archivo.requisitoId}`);
+    
+    const handleUploadError = (error, isNetworkError = false) => {
+        console.error(`❌ Error al subir archivo para requisito ${archivo.requisitoId}:`, error);
+        
+        const mensaje = isNetworkError 
+            ? `Error de conexión al subir archivo: ${error}`
+            : `Error al subir archivo: ${error}`;
+            
+        if (typeof showToast !== 'undefined') {
+            showToast(mensaje, 'error', 5000);
+        }
+        
+        // Continue with next file even on error
+        window.subirArchivosSecuencialmente(archivos, index + 1, callback);
+    };
     
     fetch(`/workflow/api/solicitudes/${solicitudId}/subir-requisito-modal/`, {
         method: 'POST',
@@ -4578,7 +4635,7 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         return response.json();
     })
@@ -4586,7 +4643,7 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
         if (data.success) {
             console.log(`✅ Archivo subido exitosamente para requisito ${archivo.requisitoId}`);
             
-            // Actualizar UI para este requisito
+            // Update UI for this requirement
             const requisitoCard = document.querySelector(`.requisito-card[data-requisito-id="${archivo.requisitoId}"]`);
             if (requisitoCard) {
                 const uploadSection = requisitoCard.querySelector('.upload-section');
@@ -4595,7 +4652,7 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
                 if (uploadSection) uploadSection.style.display = 'none';
                 if (successSection) successSection.style.display = 'block';
                 
-                // Actualizar badge
+                // Update badge with proper classes
                 const badge = requisitoCard.querySelector('.badge');
                 if (badge) {
                     badge.className = 'badge bg-success';
@@ -4603,31 +4660,16 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
                 }
             }
             
-            // Continuar con el siguiente archivo
+            // Continue with next file
             window.subirArchivosSecuencialmente(archivos, index + 1, callback);
         } else {
-            // Error en la subida
-            console.error(`❌ Error al subir archivo para requisito ${archivo.requisitoId}:`, data.error);
-            const mensaje = `Error al subir archivo: ${data.error}`;
-            if (typeof showToast !== 'undefined') {
-                showToast(mensaje, 'error', 5000);
-            } else {
-                alert(mensaje);
-            }
-            // Continuar con el siguiente archivo de todas formas
-            window.subirArchivosSecuencialmente(archivos, index + 1, callback);
+            // Handle server-side error
+            handleUploadError(data.error || 'Error desconocido del servidor');
         }
     })
     .catch(error => {
-        console.error(`❌ Error en petición para requisito ${archivo.requisitoId}:`, error);
-        const mensaje = 'Error al subir archivo';
-        if (typeof showToast !== 'undefined') {
-            showToast(mensaje, 'error', 5000);
-        } else {
-            alert(mensaje);
-        }
-        // Continuar con el siguiente archivo de todas formas
-        window.subirArchivosSecuencialmente(archivos, index + 1, callback);
+        // Handle network or parsing errors
+        handleUploadError(error.message, true);
     });
 };
 
@@ -4704,37 +4746,73 @@ window.verificarTodosRequisitosCompletos = function() {
     
     if (!btnValidar) {
         console.error('❌ No se encontró el botón de validar');
-        return;
+        return false;
     }
     
-    const totalRequisitos = document.querySelectorAll('.requisito-card').length;
-    const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
-    const archivosSeleccionados = document.querySelectorAll('.requisito-card .requisito-file-input[type="file"]:not([style*="display: none"])').length;
+    // Use the data from the last API call instead of counting DOM elements
+    const requisitosData = window.currentRequisitosData;
+    if (!requisitosData) {
+        console.warn('⚠️ No hay datos de requisitos disponibles');
+        return false;
+    }
     
-    console.log('🔍 Verificando requisitos:', { totalRequisitos, requisitosCompletos, archivosSeleccionados });
+    const totalRequisitos = requisitosData.total_requisitos;
+    const requisitosCompletos = requisitosData.requisitos_completos;
     
+    // Count files selected for incomplete requirements
+    let archivosSeleccionadosParaIncompletos = 0;
+    const requisitosIncompletos = requisitosData.requisitos.filter(req => !req.esta_cumplido);
+    
+    requisitosIncompletos.forEach(requisito => {
+        const fileInput = document.querySelector(`.requisito-file-input[data-requisito-id="${requisito.id}"]`);
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            // Check if file input is visible (not hidden due to completion)
+            const isVisible = fileInput.offsetParent !== null || 
+                              getComputedStyle(fileInput).display !== 'none';
+            if (isVisible) {
+                archivosSeleccionadosParaIncompletos++;
+            }
+        }
+    });
+    
+    console.log('🔍 Verificando requisitos:', { 
+        totalRequisitos, 
+        requisitosCompletos, 
+        archivosSeleccionadosParaIncompletos,
+        requisitosIncompletos: requisitosIncompletos.length,
+        requisitosData: requisitosData
+    });
+    
+    // Early return for no requirements
     if (totalRequisitos === 0) {
-        // No hay requisitos para mostrar
         btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Continuar';
         btnValidar.className = 'btn btn-success';
         btnValidar.disabled = false;
-    } else if (totalRequisitos === requisitosCompletos && totalRequisitos > 0) {
-        // Todos los requisitos están completos
+        return true;
+    }
+    
+    // All requirements completed
+    if (totalRequisitos === requisitosCompletos && totalRequisitos > 0) {
         btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
         btnValidar.className = 'btn btn-success';
         btnValidar.disabled = false;
-    } else if (archivosSeleccionados > 0) {
-        // Hay archivos seleccionados, permitir validar y continuar
+        return true;
+    }
+    
+    // Files selected for incomplete requirements
+    if (archivosSeleccionadosParaIncompletos > 0) {
         btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
         btnValidar.className = 'btn btn-primary';
         btnValidar.disabled = false;
-    } else {
-        // No hay archivos seleccionados y faltan requisitos
-        btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
-        btnValidar.className = 'btn btn-warning';
-        btnValidar.disabled = true;
+        return false; // Not all complete, but can proceed with upload
     }
-}
+    
+    // No files selected and requirements missing
+    btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+    btnValidar.className = 'btn btn-warning';
+    btnValidar.disabled = true;
+    return false;
+};
 
 // Función unificada para configurar event listeners del modal
 window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion) {
@@ -4754,74 +4832,48 @@ window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callb
     btnValidar.onclick = function() {
         console.log('🔄 Botón validar clickeado');
         
-        // Verificar requisitos nuevamente
+        // Early return if button is disabled
+        if (btnValidar.disabled) {
+            console.log('⚠️ Botón deshabilitado, ignorando click');
+            return;
+        }
+        
+        // Disable button immediately to prevent double clicks
+        btnValidar.disabled = true;
+        const originalHTML = btnValidar.innerHTML;
+        
+        // Get current requirements state
         const totalRequisitos = document.querySelectorAll('.requisito-card').length;
         const requisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
         
-        // Obtener requisitos que necesitan archivos
+        // Get files that need to be uploaded
         const requisitosConArchivos = document.querySelectorAll('.requisito-card .requisito-file-input');
         const archivosParaSubir = [];
         
         requisitosConArchivos.forEach(input => {
-            if (input.files.length > 0) {
-                archivosParaSubir.push({
-                    requisitoId: input.dataset.requisitoId,
-                    file: input.files[0]
-                });
+            if (input.files && input.files.length > 0) {
+                const requisitoCard = input.closest('.requisito-card');
+                const badge = requisitoCard?.querySelector('.badge');
+                
+                // Only upload if not already completed
+                if (badge && !badge.classList.contains('bg-success')) {
+                    archivosParaSubir.push({
+                        requisitoId: input.dataset.requisitoId,
+                        file: input.files[0]
+                    });
+                }
             }
         });
         
         console.log('📁 Archivos para subir:', archivosParaSubir.length);
+        console.log('🔍 Verificando requisitos:', {
+            totalRequisitos,
+            requisitosCompletos,
+            archivosSeleccionados: archivosParaSubir.length
+        });
         
-        if (archivosParaSubir.length > 0) {
-            // Hay archivos para subir, hacerlo primero
-            btnValidar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo archivos...';
-            btnValidar.disabled = true;
-            
-            // Mostrar loading overlay con progreso
-            if (typeof showLoading === 'function') {
-                showLoading('Subiendo archivos...', `Procesando archivo 1 de ${archivosParaSubir.length}`);
-            }
-            
-            // Subir archivos uno por uno con progreso
-            window.subirArchivosSecuencialmente(archivosParaSubir, 0, function() {
-                // Ocultar loading overlay
-                if (typeof hideLoading === 'function') {
-                    hideLoading();
-                }
-                
-                // Todos los archivos subidos, verificar estado final
-                window.verificarTodosRequisitosCompletos();
-                
-                const totalRequisitosFinal = document.querySelectorAll('.requisito-card').length;
-                const requisitosCompletosFinal = document.querySelectorAll('.requisito-card .badge.bg-success').length;
-                
-                if (totalRequisitosFinal === requisitosCompletosFinal) {
-                    // Todos completos, proceder
-                    console.log('✅ Todos los requisitos completos, procediendo con transición');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
-                    if (modal) {
-                        modal.hide();
-                    }
-                    if (callbackExito) {
-                        callbackExito();
-                    }
-                } else {
-                    // Aún faltan requisitos
-                    btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletosFinal}/${totalRequisitosFinal})`;
-                    btnValidar.disabled = true;
-                    btnValidar.className = 'btn btn-warning';
-                    
-                    const mensaje = `Aún faltan ${totalRequisitosFinal - requisitosCompletosFinal} requisitos por completar`;
-                    if (typeof showToast !== 'undefined') {
-                        showToast(mensaje, 'warning', 6000);
-                    } else {
-                        alert(mensaje);
-                    }
-                }
-            });
-        } else if (totalRequisitos === requisitosCompletos) {
-            // Todos completos, proceder
+        // Function to handle success completion
+        const handleSuccessCompletion = () => {
             console.log('✅ Todos los requisitos completos, procediendo con transición');
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalRequisitosFaltantes'));
             if (modal) {
@@ -4830,14 +4882,58 @@ window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callb
             if (callbackExito) {
                 callbackExito();
             }
-        } else {
-            // Aún faltan requisitos
-            const mensaje = `Aún faltan ${totalRequisitos - requisitosCompletos} requisitos por completar`;
+        };
+        
+        // Function to handle error/incomplete state
+        const handleIncompleteState = (currentCompleted, currentTotal) => {
+            const pendingCount = currentTotal - currentCompleted;
+            const mensaje = `Aún faltan ${pendingCount} requisitos por completar`;
+            
+            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${currentCompleted}/${currentTotal})`;
+            btnValidar.className = 'btn btn-warning';
+            btnValidar.disabled = true;
+            
             if (typeof showToast !== 'undefined') {
                 showToast(mensaje, 'warning', 6000);
             } else {
                 alert(mensaje);
             }
+        };
+        
+        // If there are files to upload, handle them first
+        if (archivosParaSubir.length > 0) {
+            btnValidar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo archivos...';
+            
+            // Show loading overlay with progress
+            if (typeof showLoading === 'function') {
+                showLoading('Subiendo archivos...', `Procesando archivo 1 de ${archivosParaSubir.length}`);
+            }
+            
+            // Upload files sequentially with proper error handling
+            window.subirArchivosSecuencialmente(archivosParaSubir, 0, function(uploadSuccess = true) {
+                // Hide loading overlay
+                if (typeof hideLoading === 'function') {
+                    hideLoading();
+                }
+                
+                // Verify final state after uploads
+                window.verificarTodosRequisitosCompletos();
+                
+                const finalTotalRequisitos = document.querySelectorAll('.requisito-card').length;
+                const finalRequisitosCompletos = document.querySelectorAll('.requisito-card .badge.bg-success').length;
+                
+                if (finalTotalRequisitos === finalRequisitosCompletos && uploadSuccess) {
+                    handleSuccessCompletion();
+                } else {
+                    handleIncompleteState(finalRequisitosCompletos, finalTotalRequisitos);
+                }
+            });
+        } else if (totalRequisitos === requisitosCompletos) {
+            // All requirements already completed, proceed immediately
+            handleSuccessCompletion();
+        } else {
+            // Requirements still missing
+            handleIncompleteState(requisitosCompletos, totalRequisitos);
         }
     };
     
