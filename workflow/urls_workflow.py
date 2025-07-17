@@ -49,6 +49,9 @@ urlpatterns += [
     path('api/comite/asignaciones/<int:asignacion_id>/estado/', apicomite.api_cambiar_estado_asignacion_comite, name='api_cambiar_estado_asignacion_comite'),
     path('api/comite/asignaciones/<int:asignacion_id>/eliminar/', apicomite.api_eliminar_asignacion_comite, name='api_eliminar_asignacion_comite'),
     path('api/comite/estadisticas/', apicomite.api_estadisticas_comite, name='api_estadisticas_comite'),
+    path('api/comite/test-email/', apicomite.api_test_email_comite, name='api_test_email_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
     # APIs para bandeja mixta
     path('api/solicitudes/<int:solicitud_id>/tomar/', views_workflow.api_tomar_solicitud, name='api_tomar_solicitud'),

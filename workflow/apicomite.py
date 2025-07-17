@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Prefetch, Count
 from django.core.paginator import Paginator
-from .modelsWorkflow import Solicitud, Etapa, ParticipacionComite, NivelComite, UsuarioNivelComite, SolicitudEscalamientoComite, HistorialSolicitud, SolicitudComentario
+from django.utils import timezone
+from .modelsWorkflow import Solicitud, Etapa, ParticipacionComite, NivelComite, UsuarioNivelComite, SolicitudEscalamientoComite, HistorialSolicitud, SolicitudComentario, CalificacionCampo
 from django.contrib.auth.models import User
 import json
 
@@ -246,6 +247,10 @@ def api_escalar_comite(request, solicitud_id):
     API para escalar una solicitud a un nivel superior del comité.
     """
     try:
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        
         # Obtener la solicitud
         solicitud = Solicitud.objects.get(id=solicitud_id)
         
@@ -294,7 +299,7 @@ def api_escalar_comite(request, solicitud_id):
             comentario=comentario
         )
         
-        # Crear una participación automática del usuario actual si no existe
+        # Finalizar la participación del usuario actual (marcar como ALTERNATIVA)
         if usuario_nivel:
             participacion, created = ParticipacionComite.objects.get_or_create(
                 solicitud=solicitud,
@@ -311,6 +316,117 @@ def api_escalar_comite(request, solicitud_id):
                 participacion.comentario = f'Escalado a {nivel_solicitado.nombre}: {comentario}'
                 participacion.resultado = 'OBSERVACIONES'
                 participacion.save()
+        
+        # Enviar correo de notificación a los usuarios del nivel escalado
+        try:
+            # Obtener usuarios del nivel escalado
+            usuarios_nivel = UsuarioNivelComite.objects.filter(
+                nivel=nivel_solicitado,
+                activo=True
+            ).select_related('usuario')
+            
+            print(f"Usuarios encontrados en nivel {nivel_solicitado.nombre}: {usuarios_nivel.count()}")
+            
+            # Preparar datos para el correo
+            context = {
+                'solicitud': solicitud,
+                'nivel_solicitado': nivel_solicitado,
+                'solicitado_por': request.user,
+                'comentario': comentario,
+                'fecha_escalamiento': timezone.now(),
+                'usuarios_nivel': usuarios_nivel
+            }
+            
+            # Renderizar template del correo
+            html_content = render_to_string('workflow/emails/escalamiento_comite_notification.html', context)
+            
+            # Lista de destinatarios (usuarios del nivel + copias obligatorias)
+            recipient_list = []
+            
+            # Agregar usuarios del nivel si tienen email
+            for usuario_nivel in usuarios_nivel:
+                if usuario_nivel.usuario.email:
+                    recipient_list.append(usuario_nivel.usuario.email)
+                    print(f"Agregando usuario del nivel: {usuario_nivel.usuario.email}")
+            
+            # Agregar copias obligatorias
+            copias_obligatorias = ['jacastillo@fpacifico.com', 'arodriguez@fpacifico.com']
+            recipient_list.extend(copias_obligatorias)
+            print(f"Agregando copias obligatorias: {copias_obligatorias}")
+            
+            # Verificar que hay destinatarios
+            if not recipient_list:
+                print("ADVERTENCIA: No hay destinatarios para el correo")
+                recipient_list = copias_obligatorias  # Enviar al menos a las copias
+            
+            print(f"Lista final de destinatarios: {recipient_list}")
+            
+            # Enviar correo
+            subject = f'Escalamiento de Solicitud {solicitud.codigo} - Nivel {nivel_solicitado.nombre}'
+            
+            # Crear mensaje de texto plano como fallback
+            text_content = f"""
+            Escalamiento de Solicitud
+            
+            Solicitud: {solicitud.codigo}
+            Nivel Solicitado: {nivel_solicitado.nombre}
+            Solicitado por: {request.user.get_full_name() or request.user.username}
+            Comentario: {comentario}
+            Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+            """
+            
+            # Intentar enviar con el backend principal
+            try:
+                send_mail(
+                    subject=subject,
+                    message=text_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=recipient_list,
+                    html_message=html_content,
+                    fail_silently=False
+                )
+                print(f"✅ Correo enviado exitosamente con backend principal")
+                
+            except Exception as e:
+                print(f"⚠️ Error con backend principal: {e}")
+                
+                # Si estamos en desarrollo, intentar con backend de respaldo
+                if settings.DEBUG and hasattr(settings, 'EMAIL_BACKEND_FALLBACK'):
+                    try:
+                        from django.core.mail import get_connection
+                        from django.core.mail import EmailMultiAlternatives
+                        
+                        # Usar backend de respaldo
+                        connection = get_connection(backend=settings.EMAIL_BACKEND_FALLBACK)
+                        
+                        # Crear mensaje con respaldo
+                        email = EmailMultiAlternatives(
+                            subject=subject,
+                            body=text_content,
+                            from_email=settings.EMAIL_FROM_FALLBACK,
+                            to=recipient_list,
+                            connection=connection
+                        )
+                        email.attach_alternative(html_content, "text/html")
+                        email.send()
+                        
+                        print(f"✅ Correo enviado exitosamente con backend de respaldo")
+                        
+                    except Exception as fallback_error:
+                        print(f"❌ Error también con backend de respaldo: {fallback_error}")
+                        raise fallback_error
+                else:
+                    raise e
+            
+            print(f"✅ Correo de escalamiento enviado exitosamente a {len(recipient_list)} destinatarios")
+            print(f"   Asunto: {subject}")
+            print(f"   Destinatarios: {recipient_list}")
+            
+        except Exception as e:
+            print(f"❌ Error enviando correo de escalamiento: {e}")
+            import traceback
+            print(f"   Traceback: {traceback.format_exc()}")
+            # No fallar la operación si el correo falla
         
         return JsonResponse({
             'success': True, 
@@ -694,6 +810,120 @@ def api_eliminar_asignacion_comite(request, asignacion_id):
 
 @login_required
 @require_http_methods(["GET"])
+def api_test_email_comite(request):
+    """
+    API para probar el envío de correos del comité
+    """
+    try:
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        
+        # Datos de prueba
+        test_data = {
+            'solicitud': {
+                'codigo': 'TEST-001',
+                'id': 1
+            },
+            'nivel_solicitado': {
+                'nombre': 'Nivel de Prueba'
+            },
+            'solicitado_por': request.user,
+            'comentario': 'Este es un correo de prueba para verificar la configuración del sistema.',
+            'fecha_escalamiento': timezone.now(),
+            'usuarios_nivel': []
+        }
+        
+        # Renderizar template del correo
+        html_content = render_to_string('workflow/emails/escalamiento_comite_notification.html', test_data)
+        
+        # Lista de destinatarios de prueba
+        recipient_list = ['jacastillo@fpacifico.com', 'arodriguez@fpacifico.com']
+        
+        # Crear mensaje de texto plano
+        text_content = f"""
+        Correo de Prueba - Escalamiento
+        
+        Solicitud: TEST-001
+        Nivel Solicitado: Nivel de Prueba
+        Solicitado por: {request.user.get_full_name() or request.user.username}
+        Comentario: Este es un correo de prueba para verificar la configuración del sistema.
+        Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        """
+        
+        subject = 'PRUEBA - Escalamiento de Solicitud TEST-001'
+        
+        # Intentar enviar con el backend principal
+        try:
+            send_mail(
+                subject=subject,
+                message=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                html_message=html_content,
+                fail_silently=False
+            )
+            print(f"✅ Correo de prueba enviado exitosamente")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Correo de prueba enviado exitosamente',
+                'destinatarios': recipient_list
+            })
+            
+        except Exception as e:
+            print(f"❌ Error enviando correo de prueba: {e}")
+            
+            # Si estamos en desarrollo, intentar con backend de respaldo
+            if settings.DEBUG and hasattr(settings, 'EMAIL_BACKEND_FALLBACK'):
+                try:
+                    from django.core.mail import get_connection
+                    from django.core.mail import EmailMultiAlternatives
+                    
+                    # Usar backend de respaldo
+                    connection = get_connection(backend=settings.EMAIL_BACKEND_FALLBACK)
+                    
+                    # Crear mensaje con respaldo
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_content,
+                        from_email=settings.EMAIL_FROM_FALLBACK,
+                        to=recipient_list,
+                        connection=connection
+                    )
+                    email.attach_alternative(html_content, "text/html")
+                    email.send()
+                    
+                    print(f"✅ Correo de prueba enviado con backend de respaldo")
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Correo de prueba enviado con backend de respaldo',
+                        'destinatarios': recipient_list,
+                        'backend': 'fallback'
+                    })
+                    
+                except Exception as fallback_error:
+                    print(f"❌ Error también con backend de respaldo: {fallback_error}")
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Error enviando correo: {str(fallback_error)}'
+                    }, status=500)
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Error enviando correo: {str(e)}'
+                }, status=500)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
 def api_estadisticas_comite(request):
     """
     API para obtener estadísticas del comité
@@ -722,4 +952,237 @@ def api_estadisticas_comite(request):
         return JsonResponse({'success': True, 'estadisticas': estadisticas})
         
     except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_etapas_disponibles_comite(request, solicitud_id):
+    """
+    API para obtener las etapas disponibles para avanzar desde el comité
+    """
+    try:
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        
+        # Verificar que la solicitud esté en etapa de comité
+        if solicitud.etapa_actual.nombre != "Comité de Crédito":
+            return JsonResponse({'success': False, 'error': 'La solicitud no está en etapa de comité.'}, status=400)
+        
+        # Obtener transiciones válidas desde la etapa actual
+        from .modelsWorkflow import TransicionEtapa
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        ).select_related('etapa_destino')
+        
+        etapas_disponibles = []
+        for transicion in transiciones:
+            etapas_disponibles.append({
+                'id': transicion.etapa_destino.id,
+                'nombre': transicion.etapa_destino.nombre,
+                'transicion_nombre': transicion.nombre
+            })
+        
+        return JsonResponse({'success': True, 'etapas': etapas_disponibles})
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avanzar_etapa_comite(request, solicitud_id):
+    """
+    API para avanzar la etapa de una solicitud desde el comité y enviar correo
+    """
+    try:
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        from .views_workflow import enviar_correo_comite_credito
+        
+        print(f"=== api_avanzar_etapa_comite START ===")
+        print(f"Request method: {request.method}")
+        print(f"Solicitud ID: {solicitud_id}")
+        print(f"User: {request.user.username}")
+        print(f"Request body: {request.body}")
+        
+        data = json.loads(request.body)
+        etapa_destino_id = data.get('etapa_destino_id')
+        
+        print(f"Parsed data: {data}")
+        print(f"Etapa destino ID: {etapa_destino_id}")
+        
+        if not etapa_destino_id:
+            print(f"ERROR: etapa_destino_id is empty or None")
+            return JsonResponse({'success': False, 'error': 'ID de etapa destino es requerido.'}, status=400)
+        
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        print(f"Solicitud found: {solicitud}")
+        print(f"Etapa actual: {solicitud.etapa_actual}")
+        
+        # Verificar que la solicitud esté en etapa de comité
+        if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Comité de Crédito":
+            print(f"ERROR: La solicitud no está en etapa de comité. Etapa actual: {solicitud.etapa_actual}")
+            return JsonResponse({'success': False, 'error': 'La solicitud no está en etapa de comité.'}, status=400)
+        
+        etapa_destino = Etapa.objects.get(id=etapa_destino_id)
+        print(f"Etapa destino found: {etapa_destino}")
+        
+        # Verificar que la transición sea válida
+        from .modelsWorkflow import TransicionEtapa
+        print(f"Verificando transición válida...")
+        print(f"Pipeline: {solicitud.pipeline}")
+        print(f"Etapa origen: {solicitud.etapa_actual}")
+        print(f"Etapa destino: {etapa_destino}")
+        
+        transicion_valida = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual,
+            etapa_destino=etapa_destino
+        ).exists()
+        
+        print(f"Transición válida: {transicion_valida}")
+        
+        if not transicion_valida:
+            print(f"ERROR: Transición no válida")
+            return JsonResponse({'success': False, 'error': 'Transición no válida.'}, status=400)
+        
+        # Obtener todas las participaciones del comité ordenadas por nivel
+        print(f"Buscando participaciones del comité...")
+        participaciones = ParticipacionComite.objects.filter(
+            solicitud=solicitud
+        ).select_related('usuario', 'nivel').order_by('nivel__orden', '-fecha_modificacion')
+        
+        print(f"Participaciones encontradas: {participaciones.count()}")
+        
+        if not participaciones.exists():
+            print(f"ERROR: No hay participaciones del comité")
+            return JsonResponse({'success': False, 'error': 'No hay participaciones del comité para esta solicitud.'}, status=400)
+        
+        # Crear historial de la transición
+        from .modelsWorkflow import HistorialSolicitud
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual
+        ).order_by('-fecha_inicio').first()
+        
+        if historial_anterior:
+            historial_anterior.fecha_fin = timezone.now()
+            historial_anterior.save()
+        
+        # Crear nuevo historial
+        nuevo_historial = HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=etapa_destino,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Actualizar la solicitud
+        solicitud.etapa_actual = etapa_destino
+        solicitud.save()
+        
+        # Preparar datos para el correo
+        cliente_nombre = solicitud.cliente_nombre if hasattr(solicitud, 'cliente_nombre') else 'Sin cliente'
+        cliente_cedula = solicitud.cliente_cedula if hasattr(solicitud, 'cliente_cedula') else 'Sin cédula'
+        monto_formateado = solicitud.monto_formateado if hasattr(solicitud, 'monto_formateado') else '$ 0.00'
+        
+        # Obtener analista revisor
+        analista_info = obtener_analista_revisor(solicitud)
+        
+        # Preparar comentarios ordenados por nivel
+        comentarios_ordenados = []
+        resultado_final = "Pendiente"
+        
+        for participacion in participaciones:
+            comentarios_ordenados.append({
+                'nivel': participacion.nivel.nombre,
+                'orden_nivel': participacion.nivel.orden,
+                'usuario': participacion.usuario.get_full_name() or participacion.usuario.username,
+                'resultado': participacion.get_resultado_display(),
+                'comentario': participacion.comentario,
+                'fecha': participacion.fecha_modificacion.strftime('%d-%m-%Y %H:%M')
+            })
+            
+            # Determinar el resultado final basado en la jerarquía
+            if participacion.resultado in ['APROBADO', 'RECHAZADO', 'OBSERVACIONES']:
+                if resultado_final == "Pendiente" or participacion.nivel.orden < comentarios_ordenados[0]['orden_nivel']:
+                    resultado_final = participacion.get_resultado_display()
+        
+        # Ordenar por nivel (menor orden = mayor jerarquía)
+        comentarios_ordenados.sort(key=lambda x: x['orden_nivel'])
+        
+        # Obtener comentarios del analista desde CalificacionCampo
+        comentarios_analista = []
+        comentarios_analista_db = CalificacionCampo.objects.filter(
+            solicitud=solicitud,
+            campo__startswith='comentario_analista_credito_'
+        ).select_related('usuario').order_by('-fecha_creacion')
+        
+        for comentario in comentarios_analista_db:
+            comentarios_analista.append({
+                'usuario': comentario.usuario.get_full_name() or comentario.usuario.username,
+                'comentario': comentario.comentario,
+                'fecha': comentario.fecha_creacion.strftime('%d-%m-%Y %H:%M')
+            })
+        
+        # Enviar correo de respuesta del comité
+        context = {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'cliente_cedula': cliente_cedula,
+            'monto_formateado': monto_formateado,
+            'analista_revisor': analista_info['nombre'],
+            'etapa_destino': etapa_destino.nombre,
+            'comentarios_ordenados': comentarios_ordenados,
+            'comentarios_analista': comentarios_analista,
+            'usuario_que_avanzo': request.user.get_full_name() or request.user.username,
+            'fecha_avance': timezone.now().strftime('%d-%m-%Y %H:%M'),
+            'resultado_final': resultado_final
+        }
+        
+        # Renderizar template de correo
+        html_content = render_to_string('workflow/emails/respuesta_comite_notification.html', context)
+        
+        # Enviar correo
+        try:
+            # En fase de desarrollo, enviar a los desarrolladores
+            recipient_list = ['jacastillo@fpacifico.com', 'arodriguez@fpacifico.com']
+            
+            send_mail(
+                subject=f'Respuesta del Comité - Solicitud {solicitud.codigo}',
+                message='',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,  # Enviar a desarrolladores en fase de desarrollo
+                html_message=html_content,
+                fail_silently=False
+            )
+        except Exception as e:
+            print(f"Error enviando correo: {e}")
+            # No fallar la operación si el correo falla
+        
+        print(f"=== api_avanzar_etapa_comite SUCCESS ===")
+        return JsonResponse({
+            'success': True, 
+            'message': f'Solicitud avanzada exitosamente a "{etapa_destino.nombre}".',
+            'etapa_destino': etapa_destino.nombre
+        })
+        
+    except Solicitud.DoesNotExist:
+        print(f"ERROR: Solicitud {solicitud_id} no encontrada")
+        return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
+    except Etapa.DoesNotExist:
+        print(f"ERROR: Etapa destino {etapa_destino_id} no encontrada")
+        return JsonResponse({'success': False, 'error': 'Etapa destino no encontrada.'}, status=404)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: JSON decode error: {e}")
+        print(f"Request body: {request.body}")
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
+    except Exception as e:
+        print(f"ERROR: Unexpected exception: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500) 
