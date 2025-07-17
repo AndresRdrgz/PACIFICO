@@ -1050,6 +1050,15 @@
 
 
 <script>
+// Stub functions to prevent recursion errors
+window.showLoading = function(title, message) {
+    console.log('📡 Loading:', title, message);
+};
+
+window.hideLoading = function() {
+    console.log('📡 Loading hidden');
+};
+
 // Función global para manejar clicks en filas de la tabla
 function handleRowClick(event, solicitudId) {
     // Prevenir el click si el usuario está interactuando con elementos de formulario
@@ -4581,10 +4590,9 @@ window.subirArchivosSecuencialmente = function(archivos, index, callback) {
         return;
     }
     
-    // Update progress in loading overlay
-    if (typeof showLoading === 'function') {
-        showLoading('Subiendo archivos...', `Procesando archivo ${index + 1} de ${archivos.length}`);
-    }
+    // Update progress in loading overlay (removed to fix recursion error)
+    console.log(`📤 Procesando archivo ${index + 1} de ${archivos.length}`);
+    
     
     const archivo = archivos[index];
     
@@ -4904,17 +4912,15 @@ window.configurarEventListenersModal = function(solicitudId, nuevaEtapaId, callb
         if (archivosParaSubir.length > 0) {
             btnValidar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo archivos...';
             
-            // Show loading overlay with progress
-            if (typeof showLoading === 'function') {
-                showLoading('Subiendo archivos...', `Procesando archivo 1 de ${archivosParaSubir.length}`);
-            }
+            // Show loading overlay with progress (removed to fix recursion error)
+            console.log(`📤 Iniciando carga de ${archivosParaSubir.length} archivos`);
+            
             
             // Upload files sequentially with proper error handling
             window.subirArchivosSecuencialmente(archivosParaSubir, 0, function(uploadSuccess = true) {
-                // Hide loading overlay
-                if (typeof hideLoading === 'function') {
-                    hideLoading();
-                }
+                // Hide loading overlay (removed to fix recursion error)
+                console.log('📤 Finalizando carga de archivos');
+                
                 
                 // Verify final state after uploads
                 window.verificarTodosRequisitosCompletos();
