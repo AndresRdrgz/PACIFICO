@@ -4299,7 +4299,7 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
         
         if (data.success) {
             // Llenar la lista de requisitos faltantes
-            window.llenarListaRequisitosFaltantes(data.requisitos_faltantes);
+            window.llenarListaRequisitosFaltantes(data.requisitos, data.total_requisitos, data.requisitos_completos);
             
             // Configurar event listeners del modal
             window.configurarEventListenersModal(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion);
@@ -4329,8 +4329,8 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     });
 }
 
-// Función unificada para llenar la lista de requisitos faltantes en el modal
-window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
+// Función unificada para llenar la lista de requisitos en el modal
+window.llenarListaRequisitosFaltantes = function(requisitos, totalRequisitos, requisitosCompletos) {
     const listaContainer = document.getElementById('listaRequisitosFaltantes');
     const btnValidar = document.getElementById('btnValidarYContinuar');
     
@@ -4347,24 +4347,39 @@ window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
     // Limpiar contenedor
     listaContainer.innerHTML = '';
     
-    // Validar que requisitosFaltantes sea un array
-    if (!Array.isArray(requisitosFaltantes)) {
-        console.error('❌ requisitosFaltantes no es un array:', requisitosFaltantes);
+    // Si todos los requisitos están completos, mostrar mensaje de éxito
+    if (requisitosCompletos === totalRequisitos) {
+        btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar`;
+        btnValidar.className = 'btn btn-success';
+        btnValidar.disabled = false;
+        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
+        return;
+    }
+    
+    // Validar que requisitos sea un array
+    if (!Array.isArray(requisitos)) {
+        console.error('❌ requisitos no es un array:', requisitos);
         listaContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar requisitos</div>';
         btnValidar.disabled = true;
         return;
     }
     
-    if (requisitosFaltantes.length === 0) {
-        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
-        // Enable the button immediately if no requisitos to show
-        btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
+    // Actualizar el botón con el conteo correcto
+    btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+    if (requisitosCompletos === totalRequisitos) {
         btnValidar.className = 'btn btn-success';
         btnValidar.disabled = false;
+    } else {
+        btnValidar.className = 'btn btn-primary';
+        btnValidar.disabled = true;
+    }
+    
+    if (requisitos.length === 0) {
+        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
         return;
     }
     
-    requisitosFaltantes.forEach(requisito => {
+    requisitos.forEach(requisito => {
         const requisitoHtml = `
             <div class="card mb-3 requisito-card" data-requisito-id="${requisito.id}">
                 <div class="card-body">
@@ -4400,7 +4415,6 @@ window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
                                         </button>
                                     </div>
                                 </div>
-                                <span class="badge bg-success ms-2">Completo</span>
                             </div>
                         </div>
                     ` : ''}
