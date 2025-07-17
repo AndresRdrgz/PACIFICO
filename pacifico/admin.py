@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from .models import Politicas
 from .forms import UserProfileForm  # Importamos el formulario personalizado
 
 # Register your models here.
@@ -104,4 +105,10 @@ class DebidaDiligenciaAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+ 
 
+@admin.register(Politicas)
+class PoliticasAdmin(admin.ModelAdmin):
+    list_display = ('titulo',)
+    search_fields = ('titulo',)
+    list_filter = ('titulo',)

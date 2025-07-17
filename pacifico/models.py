@@ -190,6 +190,13 @@ class Cliente(models.Model):
     def __str__(self):
         return f"{self.nombreCliente} - {self.cedulaCliente}"    
 
+# create a model named Politicas
+class Politicas(models.Model):
+    titulo = models.CharField(max_length=255, null=True)
+
+    def __str__(self):
+        return self.titulo
+
 
 class Cotizacion(models.Model):
     
@@ -215,7 +222,19 @@ class Cotizacion(models.Model):
     jubilado = models.CharField(max_length=10, choices=JUBILADO_CHOICES, default='NO')
     apcScore = models.IntegerField(null=True,blank=True)
     apcPI = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
-   
+    # add a sector with 3 choices "Sector A", "Sector B", "Sector C"
+    sector = models.CharField(
+        max_length=20,
+        choices=[
+            ('SECTOR A', 'Sector A'),
+            ('SECTOR B', 'Sector B'),
+            ('SECTOR C', 'Sector C'),
+        ],
+        blank=True,
+        null=True
+    )
+    politica = models.ForeignKey(Politicas, on_delete=models.SET_NULL, null=True, blank=True)
+
     #Parametros de la Cotizacion
     aplicaPromocion = models.BooleanField(default=False, blank=True, null=True)
     patrono = models.CharField(max_length=255, null=True)

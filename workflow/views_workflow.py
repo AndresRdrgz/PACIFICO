@@ -4217,16 +4217,27 @@ def api_solicitud_brief(request, solicitud_id):
         # Cotización info
         cotizacion_info = {}
         if cotizacion:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Cotizacion found: {cotizacion}")
+            logger.debug(f"Cotizacion edad: {cotizacion.edad} (type: {type(cotizacion.edad)})")
+            logger.debug(f"Cotizacion sexo: {cotizacion.sexo} (type: {type(cotizacion.sexo)})")
+            logger.debug(f"Cotizacion cartera: {cotizacion.cartera} (type: {type(cotizacion.cartera)})")
+            
             cotizacion_info = {
                 'monto': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else 0,
                 'plazo': cotizacion.plazoPago or '-',
                 'tasa': float(cotizacion.tasaInteres) if cotizacion.tasaInteres else '-',
                 'cuota': float(getattr(cotizacion, 'wrkMontoLetra', 0)) if hasattr(cotizacion, 'wrkMontoLetra') and cotizacion.wrkMontoLetra else '-',
                 'auxMonto2': float(getattr(cotizacion, 'auxMonto2', 0)) if getattr(cotizacion, 'auxMonto2', None) is not None else 0,
-                'edad': cotizacion.edad if hasattr(cotizacion, 'edad') and cotizacion.edad is not None else '-',
-                'sexo': cotizacion.sexo if hasattr(cotizacion, 'sexo') and cotizacion.sexo else '-',
-                'cartera': cotizacion.cartera if hasattr(cotizacion, 'cartera') and cotizacion.cartera else '-',
+                'edad': cotizacion.edad if cotizacion.edad is not None else None,
+                'sexo': cotizacion.sexo if cotizacion.sexo else None,
+                'cartera': cotizacion.cartera if cotizacion.cartera else None,
             }
+            
+            logger.debug(f"Final cotizacion_info: {cotizacion_info}")
+        else:
+            logger.debug("No cotizacion found")
 
         return JsonResponse({
             'general': general,

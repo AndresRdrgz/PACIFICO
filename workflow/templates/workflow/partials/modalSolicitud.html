@@ -1374,20 +1374,41 @@ function populateModalData(data) {
         // Client info with fallbacks
         const cliente = data.cliente || {};
         const cotizacion = data.cotizacion || {};
+        
+        console.log('🔍 DEBUG - Full API response data:', data);
+        console.log('🔍 DEBUG - Cliente data:', cliente);
+        console.log('🔍 DEBUG - Cotizacion data:', cotizacion);
+        
         $('#modalSolicitudCliente').text(cliente.nombre || 'N/A');
         $('#modalSolicitudCedula').text(cliente.cedula || 'N/A');
+        
         // Edad y Sexo from cotizacion (API fields)
         let edadSexo = 'N/A';
-        if (cotizacion.edad !== undefined && cotizacion.edad !== '-' && cotizacion.sexo && cotizacion.sexo !== '-') {
-            edadSexo = `${cotizacion.edad} años / ${cotizacion.sexo}`;
-        } else if (cotizacion.edad !== undefined && cotizacion.edad !== '-') {
-            edadSexo = `${cotizacion.edad} años`;
-        } else if (cotizacion.sexo && cotizacion.sexo !== '-') {
-            edadSexo = cotizacion.sexo;
+        const edad = cotizacion.edad;
+        const sexo = cotizacion.sexo;
+        
+        console.log('🔍 DEBUG - Edad:', edad, 'type:', typeof edad);
+        console.log('🔍 DEBUG - Sexo:', sexo, 'type:', typeof sexo);
+        
+        if (edad !== null && edad !== undefined && edad !== '-' && 
+            sexo !== null && sexo !== undefined && sexo !== '-') {
+            edadSexo = `${edad} años / ${sexo}`;
+        } else if (edad !== null && edad !== undefined && edad !== '-') {
+            edadSexo = `${edad} años`;
+        } else if (sexo !== null && sexo !== undefined && sexo !== '-') {
+            edadSexo = sexo;
         }
+        
         $('#modalSolicitudEdadSexo').text(edadSexo);
+        console.log('🔍 DEBUG - EdadSexo final:', edadSexo);
+        
         // Cartera from cotizacion (API field)
-        $('#modalSolicitudCartera').text(cotizacion.cartera && cotizacion.cartera !== '-' ? cotizacion.cartera : 'N/A');
+        const cartera = cotizacion.cartera;
+        console.log('🔍 DEBUG - Cartera:', cartera, 'type:', typeof cartera);
+        
+        const carteraText = (cartera !== null && cartera !== undefined && cartera !== '-') ? cartera : 'N/A';
+        $('#modalSolicitudCartera').text(carteraText);
+        console.log('🔍 DEBUG - Cartera final:', carteraText);
 
         // Cotización info with fallbacks
         $('#modalSolicitudMontoFinanciado').text(
