@@ -622,16 +622,7 @@
                                     <td>
                                         <select class="prioridad-select border rounded px-2 py-1 text-xs w-full"
                                                 data-id="{{ s.id }}"
-                                                style="background-color:
-                                                  {% if s.prioridad == 'Alta' %}#fee2e2
-                                                  {% elif s.prioridad == 'Media' %}#fef9c3
-                                                  {% elif s.prioridad == 'Baja' %}#dcfce7
-                                                  {% else %}white{% endif %};
-                                                  color:
-                                                  {% if s.prioridad == 'Alta' %}#b91c1c
-                                                  {% elif s.prioridad == 'Media' %}#b45309
-                                                  {% elif s.prioridad == 'Baja' %}#166534
-                                                  {% else %}#333{% endif %};">
+                                                style="background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %}; color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
                                           <option value="">-</option>
                                           {% for prioridad in prioridades_posibles %}
                                             <option value="{{ prioridad }}" {% if s.prioridad == prioridad %}selected{% endif %}>{{ prioridad }}</option>
@@ -757,83 +748,69 @@
                              data-sla-texto="{{ s.sla_restante }}"
                              style="cursor: grab;">
                              
-                            <div class="card shadow-sm border-0" 
-                                 style="border-left: 4px solid {% if s.sla_color == 'text-danger' %}#dc3545{% elif s.sla_color == 'text-warning' %}#ffc107{% elif s.sla_color == 'text-success' %}#198754{% else %}#6c757d{% endif %} !important; 
-                                        height: 110px; 
-                                        border-radius: 6px;
-                                        transition: all 0.3s ease;
-                                        background: white;
-                                        cursor: pointer;"
+                                                        <div class="card shadow-sm border-0" 
+                                 style="border-left: 4px solid {% if s.sla_color == 'text-danger' %}#dc3545{% elif s.sla_color == 'text-warning' %}#ffc107{% elif s.sla_color == 'text-success' %}#198754{% else %}#6c757d{% endif %} !important; height: 110px; border-radius: 6px; transition: all 0.3s ease; background: white; cursor: pointer;"
                                  onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
                                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
                                  onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'">
                                 <div class="card-body p-2" style="height: 100%;">
                                     <!-- Header compacto -->
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0" style="font-size: 0.9rem;">
-                                            <span class="text-decoration-none fw-bold text-primary solicitud-link-kanban" 
-                                               title="Ver detalles">
-                                                {{ s.codigo }}
-                                            </span>
-                                        </h6>
-                                        
-                                        <!-- Botón de cambio de etapa eliminado por solicitud del usuario -->
-                                    </div>
-                                    
-                                    <!-- Contenido en 2 columnas -->
-                                    <div class="row g-1" style="height: calc(100% - 35px);">
-                                        <!-- Columna izquierda -->
-                                        <div class="col-7">
-                                            <div class="d-flex align-items-center mb-1">
+                                        <div>
+                                            <h6 class="mb-0" style="font-size: 0.9rem;">
                                                 <i class="fas fa-user text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                <span style="font-size: 0.75rem; color: #495057;">{{ s.cliente_nombre|truncatechars:12 }}</span>
-                                            </div>
-                                            
-                                            <div class="d-flex align-items-center mb-1">
-                                                <i class="fas fa-dollar-sign text-success me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto_formateado }}</span>
-                                            </div>
-                                            
-                                            <div class="d-flex align-items-center">
-                                                {% if s.asignado_a != 'Sin asignar' %}
-                                                    {% if s.asignado_a_user.userprofile.profile_picture %}
-                                                        <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}" 
-                                                             alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
-                                                             class="w-4 h-4 rounded-full object-cover me-1">
-                                                    {% else %}
-                                                        <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
-                                                            {{ s.asignado_a_user.first_name|first|default:s.asignado_a_user.username|first|upper }}
-                                                        </div>
-                                                    {% endif %}
-                                                    <span style="font-size: 0.7rem; color: #6c757d;">{{ s.asignado_a|truncatechars:10 }}</span>
-                                                {% else %}
-                                                    <i class="fas fa-user-slash text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
-                                                    <span style="font-size: 0.7rem; color: #6c757d;"><em>Sin asignar</em></span>
-                                                {% endif %}
-                                            </div>
+                                                <span class="text-decoration-none fw-bold text-primary solicitud-link-kanban" 
+                                                   title="Ver detalles - {{ s.codigo }}">
+                                                    {{ s.cliente_nombre|truncatechars:15 }}
+                                                </span>
+                                            </h6>
+                                            <small class="text-muted" style="font-size: 0.65rem;">{{ s.codigo }}</small>
                                         </div>
                                         
-                                        <!-- Columna derecha -->
-                                        <div class="col-5">
-                                            <div class="d-flex align-items-center mb-1">
+                                        <!-- Timer y Status -->
+                                        <div class="text-end">
+                                            <div class="d-flex align-items-center justify-content-end mb-1">
                                                 <i class="fas fa-clock text-muted me-1" style="font-size: 0.75rem; width: 12px;"></i>
                                                 <span class="{{ s.sla_color }} fw-bold" style="font-size: 0.7rem;">{{ s.sla_restante }}</span>
                                             </div>
-                                            
-                                            <div class="mb-1">
-                                                <span class="badge bg-{{ s.estado_color }}" style="font-size: 0.6rem; padding: 2px 5px;">{{ s.estado_actual }}</span>
+                                            <span class="badge bg-{{ s.estado_color }}" style="font-size: 0.6rem; padding: 2px 5px;">{{ s.estado_actual }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Contenido en 2 columnas -->
+                                    <div class="row g-1">
+                                        <!-- Columna izquierda -->
+                                        <div class="col-7">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto_formateado }}</span>
                                             </div>
                                             
+                                            {% if s.asignado_a != 'Sin asignar' %}
                                             <div class="d-flex align-items-center">
+                                                {% if s.asignado_a_user.userprofile.profile_picture %}
+                                                    <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}" 
+                                                         alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
+                                                         class="w-4 h-4 rounded-full object-cover me-1">
+                                                {% else %}
+                                                    <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
+                                                        {{ s.asignado_a_user.first_name|first|default:s.asignado_a_user.username|first|upper }}
+                                                    </div>
+                                                {% endif %}
+                                                <span style="font-size: 0.7rem; color: #6c757d;">{{ s.asignado_a|truncatechars:10 }}</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Columna derecha -->
+                                        <div class="col-5 text-end">
+                                            <div class="d-flex align-items-center justify-content-end">
                                                 {% if s.prioridad %}
-                                                <span class="badge" 
-                                                      style="font-size: 0.55rem; padding: 1px 4px;
-                                                             background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %};
-                                                             color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
+                                                <span class="badge me-1" 
+                                                      style="font-size: 0.55rem; padding: 1px 4px; background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %}; color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
                                                     {{ s.prioridad }}
                                                 </span>
                                                 {% endif %}
-                                                <small class="text-muted ms-auto" style="font-size: 0.65rem;">{{ s.fecha_inicio }}</small>
+                                                <small class="text-muted" style="font-size: 0.65rem;">{{ s.fecha_inicio }}</small>
                                             </div>
                                         </div>
                                     </div>
@@ -1066,13 +1043,11 @@
 {% block extra_js %}
 <!-- DataTables CSS y JS desde CDN -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
+
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/colresize/1.0.0/dataTables.colResize.min.js"></script>
-<script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
+
 
 <script>
 // Función global para manejar clicks en filas de la tabla
@@ -1115,79 +1090,74 @@ $(document).ready(function() {
     var table;
     
     if ($tabla.length > 0) {
-        // Verificar si hay filas de datos (excluyendo la fila vacía)
-        var hasDataRows = $tabla.find('tbody tr:not([colspan])').length > 0;
-        
+        // Only count rows that do NOT have a colspan attribute (i.e., real data rows)
+        var hasDataRows = $tabla.find('tbody tr').filter(function() {
+            return !$(this).find('td[colspan]').length;
+        }).length > 0;
+
         if (hasDataRows) {
             // Inicializar DataTable con configuración mejorada
             table = $tabla.DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        scrollX: true,
-        scrollY: '70vh',
-        scrollCollapse: true,
-        fixedColumns: {
-            left: 1,
-            heightMatch: 'auto'
-        },
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-            search: 'Buscar:',
-            lengthMenu: 'Mostrar _MENU_ registros',
-            info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
-            emptyTable: 'No hay solicitudes para mostrar',
-            zeroRecords: 'No se encontraron solicitudes que coincidan con los filtros',
-            paginate: {
-                previous: 'Anterior',
-                next: 'Siguiente'
-            }
-        },
-        columnDefs: [
-            { orderable: false, targets: [10, 11] }, // Etiquetas y Prioridad no ordenables
-            { width: '80px', targets: 0 }, // Nº
-            { width: '200px', targets: 1 }, // Cliente
-            { width: '150px', targets: 2 }, // Producto
-            { width: '120px', targets: 3 }, // Monto
-            { width: '150px', targets: 4 }, // Propietario
-            { width: '150px', targets: 5 }, // Asignado a
-            { width: '120px', targets: 6 }, // Etapa
-            { width: '100px', targets: 7 }, // Estado
-            { width: '150px', targets: 8 }, // Fecha SLA
-            { width: '120px', targets: 9 }, // SLA
-            { width: '180px', targets: 10 }, // Etiquetas
-            { width: '100px', targets: 11 }, // Prioridad
-        ],
-        autoWidth: false,
-        pageLength: 25,
-        responsive: false,
-        deferRender: true,
-        processing: true,
-        dom: 'rt<"bottom d-flex justify-content-between align-items-center mt-3"<"d-flex align-items-center gap-2"l<"text-muted small"i>>p><"clear">',
-        // Manejar tablas vacías correctamente
-        initComplete: function(settings, json) {
-            // Verificar si la tabla está vacía y mostrar mensaje personalizado
-            if (this.api().data().length === 0) {
-                var tbody = this.api().table().body();
-                $(tbody).html('<tr><td colspan="12" class="text-center py-4"><i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No hay solicitudes para mostrar</p></td></tr>');
-            }
-        }
-    });
+                paging: true,
+                searching: true,
+                ordering: true,
+                scrollX: true,
+                scrollY: '70vh',
+                scrollCollapse: true,
+                language: {
+                    search: 'Buscar:',
+                    lengthMenu: 'Mostrar _MENU_ registros',
+                    info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+                    emptyTable: 'No hay solicitudes para mostrar',
+                    zeroRecords: 'No se encontraron solicitudes que coincidan con los filtros',
+                    paginate: {
+                        previous: 'Anterior',
+                        next: 'Siguiente'
+                    }
+                },
+                columnDefs: [
+                    { orderable: false, targets: [10, 11] }, // Etiquetas y Prioridad no ordenables
+                    { width: '80px', targets: 0 }, // Nº
+                    { width: '200px', targets: 1 }, // Cliente
+                    { width: '150px', targets: 2 }, // Producto
+                    { width: '120px', targets: 3 }, // Monto
+                    { width: '150px', targets: 4 }, // Propietario
+                    { width: '150px', targets: 5 }, // Asignado a
+                    { width: '120px', targets: 6 }, // Etapa
+                    { width: '100px', targets: 7 }, // Estado
+                    { width: '150px', targets: 8 }, // Fecha SLA
+                    { width: '120px', targets: 9 }, // SLA
+                    { width: '180px', targets: 10 }, // Etiquetas
+                    { width: '100px', targets: 11 }, // Prioridad
+                ],
+                autoWidth: false,
+                pageLength: 25,
+                responsive: false,
+                deferRender: true,
+                processing: true,
+                dom: 'rt<"bottom d-flex justify-content-between align-items-center mt-3"<"d-flex align-items-center gap-2"l<"text-muted small"i>>p><"clear">',
+                // Manejar tablas vacías correctamente
+                initComplete: function(settings, json) {
+                    // Verificar si la tabla está vacía y mostrar mensaje personalizado
+                    if (this.api().data().length === 0) {
+                        var tbody = this.api().table().body();
+                        $(tbody).html('<tr><td colspan="12" class="text-center py-4"><i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No hay solicitudes para mostrar</p></td></tr>');
+                    }
+                }
+            });
 
-    // Ocultar el buscador nativo de DataTables
-    $('.dataTables_filter').hide();
-    
-    // Configurar filtros dinámicos solo si la tabla tiene datos
-    if (table) {
-        setTimeout(function() {
-            configurarFiltros();
-        }, 500);
-    }
-    
-    } else {
-        // Si no hay datos, mostrar mensaje personalizado sin DataTables
-        console.log('📋 Tabla sin datos - no inicializando DataTables');
-    }
+            // Ocultar el buscador nativo de DataTables
+            $('.dataTables_filter').hide();
+            // Configurar filtros dinámicos solo si la tabla tiene datos
+            if (table) {
+                setTimeout(function() {
+                    configurarFiltros();
+                }, 500);
+            }
+        } else {
+            // Si no hay datos, mostrar mensaje personalizado sin DataTables
+            console.log('📋 Tabla sin datos - no inicializando DataTables');
+        }
     }
     
     // =====================================
@@ -1417,9 +1387,21 @@ $(document).ready(function() {
     });
     
     // Función para cargar transiciones válidas y actualizar dropdown
-    function cargarTransicionesValidas(solicitudId, $select) {
+    function cargarTransicionesValidas(solicitudId, $select, callback) {
         console.log('🔍 DEBUG: cargarTransicionesValidas llamado con solicitudId:', solicitudId);
         console.log('🔍 DEBUG: URL a llamar:', `/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`);
+        
+        // Verificar si ya se cargaron las transiciones para evitar llamadas duplicadas
+        if ($select.data('transiciones-cargadas')) {
+            console.log('✅ Transiciones ya cargadas para solicitud:', solicitudId);
+            return;
+        }
+        
+        // Mostrar estado de carga
+        var etapaActual = $select.data('etapa-actual');
+        var opcionSeleccionada = $select.val();
+        $select.prop('disabled', true);
+        $select.html('<option value="">Cargando transiciones...</option>');
         
         fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
         .then(response => {
@@ -1444,18 +1426,27 @@ $(document).ready(function() {
         .then(data => {
             console.log('🔍 DEBUG cargarTransicionesValidas: Data recibida:', data);
             if (data.success) {
-                // Guardar la opción actualmente seleccionada
-                var etapaActual = $select.data('etapa-actual');
-                var opcionSeleccionada = $select.val();
-                
                 // Limpiar el select
                 $select.empty();
                 
-                // Agregar opción por defecto
-                $select.append('<option value="">Sin etapa</option>');
+                // SIEMPRE agregar la etapa actual primero (si existe)
+                if (data.etapa_actual && data.etapa_actual.id) {
+                    $select.append(`<option value="${data.etapa_actual.id}" 
+                                            class="text-primary fw-bold"
+                                            data-puede-realizar="true"
+                                            data-requisitos-faltantes="0"
+                                            selected>
+                        📍 ${data.etapa_actual.nombre} (Actual)
+                    </option>`);
+                }
                 
-                // Agregar solo las etapas válidas según las transiciones
+                // Agregar las etapas válidas según las transiciones
                 data.transiciones.forEach(function(transicion) {
+                    // No agregar la etapa actual nuevamente si ya está en las transiciones
+                    if (data.etapa_actual && transicion.etapa_destino.id === data.etapa_actual.id) {
+                        return;
+                    }
+                    
                     var warningClass = !transicion.puede_realizar ? 'text-warning' : '';
                     var requisitosInfo = transicion.total_requisitos_faltantes > 0 ? 
                         ` (${transicion.total_requisitos_faltantes} requisitos faltantes)` : '';
@@ -1464,33 +1455,55 @@ $(document).ready(function() {
                                             class="${warningClass}"
                                             data-puede-realizar="${transicion.puede_realizar}"
                                             data-requisitos-faltantes="${transicion.total_requisitos_faltantes}">
-                        ${transicion.etapa_destino.nombre}${requisitosInfo}
+                        ➡️ ${transicion.etapa_destino.nombre}${requisitosInfo}
                     </option>`);
                 });
                 
-                // Restaurar selección si es válida
-                if (opcionSeleccionada && $select.find(`option[value="${opcionSeleccionada}"]`).length > 0) {
-                    $select.val(opcionSeleccionada);
-                } else {
-                    $select.val(etapaActual || '');
+                // Si no hay etapa actual en los datos pero sí en el select original, agregarla
+                if ((!data.etapa_actual || !data.etapa_actual.id) && etapaActual) {
+                    $select.append(`<option value="${etapaActual}" 
+                                            class="text-primary fw-bold"
+                                            data-puede-realizar="true"
+                                            data-requisitos-faltantes="0"
+                                            selected>
+                        📍 Etapa actual (ID: ${etapaActual})
+                    </option>`);
                 }
                 
-                // Actualizar data attribute
+                // Actualizar data attributes
                 $select.data('etapa-actual', etapaActual);
+                $select.data('transiciones-cargadas', true);
+                
+                // Habilitar el select
+                $select.prop('disabled', false);
                 
                 console.log('✅ Transiciones válidas cargadas:', data.transiciones);
+                
+                // Ejecutar callback si existe
+                if (typeof callback === 'function') {
+                    callback();
+                }
             } else {
                 console.error('❌ Error al cargar transiciones válidas:', data.error);
+                // Restaurar opciones originales en caso de error
+                restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada);
                 // Mostrar notificación de error
                 if (typeof showToast !== 'undefined') {
                     showToast('Error al cargar transiciones: ' + (data.error || 'Error desconocido'), 'error', 5000);
                 } else {
                     mostrarNotificacionError('Error al cargar transiciones: ' + (data.error || 'Error desconocido'));
                 }
+                
+                // Ejecutar callback si existe (incluso en error)
+                if (typeof callback === 'function') {
+                    callback();
+                }
             }
         })
         .catch(error => {
             console.error('❌ Error en la petición de transiciones válidas:', error);
+            // Restaurar opciones originales en caso de error
+            restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada);
             // Mostrar notificación de error más específica
             let mensajeError = 'Error al cargar transiciones válidas';
             if (error.message.includes('404')) {
@@ -1508,10 +1521,73 @@ $(document).ready(function() {
             } else {
                 mostrarNotificacionError(mensajeError);
             }
+            
+            // Ejecutar callback si existe (incluso en error)
+            if (typeof callback === 'function') {
+                callback();
+            }
         });
     }
     
-    // Cargar transiciones válidas cuando se hace focus en el select
+    // Función auxiliar para restaurar opciones originales en caso de error
+    function restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada) {
+        $select.prop('disabled', false);
+        $select.empty();
+        
+        // Restaurar la opción seleccionada originalmente con mejor formato
+        if (etapaActual) {
+            $select.append(`<option value="${etapaActual}" selected class="text-primary fw-bold">
+                📍 Etapa actual (ID: ${etapaActual})
+            </option>`);
+        }
+        
+        // Marcar como no cargado para permitir reintentos
+        $select.data('transiciones-cargadas', false);
+    }
+    
+    // Cargar transiciones válidas inmediatamente al cargar la página
+    $(document).ready(function() {
+        console.log('🚀 Cargando transiciones válidas para todos los selects de etapa...');
+        
+        // Mostrar indicador de carga global
+        var $loadingIndicator = $('<div class="text-center py-2"><small class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Cargando transiciones válidas...</small></div>');
+        $('.etapa-select').first().closest('td').before($loadingIndicator);
+        
+        var totalSelects = $('.etapa-select:not(:disabled)').length;
+        var loadedSelects = 0;
+        
+        $('.etapa-select').each(function() {
+            var $select = $(this);
+            
+            // No cargar transiciones si el select está deshabilitado (bandeja grupal)
+            if ($select.prop('disabled')) {
+                console.log('❌ Select deshabilitado - no cargando transiciones');
+                return;
+            }
+            
+            var solicitudId = $select.data('solicitud-id');
+            console.log('📋 Cargando transiciones para solicitud:', solicitudId);
+            
+            // Modificar la función para incluir callback de completado
+            cargarTransicionesValidas(solicitudId, $select, function() {
+                loadedSelects++;
+                if (loadedSelects >= totalSelects) {
+                    // Ocultar indicador de carga cuando todos estén listos
+                    $loadingIndicator.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    console.log('✅ Todas las transiciones han sido cargadas');
+                }
+            });
+        });
+        
+        // Si no hay selects para cargar, remover el indicador inmediatamente
+        if (totalSelects === 0) {
+            $loadingIndicator.remove();
+        }
+    });
+    
+    // Mantener el evento focus como fallback para casos donde se agreguen selects dinámicamente
     $(document).on('focus', '.etapa-select', function() {
         var $select = $(this);
         
@@ -1521,8 +1597,12 @@ $(document).ready(function() {
             return;
         }
         
-        var solicitudId = $select.data('solicitud-id');
-        cargarTransicionesValidas(solicitudId, $select);
+        // Solo cargar si no se han cargado ya las transiciones (verificar si tiene data-transiciones-cargadas)
+        if (!$select.data('transiciones-cargadas')) {
+            var solicitudId = $select.data('solicitud-id');
+            console.log('📋 Cargando transiciones en focus para solicitud:', solicitudId);
+            cargarTransicionesValidas(solicitudId, $select);
+        }
     });
     
     // Manejar cambio de etapa con modal personalizado
@@ -1919,1685 +1999,9 @@ $(document).ready(function() {
 });
 </script>
 
-<!-- Mantener estilos PACIFICO para badges y botones -->
-<style>
-/* Estilos para botones de cambio de vista */
-.btn-group .btn {
-    border-radius: 0.375rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
 
-.btn-group .btn:first-child {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.btn-group .btn:last-child {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.btn-group .btn.active {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* Estilos para filtros responsivos */
-@media (max-width: 991.98px) {
-    .card-header-custom .row .col-6:nth-child(odd) {
-        padding-right: 0.5rem;
-    }
-    .card-header-custom .row .col-6:nth-child(even) {
-        padding-left: 0.5rem;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .ribbon-actions .btn-group {
-        flex-direction: column;
-    }
-    .ribbon-actions .btn-group .btn {
-        border-radius: 0.375rem !important;
-        margin-bottom: 2px;
-    }
-    .ribbon-actions {
-        flex-direction: column;
-        gap: 8px !important;
-    }
-}
-
-/* Estilos para filas clickeables */
-.clickable-row {
-    transition: all 0.2s ease;
-}
-
-.clickable-row:hover {
-    background-color: rgba(0, 156, 60, 0.1) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.clickable-row:active {
-
-/* === LOADING STATE === */
-.loading-placeholder {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading-shimmer 1.5s infinite;
-    border-radius: 4px;
-    height: 1rem;
-    margin: 0.25rem 0;
-}
-
-@keyframes loading-shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-    100% {
-        background-position: 200% 0;
-    }
-}
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Mejorar paginación de DataTables */
-.dataTables_wrapper .bottom {
-    background: #f8f9fa;
-    padding: 15px;
-    border-top: 1px solid #dee2e6;
-    border-radius: 0 0 8px 8px;
-}
-
-.dataTables_length select {
-    min-width: 60px;
-}
-
-.dataTables_info {
-    font-size: 0.875rem;
-}
-
-/* Estilos para Kanban Drag & Drop */
-.kanban-card {
-    cursor: grab;
-    transition: all 0.3s ease;
-}
-
-/* Estilos para tarjetas con requisitos faltantes */
-.kanban-card.requisitos-faltantes {
-    border-left: 4px solid #dc3545 !important;
-    position: relative;
-}
-
-.kanban-card.requisitos-faltantes::after {
-    content: "⚠️";
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    font-size: 12px;
-    background: rgba(220, 53, 69, 0.9);
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-/* Estilos para zonas de drop válidas e inválidas */
-.kanban-column-body.drop-zone-valid {
-    background-color: rgba(25, 135, 84, 0.1) !important;
-    border: 2px dashed #198754 !important;
-}
-
-.kanban-column-body.drop-zone-invalid {
-    background-color: rgba(220, 53, 69, 0.1) !important;
-    border: 2px dashed #dc3545 !important;
-    cursor: not-allowed;
-}
-
-.kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.kanban-card.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg) scale(0.95);
-    cursor: grabbing;
-}
-
-.kanban-card.updating {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-.drop-zone-active {
-    border: 2px dashed #007bff;
-    background-color: rgba(0, 123, 255, 0.05);
-    border-radius: 8px;
-}
-
-.drop-zone-hover {
-    border-color: #28a745 !important;
-    background-color: rgba(40, 167, 69, 0.1) !important;
-}
-
-.drag-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 9999;
-    transform: translateX(400px);
-    opacity: 0;
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-
-.drag-notification.show {
-    transform: translateX(0);
-    opacity: 1;
-}
-
-/* Estilos para tarjetas Kanban compactas */
-.kanban-column {
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.kanban-column-body {
-    background: #f8f9fa;
-}
-
-.kanban-card .card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-
-.kanban-card .card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Responsividad para filtros Kanban */
-@media (max-width: 768px) {
-    .kanban-board {
-        padding-bottom: 20px !important;
-    }
-    
-    .kanban-column {
-        min-width: 280px !important;
-        width: 280px !important;
-    }
-    
-    .card-body.py-2 .row {
-        row-gap: 0.5rem;
-    }
-}
-
-/* Estilos mejorados para contenedores Kanban */
-.kanban-container {
-    min-height: 700px;
-    background: #f1f3f4;
-    border-radius: 12px;
-    padding: 1rem;
-}
-
-.kanban-board {
-    gap: 0.75rem;
-    padding-bottom: 1rem;
-}
-
-.kanban-column .card {
-    border: 2px solid #e9ecef;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border-radius: 12px;
-    overflow: hidden;
-    background: #ffffff;
-}
-
-.kanban-column .card-header {
-    background: #28a745;
-    border: none;
-    padding: 1rem;
-    color: white;
-}
-
-.kanban-column-body {
-    background: #fafbfc;
-    padding: 1rem;
-}
-
-/* Estilos para tarjetas individuales mejoradas */
-.kanban-card .card {
-    border: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    background: white;
-    height: 110px;
-}
-
-.kanban-card .card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transform: translateY(-2px);
-}
-
-.kanban-card .card-body {
-    padding: 0.5rem;
-    height: 100%;
-}
-
-/* Scrollbar personalizado para contenedores Kanban */
-.kanban-column-body::-webkit-scrollbar {
-    width: 6px;
-}
-
-.kanban-column-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.kanban-column-body::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.kanban-column-body::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Animaciones mejoradas para drag and drop */
-.kanban-card.dragging {
-    opacity: 0.7;
-    transform: rotate(2deg) scale(1.02);
-    z-index: 1000;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-}
-
-.kanban-column.drag-over {
-    background: #e8f5e8;
-    border: 2px dashed #28a745;
-    transform: scale(1.02);
-    transition: all 0.3s ease;
-}
-
-/* Estilos para badges y etiquetas */
-.badge {
-    font-size: 0.65rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-weight: 500;
-}
-
-/* Mejoras visuales adicionales */
-.kanban-card .dropdown-toggle {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    transition: all 0.2s ease;
-}
-
-.kanban-card .dropdown-toggle:hover {
-    background: #f8f9fa;
-    border-color: #adb5bd;
-}
-
-.kanban-card .dropdown-menu {
-    border: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-radius: 8px;
-    padding: 0.5rem 0;
-}
-
-.kanban-card .dropdown-item {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.kanban-card .dropdown-item:hover {
-    background: #f8f9fa;
-    color: #495057;
-}
-
-/* Responsive mejoras */
-@media (max-width: 768px) {
-    .kanban-container {
-        min-height: 500px;
-        padding: 0.5rem;
-    }
-    
-    .kanban-board {
-        gap: 0.5rem;
-    }
-    
-    .kanban-column {
-        min-width: 300px !important;
-        width: 300px !important;
-    }
-    
-    .kanban-card .card {
-        min-height: 150px;
-    }
-}
-    margin: 0;
-}
-
-/* Responsividad para vistas móvil y desktop */
-.vista-movil {
-    display: block !important;
-}
-
-.vista-desktop {
-    display: none !important;
-}
-
-/* En pantallas pequeñas (sm y superiores - ≥576px) */
-@media (min-width: 576px) {
-    .vista-movil {
-        display: none !important;
-    }
-    
-    .vista-desktop {
-        display: block !important;
-    }
-}
-
-/* Estilos específicos para la vista móvil usando Tailwind-like classes pero con CSS tradicional */
-.vista-movil .bg-white { background-color: white; }
-.vista-movil .rounded-lg { border-radius: 0.5rem; }
-.vista-movil .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-.vista-movil .border { border: 1px solid #e5e7eb; }
-.vista-movil .p-4 { padding: 1rem; }
-.vista-movil .mb-4 { margin-bottom: 1rem; }
-.vista-movil .w-full { width: 100%; }
-.vista-movil .pl-10 { padding-left: 2.5rem; }
-.vista-movil .pr-4 { padding-right: 1rem; }
-.vista-movil .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.vista-movil .border-gray-300 { border-color: #d1d5db; }
-.vista-movil .rounded-lg { border-radius: 0.5rem; }
-.vista-movil .focus\:ring-2:focus { outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
-.vista-movil .focus\:ring-blue-500:focus { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
-.vista-movil .focus\:border-transparent:focus { border-color: transparent; }
-.vista-movil .absolute { position: absolute; }
-.vista-movil .inset-y-0 { top: 0; bottom: 0; }
-.vista-movil .left-0 { left: 0; }
-.vista-movil .pl-3 { padding-left: 0.75rem; }
-.vista-movil .flex { display: flex; }
-.vista-movil .items-center { align-items: center; }
-.vista-movil .text-gray-400 { color: #9ca3af; }
-.vista-movil .gap-2 { gap: 0.5rem; }
-.vista-movil .overflow-x-auto { overflow-x: auto; }
-.vista-movil .pb-2 { padding-bottom: 0.5rem; }
-.vista-movil .whitespace-nowrap { white-space: nowrap; }
-.vista-movil .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
-.vista-movil .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-.vista-movil .rounded-full { border-radius: 9999px; }
-.vista-movil .text-xs { font-size: 0.75rem; line-height: 1rem; }
-.vista-movil .font-medium { font-weight: 500; }
-.vista-movil .bg-blue-100 { background-color: #dbeafe; }
-.vista-movil .text-blue-800 { color: #1e40af; }
-.vista-movil .border-blue-200 { border-color: #bfdbfe; }
-.vista-movil .bg-gray-100 { background-color: #f3f4f6; }
-.vista-movil .text-gray-700 { color: #374151; }
-.vista-movil .border-gray-200 { border-color: #e5e7eb; }
-.vista-movil .space-y-4 > * + * { margin-top: 1rem; }
-.vista-movil .rounded-xl { border-radius: 0.75rem; }
-.vista-movil .overflow-hidden { overflow: hidden; }
-.vista-movil .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-.vista-movil .transition-shadow { transition-property: box-shadow; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-.vista-movil .duration-200 { transition-duration: 200ms; }
-.vista-movil .pb-3 { padding-bottom: 0.75rem; }
-.vista-movil .items-start { align-items: flex-start; }
-.vista-movil .justify-between { justify-content: space-between; }
-.vista-movil .mb-3 { margin-bottom: 0.75rem; }
-.vista-movil .space-x-2 > * + * { margin-left: 0.5rem; }
-.vista-movil .w-3 { width: 0.75rem; }
-.vista-movil .h-3 { height: 0.75rem; }
-.vista-movil .bg-red-500 { background-color: #ef4444; }
-.vista-movil .bg-yellow-500 { background-color: #eab308; }
-.vista-movil .bg-green-500 { background-color: #22c55e; }
-.vista-movil .bg-gray-400 { background-color: #9ca3af; }
-.vista-movil .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-.vista-movil .font-bold { font-weight: 700; }
-.vista-movil .text-gray-900 { color: #111827; }
-.vista-movil .font-semibold { font-weight: 600; }
-.vista-movil .bg-red-100 { background-color: #fee2e2; }
-.vista-movil .text-red-800 { color: #991b1b; }
-.vista-movil .bg-yellow-100 { background-color: #fef3c7; }
-.vista-movil .text-yellow-800 { color: #92400e; }
-.vista-movil .bg-green-100 { background-color: #dcfce7; }
-.vista-movil .text-green-800 { color: #166534; }
-.vista-movil .bg-gray-800 { background-color: #1f2937; }
-.vista-movil .relative { position: relative; }
-.vista-movil .p-1 { padding: 0.25rem; }
-.vista-movil .hover\:bg-gray-100:hover { background-color: #f3f4f6; }
-.vista-movil .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-.vista-movil .right-0 { right: 0; }
-.vista-movil .top-8 { top: 2rem; }
-.vista-movil .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-.vista-movil .z-10 { z-index: 10; }
-.vista-movil .hidden { display: none; }
-.vista-movil .min-w-40 { min-width: 10rem; }
-.vista-movil .block { display: block; }
-.vista-movil .px-4 { padding-left: 1rem; padding-right: 1rem; }
-.vista-movil .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-.vista-movil .hover\:bg-gray-50:hover { background-color: #f9fafb; }
-.vista-movil .w-full { width: 100%; }
-.vista-movil .text-left { text-align: left; }
-.vista-movil .text-red-600 { color: #dc2626; }
-.vista-movil .hover\:bg-red-50:hover { background-color: #fef2f2; }
-.vista-movil .grid { display: grid; }
-.vista-movil .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.vista-movil .gap-3 { gap: 0.75rem; }
-.vista-movil .text-gray-500 { color: #6b7280; }
-.vista-movil .uppercase { text-transform: uppercase; }
-.vista-movil .tracking-wide { letter-spacing: 0.025em; }
-.vista-movil .text-green-600 { color: #16a34a; }
-.vista-movil .space-y-2 > * + * { margin-top: 0.5rem; }
-.vista-movil .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vista-movil .ml-2 { margin-left: 0.5rem; }
-.vista-movil .w-6 { width: 1.5rem; }
-.vista-movil .h-6 { height: 1.5rem; }
-.vista-movil .text-blue-600 { color: #2563eb; }
-.vista-movil .bg-orange-100 { background-color: #fed7aa; }
-.vista-movil .text-orange-800 { color: #9a3412; }
-.vista-movil .mr-1 { margin-right: 0.25rem; }
-.vista-movil .inline-block { display: inline-block; }
-.vista-movil .bg-purple-100 { background-color: #f3e8ff; }
-.vista-movil .text-purple-800 { color: #6b21a8; }
-.vista-movil .mb-1 { margin-bottom: 0.25rem; }
-.vista-movil .bg-gray-50 { background-color: #f9fafb; }
-.vista-movil .border-t { border-top-width: 1px; }
-.vista-movil .border-gray-100 { border-color: #f3f4f6; }
-.vista-movil .space-x-4 > * + * { margin-left: 1rem; }
-.vista-movil .pt-3 { padding-top: 0.75rem; }
-.vista-movil .text-center { text-align: center; }
-.vista-movil .bg-blue-600 { background-color: #2563eb; }
-.vista-movil .hover\:bg-blue-700:hover { background-color: #1d4ed8; }
-.vista-movil .text-white { color: white; }
-.vista-movil .rounded-lg { border-radius: 0.5rem; }
-.vista-movil .bg-gray-600 { background-color: #4b5563; }
-.vista-movil .hover\:bg-gray-700:hover { background-color: #374151; }
-.vista-movil .bg-red-600 { background-color: #dc2626; }
-.vista-movil .hover\:bg-red-700:hover { background-color: #b91c1c; }
-.vista-movil .py-12 { padding-top: 3rem; padding-bottom: 3rem; }
-.vista-movil .w-16 { width: 4rem; }
-.vista-movil .h-16 { height: 4rem; }
-.vista-movil .mx-auto { margin-left: auto; margin-right: auto; }
-.vista-movil .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-.vista-movil .mb-2 { margin-bottom: 0.5rem; }
-.vista-movil .mt-6 { margin-top: 1.5rem; }
-.vista-movil .justify-center { justify-content: center; }
-.vista-movil .space-x-1 > * + * { margin-left: 0.25rem; }
-.vista-movil .rounded-l-md { border-top-left-radius: 0.375rem; border-bottom-left-radius: 0.375rem; }
-.vista-movil .hover\:bg-gray-50:hover { background-color: #f9fafb; }
-.vista-movil .border-t { border-top-width: 1px; }
-.vista-movil .border-b { border-bottom-width: 1px; }
-.vista-movil .rounded-r-md { border-top-right-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
-
-/* Ocultar buscador nativo de DataTables */
-.dataTables_filter {
-    display: none !important;
-}
-
-/* === ESTILOS PARA KPIs COMPACTOS === */
-.kpi-card-compact {
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 156, 60, 0.1);
-    transition: all 0.3s ease;
-    height: 100%;
-    display: flex;
-    align-items: center;
-}
-
-.kpi-card-compact:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border-color: rgba(0, 156, 60, 0.2);
-}
-
-.kpi-icon-compact {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    margin-right: 10px;
-    flex-shrink: 0;
-}
-
-.kpi-content-compact {
-    flex: 1;
-    min-width: 0;
-}
-
-.kpi-label-compact {
-    font-size: 0.65rem;
-    font-weight: 600;
-    margin: 0 0 2px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    opacity: 0.7;
-    line-height: 1;
-}
-
-.kpi-number-compact {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0;
-    line-height: 1;
-}
-
-/* Variantes de KPIs compactos */
-.kpi-total .kpi-icon-compact {
-    background: linear-gradient(135deg, #009c3c, #22a650);
-    color: white;
-}
-
-.kpi-total .kpi-number-compact {
-    color: #009c3c;
-}
-
-.kpi-activas .kpi-icon-compact {
-    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-    color: white;
-}
-
-.kpi-activas .kpi-number-compact {
-    color: #0d6efd;
-}
-
-.kpi-completadas .kpi-icon-compact {
-    background: linear-gradient(135deg, #ffc107, #ffb84d);
-    color: #000;
-}
-
-.kpi-completadas .kpi-number-compact {
-    color: #ffc107;
-}
-
-.kpi-vencidas .kpi-icon-compact {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    color: white;
-}
-
-.kpi-vencidas .kpi-number-compact {
-    color: #dc3545;
-}
-
-/* === ESTILOS PARA TABLA OPTIMIZADA === */
-.table-container {
-    position: relative;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
-
-.table-container .table-responsive {
-    overflow-y: auto;
-    overflow-x: auto;
-}
-
-.table-container .table {
-    margin-bottom: 0;
-}
-
-.table-container .sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    background: #f8f9fa;
-}
-
-.solicitud-link {
-    color: #009c3c;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.solicitud-link:hover {
-    color: #007529;
-    text-decoration: underline !important;
-}
-
-/* Responsive para filtros integrados */
-@media (max-width: 1200px) {
-    .card-header-custom .d-flex {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .card-header-custom select {
-        width: 100px !important;
-        font-size: 0.75rem;
-    }
-    
-    .card-header-custom input {
-        width: 150px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .card-header-custom .d-flex {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .card-header-custom select,
-    .card-header-custom input {
-        width: 100% !important;
-        margin-bottom: 0.5rem;
-    }
-}
-
-/* === ESTILOS PARA LEYENDA SLA COMPACTA === */
-.sla-legend-compact {
-    padding: 8px 12px;
-    background: rgba(0, 156, 60, 0.02);
-    border: 1px solid rgba(0, 156, 60, 0.1);
-    border-radius: 6px;
-    margin-bottom: 8px;
-}
-
-.sla-legend-compact small {
-    font-size: 0.75rem;
-    line-height: 1.2;
-}
-
-.sla-legend-compact i.fa-circle {
-    display: inline-block;
-    margin-right: 4px;
-}
-
-/* Responsive para KPIs */
-@media (max-width: 768px) {
-    .kpi-card {
-        padding: 12px;
-        margin-bottom: 8px;
-        border-radius: 8px;
-    }
-    
-    .kpi-number {
-        font-size: 1.25rem;
-    }
-    
-    .kpi-label {
-        font-size: 0.7rem;
-    }
-    
-    .kpi-icon {
-        width: 28px;
-        height: 28px;
-        font-size: 14px;
-        margin-right: 8px;
-    }
-    
-    .sla-legend-items {
-        gap: 16px;
-    }
-}
-
-/* Estilos para el buscador personalizado en el header */
-#busquedaTabla {
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-#busquedaTabla:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-.dataTables_info {
-    display: none !important;
-}
-/* Oculta solo el selector de cantidad de registros de la parte superior, pero no el de abajo */
-.dataTables_wrapper > .dataTables_length:first-child {
-    display: none !important;
-}
-.dataTables_length {
-    float: none !important;
-    display: inline-block !important;
-    margin: 0 1rem 0 0 !important;
-    vertical-align: middle;
-}
-.dataTables_wrapper .dt-bottom-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-/* Estilos para columna fija */
-.DTFC_LeftWrapper {
-    background: #f8f9fa;
-    border-right: 2px solid #dee2e6;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-}
-
-.DTFC_LeftWrapper table {
-    background: white;
-}
-
-.DTFC_LeftWrapper th,
-.DTFC_LeftWrapper td {
-    background: white !important;
-    border-right: 1px solid #dee2e6;
-}
-
-/* Mejorar la separación visual */
-.DTFC_LeftWrapper th:last-child,
-.DTFC_LeftWrapper td:last-child {
-    border-right: 2px solid #007bff;
-}
-
-/* Centrar encabezados de columnas */
-#tablaSolicitudes thead th {
-    text-align: center !important;
-    vertical-align: middle !important;
-    font-weight: 600 !important;
-    background-color: #f8f9fa !important;
-    border-bottom: 2px solid #dee2e6 !important;
-}
-
-/* Centrar también los encabezados en la columna fija */
-.DTFC_LeftWrapper thead th {
-    text-align: center !important;
-    vertical-align: middle !important;
-    font-weight: 600 !important;
-    background-color: #f8f9fa !important;
-    border-bottom: 2px solid #dee2e6 !important;
-}
-
-/* Mejorar la apariencia general de la tabla */
-#tablaSolicitudes {
-    border-collapse: collapse !important;
-    width: 100% !important;
-}
-
-#tablaSolicitudes tbody tr:hover {
-    background-color: #f8f9fa !important;
-    transition: background-color 0.2s ease;
-}
-
-#tablaSolicitudes tbody td {
-    vertical-align: middle !important;
-    padding: 0.75rem 0.5rem !important;
-    border-bottom: 1px solid #dee2e6 !important;
-}
-
-/* Estilos para la columna fija mejorados */
-.DTFC_LeftWrapper {
-    background: #f8f9fa !important;
-    border-right: 3px solid #007bff !important;
-    box-shadow: 3px 0 8px rgba(0,0,0,0.15) !important;
-    z-index: 1000 !important;
-}
-
-.DTFC_LeftWrapper table {
-    background: white !important;
-    border-collapse: collapse !important;
-}
-
-.DTFC_LeftWrapper th,
-.DTFC_LeftWrapper td {
-    background: white !important;
-    border-right: 1px solid #dee2e6 !important;
-    padding: 0.75rem 0.5rem !important;
-}
-
-.DTFC_LeftWrapper tbody tr:hover {
-    background-color: #e3f2fd !important;
-}
-
-/* Mejorar la separación visual de la columna fija */
-.DTFC_LeftWrapper th:last-child,
-.DTFC_LeftWrapper td:last-child {
-    border-right: 3px solid #007bff !important;
-    position: relative;
-}
-
-.DTFC_LeftWrapper th:last-child::after,
-.DTFC_LeftWrapper td:last-child::after {
-    content: '';
-    position: absolute;
-    right: -3px;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(90deg, #007bff, #0056b3);
-}
-
-/* Estilos para el scroll horizontal */
-.dataTables_scrollBody {
-    border: 1px solid #dee2e6 !important;
-    border-radius: 0.375rem !important;
-}
-
-.dataTables_scrollHead {
-    border: 1px solid #dee2e6 !important;
-    border-bottom: none !important;
-    border-radius: 0.375rem 0.375rem 0 0 !important;
-}
-
-/* Estilos para los filtros mejorados */
-.form-control-custom {
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-/* Estilos para filtros compactos en una fila */
-.form-select-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    border-radius: 0.25rem;
-}
-
-.form-control-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    border-radius: 0.25rem;
-}
-
-.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    border-radius: 0.25rem;
-}
-
-.small {
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
-}
-
-/* Espaciado compacto para filtros */
-.row.g-2 {
-    --bs-gutter-x: 0.5rem;
-    --bs-gutter-y: 0.5rem;
-}
-
-/* Alineación de elementos en filtros */
-.align-items-end {
-    align-items: end !important;
-}
-
-.form-control-custom:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.form-label.fw-semibold {
-    color: #495057;
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-}
-
-/* Estilos para botones de filtros */
-.btn-pacifico {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.btn-pacifico:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    color: white;
-}
-
-.btn-outline-pacifico {
-    color: #007bff;
-    border-color: #007bff;
-}
-
-.btn-outline-pacifico:hover {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-/* Estilos para botones en el header de filtros */
-.card-header-custom .btn-light {
-    background-color: rgba(255, 255, 255, 0.9);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #495057;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.card-header-custom .btn-light:hover {
-    background-color: rgba(255, 255, 255, 1);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: #212529;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.card-header-custom .btn-outline-light {
-    background-color: transparent;
-    border-color: rgba(255, 255, 255, 0.5);
-    color: rgba(255, 255, 255, 0.9);
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.card-header-custom .btn-outline-light:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.8);
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Animación para los filtros */
-.card-custom {
-    transition: all 0.3s ease;
-}
-
-.card-custom:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* Estilos para filtros activos */
-.filtro-activo {
-    background-color: #e3f2fd !important;
-    border-color: #2196f3 !important;
-    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25) !important;
-}
-
-.filtro-activo:focus {
-    background-color: #e3f2fd !important;
-    border-color: #1976d2 !important;
-    box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25) !important;
-}
-
-/* Indicador visual para filtros activos */
-.filtro-activo::before {
-    content: '✓';
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #2196f3;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 10;
-}
-
-/* Contenedor relativo para el indicador */
-.col-md-2 {
-    position: relative;
-}
-
-/* Estilos para la cinta (ribbon) */
-.ribbon-container {
-    position: relative;
-    margin-bottom: 2rem;
-}
-
-.ribbon {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 1.5rem 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.ribbon::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #ffc107, #fd7e14, #e83e8c, #6f42c1);
-    border-radius: 8px 8px 0 0;
-}
-
-.ribbon-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.ribbon-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
-}
-
-.ribbon h1 {
-    margin: 0;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.ribbon p {
-    margin: 0;
-    opacity: 0.9;
-}
-
-/* Responsive para la cinta */
-@media (max-width: 768px) {
-    .ribbon-content {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .ribbon-actions {
-        margin-top: 1rem;
-    }
-}
-
-.table-row-hover:hover {
-    background-color: #f5f9f6 !important;
-    transition: background 0.2s;
-}
-
-/* MEJORAS PREMIUM PARA VISTA MÓVIL - ESTILO PACIFICO */
-.vista-movil .solicitud-card {
-    background: #ffffff !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
-    border: 2px solid rgba(0, 156, 60, 0.2) !important;
-    margin-bottom: 20px !important;
-    overflow: hidden !important;
-    transition: all 0.3s ease !important;
-    position: relative !important;
-}
-
-.vista-movil .solicitud-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #009c3c, #22a650, #00d46a);
-    z-index: 1;
-}
-
-.vista-movil .solicitud-card:hover {
-    transform: translateY(-4px) !important;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12) !important;
-    border-color: rgba(0, 156, 60, 0.4) !important;
-}
-
-.vista-movil .solicitud-card .p-4:first-child {
-    background: #ffffff !important;
-    color: #2d3748 !important;
-    padding: 24px !important;
-    position: relative;
-    overflow: hidden;
-    border-bottom: 2px solid rgba(0, 156, 60, 0.1) !important;
-}
-
-.vista-movil .solicitud-card .text-lg {
-    font-size: 20px !important;
-    font-weight: 800 !important;
-    color: #009c3c !important;
-    text-shadow: none !important;
-}
-
-.vista-movil .solicitud-card .w-3.h-3 {
-    width: 14px !important;
-    height: 14px !important;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3) !important;
-    animation: pulse 2s infinite !important;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.1); }
-}
-
-.vista-movil .solicitud-card .bg-red-500 {
-    background: linear-gradient(45deg, #ef4444, #dc2626) !important;
-}
-
-.vista-movil .solicitud-card .bg-yellow-500 {
-    background: linear-gradient(45deg, #f59e0b, #d97706) !important;
-}
-
-.vista-movil .solicitud-card .bg-green-500 {
-    background: linear-gradient(45deg, #10b981, #059669) !important;
-}
-
-.vista-movil .solicitud-card .rounded-full {
-    border-radius: 25px !important;
-    padding: 8px 16px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    font-size: 11px !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-}
-
-.vista-movil .solicitud-card .bg-red-100 {
-    background: linear-gradient(135deg, rgba(220, 53, 69, 0.9), rgba(200, 35, 51, 0.9)) !important;
-    color: white !important;
-}
-
-.vista-movil .solicitud-card .bg-yellow-100 {
-    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 179, 77, 0.9)) !important;
-    color: #000 !important;
-}
-
-.vista-movil .solicitud-card .bg-green-100 {
-    background: linear-gradient(135deg, rgba(0, 156, 60, 0.9), rgba(34, 166, 80, 0.9)) !important;
-    color: white !important;
-}
-
-.vista-movil .solicitud-card .grid {
-    background: rgba(0, 156, 60, 0.05) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
-    border: 1px solid rgba(0, 156, 60, 0.1) !important;
-    margin-top: 16px !important;
-}
-
-.vista-movil .solicitud-card .text-green-600 {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    font-weight: 800 !important;
-    font-size: 16px !important;
-}
-
-.vista-movil .solicitud-card .bg-gray-50:last-child {
-    background: rgba(0, 156, 60, 0.02) !important;
-    border-top: 1px solid rgba(0, 156, 60, 0.1) !important;
-}
-
-.vista-movil .solicitud-card .bg-blue-600 {
-    background: linear-gradient(135deg, #009c3c, #22a650) !important;
-    box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3) !important;
-    border-radius: 12px !important;
-    padding: 12px 20px !important;
-    font-weight: 600 !important;
-    transition: all 0.3s ease !important;
-}
-
-.vista-movil .solicitud-card .bg-blue-600:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 20px rgba(0, 156, 60, 0.4) !important;
-}
-
-.vista-movil .solicitud-card .bg-gray-600 {
-    background: linear-gradient(135deg, #6c757d, #495057) !important;
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3) !important;
-    border-radius: 12px !important;
-    padding: 12px 20px !important;
-    font-weight: 600 !important;
-    transition: all 0.3s ease !important;
-}
-
-.vista-movil .solicitud-card .bg-red-600 {
-    background: linear-gradient(135deg, #dc3545, #c82333) !important;
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
-    border-radius: 12px !important;
-    padding: 12px 20px !important;
-    font-weight: 600 !important;
-    transition: all 0.3s ease !important;
-}
-
-.vista-movil .solicitud-card .text-xs {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: #009c3c !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.8px !important;
-}
-
-.vista-movil .solicitud-card .bg-blue-100 {
-    background: linear-gradient(135deg, rgba(0, 156, 60, 0.1), rgba(34, 166, 80, 0.15)) !important;
-    color: #009c3c !important;
-    border-radius: 20px !important;
-    padding: 8px 16px !important;
-    font-weight: 700 !important;
-    border: 1px solid rgba(0, 156, 60, 0.3) !important;
-}
-
-.vista-movil .solicitud-card .bg-purple-100 {
-    background: linear-gradient(135deg, rgba(108, 117, 125, 0.1), rgba(73, 80, 87, 0.15)) !important;
-    color: #495057 !important;
-    border-radius: 20px !important;
-    padding: 8px 16px !important;
-    font-weight: 700 !important;
-    border: 1px solid rgba(108, 117, 125, 0.3) !important;
-}
-
-.vista-movil .empty-state {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0) !important;
-    border-radius: 25px !important;
-    border: 3px dashed #cbd5e1 !important;
-    padding: 60px 30px !important;
-    text-align: center !important;
-}
-
-.vista-movil .empty-state .w-16 {
-    background: linear-gradient(135deg, #e2e8f0, #cbd5e1) !important;
-    width: 100px !important;
-    height: 100px !important;
-    border-radius: 50% !important;
-    margin: 0 auto 25px !important;
-    animation: bounce 3s infinite !important;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
-}
-
-/* Mejoras adicionales para micro-interacciones */
-.vista-movil .solicitud-card .p-4:first-child::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(0, 156, 60, 0.05) 0%, transparent 60%);
-    animation: shimmer 4s infinite;
-}
-
-@keyframes shimmer {
-    0%, 100% { opacity: 0; transform: rotate(0deg); }
-    50% { opacity: 1; transform: rotate(180deg); }
-}
-
-.vista-movil .solicitud-card .menu-dropdown {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
-    border-radius: 15px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-
-.vista-movil .solicitud-card .menu-dropdown a:hover,
-.vista-movil .solicitud-card .menu-dropdown button:hover {
-    background: linear-gradient(90deg, #f3f4f6, #e5e7eb) !important;
-    border-radius: 10px !important;
-    margin: 2px !important;
-}
-
-.vista-movil .solicitud-card .text-sm.font-semibold {
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    color: #2d3748 !important;
-    text-shadow: none !important;
-}
-
-.vista-movil .solicitud-card .text-sm.font-medium {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #2d3748 !important;
-}
-
-.vista-movil .solicitud-card .text-sm.font-bold {
-    color: #10b981 !important;
-    font-weight: 800 !important;
-    font-size: 16px !important;
-}
-
-/* Mejoras para filtros móviles */
-.vista-movil .filter-btn {
-    transition: all 0.3s ease !important;
-    position: relative !important;
-    overflow: hidden !important;
-}
-
-.vista-movil .filter-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    transition: left 0.5s ease;
-}
-
-.vista-movil .filter-btn:hover::before {
-    left: 100%;
-}
-
-.vista-movil .filter-btn.active {
-    background: linear-gradient(135deg, #009c3c, #22a650) !important;
-    color: white !important;
-    border: 1px solid #009c3c !important;
-    box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3) !important;
-}
-
-/* Mejoras para el buscador móvil */
-.vista-movil input[type="text"] {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 2px solid rgba(0, 156, 60, 0.1) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px 12px 40px !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    backdrop-filter: blur(10px) !important;
-    transition: all 0.3s ease !important;
-}
-
-.vista-movil input[type="text"]:focus {
-    border-color: #009c3c !important;
-    box-shadow: 0 0 0 3px rgba(0, 156, 60, 0.1) !important;
-    background: white !important;
-}
-
-.vista-movil .relative .absolute {
-    color: #4a5568 !important;
-    font-size: 16px !important;
-}
-
-/* =====================================
-   ESTILOS PARA NOTIFICACIONES PERSONALIZADAS
-   ===================================== */
-.notificacion-personalizada {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    z-index: 9999;
-    transform: translateX(400px);
-    opacity: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.notificacion-personalizada.show {
-    transform: translateX(0);
-    opacity: 1;
-}
-
-.notificacion-exito {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.notificacion-error {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    color: white;
-}
-
-.notificacion-advertencia {
-    background: linear-gradient(135deg, #ffc107, #e0a800);
-    color: #212529;
-}
-
-.notificacion-contenido {
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-}
-
-.notificacion-personalizada i {
-    font-size: 1.1rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-
-
-/* Estilos para el header de Negocios */
-.ribbon {
-    overflow: hidden;
-    position: relative;
-}
-
-.ribbon-container {
-    padding: 0 15px;
-}
-
-.ribbon-actions {
-    white-space: nowrap;
-}
-
-.ribbon-actions .btn {
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-}
-
-.ribbon-actions .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.ribbon-actions .btn-light:hover {
-    background-color: #f8f9fa;
-    border-color: #f8f9fa;
-}
-
-.ribbon-actions .btn-outline-light:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* Responsive para móvil */
-@media (max-width: 767px) {
-    .ribbon-actions {
-        width: 100%;
-        justify-content: center;
-        margin-top: 10px;
-    }
-    
-    .ribbon-actions .btn {
-        flex: 1;
-        max-width: 150px;
-    }
-}
-
-/* Estilos para controles móviles */
-.mobile-controls {
-    background: rgba(0, 156, 60, 0.02);
-    border-radius: 12px;
-    padding: 12px;
-    border: 1px solid rgba(0, 156, 60, 0.1);
-}
-
-.toggle-btn {
-    border-color: #009c3c !important;
-    color: #009c3c !important;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.toggle-btn:hover {
-    background-color: #009c3c !important;
-    color: white !important;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
-}
-
-.toggle-btn.collapsed {
-    background-color: #f8f9fa !important;
-    color: #6c757d !important;
-    border-color: #dee2e6 !important;
-}
-
-.toggle-btn.collapsed:hover {
-    background-color: #009c3c !important;
-    color: white !important;
-    border-color: #009c3c !important;
-}
-
-/* Estilo especial para toggle en header de filtros */
-.card-header-custom .toggle-btn {
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    color: #009c3c !important;
-    border-color: rgba(255, 255, 255, 0.9) !important;
-    font-weight: 600;
-}
-
-.card-header-custom .toggle-btn:hover {
-    background-color: white !important;
-    color: #007529 !important;
-    border-color: white !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.card-header-custom .toggle-btn.collapsed {
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    color: #6c757d !important;
-    border-color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.card-header-custom .toggle-btn.collapsed:hover {
-    background-color: white !important;
-    color: #009c3c !important;
-    border-color: white !important;
-}
-
-/* Contenidos colapsables */
-.kpis-content, .filters-content {
-    transition: all 0.4s ease;
-    overflow: hidden;
-    opacity: 1;
-    max-height: 2000px;
-}
-
-.kpis-content.collapsed, .filters-content.collapsed {
-    opacity: 0;
-    max-height: 0;
-    margin: 0;
-    padding: 0;
-    transform: translateY(-10px);
-}
-
-/* Solo en móvil mostrar controles */
-@media (min-width: 576px) {
-    .mobile-controls {
-        display: none !important;
-    }
-}
-
-/* Animaciones de entrada */
-.vista-movil .solicitud-card {
-    animation: fadeInUp 0.5s ease-out !important;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideOutUp {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(-30px);
-    }
-}
-
-@keyframes ripple {
-    to {
-        transform: scale(4);
-        opacity: 0;
-    }
-}
-
-/* Mejoras para paginación móvil */
-.vista-movil nav a,
-.vista-movil nav span {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(0, 156, 60, 0.2) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    font-weight: 600 !important;
-    color: #2d3748 !important;
-    backdrop-filter: blur(10px) !important;
-    transition: all 0.3s ease !important;
-}
-
-.vista-movil nav a:hover {
-    background: linear-gradient(135deg, #009c3c, #22a650) !important;
-    color: white !important;
-    border-color: #009c3c !important;
-    box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3) !important;
-    transform: translateY(-2px) !important;
-}
-</style>
+<!-- incluir estilos de negocios_styles.html -->
+ {% include "workflow/partials/negocios_styles.html" %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -4424,8 +2828,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Marcar como inicializado
         $('.kanban-card').data('drag-initialized', true);
         
-        // Marcar tarjetas con requisitos faltantes
-        marcarTarjetasConRequisitosFaltantes();
+
         
         // Configurar eventos de drag para las tarjetas
         $('.kanban-card').on('dragstart', function(e) {
@@ -4517,7 +2920,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('📋 Mostrando modal de requisitos faltantes:', requisitosFaltantes);
                             
                             // Obtener nombre de la nueva etapa
-                            var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
+                            var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
                             nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                             
                             // Usar la función global correcta que maneja la carga de requisitos
@@ -4564,7 +2967,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Obtener nombre de la nueva etapa
-                    var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header-custom h6').text().trim();
+                    var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
                     nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                     
                     // Confirmar movimiento con modal personalizado
@@ -4597,36 +3000,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Función para realizar transición después de completar requisitos - REMOVIDA
     // Esta función ha sido reemplazada por el sistema de callbacks en la nueva implementación
     
-    // Función para marcar tarjetas con requisitos faltantes
-    function marcarTarjetasConRequisitosFaltantes() {
-        console.log('🔍 Marcando tarjetas con requisitos faltantes...');
-        
-        $('.kanban-card').each(function() {
-            var $card = $(this);
-            var solicitudId = $card.attr('data-solicitud-id');
-            
-            // Verificar requisitos faltantes para cada tarjeta
-            $.ajax({
-                url: `/workflow/api/solicitudes/${solicitudId}/requisitos-faltantes-detallado/`,
-                type: 'GET',
-                success: function(response) {
-                    if (response.success && response.requisitos_faltantes && response.requisitos_faltantes.length > 0) {
-                        $card.addClass('requisitos-faltantes');
-                        console.log('⚠️ Tarjeta marcada con requisitos faltantes:', solicitudId);
-                    }
-                },
-                error: function() {
-                    // Silenciar errores para no afectar la experiencia del usuario
-                    console.log('No se pudo verificar requisitos para tarjeta:', solicitudId);
-                }
-            });
-        });
-    }
-    
-    // Hacer funciones globalmente accesibles
-    // Nota: mostrarModalRequisitosFaltantes se asigna más adelante con la versión correcta
-    // Nota: cerrarModalRequisitos se asigna más adelante con la versión correcta
-    window.marcarTarjetasConRequisitosFaltantes = marcarTarjetasConRequisitosFaltantes;
+
     
     // Función para validar transiciones en Kanban
     function validarTransicionKanban(solicitudId, nuevaEtapaId, callback) {
@@ -5925,7 +4299,7 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
         
         if (data.success) {
             // Llenar la lista de requisitos faltantes
-            window.llenarListaRequisitosFaltantes(data.requisitos_faltantes);
+            window.llenarListaRequisitosFaltantes(data.requisitos, data.total_requisitos, data.requisitos_completos);
             
             // Configurar event listeners del modal
             window.configurarEventListenersModal(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion);
@@ -5955,8 +4329,8 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     });
 }
 
-// Función unificada para llenar la lista de requisitos faltantes en el modal
-window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
+// Función unificada para llenar la lista de requisitos en el modal
+window.llenarListaRequisitosFaltantes = function(requisitos, totalRequisitos, requisitosCompletos) {
     const listaContainer = document.getElementById('listaRequisitosFaltantes');
     const btnValidar = document.getElementById('btnValidarYContinuar');
     
@@ -5973,24 +4347,39 @@ window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
     // Limpiar contenedor
     listaContainer.innerHTML = '';
     
-    // Validar que requisitosFaltantes sea un array
-    if (!Array.isArray(requisitosFaltantes)) {
-        console.error('❌ requisitosFaltantes no es un array:', requisitosFaltantes);
+    // Si todos los requisitos están completos, mostrar mensaje de éxito
+    if (requisitosCompletos === totalRequisitos) {
+        btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar`;
+        btnValidar.className = 'btn btn-success';
+        btnValidar.disabled = false;
+        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
+        return;
+    }
+    
+    // Validar que requisitos sea un array
+    if (!Array.isArray(requisitos)) {
+        console.error('❌ requisitos no es un array:', requisitos);
         listaContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar requisitos</div>';
         btnValidar.disabled = true;
         return;
     }
     
-    if (requisitosFaltantes.length === 0) {
-        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
-        // Enable the button immediately if no requisitos to show
-        btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
+    // Actualizar el botón con el conteo correcto
+    btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+    if (requisitosCompletos === totalRequisitos) {
         btnValidar.className = 'btn btn-success';
         btnValidar.disabled = false;
+    } else {
+        btnValidar.className = 'btn btn-primary';
+        btnValidar.disabled = true;
+    }
+    
+    if (requisitos.length === 0) {
+        listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
         return;
     }
     
-    requisitosFaltantes.forEach(requisito => {
+    requisitos.forEach(requisito => {
         const requisitoHtml = `
             <div class="card mb-3 requisito-card" data-requisito-id="${requisito.id}">
                 <div class="card-body">
@@ -6009,27 +4398,38 @@ window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
                     </div>
                     
                     ${requisito.archivo_actual ? `
-                        <div class="alert alert-warning mb-3">
-                            <i class="fas fa-file me-2"></i>
-                            Archivo actual: <a href="${requisito.archivo_actual.url}" target="_blank">${requisito.archivo_actual.nombre}</a>
-                            <br><small>Puedes reemplazarlo subiendo un nuevo archivo</small>
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-file-alt me-2 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <strong>Archivo actual:</strong> 
+                                    <a href="${requisito.archivo_actual.url}" target="_blank" class="text-decoration-none">
+                                        ${requisito.archivo_actual.nombre}
+                                    </a>
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="mostrarUploadParaReemplazo(${requisito.id})" aria-label="Reemplazar archivo">
+                                            <i class="fas fa-upload me-1"></i>Reemplazar archivo
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" style="display:none;" id="cancelar-upload-btn-${requisito.id}" onclick="cancelarUploadParaReemplazo(${requisito.id})" aria-label="Cancelar reemplazo">
+                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ` : ''}
                     
-                    <div class="upload-section" style="${requisito.archivo_actual ? 'display: none;' : ''}">
+                    <div class="upload-section" style="${requisito.archivo_actual ? 'display: none;' : ''}" id="upload-section-${requisito.id}">
                         <div class="mb-3">
-                            <label class="form-label">Subir archivo <span class="text-danger">*</span></label>
+                            <label class="form-label">
+                                ${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'} 
+                                <span class="text-danger">*</span>
+                            </label>
                             <input type="file" class="form-control requisito-file-input" 
                                    data-requisito-id="${requisito.id}" 
-                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
-                            <small class="text-muted">El archivo se subirá automáticamente cuando hagas clic en "Validar y Continuar"</small>
-                        </div>
-                    </div>
-                    
-                    <div class="success-section" style="${requisito.archivo_actual ? 'display: block;' : 'display: none;'}">
-                        <div class="alert alert-success mb-0">
-                            <i class="fas fa-check-circle me-2"></i>
-                            ${requisito.archivo_actual ? 'Requisito ya completado' : 'Requisito subido exitosamente'}
+                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                                   aria-label="${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'}">
+                            <small class="text-muted">El archivo se subirá automáticamente cuando hagas clic en 'Validar y Continuar'</small>
                         </div>
                     </div>
                 </div>
@@ -6044,6 +4444,26 @@ window.llenarListaRequisitosFaltantes = function(requisitosFaltantes) {
     
     // Verificar estado inicial de requisitos
     window.verificarTodosRequisitosCompletos();
+}
+
+// Función para mostrar upload para reemplazar archivo
+window.mostrarUploadParaReemplazo = function(requisitoId) {
+    const uploadSection = document.getElementById(`upload-section-${requisitoId}`);
+    const cancelarBtn = document.getElementById(`cancelar-upload-btn-${requisitoId}`);
+    if (uploadSection) {
+        uploadSection.style.display = 'block';
+        if (cancelarBtn) cancelarBtn.style.display = 'inline-block';
+        // Scroll to the upload section
+        uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Función para cancelar upload para reemplazo
+window.cancelarUploadParaReemplazo = function(requisitoId) {
+    const uploadSection = document.getElementById(`upload-section-${requisitoId}`);
+    const cancelarBtn = document.getElementById(`cancelar-upload-btn-${requisitoId}`);
+    if (uploadSection) uploadSection.style.display = 'none';
+    if (cancelarBtn) cancelarBtn.style.display = 'none';
 }
 
 // Función para configurar event listeners de archivos

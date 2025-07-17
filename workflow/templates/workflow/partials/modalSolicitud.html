@@ -1156,6 +1156,18 @@
 
 
 window.mostrarModalSolicitud = function(solicitudId) {
+    // Test if jQuery is available first
+    if (typeof $ === 'undefined') {
+        console.error('jQuery is not available');
+        return;
+    }
+    
+    // Test if Bootstrap is available
+    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
+        console.error('Bootstrap is not available');
+        return;
+    }
+    
     console.log('Opening modal for solicitud:', solicitudId);
     
     // Store the solicitudId globally for use in the modal
@@ -1167,15 +1179,23 @@ window.mostrarModalSolicitud = function(solicitudId) {
     // Show loading state
     showLoadingState();
     
-    // Show modal first
-    var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
-    modal.show();
-    
-    // Test if jQuery is available
-    if (typeof $ === 'undefined') {
-        console.error('jQuery is not available');
-        showErrorState('jQuery no está disponible');
-        return;
+    // Show modal first - try multiple ways to access Bootstrap
+    try {
+        var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
+        modal.show();
+    } catch (error) {
+        console.error('Error creating Bootstrap modal:', error);
+        // Fallback: try to show modal manually
+        var modalElement = document.getElementById('modalSolicitud');
+        if (modalElement) {
+            modalElement.classList.add('show');
+            modalElement.style.display = 'block';
+            modalElement.setAttribute('aria-hidden', 'false');
+            // Add backdrop
+            var backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
     }
     
     // Construct the API URL
@@ -1256,6 +1276,11 @@ window.mostrarModalSolicitud = function(solicitudId) {
 };
 
 function showLoadingState() {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for showLoadingState');
+        return;
+    }
+    
     // Clear modal content
     $('#modalSolicitudCodigo').html('<div class="loading-placeholder" style="width: 120px;"></div>');
     $('#modalSolicitudEstadoBadge').html('<div class="loading-placeholder" style="width: 80px;"></div>');
@@ -1285,8 +1310,6 @@ function showLoadingState() {
         </div>
     `);
     
-
-    
     // Add loading animation to modern cards
     $('.summary-card-modern, .client-card-modern, .cotizacion-card-modern').each(function(index) {
         $(this).html(`
@@ -1300,6 +1323,11 @@ function showLoadingState() {
 }
 
 function showErrorState(errorMessage = 'Error al cargar la información') {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for showErrorState');
+        return;
+    }
+    
     $('#modalSolicitudWorkflowProgress').html(`
         <div class="text-center text-danger py-4">
             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
@@ -1308,15 +1336,16 @@ function showErrorState(errorMessage = 'Error al cargar la información') {
         </div>
     `);
     
-
-    
-
-    
     // Enable action buttons but show they're unavailable
     $('.action-btn-header').prop('disabled', false);
 }
 
 function populateModalData(data) {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for populateModalData');
+        return;
+    }
+    
     try {
         console.log('Populating modal with data:', data);
         
@@ -1424,6 +1453,11 @@ function populateModalData(data) {
 }
 
 function renderWorkflowRoadmap(etapas) {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for renderWorkflowRoadmap');
+        return;
+    }
+    
     let roadmapHtml = '<div class="workflow-roadmap">';
     
     etapas.forEach(function(etapa, idx) {
@@ -1528,12 +1562,24 @@ function getMockData(solicitudId) {
 
 // Add debug functionality
 window.testModalSolicitud = function() {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for testModalSolicitud');
+        return;
+    }
+    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
+        console.error('Bootstrap not available for testModalSolicitud');
+        return;
+    }
     console.log('Testing modal with mock data...');
     mostrarModalSolicitud('test-123');
 };
 
 // Add a helper function to test API directly
 window.testApiDirectly = function(solicitudId = 1) {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for testApiDirectly');
+        return;
+    }
     console.log('Testing API directly for solicitud:', solicitudId);
     
     $.ajax({
@@ -1555,8 +1601,21 @@ window.testApiDirectly = function(solicitudId = 1) {
     });
 };
 
-// Auto-test on page load
-$(document).ready(function() {
+// Auto-test on page load - Wait for jQuery and Bootstrap to be available
+function initializeModalWhenReady() {
+    if (typeof $ === 'undefined') {
+        console.log('jQuery not ready yet, waiting...');
+        setTimeout(initializeModalWhenReady, 100);
+        return;
+    }
+    
+    // Check for Bootstrap - try multiple ways it might be available
+    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
+        console.log('Bootstrap not ready yet, waiting...');
+        setTimeout(initializeModalWhenReady, 100);
+        return;
+    }
+    
     console.log('Modal script loaded successfully');
     
     // Test if required dependencies are available
@@ -1566,7 +1625,7 @@ $(document).ready(function() {
         console.log('jQuery version:', $.fn.jquery);
     }
     
-    if (typeof bootstrap === 'undefined') {
+    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
         console.error('Bootstrap is not available');
     } else {
         console.log('Bootstrap is available');
@@ -1578,7 +1637,10 @@ $(document).ready(function() {
     // Add test button to console
     console.log('To test modal, run: testModalSolicitud()');
     console.log('To test API directly, run: testApiDirectly(1)');
-});
+}
+
+// Start the initialization process
+initializeModalWhenReady();
 
 // Initialize modal layout functionality
 function initializeModalLayout() {
@@ -1586,8 +1648,6 @@ function initializeModalLayout() {
     $(window).on('resize', function() {
         adjustModalLayout();
     });
-    
-
     
     // Add click handlers for action buttons
     $('#modalBtnProcesarTarea').on('click', function() {
@@ -1624,6 +1684,11 @@ function initializeModalLayout() {
 
 // Adjust modal layout based on screen size
 function adjustModalLayout() {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for adjustModalLayout');
+        return;
+    }
+    
     const isMobile = window.innerWidth <= 768;
     
     if (isMobile) {

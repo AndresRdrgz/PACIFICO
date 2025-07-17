@@ -138,7 +138,17 @@ def negocios_view(request):
         # 1. Intentar usar el último pipeline visitado (guardado en sesión)
         pipeline_id = request.session.get('ultimo_pipeline_id')
         
-        # 2. Si no hay pipeline en sesión, seleccionar el primer pipeline disponible
+        # 2. Verificar que el pipeline de la sesión aún existe
+        if pipeline_id:
+            try:
+                Pipeline.objects.get(id=pipeline_id)
+            except Pipeline.DoesNotExist:
+                # Pipeline de la sesión ya no existe, limpiar la sesión
+                pipeline_id = None
+                if 'ultimo_pipeline_id' in request.session:
+                    del request.session['ultimo_pipeline_id']
+        
+        # 3. Si no hay pipeline válido en sesión, seleccionar el primer pipeline disponible
         if not pipeline_id and pipelines.exists():
             # Para usuarios regulares, verificar permisos de pipeline
             if not (request.user.is_superuser or request.user.is_staff):
@@ -174,7 +184,7 @@ def negocios_view(request):
                 # Para superusers y staff, seleccionar el primer pipeline
                 pipeline_id = pipelines.first().id
         
-        # 3. Si se seleccionó un pipeline por defecto, redirigir con el parámetro
+        # 4. Si se seleccionó un pipeline por defecto, redirigir con el parámetro
         if pipeline_id:
             # Preservar otros parámetros de la URL
             params = request.GET.copy()
@@ -785,6 +795,7 @@ def nueva_solicitud(request):
                 archivo_key = f'archivo_requisito_{req_pipeline.requisito.id}'
                 if archivo_key in request.FILES:
                     requisito_solicitud.archivo = request.FILES[archivo_key]
+                    requisito_solicitud.cumplido = True  # Marcar como cumplido cuando se sube archivo
                     requisito_solicitud.save()
             
             # Guardar campos personalizados
@@ -4993,37 +5004,44 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 'error': 'No existe una transición válida hacia esta etapa'
             }, status=400)
         
-        # Obtener requisitos obligatorios para esta transición
+        # Obtener TODOS los requisitos obligatorios para esta transición
         requisitos_transicion = RequisitoTransicion.objects.filter(
             transicion=transicion,
             obligatorio=True
         ).select_related('requisito')
         
-        requisitos_faltantes_detallados = []
-        
+        requisitos_detallados = []
+        total_requisitos = 0
+        requisitos_completos = 0
         for req_transicion in requisitos_transicion:
+            total_requisitos += 1
+            
             # Verificar si el requisito existe para esta solicitud
             requisito_solicitud = RequisitoSolicitud.objects.filter(
                 solicitud=solicitud,
                 requisito=req_transicion.requisito
             ).first()
             
-            # Si no existe o no está cumplido o no tiene archivo
-            if not requisito_solicitud or not requisito_solicitud.cumplido or not requisito_solicitud.archivo:
-                requisitos_faltantes_detallados.append({
-                    'id': req_transicion.requisito.id,
-                    'nombre': req_transicion.requisito.nombre,
-                    'descripcion': req_transicion.requisito.descripcion,
-                    'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                    'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
-                    'esta_cumplido': bool(requisito_solicitud and requisito_solicitud.cumplido),
-                    'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None,
-                    'archivo_actual': {
-                        'nombre': requisito_solicitud.archivo.name.split('/')[-1] if requisito_solicitud and requisito_solicitud.archivo else None,
-                        'url': requisito_solicitud.archivo.url if requisito_solicitud and requisito_solicitud.archivo else None
-                    } if requisito_solicitud and requisito_solicitud.archivo else None,
-                    'observaciones': requisito_solicitud.observaciones if requisito_solicitud else ''
-                })
+            # Determinar si está completo
+            esta_completo = bool(requisito_solicitud and requisito_solicitud.cumplido and requisito_solicitud.archivo)
+            if esta_completo:
+                requisitos_completos += 1
+            
+            # Incluir TODOS los requisitos, no solo los faltantes
+            requisitos_detallados.append({
+                'id': req_transicion.requisito.id,
+                'nombre': req_transicion.requisito.nombre,
+                'descripcion': req_transicion.requisito.descripcion,
+                'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
+                'esta_cumplido': esta_completo,
+                'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None,
+                'archivo_actual': {
+                    'nombre': requisito_solicitud.archivo.name.split('/')[-1] if requisito_solicitud and requisito_solicitud.archivo else None,
+                    'url': requisito_solicitud.archivo.url if requisito_solicitud and requisito_solicitud.archivo else None
+                } if requisito_solicitud and requisito_solicitud.archivo else None,
+                'observaciones': requisito_solicitud.observaciones if requisito_solicitud else ''
+            })
         
         return JsonResponse({
             'success': True,
@@ -5033,8 +5051,11 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 'etapa_origen': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
                 'etapa_destino': nueva_etapa.nombre
             },
-            'requisitos_faltantes': requisitos_faltantes_detallados,
-            'total_faltantes': len(requisitos_faltantes_detallados),
+            'requisitos': requisitos_detallados,
+            'total_requisitos': total_requisitos,
+            'requisitos_completos': requisitos_completos,
+            'requisitos_faltantes': [req for req in requisitos_detallados if not req['esta_cumplido']],
+            'total_faltantes': total_requisitos - requisitos_completos,
             'puede_continuar_sin_requisitos': request.user.is_superuser or request.user.is_staff
         })
         
