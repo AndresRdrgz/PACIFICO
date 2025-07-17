@@ -3219,6 +3219,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Define functions immediately to ensure they're available
 (function() {
+    // Search functionality variables
+    let searchTimeout;
+    let currentSearchType = '';
+    
     // Ensure drawer functions are available globally
 window.openSolicitudDrawerWithContext = function(pipelineId = null) {
     console.log('🔧 openSolicitudDrawerWithContext called with pipelineId:', pipelineId);
@@ -3638,10 +3642,7 @@ window.setupSearch = function() {
     console.log('✅ Search functionality setup successfully');
 };
 
-// Search functionality variables
-let searchTimeout;
-let currentSearchType = '';
-
+// Search functions moved to top of IIFE
 function searchCotizaciones(query) {
     console.log('🔧 searchCotizaciones called with query:', query);
     
@@ -3656,8 +3657,6 @@ function searchCotizaciones(query) {
             console.error('❌ Error searching cotizaciones:', error);
         });
 }
-
-
 
 function showSearchResults(type, results) {
     console.log('🔧 showSearchResults called with type:', type, 'results:', results);
@@ -3679,11 +3678,8 @@ function showSearchResults(type, results) {
             resultItem.onclick = () => selectItem(type, item);
             
             if (type === 'cotizacion') {
-                // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
-                console.log('🔧 Processing cotización item in negocios.html:', item);
                 const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                 const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
-                console.log('🔧 montoFinanciado:', montoFinanciado, 'montoFormateado:', montoFormateado);
                 resultItem.innerHTML = `
                     <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
                     <div class="search-result-details">
@@ -3727,7 +3723,6 @@ function selectItem(type, item) {
         if (nameElement) nameElement.textContent = item.nombreCliente || 'Sin nombre';
         if (detailsElement) {
             if (type === 'cotizacion') {
-                // Use montoFinanciado as "Monto Financiado" instead of montoPrestamo
                 const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                 const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
                 detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
@@ -3744,12 +3739,10 @@ function selectItem(type, item) {
                     const observaciones = item.observaciones || '';
                     
                     if (observaciones.trim()) {
-                        // Show the observaciones content
                         observacionesText.textContent = observaciones;
                         observacionesSelected.style.display = 'block';
                         observacionesPlaceholder.style.display = 'none';
                     } else {
-                        // Show placeholder if no observaciones
                         observacionesSelected.style.display = 'none';
                         observacionesPlaceholder.style.display = 'block';
                     }
@@ -3762,45 +3755,30 @@ function selectItem(type, item) {
                 if (motivoSection && motivoTextarea) {
                     motivoSection.classList.add('show');
                     
-                    // Set the observaciones from the cotización
                     const observaciones = item.observaciones || '';
-                    
                     motivoTextarea.value = observaciones;
-                    
-                    // Trigger input event to ensure any listeners are notified
                     motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                     
-                    // Show debug indicator if observaciones were populated
-                    const debugIndicator = document.getElementById('motivoConsultaDebug');
-                    if (debugIndicator) {
-                        if (observaciones.trim()) {
-                            debugIndicator.style.display = 'block';
-                            debugIndicator.innerHTML = `<small><i class="fas fa-check-circle me-1"></i>Debug: Textarea populated with "${observaciones.substring(0, 50)}${observaciones.length > 50 ? '...' : ''}"</small>`;
-                        } else {
-                            debugIndicator.style.display = 'none';
-                        }
-                    }
-                    
-                    // If observaciones is empty, focus on the textarea for user input
                     if (!observaciones.trim()) {
                         setTimeout(() => {
                             motivoTextarea.focus();
                         }, 100);
                     }
-                
+                }
             } else {
                 detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
             }
         }
         
         selectedContainer.style.display = 'block';
-        
-        // Auto-populate cliente when cotización is selected
-        autoPopulateClienteFromCotizacion(item);
     }
     
     hideSearchResults(type);
 }
+
+
+
+// Duplicate functions removed - using the ones defined at the top of IIFE
 
 function autoPopulateClienteFromCotizacion(cotizacion) {
     console.log('🔧 autoPopulateClienteFromCotizacion called with:', cotizacion);
@@ -4945,19 +4923,19 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
     });
 }
 
-    // Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
-    setTimeout(function() {
-        if ($('.kanban-board').length > 0 && $('.kanban-card').length > 0) {
-            console.log('Fallback: Verificando drag and drop...');
-            if (!$('.kanban-card').data('drag-initialized')) {
-                console.log('Fallback: Inicializando drag and drop...');
-                inicializarDragAndDrop();
-                $('.kanban-card').data('drag-initialized', true);
-            }
-        }
-    }, 1000);
-    
 })(); // Close IIFE
+
+// Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
+setTimeout(function() {
+    if ($('.kanban-board').length > 0 && $('.kanban-card').length > 0) {
+        console.log('Fallback: Verificando drag and drop...');
+        if (!$('.kanban-card').data('drag-initialized')) {
+            console.log('Fallback: Inicializando drag and drop...');
+            inicializarDragAndDrop();
+            $('.kanban-card').data('drag-initialized', true);
+        }
+    }
+}, 1000);
 </script>
 
 

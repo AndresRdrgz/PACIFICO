@@ -473,15 +473,15 @@
         color: #0dcaf0 !important;
     }
 
-    /* Bullet points styling */
+    /* Enhanced Bullet points styling */
     .bullet-item {
         background: white;
         border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        padding: 8px 12px;
-        margin-bottom: 6px;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
         transition: all 0.2s ease;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         overflow: hidden;
         word-wrap: break-word;
         overflow-wrap: break-word;
@@ -489,42 +489,30 @@
 
     .bullet-item:hover {
         border-color: #d1d5db;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
         background-color: #f9fafb;
+        transform: translateY(-1px);
     }
 
     .bullet-content {
         display: flex;
-        align-items: flex-start;
+        flex-direction: column;
         gap: 8px;
     }
 
-    .bullet-text {
-        color: #1f2937;
-        font-size: 0.875rem;
-        line-height: 1.5;
+    .bullet-header {
         display: flex;
+        justify-content: space-between;
         align-items: flex-start;
-        gap: 4px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
+        gap: 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #f1f3f4;
     }
 
-    .bullet-text::before {
-        content: '•';
-        color: #3b82f6;
-        font-weight: bold;
-        font-size: 1.2rem;
-        line-height: 1;
-        margin-right: 8px;
-        flex-shrink: 0;
-        margin-top: 2px;
-    }
-
-    .bullet-text strong {
-        color: #374151;
-        font-weight: 600;
+    .bullet-title {
+        color: #1f2937;
+        font-weight: 700;
+        font-size: 0.9rem;
         flex-shrink: 0;
         min-width: 120px;
         max-width: 200px;
@@ -532,21 +520,48 @@
         overflow-wrap: break-word;
     }
 
+    .bullet-value {
+        color: #6b7280;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-align: right;
+        flex: 1;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 300px;
+    }
+
+    .bullet-comment {
+        color: #374151;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        padding-left: 4px;
+    }
+
+    .bullet-comment i {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
     /* Responsive improvements for bullet points */
     @media (max-width: 768px) {
-        .bullet-text {
+        .bullet-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 4px;
         }
 
-        .bullet-text::before {
-            margin-right: 0;
-            margin-bottom: 4px;
+        .bullet-title {
+            min-width: auto;
+            max-width: none;
+            width: 100%;
         }
 
-        .bullet-text strong {
-            min-width: auto;
+        .bullet-value {
+            text-align: left;
             max-width: none;
             width: 100%;
         }
@@ -932,21 +947,28 @@
             font-size: 0.75rem;
         }
         
-        .bullet-text {
+        .bullet-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 2px;
         }
         
-        .bullet-text::before {
-            margin-right: 0;
-            margin-bottom: 2px;
-        }
-        
-        .bullet-text strong {
+        .bullet-title {
             min-width: auto;
             max-width: none;
             width: 100%;
+            font-size: 0.8rem;
+        }
+        
+        .bullet-value {
+            text-align: left;
+            max-width: none;
+            width: 100%;
+            font-size: 0.75rem;
+        }
+        
+        .bullet-comment {
+            font-size: 0.8rem;
         }
         
         .related-item {
@@ -2216,38 +2238,8 @@
         // Set field information
         campoNombre.textContent = getFieldDisplayName(field);
         
-        // Get the field value from the DOM
-        const fieldButton = document.querySelector(`[data-field="${field}"]`);
-        if (!fieldButton) {
-            console.error('Field button not found:', field);
-            showNotification('Error: No se pudo encontrar el campo', 'error');
-            return;
-        }
-        
-        let fieldValue = 'Sin valor';
-        
-        // Handle document fields differently
-        if (field.startsWith('doc_')) {
-            const docRow = fieldButton.closest('.adjunto-item');
-            if (docRow) {
-                const docNameElement = docRow.querySelector('.adjunto-name');
-                if (docNameElement) {
-                    fieldValue = docNameElement.textContent.trim();
-                }
-            }
-        } else {
-            // Handle regular fields
-            const fieldRow = fieldButton.closest('.info-row-with-check');
-            if (fieldRow) {
-                const fieldValueElement = fieldRow.querySelector('.info-value');
-                fieldValue = fieldValueElement ? fieldValueElement.textContent.trim() : 'Sin valor';
-            } else {
-                console.error('Field row not found for field:', field);
-                showNotification('Error: No se pudo encontrar la información del campo', 'error');
-                return;
-            }
-        }
-        
+        // Get the field value using the helper function
+        const fieldValue = getFieldValue(field);
         campoValor.textContent = fieldValue;
         
         // Store field and solicitud ID for the save action
@@ -2754,6 +2746,34 @@
         }
     };
 
+    // Get field value from DOM
+    const getFieldValue = (field) => {
+        const fieldButton = document.querySelector(`[data-field="${field}"]`);
+        if (!fieldButton) {
+            return 'Sin valor';
+        }
+        
+        // Handle document fields differently
+        if (field.startsWith('doc_')) {
+            const docRow = fieldButton.closest('.adjunto-item');
+            if (docRow) {
+                const docNameElement = docRow.querySelector('.adjunto-name');
+                if (docNameElement) {
+                    return docNameElement.textContent.trim();
+                }
+            }
+        } else {
+            // Handle regular fields
+            const fieldRow = fieldButton.closest('.info-row-with-check');
+            if (fieldRow) {
+                const fieldValueElement = fieldRow.querySelector('.info-value');
+                return fieldValueElement ? fieldValueElement.textContent.trim() : 'Sin valor';
+            }
+        }
+        
+        return 'Sin valor';
+    };
+
     // Load and display compliance comments as bullet points
     const loadComplianceCommentsAsBullets = (calificaciones) => {
         const bulletsContent = document.getElementById('bullets-content');
@@ -2780,17 +2800,23 @@
             return;
         }
 
-        // Create simple bullet points HTML
+        // Create enhanced bullet points HTML with campo title, value, and comment
         const bulletsHTML = commentsWithContent.map(cal => {
             const fieldName = getFieldDisplayName(cal.campo);
+            const fieldValue = getFieldValue(cal.campo);
             const comment = cal.comentario.trim();
             
             return `
                 <div class="bullet-item" data-field="${cal.campo}">
                     <div class="bullet-content">
-                        <span class="bullet-text">
-                            <strong>${fieldName}:</strong> ${escapeHtml(comment)}
-                        </span>
+                        <div class="bullet-header">
+                            <strong class="bullet-title">${fieldName}</strong>
+                            <span class="bullet-value">${escapeHtml(fieldValue)}</span>
+                        </div>
+                        <div class="bullet-comment">
+                            <i class="fas fa-comment-dots text-primary me-1"></i>
+                            ${escapeHtml(comment)}
+                        </div>
                     </div>
                 </div>
             `;
@@ -2836,7 +2862,7 @@
     // Initialize character counters when DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
         // Check if solicitud is assigned and block content if not
-        const isSolicitudAsignada = {{ solicitud.asignada_a|yesno:"true,false" }};
+        const isSolicitudAsignada = {% if solicitud.asignada_a %}true{% else %}false{% endif %};
         if (!isSolicitudAsignada) {
             // Block all interactive elements except navigation buttons
             document.querySelectorAll('.btn-compliance, .btn:not(.btn-outline-warning), textarea, input, select').forEach(element => {
