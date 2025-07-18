@@ -21,37 +21,75 @@
     
     .participacion-row {
         border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.2s ease;
+    }
+    
+    .participacion-row:hover {
+        background-color: #f8fafc;
     }
     
     .participacion-row:last-child {
         border-bottom: none;
     }
     
-    .nivel-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 500;
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: #f3f4f6;
+        overflow: hidden;
+        flex-shrink: 0;
     }
     
-    .resultado-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 500;
+    .avatar-sm img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
     }
     
-    .resultado-APROBADO { background-color: #dcfce7; color: #166534; }
-    .resultado-RECHAZADO { background-color: #fef2f2; color: #991b1b; }
-    .resultado-OBSERVACIONES { background-color: #fef3c7; color: #92400e; }
-    .resultado-PENDIENTE { background-color: #f3f4f6; color: #374151; }
+    .avatar-sm i {
+        font-size: 1.2rem;
+    }
     
-    .participacion-form {
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
+    .comentario-cell {
+        position: relative;
+    }
+    
+    .comentario-preview {
+        color: #374151;
+        line-height: 1.4;
+    }
+    
+    .empty-state {
+        padding: 2rem;
+    }
+    
+    .resultado-APROBADO { 
+        background-color: #dcfce7; 
+        color: #166534; 
+        border: 1px solid #22c55e;
+    }
+    
+    .resultado-RECHAZADO { 
+        background-color: #fef2f2; 
+        color: #991b1b; 
+        border: 1px solid #ef4444;
+    }
+    
+    .resultado-OBSERVACIONES { 
+        background-color: #fef3c7; 
+        color: #92400e; 
+        border: 1px solid #f59e0b;
+    }
+    
+    .resultado-PENDIENTE { 
+        background-color: #f3f4f6; 
+        color: #374151; 
+        border: 1px solid #9ca3af;
     }
     
     .btn-comite {
@@ -529,8 +567,81 @@
         font-style: italic;
     }
     
-    /* Responsive adjustments for analysis section */
+    /* Mobile Section Navigation */
+    .mobile-section-nav {
+        position: fixed;
+        top: 60px; /* Below the main mobile navbar - adjusted for actual navbar height */
+        left: 0;
+        right: 0;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        z-index: 1001; /* Higher than sidebar z-index: 1000 */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        /* Ensure it's always visible on mobile */
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .mobile-nav-container {
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+    }
+    
+    .mobile-nav-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    
+    .mobile-nav-item {
+        flex: 1;
+        min-width: 0;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        text-align: center;
+        white-space: nowrap;
+    }
+    
+    .mobile-nav-item:hover {
+        background-color: #f8fafc;
+    }
+    
+    .mobile-nav-item.active {
+        background-color: #f0f9ff;
+        border-bottom-color: #047857;
+        color: #047857;
+    }
+    
+    .mobile-nav-item i {
+        font-size: 1.1rem;
+        margin-bottom: 0.125rem;
+    }
+    
+    .mobile-nav-item span {
+        font-size: 0.75rem;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+    
+    /* Adjust main content for mobile navigation */
     @media (max-width: 768px) {
+        .main-content {
+            padding-top: 120px !important; /* Account for both navbars (mobile navbar + section nav) */
+        }
+        
+        .mobile-section-nav {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
         .analisis-seccion {
             min-height: 250px;
             margin-bottom: 1rem;
@@ -554,11 +665,32 @@
             width: 100%;
         }
     }
+    
+    /* Hide mobile section navigation on desktop */
+    @media (min-width: 769px) {
+        .mobile-section-nav {
+            display: none !important;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="comite-container">
+    <!-- Mobile Navigation Bar -->
+    <div class="mobile-section-nav d-md-none">
+        <div class="mobile-nav-container">
+            <div class="mobile-nav-item" data-section="analisis-consulta">
+                <i class="fas fa-search"></i>
+                <span>Análisis de Consulta</span>
+            </div>
+            <div class="mobile-nav-item" data-section="participacion-comite">
+                <i class="fas fa-users"></i>
+                <span>Participación Comité</span>
+            </div>
+        </div>
+    </div>
+    
     <div class="container-fluid">
         <!-- Header de la Solicitud -->
         <div class="row mb-4">
@@ -1061,7 +1193,7 @@
 
 
         <!-- Análisis de Consulta -->
-        <div class="row mb-4">
+        <div class="row mb-4" id="analisis-consulta">
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light">
@@ -1119,199 +1251,129 @@
             </div>
         </div>
 
-        <!-- Formulario de Participación del Usuario -->
-        {% if nivel_usuario %}
-        <div class="row mb-4">
+        <!-- Participaciones del Comité -->
+        <div class="row mb-4" id="participacion-comite">
             <div class="col-12">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="fas fa-comment-dots me-2"></i>
-                            Mi Participación - {{ nivel_usuario.nivel.nombre }}
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="participacion-form">
-                            <form id="form-participacion-comite">
-                                {% csrf_token %}
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <label for="resultado" class="form-label">Resultado</label>
-                                        <select class="form-select" id="resultado" name="resultado" required>
-                                            <option value="">Seleccione...</option>
-                                            <option value="APROBADO" {% if participacion_usuario.resultado == 'APROBADO' %}selected{% endif %}>Aprobado</option>
-                                            <option value="RECHAZADO" {% if participacion_usuario.resultado == 'RECHAZADO' %}selected{% endif %}>Rechazado</option>
-                                            <option value="OBSERVACIONES" {% if participacion_usuario.resultado == 'OBSERVACIONES' %}selected{% endif %}>Alternativa</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-9">
-                                        <label for="comentario" class="form-label">Comentario</label>
-                                        <textarea class="form-control" id="comentario" name="comentario" rows="3" placeholder="Escriba su comentario o análisis..." required>{% if participacion_usuario %}{{ participacion_usuario.comentario }}{% endif %}</textarea>
-                                    </div>
-                                </div>
-                                <div class="row mt-3">
-                                    <div class="col-12 d-flex gap-2">
-                                        <button type="submit" class="btn btn-comite">
-                                            <i class="fas fa-save me-1"></i>
-                                            {% if participacion_usuario %}Actualizar Participación{% else %}Participar en Comité{% endif %}
-                                        </button>
-                                        <button type="button" class="btn btn-escalar" onclick="mostrarModalEscalar()">
-                                            <i class="fas fa-arrow-up me-1"></i>
-                                            Escalar a Nivel Superior
-                                        </button>
-                                        <button type="button" class="btn btn-avanzar" id="btnAvanzarEtapa" onclick="mostrarModalAvanzarEtapa()" disabled>
-                                            <i class="fas fa-forward me-1"></i>
-                                            Avanzar Etapa
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Tabla de Participaciones -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="fas fa-table me-2"></i>
-                            Participaciones del Comité
-                        </h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="participaciones-table">
-                            {% if participaciones %}
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Nivel</th>
-                                            <th>Usuario</th>
-                                            <th>Resultado</th>
-                                            <th>Comentario</th>
-                                            <th>Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for participacion in participaciones %}
-                                        <tr class="participacion-row">
-                                            <td>
-                                                <span class="nivel-badge bg-primary text-white">
-                                                    {{ participacion.nivel.nombre }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <strong>{{ participacion.usuario.get_full_name|default:participacion.usuario.username }}</strong>
-                                            </td>
-                                            <td>
-                                                <span class="resultado-badge resultado-{{ participacion.resultado }}">
-                                                    {{ participacion.get_resultado_display }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div style="max-width: 300px;">
-                                                    {{ participacion.comentario|truncatechars:100 }}
-                                                    {% if participacion.comentario|length > 100 %}
-                                                        <button class="btn btn-sm btn-link p-0" onclick="mostrarComentarioCompleto('{{ participacion.comentario }}')">
-                                                            Ver más...
-                                                        </button>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
-                                                </small>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% else %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No hay participaciones aún</h5>
-                                <p class="text-muted">Esta solicitud aún no tiene participaciones del comité.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users me-2"></i>
+                                Participaciones del Comité
+                            </h5>
+                            {% if nivel_usuario %}
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="mostrarModalParticipacion()">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Dar mi resultado
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" onclick="mostrarModalEscalar()">
+                                    <i class="fas fa-arrow-up me-1"></i>
+                                    Escalar a nivel superior
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" id="btnAvanzarEtapa" onclick="mostrarModalAvanzarEtapa()" disabled>
+                                    <i class="fas fa-forward me-1"></i>
+                                    Resultado de Comité
+                                </button>
                             </div>
                             {% endif %}
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
+                    
 
-        <!-- Historial de Comentarios -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="fas fa-comments me-2"></i>
-                            Historial de Comentarios
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="comentarios-container">
-                            <!-- Comentarios Combinados: Comité y Analista -->
-                            <div class="comentarios-section-unified">
-                                <!-- Comentarios del Comité -->
-                                {% if participaciones %}
+                    
+                    <!-- Lista de Participaciones -->
+                    <div class="card-body p-0">
+                        {% if participaciones %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="px-3">Nivel</th>
+                                        <th>Usuario</th>
+                                        <th>Resultado</th>
+                                        <th>Comentario</th>
+                                        <th class="text-end px-3">Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     {% for participacion in participaciones %}
-                                        <div class="comentario-item mb-3">
-                                            <div class="comentario-header">
-                                                <div class="d-flex align-items-center justify-content-between">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="comentario-avatar me-2">
-                                                            <i class="fas fa-user-circle fa-lg text-primary"></i>
-                                                        </div>
-                                                        <div>
-                                                            <div class="comentario-author">
-                                                                {{ participacion.usuario.get_full_name|default:participacion.usuario.username }}
-                                                                <span class="comentario-tipo-badge bg-primary text-white ms-2">COMITÉ</span>
-                                                            </div>
-                                                            <div class="comentario-meta">
-                                                                <span class="nivel-badge bg-primary text-white">
-                                                                    {{ participacion.nivel.nombre }}
-                                                                </span>
-                                                                <span class="resultado-badge resultado-{{ participacion.resultado }}">
-                                                                    {{ participacion.get_resultado_display }}
-                                                                </span>
-                                                                <span class="comentario-date">
-                                                                    {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                    <tr class="participacion-row">
+                                        <td class="px-3">
+                                            <span class="badge bg-primary">
+                                                {{ participacion.nivel.orden }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm me-2">
+                                                    {% if participacion.usuario.userprofile and participacion.usuario.userprofile.profile_picture %}
+                                                        <img src="{{ participacion.usuario.userprofile.profile_picture.url }}" 
+                                                             alt="{{ participacion.usuario.get_full_name|default:participacion.usuario.username }}" 
+                                                             class="rounded-circle"
+                                                             width="32" 
+                                                             height="32"
+                                                             style="object-fit: cover;">
+                                                    {% else %}
+                                                        <i class="fas fa-user-circle text-primary"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <strong>{{ participacion.usuario.get_full_name|default:participacion.usuario.username }}</strong>
+                                                    {% if participacion.usuario == request.user %}
+                                                    <span class="badge bg-info ms-2">Tú</span>
+                                                    {% endif %}
                                                 </div>
                                             </div>
-                                            <div class="comentario-content">
-                                                {{ participacion.comentario|linebreaks }}
+                                        </td>
+                                        <td>
+                                            <span class="badge resultado-{{ participacion.resultado }}">
+                                                {{ participacion.get_resultado_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="comentario-cell" style="max-width: 300px;">
+                                                <div class="comentario-preview">
+                                                    {{ participacion.comentario|truncatechars:80 }}
+                                                </div>
+                                                {% if participacion.comentario|length > 80 %}
+                                                <button class="btn btn-link btn-sm p-0 text-decoration-none" onclick="mostrarComentarioCompleto('{{ participacion.comentario }}')">
+                                                    Ver más...
+                                                </button>
+                                                {% endif %}
                                             </div>
-                                        </div>
+                                        </td>
+                                        <td class="text-end px-3">
+                                            <small class="text-muted">
+                                                {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
                                     {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay participaciones aún</h5>
+                                <p class="text-muted mb-3">Esta solicitud aún no tiene participaciones del comité.</p>
+                                {% if nivel_usuario %}
+                                <button type="button" class="btn btn-primary" onclick="mostrarModalParticipacion()">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Ser el primero en participar
+                                </button>
                                 {% endif %}
-
-                                <!-- Comentarios del Analista -->
-                                <div id="comentarios-analista-container">
-                                    <div class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Cargando comentarios...</span>
-                                        </div>
-                                        <p class="text-muted mt-2">Cargando comentarios del analista...</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+
+
 
         <!-- Solicitudes Relacionadas -->
         <div class="row mb-4">
@@ -1367,6 +1429,115 @@
                         {% endif %}
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Participación del Comité -->
+<div class="modal fade" id="modalParticipacion" tabindex="-1" aria-labelledby="modalParticipacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalParticipacionLabel">
+                    <i class="fas fa-comment-dots me-2"></i>
+                    Mi Participación - {{ nivel_usuario.nivel.nombre|default:"Comité" }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-participacion-comite-modal">
+                    {% csrf_token %}
+                    
+                    <!-- Información de la solicitud -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>
+                                <strong>Solicitud:</strong> {{ solicitud.codigo }} - {{ solicitud.cliente_nombre|default:"Sin cliente" }}
+                                <br>
+                                <strong>Monto:</strong> {{ solicitud.monto_formateado }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="resultado-modal" class="form-label fw-bold">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Resultado *
+                            </label>
+                            <select class="form-select form-select-lg" id="resultado-modal" name="resultado" required>
+                                <option value="">Seleccione...</option>
+                                <option value="APROBADO" {% if participacion_usuario.resultado == 'APROBADO' %}selected{% endif %}>
+                                    ✅ Aprobado
+                                </option>
+                                <option value="RECHAZADO" {% if participacion_usuario.resultado == 'RECHAZADO' %}selected{% endif %}>
+                                    ❌ Rechazado
+                                </option>
+                                <option value="OBSERVACIONES" {% if participacion_usuario.resultado == 'OBSERVACIONES' %}selected{% endif %}>
+                                    ⚠️ Alternativa
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                Seleccione su decisión final sobre esta solicitud
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="comentario-modal" class="form-label fw-bold">
+                                <i class="fas fa-comment me-1"></i>
+                                Comentario *
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="comentario-modal" 
+                                name="comentario" 
+                                rows="6" 
+                                placeholder="Escriba su análisis, comentarios o justificación de la decisión..." 
+                                required
+                            >{% if participacion_usuario %}{{ participacion_usuario.comentario }}{% endif %}</textarea>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este comentario será visible para todos los miembros del comité
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Información adicional -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="fw-bold mb-2">
+                            <i class="fas fa-user me-1"></i>
+                            Información de su participación
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Nivel:</strong> {{ nivel_usuario.nivel.nombre|default:"No asignado" }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Usuario:</strong> {{ request.user.get_full_name|default:request.user.username }}
+                            </div>
+                        </div>
+                        {% if participacion_usuario %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Última modificación: {{ participacion_usuario.fecha_modificacion|date:"d/m/Y H:i" }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="procesarParticipacion()">
+                    <i class="fas fa-save me-1"></i>
+                    {% if participacion_usuario %}Actualizar Participación{% else %}Guardar Participación{% endif %}
+                </button>
             </div>
         </div>
     </div>
@@ -1459,6 +1630,75 @@
             content.classList.add('collapsed');
             header.classList.add('collapsed');
         }
+    }
+    
+    // Función para mostrar modal de participación
+    function mostrarModalParticipacion() {
+        const modal = new bootstrap.Modal(document.getElementById('modalParticipacion'));
+        modal.show();
+    }
+    
+    // Función para procesar la participación
+    function procesarParticipacion() {
+        const form = document.getElementById('form-participacion-comite-modal');
+        const formData = new FormData(form);
+        
+        const resultado = formData.get('resultado');
+        const comentario = formData.get('comentario');
+        
+        // Validaciones
+        if (!resultado) {
+            mostrarToast('Debe seleccionar un resultado', 'error');
+            return;
+        }
+        
+        if (!comentario || comentario.trim() === '') {
+            mostrarToast('Debe escribir un comentario', 'error');
+            return;
+        }
+        
+        // Mostrar loading
+        const btnProcesar = document.querySelector('#modalParticipacion .btn-primary');
+        const originalText = btnProcesar.innerHTML;
+        btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        btnProcesar.disabled = true;
+        
+        const data = {
+            resultado: resultado,
+            comentario: comentario.trim(),
+            nivel_id: nivelUsuarioId
+        };
+        
+        fetch(`/workflow/api/comite/solicitudes/${solicitudId}/participar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Participación registrada exitosamente', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalParticipacion')).hide();
+                // Recargar página después de 1 segundo
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                mostrarToast(data.error || 'Error al registrar la participación', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'error');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnProcesar.innerHTML = originalText;
+            btnProcesar.disabled = false;
+        });
     }
     
     // Función para mostrar modal de escalar
@@ -1619,107 +1859,9 @@
         });
     }
     
-    // Manejar formulario de participación
-    const formParticipacion = document.getElementById('form-participacion-comite');
-    if (formParticipacion) {
-        formParticipacion.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = {
-                resultado: formData.get('resultado'),
-                comentario: formData.get('comentario'),
-                nivel_id: nivelUsuarioId
-            };
-            
-            fetch(`/workflow/api/comite/solicitudes/${solicitudId}/participar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast('Participación registrada exitosamente', 'success');
-                    // Recargar página después de 1 segundo
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    mostrarToast(data.error || 'Error al registrar la participación', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                mostrarToast('Error de conexión', 'error');
-            });
-        });
-    }
+
     
-    // Cargar comentarios del analista
-    function cargarComentariosAnalista() {
-        const container = document.getElementById('comentarios-analista-container');
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/?tipo=analista`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.comentarios.length > 0) {
-                    let comentariosHTML = '';
-                    
-                    data.comentarios.forEach(comentario => {
-                        comentariosHTML += `
-                            <div class="comentario-item mb-3">
-                                <div class="comentario-header">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div class="d-flex align-items-center">
-                                            <div class="comentario-avatar me-2">
-                                                <i class="fas fa-user-circle fa-lg text-success"></i>
-                                            </div>
-                                            <div>
-                                                <div class="comentario-author">
-                                                    ${comentario.usuario.nombre_completo}
-                                                    <span class="comentario-tipo-badge bg-success text-white ms-2">ANALISTA</span>
-                                                </div>
-                                                <div class="comentario-meta">
-                                                    <span class="comentario-date">
-                                                        ${formatearFecha(comentario.fecha_creacion)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="comentario-content">
-                                    ${comentario.comentario.replace(/\n/g, '<br>')}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    container.innerHTML = comentariosHTML;
-                } else {
-                    container.innerHTML = `
-                        <div class="text-center py-4">
-                            <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No hay comentarios del analista</h5>
-                            <p class="text-muted">Esta solicitud aún no tiene comentarios del analista.</p>
-                        </div>
-                    `;
-                }
-            })
-            .catch(error => {
-                console.error('Error al cargar comentarios del analista:', error);
-                container.innerHTML = `
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error al cargar los comentarios del analista
-                    </div>
-                `;
-            });
-    }
+
     
     // Función para formatear fecha
     function formatearFecha(fechaString) {
@@ -1733,11 +1875,70 @@
         });
     }
     
-    // Cargar comentarios del analista cuando se carga la página
+    // Cargar análisis de consulta cuando se carga la página
     document.addEventListener('DOMContentLoaded', function() {
-        cargarComentariosAnalista();
         cargarAnalisisConsulta();
+        
+        // Manejar errores de carga de imágenes de perfil
+        document.querySelectorAll('.avatar-sm img').forEach(img => {
+            img.addEventListener('error', function() {
+                // Reemplazar imagen con icono si falla la carga
+                const avatarContainer = this.closest('.avatar-sm');
+                avatarContainer.innerHTML = '<i class="fas fa-user-circle text-primary"></i>';
+            });
+        });
+        
+        // Inicializar navegación móvil
+        initializeMobileNavigation();
     });
+    
+    // Función para inicializar la navegación móvil
+    function initializeMobileNavigation() {
+        const navItems = document.querySelectorAll('.mobile-nav-item');
+        const sections = document.querySelectorAll('#analisis-consulta, #participacion-comite');
+        
+        // Función para actualizar el item activo basado en la posición del scroll
+        function updateActiveNavItem() {
+            const scrollPosition = window.scrollY + 130; // Offset para ambos navbars (mobile navbar + section nav)
+            
+            sections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    // Remover clase activa de todos los items
+                    navItems.forEach(item => item.classList.remove('active'));
+                    // Agregar clase activa al item correspondiente
+                    navItems[index].classList.add('active');
+                }
+            });
+        }
+        
+        // Event listeners para los items de navegación
+        navItems.forEach((item, index) => {
+            item.addEventListener('click', function() {
+                const targetSection = sections[index];
+                if (targetSection) {
+                    // Scroll suave a la sección
+                    const offsetTop = targetSection.offsetTop - 120; // Account for both navbars (mobile navbar + section nav)
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Actualizar item activo
+                    navItems.forEach(navItem => navItem.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+        
+        // Actualizar item activo en scroll
+        window.addEventListener('scroll', updateActiveNavItem);
+        
+        // Actualizar item activo inicial
+        updateActiveNavItem();
+    }
     
     // Función para cargar el análisis de consulta
     function cargarAnalisisConsulta() {
@@ -2020,17 +2221,16 @@
         }
         
         // Habilitar/deshabilitar botón de avanzar etapa según el resultado seleccionado
-        const resultadoSelect = document.getElementById('resultado');
         const btnAvanzarEtapa = document.getElementById('btnAvanzarEtapa');
         
-        if (resultadoSelect && btnAvanzarEtapa) {
-            resultadoSelect.addEventListener('change', function() {
-                btnAvanzarEtapa.disabled = !this.value;
-            });
-            
-            // Verificar estado inicial
-            btnAvanzarEtapa.disabled = !resultadoSelect.value;
+        // Función para verificar si hay participaciones y habilitar el botón
+        function verificarParticipaciones() {
+            const participaciones = document.querySelectorAll('.participacion-row');
+            btnAvanzarEtapa.disabled = participaciones.length === 0;
         }
+        
+        // Verificar estado inicial
+        verificarParticipaciones();
     });
     
     // Función para mostrar modal de avanzar etapa
@@ -2148,7 +2348,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-forward me-2"></i>Avanzar Etapa
+                    <i class="fas fa-forward me-2"></i>Resultado de Comité
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -2173,7 +2373,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-success" id="btnConfirmarAvanzar" onclick="avanzarEtapa()">
-                    <i class="fas fa-forward me-1"></i>Avanzar Etapa
+                    <i class="fas fa-forward me-1"></i>Resultado de Comité
                 </button>
             </div>
         </div>

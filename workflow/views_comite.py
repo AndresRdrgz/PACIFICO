@@ -78,7 +78,7 @@ def detalle_solicitud_comite(request, solicitud_id):
     # Obtener participaciones del comité para esta solicitud
     participaciones = ParticipacionComite.objects.filter(
         solicitud=solicitud
-    ).select_related('usuario', 'nivel').order_by('nivel__orden', '-fecha_modificacion')
+    ).select_related('usuario', 'nivel', 'usuario__userprofile').order_by('nivel__orden', '-fecha_modificacion')
     
     # Obtener todos los niveles del comité ordenados por jerarquía
     niveles_comite = NivelComite.objects.all().order_by('orden')
