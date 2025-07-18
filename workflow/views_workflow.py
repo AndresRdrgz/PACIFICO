@@ -28,6 +28,7 @@ from .modelsWorkflow import (
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
+import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
 import time
@@ -4378,6 +4379,260 @@ def api_solicitud_brief(request, solicitud_id):
     except Exception as e:
         return JsonResponse({
             'error': f'Error al obtener datos de la solicitud: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_solicitud_detalle(request, solicitud_id):
+    """API completa para obtener todos los datos de una solicitud específica"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if solicitud.asignada_a and solicitud.asignada_a != request.user:
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para ver esta solicitud.'}, status=403)
+
+        # Calcular SLA detallado
+        sla_info = calcular_sla_detallado(solicitud)
+        
+        # Información general de la solicitud
+        general = {
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline': {
+                'id': solicitud.pipeline.id,
+                'nombre': solicitud.pipeline.nombre
+            } if solicitud.pipeline else None,
+            'etapa_actual': {
+                'id': solicitud.etapa_actual.id,
+                'nombre': solicitud.etapa_actual.nombre,
+                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal,
+                'sla': solicitud.etapa_actual.sla.total_seconds() / 86400 if solicitud.etapa_actual.sla else None  # días
+            } if solicitud.etapa_actual else None,
+            'subestado_actual': {
+                'id': solicitud.subestado_actual.id,
+                'nombre': solicitud.subestado_actual.nombre
+            } if solicitud.subestado_actual else None,
+            'creada_por': {
+                'id': solicitud.creada_por.id,
+                'nombre_completo': solicitud.creada_por.get_full_name(),
+                'username': solicitud.creada_por.username
+            } if solicitud.creada_por else None,
+            'asignada_a': {
+                'id': solicitud.asignada_a.id,
+                'nombre_completo': solicitud.asignada_a.get_full_name(),
+                'username': solicitud.asignada_a.username
+            } if solicitud.asignada_a else None,
+            'fecha_creacion': solicitud.fecha_creacion.isoformat() if solicitud.fecha_creacion else None,
+            'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat() if solicitud.fecha_ultima_actualizacion else None,
+            'motivo_consulta': solicitud.motivo_consulta,
+            'sla': sla_info,
+            'puede_asignar': not solicitud.asignada_a and solicitud.etapa_actual and solicitud.etapa_actual.es_bandeja_grupal,
+            'puede_devolver': solicitud.asignada_a == request.user,
+            'puede_cambiar_estado': True  # TODO: implementar lógica de permisos específica
+        }
+
+        # Información del cliente
+        cliente_info = None
+        if solicitud.cliente:
+            cliente_info = {
+                'id': solicitud.cliente.id,
+                'nombre': solicitud.cliente.nombreCliente,
+                'cedula': solicitud.cliente.cedulaCliente,
+                'telefono': getattr(solicitud.cliente, 'telefono', None),
+                'email': getattr(solicitud.cliente, 'email', None),
+                'direccion': getattr(solicitud.cliente, 'direccion', None),
+                'fecha_creacion': solicitud.cliente.created_at.isoformat() if hasattr(solicitud.cliente, 'created_at') and solicitud.cliente.created_at else None
+            }
+
+        # Información de la cotización
+        cotizacion_info = None
+        if solicitud.cotizacion:
+            cotizacion_info = {
+                'id': solicitud.cotizacion.id,
+                'monto_prestamo': float(solicitud.cotizacion.montoPrestamo) if solicitud.cotizacion.montoPrestamo else 0,
+                'plazo_pago': solicitud.cotizacion.plazoPago,
+                'tasa_interes': float(solicitud.cotizacion.tasaInteres) if solicitud.cotizacion.tasaInteres else 0,
+                'nombre_cliente': solicitud.cotizacion.nombreCliente,
+                'cedula_cliente': solicitud.cotizacion.cedulaCliente,
+                'nombre_empresa': solicitud.cotizacion.nombreEmpresa,
+                'posicion': solicitud.cotizacion.posicion,
+                'ingresos': float(solicitud.cotizacion.ingresos) if solicitud.cotizacion.ingresos else 0,
+                'cartera': solicitud.cotizacion.cartera,
+                'referencias_apc': solicitud.cotizacion.referenciasAPC,
+                'edad': solicitud.cotizacion.edad,
+                'sexo': solicitud.cotizacion.sexo,
+                'aux_monto2': float(getattr(solicitud.cotizacion, 'auxMonto2', 0)) if getattr(solicitud.cotizacion, 'auxMonto2', None) is not None else 0,
+                'wrk_monto_letra': float(getattr(solicitud.cotizacion, 'wrkMontoLetra', 0)) if hasattr(solicitud.cotizacion, 'wrkMontoLetra') and solicitud.cotizacion.wrkMontoLetra else 0
+            }
+
+        # Transiciones disponibles
+        transiciones_disponibles = []
+        if solicitud.etapa_actual:
+            transiciones = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=solicitud.etapa_actual
+            )
+            
+            for transicion in transiciones:
+                requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+                
+                # Verificar permisos para la transición
+                puede_realizar = True
+                if transicion.requiere_permiso and not (request.user.is_superuser or request.user.is_staff):
+                    grupos_usuario = request.user.groups.all()
+                    tiene_permiso = PermisoEtapa.objects.filter(
+                        etapa=transicion.etapa_destino,
+                        grupo__in=grupos_usuario
+                    ).exists()
+                    puede_realizar = tiene_permiso
+                
+                transiciones_disponibles.append({
+                    'id': transicion.id,
+                    'nombre': transicion.nombre,
+                    'etapa_destino': {
+                        'id': transicion.etapa_destino.id,
+                        'nombre': transicion.etapa_destino.nombre
+                    },
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'puede_realizar': puede_realizar and len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': [
+                        {
+                            'id': req.id,
+                            'nombre': req.nombre,
+                            'descripcion': req.descripcion
+                        } for req in requisitos_faltantes
+                    ]
+                })
+
+        # Historial de actividades
+        historial = []
+        for h in solicitud.historial.all().order_by('-fecha_inicio'):
+            historial.append({
+                'id': h.id,
+                'etapa': {
+                    'id': h.etapa.id,
+                    'nombre': h.etapa.nombre
+                } if h.etapa else None,
+                'subestado': {
+                    'id': h.subestado.id,
+                    'nombre': h.subestado.nombre
+                } if h.subestado else None,
+                'usuario_responsable': {
+                    'id': h.usuario_responsable.id,
+                    'nombre_completo': h.usuario_responsable.get_full_name(),
+                    'username': h.usuario_responsable.username
+                } if h.usuario_responsable else None,
+                'fecha_inicio': h.fecha_inicio.isoformat() if h.fecha_inicio else None,
+                'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None,
+                'comentarios': h.comentarios
+            })
+
+        # Requisitos de la solicitud
+        requisitos = []
+        for req in solicitud.requisitos.all():
+            requisitos.append({
+                'id': req.id,
+                'requisito': {
+                    'id': req.requisito.id,
+                    'nombre': req.requisito.nombre,
+                    'descripcion': req.requisito.descripcion,
+                    'es_obligatorio': req.requisito.es_obligatorio
+                },
+                'cumplido': req.cumplido,
+                'archivo': req.archivo.url if req.archivo else None,
+                'observaciones': req.observaciones,
+                'fecha_cumplimiento': req.fecha_cumplimiento.isoformat() if req.fecha_cumplimiento else None
+            })
+
+        # Campos personalizados
+        campos_personalizados = []
+        valores_dict = {v.campo.id: v for v in solicitud.valores_personalizados.all()}
+        
+        for campo in CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline):
+            valor = valores_dict.get(campo.id)
+            valor_actual = None
+            
+            if valor:
+                if campo.tipo == 'texto':
+                    valor_actual = valor.valor_texto
+                elif campo.tipo == 'numero':
+                    valor_actual = valor.valor_numero
+                elif campo.tipo == 'entero':
+                    valor_actual = valor.valor_entero
+                elif campo.tipo == 'fecha':
+                    valor_actual = valor.valor_fecha.isoformat() if valor.valor_fecha else None
+                elif campo.tipo == 'booleano':
+                    valor_actual = valor.valor_booleano
+            
+            campos_personalizados.append({
+                'id': campo.id,
+                'nombre': campo.nombre,
+                'tipo': campo.tipo,
+                'obligatorio': campo.obligatorio,
+                'valor': valor_actual
+            })
+
+        # Progreso del pipeline
+        progreso = 0
+        if solicitud.pipeline and solicitud.etapa_actual:
+            etapas_pipeline = solicitud.pipeline.etapas.order_by('orden')
+            total_etapas = etapas_pipeline.count()
+            if total_etapas > 0:
+                try:
+                    etapa_actual_orden = solicitud.etapa_actual.orden
+                    progreso = min(100, int((etapa_actual_orden / total_etapas) * 100))
+                except:
+                    progreso = 0
+
+        return JsonResponse({
+            'success': True,
+            'general': general,
+            'cliente': cliente_info,
+            'cotizacion': cotizacion_info,
+            'transiciones_disponibles': transiciones_disponibles,
+            'historial': historial,
+            'requisitos': requisitos,
+            'campos_personalizados': campos_personalizados,
+            'progreso': progreso
+        }, encoder=DjangoJSONEncoder)
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener datos de la solicitud: {str(e)}',
+            'traceback': traceback.format_exc() if settings.DEBUG else None
+        }, status=500)
+
+
+@login_required
+def api_test_solicitud_detalle(request, solicitud_id):
+    """API de prueba para verificar que el endpoint funciona"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'API funcionando correctamente',
+            'solicitud_id': solicitud.id,
+            'solicitud_codigo': solicitud.codigo,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)
 
 

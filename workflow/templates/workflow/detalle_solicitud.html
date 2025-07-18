@@ -4,8 +4,149 @@
 
 {% block title %}Detalle de Solicitud - Sistema de Workflow{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'workflow/css/detalleSolicitud.css' %}">
+<style>
+  .info-group {
+    margin-bottom: 1rem;
+  }
+  .info-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  .info-value {
+    font-size: 1rem;
+    color: #212529;
+    font-weight: 500;
+  }
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+  .timeline-marker {
+    position: absolute;
+    left: -2rem;
+    top: 0;
+    width: 2rem;
+    height: 2rem;
+    background: #e9ecef;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .timeline-item.completed .timeline-marker {
+    background: #28a745;
+    color: white;
+  }
+  .timeline-item.active .timeline-marker {
+    background: #007bff;
+    color: white;
+  }
+  .timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid #dee2e6;
+  }
+  .timeline-item.completed .timeline-content {
+    border-left-color: #28a745;
+  }
+  .timeline-item.active .timeline-content {
+    border-left-color: #007bff;
+  }
+  .timeline-title {
+    margin-bottom: 0.5rem;
+    color: #495057;
+  }
+  .timeline-description {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+  }
+  .timeline-time {
+    font-size: 0.875rem;
+  }
+  .timeline-comments {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #fff;
+    border-radius: 0.25rem;
+    font-style: italic;
+  }
+  .comentario-item {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border-left: 3px solid #007bff;
+  }
+  .comentario-content {
+    color: #495057;
+    line-height: 1.5;
+  }
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    display: none;
+  }
+  .loading-content {
+    text-align: center;
+  }
+  .loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.3rem solid #f3f4f6;
+    border-top: 0.3rem solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="fade-in-up">
+  <!-- Pass solicitud ID to JavaScript via data attribute -->
+  <script>
+    document.body.setAttribute('data-solicitud-id', '{{ solicitud.id }}');
+    window.solicitudId = {{ solicitud.id }};
+  </script>
+  
+  <!-- CSRF Token for AJAX requests -->
+  {% csrf_token %}
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -117,8 +258,8 @@
               </button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-financiera" data-bs-toggle="tab" data-bs-target="#tabInfoFinanciera" type="button" role="tab">
-                <i class="fas fa-chart-line me-2"></i>Información Financiera
+              <button class="nav-link" id="tab-resultado" data-bs-toggle="tab" data-bs-target="#tabResultadoConsulta" type="button" role="tab">
+                <i class="fas fa-clipboard-check me-2"></i>Resultado Consulta
               </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -141,10 +282,45 @@
                 <p class="text-muted">Cargando datos personales...</p>
               </div>
             </div>
-            <div class="tab-pane fade p-4" id="tabInfoFinanciera" role="tabpanel">
-              <div class="text-center py-4" id="infoFinancieraContent">
-                <div class="spinner-custom mx-auto mb-3"></div>
-                <p class="text-muted">Cargando información financiera...</p>
+            <div class="tab-pane fade p-4" id="tabResultadoConsulta" role="tabpanel">
+              <div class="row">
+                <!-- Comentarios de Analista -->
+                <div class="col-md-6">
+                  <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-primary text-white">
+                      <h6 class="mb-0">
+                        <i class="fas fa-user-md me-2"></i>Comentarios del Analista
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <div id="comentariosAnalistaContent">
+                        <div class="text-center py-4">
+                          <div class="spinner-custom mx-auto mb-3"></div>
+                          <p class="text-muted">Cargando comentarios del analista...</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Resultado de Comité -->
+                <div class="col-md-6">
+                  <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-success text-white">
+                      <h6 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Resultado del Comité
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <div id="resultadoComiteContent">
+                        <div class="text-center py-4">
+                          <div class="spinner-custom mx-auto mb-3"></div>
+                          <p class="text-muted">Cargando resultado del comité...</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="tab-pane fade p-4" id="tabReferencias" role="tabpanel">
@@ -229,547 +405,12 @@
 <!-- Toast Container -->
 <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 
-<style>
-/* Custom styles for this template */
-.nav-tabs-custom {
-  border-bottom: none;
-  margin-bottom: 0;
-}
+{% include 'workflow/partials/solicitud_negocios_styles.html' %}
 
-.nav-tabs-custom .nav-link {
-  border: none;
-  border-radius: 0;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 1rem 1.5rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.nav-tabs-custom .nav-link:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: none;
-}
-
-.nav-tabs-custom .nav-link.active {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.2);
-  border: none;
-  position: relative;
-}
-
-.nav-tabs-custom .nav-link.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: white;
-}
-
-/* Timeline enhancements */
-.timeline-item {
-  border-left: 3px solid var(--verde-pacifico);
-  padding-left: 1.5rem;
-  margin-bottom: 1.5rem;
-  position: relative;
-}
-
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: -8px;
-  top: 0.5rem;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--verde-pacifico);
-  border: 3px solid white;
-  box-shadow: 0 0 0 2px var(--verde-pacifico);
-}
-
-.timeline-item:last-child {
-  border-left: none;
-}
-
-/* Comment styles */
-.comment-item {
-  padding: 1rem;
-  border-radius: 12px;
-  background: #f8f9fa;
-  margin-bottom: 1rem;
-  border-left: 4px solid var(--verde-pacifico);
-  transition: all 0.3s ease;
-}
-
-.comment-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-}
-
-.comment-author {
-  font-weight: 600;
-  color: var(--verde-pacifico);
-  font-size: 0.9rem;
-}
-
-.comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-.comment-date {
-  font-size: 0.75rem;
-  color: var(--gris-medio);
-}
-
-.comment-actions {
-  display: flex;
-  gap: 0.25rem;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.comment-item:hover .comment-actions {
-  opacity: 1;
-}
-
-.comment-content {
-  color: var(--gris-texto);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.comment-edit-form {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e9ecef;
-}
-
-.comment-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--verde-pacifico);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-/* Data display styles */
-.data-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.data-row:last-child {
-  border-bottom: none;
-}
-
-.data-label {
-  font-weight: 600;
-  color: var(--gris-texto);
-}
-
-.data-value {
-  color: var(--gris-medio);
-  text-align: right;
-}
-
-/* Reference card styles */
-.reference-card {
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-}
-
-.reference-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.reference-name {
-  font-weight: 600;
-  color: var(--verde-pacifico);
-  margin-bottom: 0.5rem;
-}
-
-.reference-details {
-  color: var(--gris-medio);
-  font-size: 0.875rem;
-}
-
-/* Document styles */
-.document-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-}
-
-.document-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.document-info {
-  flex: 1;
-}
-
-.document-name {
-  font-weight: 600;
-  color: var(--gris-texto);
-  margin-bottom: 0.25rem;
-}
-
-.document-meta {
-  font-size: 0.875rem;
-  color: var(--gris-medio);
-}
-
-.document-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .card-header-custom {
-    padding: 1rem;
-  }
-  
-  .nav-tabs-custom .nav-link {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-  }
-  
-  .timeline-item {
-    padding-left: 1rem;
-  }
-  
-  .data-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-  
-  .data-value {
-    text-align: left;
-  }
-}
-
-/* Toast Notifications */
-.toast-custom {
-  background: white;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  min-width: 300px;
-}
-
-.toast-custom .toast-header {
-  border-bottom: 1px solid #f0f0f0;
-  background: transparent;
-  padding: 1rem 1rem 0.5rem 1rem;
-}
-
-.toast-custom .toast-body {
-  padding: 0.5rem 1rem 1rem 1rem;
-  font-weight: 500;
-}
-
-.toast-success {
-  border-left: 4px solid var(--verde-pacifico);
-}
-
-.toast-success .toast-header {
-  color: var(--verde-pacifico);
-}
-
-.toast-error {
-  border-left: 4px solid #dc3545;
-}
-
-.toast-error .toast-header {
-  color: #dc3545;
-}
-
-.toast-warning {
-  border-left: 4px solid #ffc107;
-}
-
-.toast-warning .toast-header {
-  color: #ffc107;
-}
-
-.toast-info {
-  border-left: 4px solid #0dcaf0;
-}
-
-.toast-info .toast-header {
-  color: #0dcaf0;
-}
-</style>
+<script>
+  // Pasar el ID de la solicitud al JavaScript
+  window.solicitudId = {{ solicitud.id }};
+</script>
+<script src="{% static 'workflow/js/detalleSolicitud.js' %}"></script>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/detalleSolicitud_V2.js' %}?v={{ timestamp|default:'1.2' }}&cb={{ timestamp|default:'1.2' }}"></script>
-<script>
-  // Debug: Log the solicitud ID
-  console.log('Template solicitud_id:', '{{ solicitud_id|default:"" }}');
-  
-  // Set solicitudId for JS (if not already set)
-  document.body.setAttribute('data-solicitud-id', '{{ solicitud_id|default:"" }}');
-  
-  // Debug: Log the data attribute
-  console.log('Data attribute solicitud_id:', document.body.getAttribute('data-solicitud-id'));
-  
-  // Debug: Check if our JavaScript file is loaded
-  console.log('detalleSolicitud_V2.js loaded, version:', '{{ timestamp|default:"1.2" }}');
-  
-  // Show loading overlay initially
-  document.getElementById('loadingOverlay').classList.add('show');
-  
-  // Hide loading overlay when page is fully loaded
-  window.addEventListener('load', function() {
-    setTimeout(() => {
-      document.getElementById('loadingOverlay').classList.remove('show');
-    }, 1000);
-  });
-  
-  // Debug: Check if there are any other scripts loaded
-  console.log('All scripts loaded:', document.querySelectorAll('script[src*="detalleSolicitud"]'));
-  
-  // Wait for our main script to load and then initialize
-  window.addEventListener('load', function() {
-    console.log('Page loaded, checking if main script is available...');
-    
-    // Check if our main script functions are available
-    if (typeof window.loadComments === 'function') {
-      console.log('Main script loaded successfully!');
-    } else {
-      console.error('Main script not loaded properly!');
-      // Fallback: implement basic comment functionality
-      implementFallbackCommentSystem();
-    }
-  });
-  
-  function implementFallbackCommentSystem() {
-    console.log('Implementing fallback comment system...');
-    
-    const comentarioForm = document.getElementById('comentarioForm');
-    if (comentarioForm) {
-      comentarioForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const solicitudId = document.body.getAttribute('data-solicitud-id');
-        const comentarioInput = document.getElementById('comentarioInput');
-        const comentario = comentarioInput.value.trim();
-        
-        if (!comentario) {
-          showToast('Por favor escribe un comentario antes de enviar.', 'warning');
-          return;
-        }
-        
-        // Show loading state
-        const submitButton = document.querySelector('#comentarioForm button[type="submit"]');
-        const originalText = submitButton.innerHTML;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
-        submitButton.disabled = true;
-        
-        const apiUrl = `/workflow/api/solicitudes/${solicitudId}/comentarios/crear/`;
-        console.log('Fallback: Submitting comment to:', apiUrl);
-        
-        fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-          },
-          body: JSON.stringify({ comentario })
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.success) {
-            comentarioInput.value = '';
-            showToast('Comentario enviado exitosamente!', 'success');
-            
-            // Reload comments
-            loadCommentsFallback(solicitudId);
-          } else {
-            throw new Error(data.error || 'Error al enviar comentario');
-          }
-        })
-        .catch(error => {
-          console.error('Error submitting comment:', error);
-          showToast('Error al enviar el comentario: ' + error.message, 'error');
-        })
-        .finally(() => {
-          // Restore button state
-          submitButton.innerHTML = originalText;
-          submitButton.disabled = false;
-        });
-      });
-    }
-  }
-  
-  function loadCommentsFallback(solicitudId) {
-    fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios/`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          renderCommentsFallback(data.comentarios);
-        }
-      })
-      .catch(error => {
-        console.error('Error loading comments:', error);
-      });
-  }
-  
-  function renderCommentsFallback(comentarios) {
-    const container = document.getElementById('solicitudComentarios');
-    if (!container) return;
-    
-    if (!comentarios || comentarios.length === 0) {
-      container.innerHTML = `
-        <div class="text-center py-4">
-          <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-          <p class="text-muted mb-0">No hay comentarios</p>
-        </div>
-      `;
-      return;
-    }
-    
-    const html = comentarios.map(c => `
-      <div class="comment-item">
-        <div class="comment-header">
-          <div class="d-flex align-items-center">
-            <div class="comment-avatar me-2">
-              <i class="fas fa-user-circle fa-lg text-muted"></i>
-            </div>
-            <div>
-              <span class="comment-author">${c.usuario.nombre_completo}</span>
-              <div class="comment-meta">
-                <span class="comment-date">${formatDate(c.fecha_creacion)}</span>
-                ${c.es_editado ? '<span class="badge bg-secondary ms-2">Editado</span>' : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="comment-content">${escapeHtml(c.comentario)}</div>
-      </div>
-    `).join('');
-    
-    container.innerHTML = html;
-  }
-  
-  function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return dateString;
-    }
-  }
-  
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-  
-  // Toast notification function
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    
-    const toastId = 'toast-' + Date.now();
-    const iconMap = {
-      success: 'fas fa-check-circle',
-      error: 'fas fa-times-circle',
-      warning: 'fas fa-exclamation-triangle',
-      info: 'fas fa-info-circle'
-    };
-    
-    const toastHtml = `
-      <div id="${toastId}" class="toast toast-custom toast-${type}" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-          <i class="${iconMap[type] || iconMap.info} me-2"></i>
-          <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-          ${message}
-        </div>
-      </div>
-    `;
-    
-    container.insertAdjacentHTML('beforeend', toastHtml);
-    
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, {
-      autohide: true,
-      delay: type === 'error' ? 5000 : 3000
-    });
-    
-    toast.show();
-    
-    // Remove toast element after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', function() {
-      toastElement.remove();
-    });
-  }
-</script>
-{% endblock %} 
