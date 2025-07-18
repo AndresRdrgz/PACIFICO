@@ -4386,7 +4386,9 @@ def api_solicitud_brief(request, solicitud_id):
 def api_solicitud_detalle(request, solicitud_id):
     """API completa para obtener todos los datos de una solicitud específica"""
     try:
+        print(f"DEBUG: Starting api_solicitud_detalle for solicitud_id: {solicitud_id}")
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"DEBUG: Solicitud found: {solicitud.codigo}")
         
         # Verificar permisos
         if solicitud.asignada_a and solicitud.asignada_a != request.user:
@@ -4608,6 +4610,8 @@ def api_solicitud_detalle(request, solicitud_id):
         
     except Exception as e:
         import traceback
+        print(f"DEBUG: Exception in api_solicitud_detalle: {str(e)}")
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
             'error': f'Error al obtener datos de la solicitud: {str(e)}',
@@ -4619,20 +4623,39 @@ def api_solicitud_detalle(request, solicitud_id):
 def api_test_solicitud_detalle(request, solicitud_id):
     """API de prueba para verificar que el endpoint funciona"""
     try:
+        print(f"DEBUG: Testing api_test_solicitud_detalle for solicitud_id: {solicitud_id}")
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"DEBUG: Test solicitud found: {solicitud.codigo}")
+        
+        # Test basic fields
+        basic_info = {
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline_id': solicitud.pipeline.id if solicitud.pipeline else None,
+            'etapa_actual_id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+            'creada_por_id': solicitud.creada_por.id if solicitud.creada_por else None,
+            'asignada_a_id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+        }
+        
+        print(f"DEBUG: Basic info created: {basic_info}")
         
         return JsonResponse({
             'success': True,
             'message': 'API funcionando correctamente',
             'solicitud_id': solicitud.id,
             'solicitud_codigo': solicitud.codigo,
+            'basic_info': basic_info,
             'timestamp': timezone.now().isoformat()
         })
         
     except Exception as e:
+        import traceback
+        print(f"DEBUG: Exception in test endpoint: {str(e)}")
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'traceback': traceback.format_exc() if settings.DEBUG else None
         }, status=500)
 
 
