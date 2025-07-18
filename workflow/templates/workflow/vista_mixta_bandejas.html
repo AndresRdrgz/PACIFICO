@@ -113,6 +113,271 @@
         <i class="fas fa-circle text-danger me-1 ms-2" style="font-size: 0.5rem;"></i>Vencido
     </small>
 
+    <!-- Vista de Supervisor/Superuser - Tabla Completa de Solicitudes -->
+    {% if user.is_superuser or user.is_staff %}
+    <div class="card mb-3" style="border: 1px solid #e0e0e0;">
+        <div class="card-header" style="background: linear-gradient(135deg, #1e40af, #3b82f6); color: white;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Vista de Supervisor - Gestión Completa de Solicitudes
+                </h5>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light btn-sm" id="toggle-supervisor-view">
+                        <i class="fas fa-eye me-1"></i>Mostrar/Ocultar Vista Completa
+                    </button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="export-supervisor-data">
+                        <i class="fas fa-download me-1"></i>Exportar Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0" id="supervisor-view-content" style="display: none;">
+            <div class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="supervisor-table">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-hashtag me-1"></i>Código
+                            </th>
+                            <th style="min-width: 150px;">
+                                <i class="fas fa-user me-1"></i>Cliente
+                            </th>
+                            <th style="min-width: 100px;">
+                                <i class="fas fa-id-card me-1"></i>Cédula
+                            </th>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-layer-group me-1"></i>Pipeline
+                            </th>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-tasks me-1"></i>Etapa
+                            </th>
+                            <th style="min-width: 100px;">
+                                <i class="fas fa-user-check me-1"></i>Asignado a
+                            </th>
+                            <th style="min-width: 100px;">
+                                <i class="fas fa-clock me-1"></i>SLA
+                            </th>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-calendar me-1"></i>Fecha Creación
+                            </th>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-calendar-check me-1"></i>Última Actualización
+                            </th>
+                            <th style="min-width: 100px;">
+                                <i class="fas fa-user-plus me-1"></i>Creado por
+                            </th>
+                            <th style="min-width: 100px;">
+                                <i class="fas fa-dollar-sign me-1"></i>Monto
+                            </th>
+                            <th style="min-width: 120px;">
+                                <i class="fas fa-cogs me-1"></i>Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="supervisor-table-body">
+                        {% for solicitud in solicitudes_grupales %}
+                        <tr class="supervisor-row" 
+                            data-solicitud-id="{{ solicitud.id }}"
+                            data-tipo="grupal"
+                            data-cliente="{{ solicitud.cliente_nombre }}"
+                            data-estado="{{ solicitud.estado_actual }}"
+                            data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                            data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                            <td>
+                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}" class="text-decoration-none">
+                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                </a>
+                                <br><small class="text-muted">Bandeja Grupal</small>
+                            </td>
+                            <td>
+                                <strong>{{ solicitud.cliente_nombre|default:"Sin cliente" }}</strong>
+                            </td>
+                            <td>
+                                <code>{{ solicitud.cliente_cedula|default:"-" }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ solicitud.pipeline.nombre }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Sin asignar</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                    <span class="{{ solicitud.sla_color }} ms-1">{{ solicitud.sla_restante }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</small>
+                            </td>
+                            <td>
+                                <strong class="text-success">{{ solicitud.monto_formateado|default:"-" }}</strong>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-success btn-sm tomar-solicitud" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-codigo="{{ solicitud.codigo }}">
+                                        <i class="fas fa-hand-paper"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm asignar-solicitud" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-codigo="{{ solicitud.codigo }}"
+                                            data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                    <button class="btn btn-info btn-sm ver-detalle" 
+                                            data-solicitud-id="{{ solicitud.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% for solicitud in solicitudes_personales %}
+                        <tr class="supervisor-row" 
+                            data-solicitud-id="{{ solicitud.id }}"
+                            data-tipo="personal"
+                            data-cliente="{{ solicitud.cliente_nombre }}"
+                            data-estado="{{ solicitud.estado_actual }}"
+                            data-etapa="{{ solicitud.etapa_actual.nombre }}"
+                            data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
+                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                            <td>
+                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}" class="text-decoration-none">
+                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                </a>
+                                <br><small class="text-muted">Asignada</small>
+                            </td>
+                            <td>
+                                <strong>{{ solicitud.cliente_nombre|default:"Sin cliente" }}</strong>
+                            </td>
+                            <td>
+                                <code>{{ solicitud.cliente_cedula|default:"-" }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ solicitud.pipeline.nombre }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-circle {{ solicitud.sla_color }}" style="font-size: 0.8rem;"></i>
+                                    <span class="{{ solicitud.sla_color }} ms-1">{{ solicitud.sla_restante }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</small>
+                            </td>
+                            <td>
+                                <strong class="text-success">{{ solicitud.monto_formateado|default:"-" }}</strong>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if solicitud.asignada_a == user %}
+                                    <button class="btn btn-warning btn-sm devolver-solicitud" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-codigo="{{ solicitud.codigo }}">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-info btn-sm ver-detalle" 
+                                            data-solicitud-id="{{ solicitud.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Estadísticas de la Vista de Supervisor -->
+            <div class="card-footer bg-light">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-clipboard-list text-info me-2"></i>
+                            <div>
+                                <strong class="d-block" id="supervisor-total-count">{{ solicitudes_grupales|length|add:solicitudes_personales|length }}</strong>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-users text-primary me-2"></i>
+                            <div>
+                                <strong class="d-block">{{ solicitudes_grupales|length }}</strong>
+                                <small class="text-muted">Bandeja Grupal</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-user-check text-success me-2"></i>
+                            <div>
+                                <strong class="d-block">{{ solicitudes_personales|length }}</strong>
+                                <small class="text-muted">Asignadas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            <div>
+                                <strong class="d-block">{{ por_vencer }}</strong>
+                                <small class="text-muted">Por Vencer</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                            <div>
+                                <strong class="d-block" id="supervisor-vencidas-count">0</strong>
+                                <small class="text-muted">Vencidas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <div>
+                                <strong class="d-block">{{ en_tiempo }}</strong>
+                                <small class="text-muted">En Tiempo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Contenedor de Bandejas -->
     <div id="contenedor-bandejas">
         <!-- Vista Mixta (Default) -->
@@ -214,6 +479,9 @@
                             <h5 class="mb-0">
                                 <i class="fas fa-user me-2"></i>
                                 Mis Tareas
+                                {% if etapa_seleccionada %}
+                                    <small class="text-white-50 ms-2">({{ etapa_seleccionada.nombre }})</small>
+                                {% endif %}
                                 <span class="badge bg-light text-dark ms-2">{{ solicitudes_personales|length }}</span>
                             </h5>
                         </div>
@@ -953,7 +1221,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const busqueda = document.getElementById('busquedaGlobal').value.toLowerCase();
         
         const filas = document.querySelectorAll('.solicitud-row');
+        const supervisorFilas = document.querySelectorAll('.supervisor-row');
         
+        // Aplicar filtros a las filas normales
         filas.forEach(fila => {
             const estado = fila.dataset.estado.toLowerCase();
             const sla = fila.dataset.sla;
@@ -978,6 +1248,35 @@ document.addEventListener('DOMContentLoaded', function() {
             
             fila.style.display = mostrar ? '' : 'none';
         });
+        
+        // Aplicar filtros a las filas de supervisor
+        supervisorFilas.forEach(fila => {
+            const estado = fila.dataset.estado.toLowerCase();
+            const sla = fila.dataset.sla;
+            const search = fila.dataset.search || '';
+            
+            let mostrar = true;
+            
+            // Filtro por estado
+            if (filtroEstado && !estado.includes(filtroEstado)) {
+                mostrar = false;
+            }
+            
+            // Filtro por SLA
+            if (filtroSLA && sla !== filtroSLA) {
+                mostrar = false;
+            }
+            
+            // Búsqueda global
+            if (busqueda && !search.includes(busqueda)) {
+                mostrar = false;
+            }
+            
+            fila.style.display = mostrar ? '' : 'none';
+        });
+        
+        // Actualizar contadores en vista de supervisor
+        actualizarContadoresSupervisor();
     }
     
     // Event listeners para filtros
@@ -1502,7 +1801,258 @@ document.addEventListener('DOMContentLoaded', function() {
     //     }
     // }, 30000); // REMOVIDO - Era cada 30 segundos
     
+    // =====================================
+    // FUNCIONALIDAD DE VISTA DE SUPERVISOR
+    // =====================================
+    
+    // Toggle para mostrar/ocultar vista de supervisor
+    const toggleSupervisorView = document.getElementById('toggle-supervisor-view');
+    const supervisorViewContent = document.getElementById('supervisor-view-content');
+    
+    if (toggleSupervisorView && supervisorViewContent) {
+        toggleSupervisorView.addEventListener('click', function() {
+            const isVisible = supervisorViewContent.style.display !== 'none';
+            
+            if (isVisible) {
+                supervisorViewContent.style.display = 'none';
+                toggleSupervisorView.innerHTML = '<i class="fas fa-eye me-1"></i>Mostrar Vista Completa';
+                toggleSupervisorView.classList.remove('btn-light');
+                toggleSupervisorView.classList.add('btn-outline-light');
+            } else {
+                supervisorViewContent.style.display = 'block';
+                toggleSupervisorView.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Ocultar Vista Completa';
+                toggleSupervisorView.classList.remove('btn-outline-light');
+                toggleSupervisorView.classList.add('btn-light');
+                
+                // Actualizar contadores cuando se muestra
+                actualizarContadorVencidas();
+            }
+        });
+    }
+    
+    // Función para actualizar contadores de la vista de supervisor
+    function actualizarContadoresSupervisor() {
+        const supervisorFilas = document.querySelectorAll('.supervisor-row');
+        let vencidasCount = 0;
+        let totalVisible = 0;
+        
+        supervisorFilas.forEach(fila => {
+            if (fila.style.display !== 'none') {
+                totalVisible++;
+                const sla = fila.dataset.sla;
+                if (sla === 'vencido') {
+                    vencidasCount++;
+                }
+            }
+        });
+        
+        // Actualizar contador de vencidas
+        const vencidasElement = document.getElementById('supervisor-vencidas-count');
+        if (vencidasElement) {
+            vencidasElement.textContent = vencidasCount;
+        }
+        
+        // Actualizar contador total
+        const totalElement = document.getElementById('supervisor-total-count');
+        if (totalElement) {
+            totalElement.textContent = totalVisible;
+        }
+    }
+    
+    // Función para actualizar contador de solicitudes vencidas (mantener compatibilidad)
+    function actualizarContadorVencidas() {
+        actualizarContadoresSupervisor();
+    }
+    
+    // Función para exportar datos de supervisor
+    const exportSupervisorData = document.getElementById('export-supervisor-data');
+    if (exportSupervisorData) {
+        exportSupervisorData.addEventListener('click', function() {
+            exportarDatosSupervisor();
+        });
+    }
+    
+    function exportarDatosSupervisor() {
+        const supervisorFilas = document.querySelectorAll('.supervisor-row');
+        const datos = [];
+        
+        // Encabezados
+        datos.push([
+            'Código', 'Cliente', 'Cédula', 'Pipeline', 'Etapa', 'Asignado a', 
+            'SLA', 'Fecha Creación', 'Última Actualización', 'Creado por', 'Monto', 'Tipo'
+        ]);
+        
+        // Datos de cada fila
+        supervisorFilas.forEach(fila => {
+            if (fila.style.display !== 'none') {
+                const codigo = fila.querySelector('td:nth-child(1) strong').textContent;
+                const cliente = fila.querySelector('td:nth-child(2) strong').textContent;
+                const cedula = fila.querySelector('td:nth-child(3) code').textContent;
+                const pipeline = fila.querySelector('td:nth-child(4) .badge').textContent;
+                const etapa = fila.querySelector('td:nth-child(5) .badge').textContent;
+                const asignado = fila.querySelector('td:nth-child(6) .badge').textContent;
+                const sla = fila.querySelector('td:nth-child(7) span').textContent.trim();
+                const fechaCreacion = fila.querySelector('td:nth-child(8) small').textContent;
+                const ultimaActualizacion = fila.querySelector('td:nth-child(9) small').textContent;
+                const creadoPor = fila.querySelector('td:nth-child(10) small').textContent;
+                const monto = fila.querySelector('td:nth-child(11) strong').textContent;
+                const tipo = fila.dataset.tipo === 'grupal' ? 'Bandeja Grupal' : 'Asignada';
+                
+                datos.push([
+                    codigo, cliente, cedula, pipeline, etapa, asignado, sla,
+                    fechaCreacion, ultimaActualizacion, creadoPor, monto, tipo
+                ]);
+            }
+        });
+        
+        // Crear CSV
+        const csvContent = datos.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `solicitudes_supervisor_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+    
+    // Event listeners para botones en la tabla de supervisor
+    document.addEventListener('click', function(e) {
+        // Botones de tomar solicitud en tabla de supervisor
+        if (e.target.closest('.supervisor-row .tomar-solicitud')) {
+            const button = e.target.closest('.tomar-solicitud');
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const codigo = button.getAttribute('data-codigo');
+            
+            console.log('🔵 Tomando solicitud desde vista supervisor:', solicitudId, codigo);
+            
+            // Usar el mismo modal de confirmación
+            mostrarModalConfirmacion('tomar', function() {
+                // CALLBACK DE CONFIRMACIÓN
+                console.log('✅ Confirmado - Tomando solicitud desde supervisor:', solicitudId);
+                
+                // Deshabilitar botón
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                fetch(`/workflow/api/solicitudes/${solicitudId}/tomar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarNotificacionExito(`Solicitud ${codigo} tomada correctamente`);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        mostrarNotificacionError("Error: " + (data.error || 'Error desconocido'));
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-hand-paper"></i>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacionError("Error de red al tomar la solicitud");
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-hand-paper"></i>';
+                });
+            });
+        }
+        
+        // Botones de devolver solicitud en tabla de supervisor
+        if (e.target.closest('.supervisor-row .devolver-solicitud')) {
+            const button = e.target.closest('.devolver-solicitud');
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const codigo = button.getAttribute('data-codigo');
+            
+            console.log('🔴 Devolviendo solicitud desde vista supervisor:', solicitudId, codigo);
+            
+            mostrarModalConfirmacion('devolver', function() {
+                console.log('✅ Confirmado - Devolviendo solicitud desde supervisor:', solicitudId);
+                
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                fetch(`/workflow/api/solicitudes/${solicitudId}/devolver/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarNotificacionExito(`Solicitud ${codigo} devuelta correctamente`);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        mostrarNotificacionError("Error: " + (data.error || 'Error desconocido'));
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-undo"></i>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacionError("Error de red al devolver la solicitud");
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-undo"></i>';
+                });
+            });
+        }
+        
+        // Botones de asignar solicitud en tabla de supervisor
+        if (e.target.closest('.supervisor-row .asignar-solicitud')) {
+            const button = e.target.closest('.asignar-solicitud');
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const codigo = button.getAttribute('data-codigo');
+            const etapaId = button.getAttribute('data-etapa-id');
+            
+            console.log('🔵 Asignando solicitud desde vista supervisor:', solicitudId, codigo, etapaId);
+            
+            // Guardar el solicitud_id en el modal para uso posterior
+            document.getElementById('modalAsignarSolicitud').setAttribute('data-solicitud-id', solicitudId);
+            
+            // Actualizar información del modal
+            document.getElementById('asignar-codigo-solicitud').textContent = codigo;
+            document.getElementById('asignar-etapa-solicitud').textContent = button.closest('tr').querySelector('.badge').textContent;
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalAsignarSolicitud'));
+            modal.show();
+            
+            // Configurar búsqueda después de que el modal se muestre
+            setTimeout(() => {
+                configurarBusquedaUsuarios();
+            }, 100);
+            
+            // Cargar usuarios disponibles
+            cargarUsuariosDisponibles(solicitudId, etapaId);
+        }
+        
+        // Botones de ver detalle en tabla de supervisor
+        if (e.target.closest('.supervisor-row .ver-detalle')) {
+            const button = e.target.closest('.ver-detalle');
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            
+            // Navegar directamente a la página de análisis
+            window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
+        }
+    });
+    
     console.log('✅ Sistema de bandejas inicializado correctamente - SIN auto-refresh');
+    console.log('✅ Vista de supervisor habilitada para superusers/staff');
 });
 </script>
 
@@ -1690,6 +2240,107 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .kpi-label-compact {
         font-size: 0.7rem;
+    }
+}
+
+/* Estilos para la Vista de Supervisor */
+#supervisor-table {
+    font-size: 0.875rem;
+}
+
+#supervisor-table th {
+    font-weight: 600;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+#supervisor-table td {
+    vertical-align: middle;
+    padding: 0.5rem 0.25rem;
+}
+
+.supervisor-row {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.supervisor-row:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.supervisor-row td {
+    border-top: 1px solid #f0f0f0;
+}
+
+.supervisor-row td:first-child {
+    border-left: 3px solid transparent;
+}
+
+.supervisor-row[data-tipo="grupal"] td:first-child {
+    border-left-color: #ffc107;
+}
+
+.supervisor-row[data-tipo="personal"] td:first-child {
+    border-left-color: #28a745;
+}
+
+/* Estilos para los badges en la tabla de supervisor */
+#supervisor-table .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Estilos para los botones en la tabla de supervisor */
+#supervisor-table .btn-group-sm .btn {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.7rem;
+    min-width: 32px;
+}
+
+/* Estilos para el header de la vista de supervisor */
+#supervisor-view-content .card-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    border: none;
+}
+
+/* Estilos para el footer de estadísticas */
+#supervisor-view-content .card-footer {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-top: 1px solid #dee2e6;
+}
+
+/* Responsive para la vista de supervisor */
+@media (max-width: 1200px) {
+    #supervisor-table {
+        font-size: 0.8rem;
+    }
+    
+    #supervisor-table th,
+    #supervisor-table td {
+        padding: 0.25rem 0.15rem;
+    }
+    
+    #supervisor-table .btn-group-sm .btn {
+        padding: 0.1rem 0.2rem;
+        font-size: 0.65rem;
+        min-width: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    #supervisor-view-content .table-responsive {
+        max-height: 600px;
+    }
+    
+    #supervisor-table th,
+    #supervisor-table td {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.1rem;
+    }
+    
+    #supervisor-table .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
     }
 }
 </style>

@@ -3371,13 +3371,25 @@ def vista_mixta_bandejas(request):
             'creada_por', 'asignada_a'
         ).order_by('-fecha_creacion')
         
-        # Superuser y super staff ven TODAS las solicitudes personales
-        solicitudes_personales = Solicitud.objects.filter(
-            asignada_a__isnull=False
-        ).select_related(
-            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
-            'creada_por', 'asignada_a'
-        ).order_by('-fecha_ultima_actualizacion')
+        # Superuser y super staff ven solicitudes personales en las etapas actuales de bandeja grupal
+        if etapa_seleccionada:
+            # Si hay una etapa específica seleccionada, mostrar solo solicitudes asignadas en esa etapa
+            solicitudes_personales = Solicitud.objects.filter(
+                asignada_a__isnull=False,
+                etapa_actual=etapa_seleccionada
+            ).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            ).order_by('-fecha_ultima_actualizacion')
+        else:
+            # Si no hay etapa específica, mostrar solicitudes asignadas en cualquier etapa de bandeja grupal
+            solicitudes_personales = Solicitud.objects.filter(
+                asignada_a__isnull=False,
+                etapa_actual__in=etapas_grupales
+            ).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            ).order_by('-fecha_ultima_actualizacion')
     else:
         # Usuarios regulares - permisos normales
         grupos_usuario = request.user.groups.all()
@@ -3410,13 +3422,25 @@ def vista_mixta_bandejas(request):
         ).order_by('-fecha_creacion')
         
         # === BANDEJA PERSONAL ===
-        # Solicitudes asignadas al usuario
-        solicitudes_personales = Solicitud.objects.filter(
-            asignada_a=request.user
-        ).select_related(
-            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
-            'creada_por', 'asignada_a'
-        ).order_by('-fecha_ultima_actualizacion')
+        # Solicitudes asignadas al usuario en las etapas actuales de bandeja grupal
+        if etapa_seleccionada:
+            # Si hay una etapa específica seleccionada, mostrar solo solicitudes asignadas en esa etapa
+            solicitudes_personales = Solicitud.objects.filter(
+                asignada_a=request.user,
+                etapa_actual=etapa_seleccionada
+            ).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            ).order_by('-fecha_ultima_actualizacion')
+        else:
+            # Si no hay etapa específica, mostrar solicitudes asignadas en cualquier etapa de bandeja grupal
+            solicitudes_personales = Solicitud.objects.filter(
+                asignada_a=request.user,
+                etapa_actual__in=etapas_grupales
+            ).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            ).order_by('-fecha_ultima_actualizacion')
     
     # === MÉTRICAS ===
     # Total en bandeja grupal

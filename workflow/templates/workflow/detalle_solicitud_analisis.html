@@ -981,6 +981,67 @@
             align-self: flex-end;
         }
     }
+
+    /* View Mode Styles */
+    .view-mode-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(13, 110, 253, 0.1);
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    .view-mode-badge {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        color: white;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+        }
+        50% {
+            box-shadow: 0 2px 12px rgba(13, 110, 253, 0.5);
+        }
+        100% {
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+        }
+    }
+
+    /* Read-only styles for view mode */
+    .read-only-element {
+        background-color: #f8f9fa !important;
+        cursor: not-allowed !important;
+        opacity: 0.8;
+    }
+
+    .read-only-element:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Disabled compliance buttons in view mode */
+    .btn-compliance.view-mode-disabled {
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+    }
+
+    .btn-compliance.view-mode-disabled:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -1063,7 +1124,7 @@
 
         <!-- BLOCKING ALERT: Solicitud sin asignar -->
         {% if not solicitud.asignada_a %}
-        <div class="row mb-4">
+        <div class="row mb-4" id="solicitud-bloqueada-alert">
             <div class="col-12">
                 <div class="alert alert-warning border-warning" role="alert">
                     <div class="d-flex align-items-center">
@@ -1112,7 +1173,11 @@
                                         Solicitud creada hace {{ solicitud.fecha_creacion|timesince }}
                                     </small>
                                 </div>
-                                <div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-info btn-sm" id="btn-ver-solicitud">
+                                        <i class="fas fa-eye me-1"></i>
+                                        Ver Solicitud
+                                    </button>
                                     <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-outline-warning btn-sm">
                                         <i class="fas fa-arrow-left me-1"></i>
                                         Volver a Bandejas
@@ -1924,6 +1989,13 @@
 
     // Enhanced stage change handler with validation
     const handleTransicionClick = (etapaId, etapaNombre, puedeRealizar, requisitosFaltantes) => {
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden cambiar etapas en solicitudes no asignadas', 'warning');
+            return;
+        }
+        
         if (!puedeRealizar) {
             showNotification(`No se puede cambiar a ${etapaNombre}. Faltan ${requisitosFaltantes} requisito(s) obligatorio(s).`, 'warning');
             return;
@@ -1935,6 +2007,13 @@
 
     // Confirmation dialog for marking all as good
     const confirmarMarcarTodosComoBueno = () => {
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden realizar acciones en solicitudes no asignadas', 'warning');
+            return;
+        }
+        
         const goodButtons = document.querySelectorAll('.btn-compliance.btn-good');
         const totalButtons = goodButtons.length;
         
@@ -2112,6 +2191,13 @@
 
     // Compliance button functionality
     const handleComplianceAction = async (button) => {
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden realizar acciones en solicitudes no asignadas', 'warning');
+            return;
+        }
+        
         const field = button.getAttribute('data-field');
         const action = button.getAttribute('data-action');
         const solicitudId = getSolicitudIdFromUrl();
@@ -2551,6 +2637,13 @@
 
     // PDF Download functionality
     const downloadMergedPDF = async () => {
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden descargar documentos en solicitudes no asignadas', 'warning');
+            return;
+        }
+        
         const btnDownload = document.getElementById('btn-download-merged-pdf');
         const originalContent = btnDownload.innerHTML;
         
@@ -2897,37 +2990,157 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Check if solicitud is assigned and block content if not
         const isSolicitudAsignada = {% if solicitud.asignada_a %}true{% else %}false{% endif %};
+        
+        // Global state for view mode
+        let isViewMode = false;
+        
         if (!isSolicitudAsignada) {
-            // Block all interactive elements except navigation buttons
-            document.querySelectorAll('.btn-compliance, .btn:not(.btn-outline-warning), textarea, input, select').forEach(element => {
-                // Skip navigation buttons
-                if (element.textContent.includes('Volver a Bandejas') || 
-                    element.classList.contains('btn-outline-warning')) {
-                    return;
-                }
-                element.disabled = true;
-                element.style.opacity = '0.5';
-                element.style.pointerEvents = 'none';
-            });
+            // Block all interactive elements except navigation buttons and view button
+            const blockInteractiveElements = () => {
+                document.querySelectorAll('.btn-compliance, .btn:not(.btn-outline-warning):not(.btn-outline-info), textarea, input, select').forEach(element => {
+                    // Skip navigation buttons and view button
+                    if (element.textContent.includes('Volver a Bandejas') || 
+                        element.classList.contains('btn-outline-warning') ||
+                        element.id === 'btn-ver-solicitud') {
+                        return;
+                    }
+                    element.disabled = true;
+                    element.style.opacity = '0.5';
+                    element.style.pointerEvents = 'none';
+                });
+            };
             
             // Add overlay to main content
-            const mainContent = document.querySelector('.main-layout-row');
-            if (mainContent) {
-                const overlay = document.createElement('div');
-                overlay.className = 'position-absolute w-100 h-100 bg-light bg-opacity-75 d-flex align-items-center justify-content-center';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.zIndex = '1000';
-                overlay.innerHTML = `
-                    <div class="text-center">
-                        <i class="fas fa-lock fa-3x text-warning mb-3"></i>
-                        <h5 class="text-warning">Contenido Bloqueado</h5>
-                        <p class="text-muted">La solicitud debe ser asignada antes de poder realizar el análisis</p>
-                    </div>
-                `;
-                mainContent.style.position = 'relative';
-                mainContent.appendChild(overlay);
+            const addBlockingOverlay = () => {
+                const mainContent = document.querySelector('.main-layout-row');
+                if (mainContent) {
+                    // Remove existing overlay if any
+                    const existingOverlay = mainContent.querySelector('.blocking-overlay');
+                    if (existingOverlay) {
+                        existingOverlay.remove();
+                    }
+                    
+                    const overlay = document.createElement('div');
+                    overlay.className = 'position-absolute w-100 h-100 bg-light bg-opacity-75 d-flex align-items-center justify-content-center blocking-overlay';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.zIndex = '1000';
+                    overlay.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+                            <h5 class="text-warning">Contenido Bloqueado</h5>
+                            <p class="text-muted">La solicitud debe ser asignada antes de poder realizar el análisis</p>
+                        </div>
+                    `;
+                    mainContent.style.position = 'relative';
+                    mainContent.appendChild(overlay);
+                }
+            };
+            
+            // Remove overlay and enable view mode
+            const enableViewMode = () => {
+                isViewMode = true;
+                
+                // Hide the blocking alert
+                const blockingAlert = document.getElementById('solicitud-bloqueada-alert');
+                if (blockingAlert) {
+                    blockingAlert.style.display = 'none';
+                }
+                
+                // Remove blocking overlay
+                const mainContent = document.querySelector('.main-layout-row');
+                if (mainContent) {
+                    const overlay = mainContent.querySelector('.blocking-overlay');
+                    if (overlay) {
+                        overlay.remove();
+                    }
+                }
+                
+                // Enable all elements but keep them read-only
+                document.querySelectorAll('.btn-compliance, .btn, textarea, input, select').forEach(element => {
+                    element.disabled = false;
+                    element.style.opacity = '1';
+                    element.style.pointerEvents = 'auto';
+                    
+                    // Make interactive elements read-only or non-functional
+                    if (element.classList.contains('btn-compliance')) {
+                        element.classList.add('view-mode-disabled');
+                        element.title = 'Modo solo lectura - La solicitud debe ser asignada para interactuar';
+                    }
+                    
+                    if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                        element.readOnly = true;
+                        element.classList.add('read-only-element');
+                    }
+                    
+                    if (element.tagName === 'SELECT') {
+                        element.disabled = true;
+                        element.classList.add('read-only-element');
+                    }
+                });
+                
+                // Add view mode indicator to header
+                const header = document.querySelector('.card-header');
+                if (header) {
+                    // Remove existing indicator if any
+                    const existingIndicator = header.querySelector('.view-mode-indicator');
+                    if (existingIndicator) {
+                        existingIndicator.remove();
+                    }
+                    
+                    const viewModeIndicator = document.createElement('div');
+                    viewModeIndicator.className = 'view-mode-indicator';
+                    viewModeIndicator.innerHTML = `
+                        <div class="view-mode-badge">
+                            <i class="fas fa-eye me-2"></i>Modo Solo Lectura
+                        </div>
+                    `;
+                    header.style.position = 'relative';
+                    header.appendChild(viewModeIndicator);
+                }
+                
+                // Add view mode indicator to main sections
+                const mainSections = document.querySelectorAll('.main-section-container, .adjuntos-container');
+                mainSections.forEach(section => {
+                    // Remove existing indicator if any
+                    const existingIndicator = section.querySelector('.view-mode-indicator');
+                    if (existingIndicator) {
+                        existingIndicator.remove();
+                    }
+                    
+                    const viewModeIndicator = document.createElement('div');
+                    viewModeIndicator.className = 'view-mode-indicator';
+                    viewModeIndicator.innerHTML = `
+                        <div class="view-mode-badge">
+                            <i class="fas fa-eye me-2"></i>Solo Lectura
+                        </div>
+                    `;
+                    section.style.position = 'relative';
+                    section.appendChild(viewModeIndicator);
+                });
+                
+                // Show notification
+                showNotification('Modo solo lectura activado - Puede ver los detalles de la solicitud', 'info');
+                
+                // Update button text
+                const btnVerSolicitud = document.getElementById('btn-ver-solicitud');
+                if (btnVerSolicitud) {
+                    btnVerSolicitud.innerHTML = '<i class="fas fa-check me-1"></i>Modo Lectura Activo';
+                    btnVerSolicitud.classList.remove('btn-outline-info');
+                    btnVerSolicitud.classList.add('btn-success');
+                    btnVerSolicitud.disabled = true;
+                }
+            };
+            
+            // Add event listener for "Ver Solicitud" button
+            const btnVerSolicitud = document.getElementById('btn-ver-solicitud');
+            if (btnVerSolicitud) {
+                btnVerSolicitud.addEventListener('click', enableViewMode);
             }
+            
+            // Initialize blocking state
+            blockInteractiveElements();
+            addBlockingOverlay();
         }
         
         // Initialize compliance comment modal character counter
@@ -3644,6 +3857,13 @@
     // Handle analyst comment form submission
     const handleAnalystCommentSubmit = async (event) => {
         event.preventDefault();
+        
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden guardar comentarios en solicitudes no asignadas', 'warning');
+            return;
+        }
         
         const textarea = document.getElementById('comentario-analista-credito-text');
         const submitButton = event.target;
