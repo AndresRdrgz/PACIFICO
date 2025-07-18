@@ -2654,6 +2654,7 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
             from django.core.mail import get_connection
             connection = get_connection()
             connection.ssl_context = ssl_context
+            email.connection = connection
             email.send()
         
         print(f"✅ Correo de asignación enviado correctamente para solicitud {solicitud.codigo} - Asignada a: {usuario_asignado.username}, correo enviado a: {solicitud.creada_por.email}")
@@ -4411,45 +4412,45 @@ def api_solicitud_detalle(request, solicitud_id):
             'id': solicitud.id,
             'codigo': solicitud.codigo,
             'pipeline': {
-                'id': solicitud.pipeline.id,
-                'nombre': solicitud.pipeline.nombre
+                'id': solicitud.pipeline.id if solicitud.pipeline else None,
+                'nombre': solicitud.pipeline.nombre if solicitud.pipeline else ''
             } if solicitud.pipeline else None,
             'etapa_actual': {
-                'id': solicitud.etapa_actual.id,
-                'nombre': solicitud.etapa_actual.nombre,
-                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal,
-                'sla': solicitud.etapa_actual.sla.total_seconds() / 86400 if solicitud.etapa_actual.sla else None  # días
+                'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
+                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False,
+                'sla': solicitud.etapa_actual.sla.total_seconds() / 86400 if (solicitud.etapa_actual and solicitud.etapa_actual.sla) else None  # días
             } if solicitud.etapa_actual else None,
             'subestado_actual': {
-                'id': solicitud.subestado_actual.id,
-                'nombre': solicitud.subestado_actual.nombre
+                'id': solicitud.subestado_actual.id if solicitud.subestado_actual else None,
+                'nombre': solicitud.subestado_actual.nombre if solicitud.subestado_actual else ''
             } if solicitud.subestado_actual else None,
             'creada_por': {
-                'id': solicitud.creada_por.id,
-                'nombre_completo': solicitud.creada_por.get_full_name(),
-                'username': solicitud.creada_por.username
+                'id': solicitud.creada_por.id if solicitud.creada_por else None,
+                'nombre_completo': solicitud.creada_por.get_full_name() if solicitud.creada_por else '',
+                'username': solicitud.creada_por.username if solicitud.creada_por else ''
             } if solicitud.creada_por else None,
             'asignada_a': {
-                'id': solicitud.asignada_a.id,
-                'nombre_completo': solicitud.asignada_a.get_full_name(),
-                'username': solicitud.asignada_a.username
+                'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else '',
+                'username': solicitud.asignada_a.username if solicitud.asignada_a else ''
             } if solicitud.asignada_a else None,
             'fecha_creacion': solicitud.fecha_creacion.isoformat() if solicitud.fecha_creacion else None,
             'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat() if solicitud.fecha_ultima_actualizacion else None,
-            'motivo_consulta': solicitud.motivo_consulta,
+            'motivo_consulta': getattr(solicitud, 'motivo_consulta', ''),
             'sla': sla_info,
-            'puede_asignar': not solicitud.asignada_a and solicitud.etapa_actual and solicitud.etapa_actual.es_bandeja_grupal,
+            'puede_asignar': not solicitud.asignada_a and solicitud.etapa_actual and getattr(solicitud.etapa_actual, 'es_bandeja_grupal', False),
             'puede_devolver': solicitud.asignada_a == request.user,
             'puede_cambiar_estado': True  # TODO: implementar lógica de permisos específica
         }
 
         # Información del cliente
-        cliente_info = None
+        cliente_info = {}
         if solicitud.cliente:
             cliente_info = {
                 'id': solicitud.cliente.id,
-                'nombre': solicitud.cliente.nombreCliente,
-                'cedula': solicitud.cliente.cedulaCliente,
+                'nombre': getattr(solicitud.cliente, 'nombreCliente', ''),
+                'cedula': getattr(solicitud.cliente, 'cedulaCliente', ''),
                 'telefono': getattr(solicitud.cliente, 'telefono', None),
                 'email': getattr(solicitud.cliente, 'email', None),
                 'direccion': getattr(solicitud.cliente, 'direccion', None),
@@ -4457,24 +4458,24 @@ def api_solicitud_detalle(request, solicitud_id):
             }
 
         # Información de la cotización
-        cotizacion_info = None
+        cotizacion_info = {}
         if solicitud.cotizacion:
             cotizacion_info = {
                 'id': solicitud.cotizacion.id,
-                'monto_prestamo': float(solicitud.cotizacion.montoPrestamo) if solicitud.cotizacion.montoPrestamo else 0,
-                'plazo_pago': solicitud.cotizacion.plazoPago,
-                'tasa_interes': float(solicitud.cotizacion.tasaInteres) if solicitud.cotizacion.tasaInteres else 0,
-                'nombre_cliente': solicitud.cotizacion.nombreCliente,
-                'cedula_cliente': solicitud.cotizacion.cedulaCliente,
-                'nombre_empresa': solicitud.cotizacion.nombreEmpresa,
-                'posicion': solicitud.cotizacion.posicion,
-                'ingresos': float(solicitud.cotizacion.ingresos) if solicitud.cotizacion.ingresos else 0,
-                'cartera': solicitud.cotizacion.cartera,
-                'referencias_apc': solicitud.cotizacion.referenciasAPC,
-                'edad': solicitud.cotizacion.edad,
-                'sexo': solicitud.cotizacion.sexo,
+                'monto_prestamo': float(getattr(solicitud.cotizacion, 'montoPrestamo', 0)) if getattr(solicitud.cotizacion, 'montoPrestamo', None) else 0,
+                'plazo_pago': getattr(solicitud.cotizacion, 'plazoPago', None),
+                'tasa_interes': float(getattr(solicitud.cotizacion, 'tasaInteres', 0)) if getattr(solicitud.cotizacion, 'tasaInteres', None) else 0,
+                'nombre_cliente': getattr(solicitud.cotizacion, 'nombreCliente', ''),
+                'cedula_cliente': getattr(solicitud.cotizacion, 'cedulaCliente', ''),
+                'nombre_empresa': getattr(solicitud.cotizacion, 'nombreEmpresa', ''),
+                'posicion': getattr(solicitud.cotizacion, 'posicion', ''),
+                'ingresos': float(getattr(solicitud.cotizacion, 'ingresos', 0)) if getattr(solicitud.cotizacion, 'ingresos', None) else 0,
+                'cartera': getattr(solicitud.cotizacion, 'cartera', ''),
+                'referencias_apc': getattr(solicitud.cotizacion, 'referenciasAPC', ''),
+                'edad': getattr(solicitud.cotizacion, 'edad', None),
+                'sexo': getattr(solicitud.cotizacion, 'sexo', ''),
                 'aux_monto2': float(getattr(solicitud.cotizacion, 'auxMonto2', 0)) if getattr(solicitud.cotizacion, 'auxMonto2', None) is not None else 0,
-                'wrk_monto_letra': float(getattr(solicitud.cotizacion, 'wrkMontoLetra', 0)) if hasattr(solicitud.cotizacion, 'wrkMontoLetra') and solicitud.cotizacion.wrkMontoLetra else 0
+                'wrk_monto_letra': float(getattr(solicitud.cotizacion, 'wrkMontoLetra', 0)) if hasattr(solicitud.cotizacion, 'wrkMontoLetra') and getattr(solicitud.cotizacion, 'wrkMontoLetra', None) else 0
             }
 
         # Transiciones disponibles

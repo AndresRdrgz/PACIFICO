@@ -321,6 +321,61 @@
                                 </div>
                             </div>
 
+                            <!-- Tabla de Niveles -->
+                            <div class="table-responsive mb-4">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Orden</th>
+                                            <th>Nombre</th>
+                                            <th>Usuarios</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaNiveles">
+                                        <!-- Los niveles se cargarán dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Filtros para Asignaciones -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-custom" id="buscarAsignacion" placeholder="Buscar asignaciones...">
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-control form-control-custom" id="filtroNivel">
+                                        <option value="">Todos los niveles</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-control form-control-custom" id="filtroEstado">
+                                        <option value="">Todos los estados</option>
+                                        <option value="activo">Activos</option>
+                                        <option value="inactivo">Inactivos</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Tabla de Asignaciones -->
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Nivel</th>
+                                            <th>Fecha Asignación</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaAsignaciones">
+                                        <!-- Las asignaciones se cargarán dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+
                             <!-- Sección de Asignación de Usuarios -->
                             <div class="mt-5">
                                 <h5 class="mb-4">
@@ -422,13 +477,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Contraseña *</label>
-                                <input type="password" class="form-control form-control-custom" name="password" required>
+                                <input type="password" class="form-control form-control-custom" name="password" required autocomplete="new-password">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Confirmar Contraseña *</label>
-                                <input type="password" class="form-control form-control-custom" name="password_confirm" required>
+                                <input type="password" class="form-control form-control-custom" name="password_confirm" required autocomplete="new-password">
                             </div>
                         </div>
                     </div>
@@ -629,98 +684,49 @@
     </div>
 </div>
 
-<!-- Modal Nuevo Nivel Comité -->
-<div class="modal fade" id="modalNuevoNivel" tabindex="-1">
+<!-- Modal Agregar Usuario a Nivel Específico -->
+<div class="modal fade" id="modalAgregarUsuarioNivel" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-gavel me-2"></i>Nuevo Nivel de Comité
+                    <i class="fas fa-user-plus me-2"></i>Agregar Usuario al Nivel
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="formNuevoNivel">
+                <form id="formAgregarUsuarioNivel">
+                    <input type="hidden" id="nivelIdSeleccionado" name="nivel_id">
                     <div class="mb-3">
-                        <label class="form-label">Nombre del Nivel *</label>
-                        <input type="text" class="form-control form-control-custom" name="nombre" required placeholder="Ej: Supervisor de Crédito">
+                        <label class="form-label">Nivel Seleccionado</label>
+                        <div class="form-control-plaintext" id="nivelNombreSeleccionado"></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Orden *</label>
-                        <input type="number" class="form-control form-control-custom" name="orden" required min="1" placeholder="1">
-                        <small class="form-text text-muted">Menor número = mayor jerarquía</small>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-pacifico" onclick="guardarNivel()">Guardar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Editar Nivel Comité -->
-<div class="modal fade" id="modalEditarNivel" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>Editar Nivel de Comité
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="formEditarNivel">
-                    <input type="hidden" name="nivel_id" id="editNivelId">
-                    <div class="mb-3">
-                        <label class="form-label">Nombre del Nivel *</label>
-                        <input type="text" class="form-control form-control-custom" name="nombre" id="editNivelNombre" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Orden *</label>
-                        <input type="number" class="form-control form-control-custom" name="orden" id="editNivelOrden" required min="1">
-                        <small class="form-text text-muted">Menor número = mayor jerarquía</small>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-pacifico" onclick="actualizarNivel()">Actualizar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Asignar Usuario a Nivel -->
-<div class="modal fade" id="modalAsignarUsuario" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>Asignar Usuario a Nivel
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="formAsignarUsuario">
                     <div class="mb-3">
                         <label class="form-label">Usuario *</label>
-                        <select class="form-control form-control-custom" name="usuario_id" id="selectUsuarioAsignar" required>
+                        <select class="form-control form-control-custom" name="usuario_id" id="selectUsuarioNivel" required>
                             <option value="">Seleccionar usuario...</option>
                         </select>
+                        <div class="form-text">Selecciona un usuario para asignarlo a este nivel</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nivel *</label>
-                        <select class="form-control form-control-custom" name="nivel_id" id="selectNivelAsignar" required>
-                            <option value="">Seleccionar nivel...</option>
-                        </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="activo" checked id="checkboxActivoNivel">
+                            <label class="form-check-label" for="checkboxActivoNivel">
+                                Usuario activo en el comité
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control form-control-custom" name="observaciones" rows="3" placeholder="Observaciones sobre esta asignación..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-pacifico" onclick="asignarUsuarioNivel()">Asignar</button>
+                <button type="button" class="btn btn-pacifico" onclick="guardarUsuarioANivel()">
+                    <i class="fas fa-user-check me-2"></i>Asignar Usuario
+                </button>
             </div>
         </div>
     </div>
@@ -913,9 +919,12 @@ let asignacionesComite = [];
 // Inicializar datos del comité cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar datos del comité cuando se selecciona el tab
-    document.getElementById('comite-tab').addEventListener('click', function() {
-        cargarDatosComite();
-    });
+    const comiteTab = document.getElementById('permisos-comite-tab');
+    if (comiteTab) {
+        comiteTab.addEventListener('click', function() {
+            cargarDatosComite();
+        });
+    }
 });
 
 function cargarDatosComite() {
@@ -925,8 +934,14 @@ function cargarDatosComite() {
 }
 
 function cargarNiveles() {
+    const tablaNiveles = document.getElementById('tablaNiveles');
+    if (!tablaNiveles) {
+        console.error('Elemento tablaNiveles no encontrado');
+        return;
+    }
+    
     // Mostrar loading
-    document.getElementById('tablaNiveles').innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando niveles...</td></tr>';
+    tablaNiveles.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando niveles...</td></tr>';
     
     fetch('/workflow/api/comite/niveles/')
         .then(response => response.json())
@@ -947,6 +962,10 @@ function cargarNiveles() {
 
 function renderNiveles(niveles) {
     const tbody = document.getElementById('tablaNiveles');
+    if (!tbody) {
+        console.error('Elemento tablaNiveles no encontrado');
+        return;
+    }
     
     if (niveles.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay niveles configurados</td></tr>';
@@ -988,8 +1007,14 @@ function renderNiveles(niveles) {
 }
 
 function cargarAsignaciones() {
+    const tablaAsignaciones = document.getElementById('tablaAsignaciones');
+    if (!tablaAsignaciones) {
+        console.error('Elemento tablaAsignaciones no encontrado');
+        return;
+    }
+    
     // Mostrar loading
-    document.getElementById('tablaAsignaciones').innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando asignaciones...</td></tr>';
+    tablaAsignaciones.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Cargando asignaciones...</td></tr>';
     
     fetch('/workflow/api/comite/asignaciones/')
         .then(response => response.json())
@@ -1009,6 +1034,10 @@ function cargarAsignaciones() {
 
 function renderAsignaciones(asignaciones) {
     const tbody = document.getElementById('tablaAsignaciones');
+    if (!tbody) {
+        console.error('Elemento tablaAsignaciones no encontrado');
+        return;
+    }
     
     if (asignaciones.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay usuarios asignados al comité</td></tr>';
@@ -1073,10 +1102,15 @@ function cargarEstadisticas() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('totalNiveles').textContent = data.estadisticas.total_niveles;
-                document.getElementById('usuariosAsignados').textContent = data.estadisticas.usuarios_asignados;
-                document.getElementById('usuariosActivos').textContent = data.estadisticas.usuarios_activos;
-                document.getElementById('nivelMasAlto').textContent = data.estadisticas.nivel_mas_alto || '--';
+                const totalNiveles = document.getElementById('totalNiveles');
+                const usuariosAsignados = document.getElementById('usuariosAsignados');
+                const usuariosActivos = document.getElementById('usuariosActivos');
+                const nivelMasAlto = document.getElementById('nivelMasAlto');
+                
+                if (totalNiveles) totalNiveles.textContent = data.estadisticas.total_niveles;
+                if (usuariosAsignados) usuariosAsignados.textContent = data.estadisticas.usuarios_asignados;
+                if (usuariosActivos) usuariosActivos.textContent = data.estadisticas.usuarios_activos;
+                if (nivelMasAlto) nivelMasAlto.textContent = data.estadisticas.nivel_mas_alto || '--';
             }
         })
         .catch(error => {
@@ -1088,15 +1122,24 @@ function actualizarSelectoresNiveles(niveles) {
     const selectNivel = document.getElementById('selectNivel');
     const filtroNivel = document.getElementById('filtroNivel');
     
-    // Limpiar opciones existentes (excepto la primera)
-    selectNivel.innerHTML = '<option value="">Seleccione un nivel...</option>';
-    filtroNivel.innerHTML = '<option value="">Todos los niveles</option>';
+    // Verificar si los elementos existen antes de actualizarlos
+    if (selectNivel) {
+        selectNivel.innerHTML = '<option value="">Seleccione un nivel...</option>';
+    }
+    
+    if (filtroNivel) {
+        filtroNivel.innerHTML = '<option value="">Todos los niveles</option>';
+    }
     
     // Agregar niveles ordenados por jerarquía
     const nivelesOrdenados = niveles.sort((a, b) => a.orden - b.orden);
     nivelesOrdenados.forEach(nivel => {
-        selectNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre} (${nivel.orden})</option>`;
-        filtroNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre}</option>`;
+        if (selectNivel) {
+            selectNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre} (${nivel.orden})</option>`;
+        }
+        if (filtroNivel) {
+            filtroNivel.innerHTML += `<option value="${nivel.id}">${nivel.nombre}</option>`;
+        }
     });
 }
 
@@ -1298,9 +1341,13 @@ function filtrarAsignaciones() {
 // Event listeners para filtros
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
-        document.getElementById('filtroNivel')?.addEventListener('change', filtrarAsignaciones);
-        document.getElementById('filtroEstado')?.addEventListener('change', filtrarAsignaciones);
-        document.getElementById('buscarAsignacion')?.addEventListener('input', filtrarAsignaciones);
+        const filtroNivel = document.getElementById('filtroNivel');
+        const filtroEstado = document.getElementById('filtroEstado');
+        const buscarAsignacion = document.getElementById('buscarAsignacion');
+        
+        if (filtroNivel) filtroNivel.addEventListener('change', filtrarAsignaciones);
+        if (filtroEstado) filtroEstado.addEventListener('change', filtrarAsignaciones);
+        if (buscarAsignacion) buscarAsignacion.addEventListener('input', filtrarAsignaciones);
     }, 1000);
 });
 
@@ -1311,11 +1358,13 @@ function cargarUsuariosParaAsignacion() {
         .then(data => {
             if (data.success) {
                 const selectUsuario = document.getElementById('selectUsuario');
-                selectUsuario.innerHTML = '<option value="">Seleccione un usuario...</option>';
-                
-                data.usuarios.forEach(usuario => {
-                    selectUsuario.innerHTML += `<option value="${usuario.id}">${usuario.username} - ${usuario.full_name || 'Sin nombre'}</option>`;
-                });
+                if (selectUsuario) {
+                    selectUsuario.innerHTML = '<option value="">Seleccione un usuario...</option>';
+                    
+                    data.usuarios.forEach(usuario => {
+                        selectUsuario.innerHTML += `<option value="${usuario.id}">${usuario.username} - ${usuario.full_name || 'Sin nombre'}</option>`;
+                    });
+                }
             }
         })
         .catch(error => {
@@ -1341,42 +1390,59 @@ function getCookie(name) {
 }
 
 // Búsqueda y filtros
-document.getElementById('searchUsuarios').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#usuarios tbody tr');
+document.addEventListener('DOMContentLoaded', function() {
+    const searchUsuarios = document.getElementById('searchUsuarios');
+    const searchGrupos = document.getElementById('searchGrupos');
+    const filterStatus = document.getElementById('filterStatus');
     
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
-    });
-});
-
-document.getElementById('searchGrupos').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const cards = document.querySelectorAll('#grupos .card-custom');
+    if (searchUsuarios) {
+        searchUsuarios.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#usuarios tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
     
-    cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.closest('.col-md-6').style.display = text.includes(searchTerm) ? '' : 'none';
-    });
-});
-
-document.getElementById('filterStatus').addEventListener('change', function(e) {
-    const filterValue = e.target.value;
-    const rows = document.querySelectorAll('#usuarios tbody tr');
+    if (searchGrupos) {
+        searchGrupos.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('#grupos .card-custom');
+            
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                const parentCol = card.closest('.col-md-6');
+                if (parentCol) {
+                    parentCol.style.display = text.includes(searchTerm) ? '' : 'none';
+                }
+            });
+        });
+    }
     
-    rows.forEach(row => {
-        const statusCell = row.querySelector('td:nth-child(6)');
-        const status = statusCell.textContent.trim();
-        
-        if (filterValue === '' || 
-            (filterValue === 'active' && status === 'Activo') ||
-            (filterValue === 'inactive' && status === 'Inactivo')) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
+    if (filterStatus) {
+        filterStatus.addEventListener('change', function(e) {
+            const filterValue = e.target.value;
+            const rows = document.querySelectorAll('#usuarios tbody tr');
+            
+            rows.forEach(row => {
+                const statusCell = row.querySelector('td:nth-child(6)');
+                if (statusCell) {
+                    const status = statusCell.textContent.trim();
+                    
+                    if (filterValue === '' || 
+                        (filterValue === 'active' && status === 'Activo') ||
+                        (filterValue === 'inactive' && status === 'Inactivo')) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
 });
 
 // Toast notification function
@@ -1418,10 +1484,14 @@ function showToast(message, type = 'info') {
 
 // Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    try {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    } catch (error) {
+        console.warn('Bootstrap tooltips not available:', error);
+    }
     
     // Inicializar comité al cargar la página
     inicializarComite();
@@ -1431,25 +1501,33 @@ document.addEventListener('DOMContentLoaded', function() {
 // FUNCIONES PARA PERMISOS DE COMITÉ
 // ===========================================
 
-let nivelesComite = [];
 let usuariosDisponibles = [];
 
 // Función para inicializar la funcionalidad del comité
 function inicializarComite() {
     // Cargar datos iniciales cuando se hace clic en el tab
-    document.getElementById('permisos-comite-tab').addEventListener('click', function() {
-        cargarNivelesComite();
-        cargarUsuariosDisponibles();
-    });
+    const permisosComiteTab = document.getElementById('permisos-comite-tab');
+    if (permisosComiteTab) {
+        permisosComiteTab.addEventListener('click', function() {
+            cargarNivelesComite();
+            cargarUsuariosDisponibles();
+        });
+    }
     
     // Event listeners para búsqueda
-    document.getElementById('searchNiveles').addEventListener('input', function(e) {
-        filtrarNiveles(e.target.value);
-    });
+    const searchNiveles = document.getElementById('searchNiveles');
+    if (searchNiveles) {
+        searchNiveles.addEventListener('input', function(e) {
+            filtrarNiveles(e.target.value);
+        });
+    }
     
-    document.getElementById('searchUsuariosComite').addEventListener('input', function(e) {
-        filtrarUsuariosComite(e.target.value);
-    });
+    const searchUsuariosComite = document.getElementById('searchUsuariosComite');
+    if (searchUsuariosComite) {
+        searchUsuariosComite.addEventListener('input', function(e) {
+            filtrarUsuariosComite(e.target.value);
+        });
+    }
 }
 
 // Función para cargar niveles de comité
@@ -1496,18 +1574,27 @@ function mostrarNivelesComite() {
                             <i class="fas fa-gavel text-primary me-2"></i>
                             ${nivel.nombre}
                         </h6>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-ellipsis-v"></i>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-pacifico" onclick="agregarUsuarioANivel(${nivel.id}, '${nivel.nombre}')" title="Agregar Usuario">
+                                <i class="fas fa-user-plus"></i>
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="editarNivel(${nivel.id})">
-                                    <i class="fas fa-edit me-2"></i>Editar
-                                </a></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="eliminarNivel(${nivel.id})">
-                                    <i class="fas fa-trash me-2"></i>Eliminar
-                                </a></li>
-                            </ul>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="agregarUsuarioANivel(${nivel.id}, '${nivel.nombre}')">
+                                        <i class="fas fa-user-plus me-2"></i>Agregar Usuario
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="editarNivel(${nivel.id})">
+                                        <i class="fas fa-edit me-2"></i>Editar
+                                    </a></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="eliminarNivel(${nivel.id})">
+                                        <i class="fas fa-trash me-2"></i>Eliminar
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1525,6 +1612,11 @@ function mostrarNivelesComite() {
                                     </button>
                                 </div>
                             `).join('') : '<p class="text-muted small">Sin usuarios asignados</p>'}
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-pacifico w-100" onclick="agregarUsuarioANivel(${nivel.id}, '${nivel.nombre}')">
+                                <i class="fas fa-user-plus me-2"></i>Agregar Usuario
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1779,6 +1871,93 @@ function mostrarModalAsignarUsuario(usuarioId = null) {
     new bootstrap.Modal(document.getElementById('modalAsignarUsuario')).show();
 }
 
+// Función para agregar usuario a un nivel específico
+function agregarUsuarioANivel(nivelId, nivelNombre) {
+    // Llenar el modal con la información del nivel
+    document.getElementById('nivelIdSeleccionado').value = nivelId;
+    document.getElementById('nivelNombreSeleccionado').textContent = nivelNombre;
+    
+    // Cargar usuarios disponibles
+    cargarUsuariosParaNivel();
+    
+    // Mostrar el modal
+    new bootstrap.Modal(document.getElementById('modalAgregarUsuarioNivel')).show();
+}
+
+// Función para cargar usuarios en el selector del modal de nivel específico
+function cargarUsuariosParaNivel() {
+    fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const selectUsuario = document.getElementById('selectUsuarioNivel');
+                if (selectUsuario) {
+                    selectUsuario.innerHTML = '<option value="">Seleccionar usuario...</option>';
+                    
+                    data.usuarios.forEach(usuario => {
+                        const option = document.createElement('option');
+                        option.value = usuario.id;
+                        option.textContent = `${usuario.nombre_completo || usuario.username} (${usuario.username})`;
+                        selectUsuario.appendChild(option);
+                    });
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar usuarios:', error);
+            showToast('Error al cargar usuarios', 'error');
+        });
+}
+
+// Función para guardar usuario a nivel específico
+function guardarUsuarioANivel() {
+    const form = document.getElementById('formAgregarUsuarioNivel');
+    const formData = new FormData(form);
+    
+    const nivelId = formData.get('nivel_id');
+    const usuarioId = formData.get('usuario_id');
+    const activo = formData.get('activo') === 'on';
+    const observaciones = formData.get('observaciones');
+
+    if (!usuarioId) {
+        showToast('Debes seleccionar un usuario', 'error');
+        return;
+    }
+
+    const data = {
+        usuario_id: parseInt(usuarioId),
+        nivel_id: parseInt(nivelId),
+        activo: activo,
+        observaciones: observaciones || ''
+    };
+
+    fetch('/workflow/api/comite/asignaciones/crear/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Usuario asignado al nivel exitosamente', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalAgregarUsuarioNivel')).hide();
+            
+            // Recargar los datos
+            cargarNivelesComite();
+            cargarUsuariosDisponibles();
+        } else {
+            showToast('Error al asignar usuario: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al asignar el usuario al nivel', 'error');
+    });
+}
+
 // Función para asignar usuario a nivel
 async function asignarUsuarioNivel() {
     const form = document.getElementById('formAsignarUsuario');
@@ -1848,11 +2027,14 @@ async function desasignarUsuario(usuarioId, nivelId) {
 function filtrarNiveles(searchTerm) {
     const niveles = document.querySelectorAll('[data-nivel-id]');
     niveles.forEach(nivel => {
-        const nombre = nivel.querySelector('.card-title').textContent.toLowerCase();
-        if (nombre.includes(searchTerm.toLowerCase())) {
-            nivel.style.display = 'block';
-        } else {
-            nivel.style.display = 'none';
+        const cardTitle = nivel.querySelector('.card-title');
+        if (cardTitle) {
+            const nombre = cardTitle.textContent.toLowerCase();
+            if (nombre.includes(searchTerm.toLowerCase())) {
+                nivel.style.display = 'block';
+            } else {
+                nivel.style.display = 'none';
+            }
         }
     });
 }
@@ -1861,12 +2043,17 @@ function filtrarNiveles(searchTerm) {
 function filtrarUsuariosComite(searchTerm) {
     const usuarios = document.querySelectorAll('[data-usuario-id]');
     usuarios.forEach(usuario => {
-        const nombre = usuario.querySelector('strong').textContent.toLowerCase();
-        const username = usuario.querySelector('.text-muted').textContent.toLowerCase();
-        if (nombre.includes(searchTerm.toLowerCase()) || username.includes(searchTerm.toLowerCase())) {
-            usuario.style.display = 'block';
-        } else {
-            usuario.style.display = 'none';
+        const nombreElement = usuario.querySelector('strong');
+        const usernameElement = usuario.querySelector('.text-muted');
+        
+        if (nombreElement && usernameElement) {
+            const nombre = nombreElement.textContent.toLowerCase();
+            const username = usernameElement.textContent.toLowerCase();
+            if (nombre.includes(searchTerm.toLowerCase()) || username.includes(searchTerm.toLowerCase())) {
+                usuario.style.display = 'block';
+            } else {
+                usuario.style.display = 'none';
+            }
         }
     });
 }
