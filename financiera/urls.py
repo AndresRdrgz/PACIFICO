@@ -24,6 +24,7 @@ urlpatterns = [
     path('workflow/', include('workflow.urls_workflow', namespace='workflow')),  # Include the workflow app's URLs with namespace
     path('mantenimiento/', include('mantenimiento.urls')),  # Include the mantenimiento app's URLs
     path('proyectos/', include('proyectos.urls', namespace='proyectos')),  # Include the proyectos app's URLs
+    path('intranet/', include('intranet.urls', namespace='intranet')),  # Include the intranet app's URLs
 ]
 
 # Serve static files during development

@@ -222,6 +222,7 @@ INSTALLED_APPS = [
     "workflow",
     "widget_tweaks",
     "proyectos",
+    "intranet",
 ]
 
 MIDDLEWARE = [

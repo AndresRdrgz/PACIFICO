@@ -1,0 +1,206 @@
+{% extends 'intranet/base.html' %}
+
+{% block title %}Gestión de Salas - Intranet{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Salas</h1>
+                <p class="text-gray-600 mt-1">Administra las salas de trabajo disponibles</p>
+            </div>
+            <a href="/admin/intranet/sala/add/" target="_blank"
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                <i class="fas fa-plus mr-2"></i>Nueva Sala
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                        <i class="fas fa-building text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Salas</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ salas.count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+                        <i class="fas fa-check text-green-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Activas</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ salas_activas }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
+                        <i class="fas fa-times text-red-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Inactivas</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ salas_inactivas }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
+                        <i class="fas fa-tools text-yellow-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">En Mantenimiento</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ salas_mantenimiento }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de salas -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Salas Disponibles</h3>
+            <p class="text-sm text-gray-500">Gestiona todas las salas del sistema</p>
+        </div>
+        <div class="p-6">
+            {% if salas %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for sala in salas %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <!-- Foto de la sala -->
+                            {% if sala.foto %}
+                                <div class="mb-4">
+                                    <img src="{{ sala.foto.url }}" alt="{{ sala.nombre }}" 
+                                         class="w-full h-32 object-cover rounded-lg">
+                                </div>
+                            {% else %}
+                                <div class="mb-4 w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-building text-gray-400 text-3xl"></i>
+                                </div>
+                            {% endif %}
+
+                            <!-- Información de la sala -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-lg font-medium text-gray-900">{{ sala.nombre }}</h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if sala.estado == 'activa' %}bg-green-100 text-green-800
+                                        {% elif sala.estado == 'inactiva' %}bg-red-100 text-red-800
+                                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                        {{ sala.get_estado_display }}
+                                    </span>
+                                </div>
+
+                                <div class="space-y-2 text-sm text-gray-600">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                                        <span>{{ sala.ubicacion }}</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <i class="fas fa-users mr-2 text-gray-400"></i>
+                                        <span>{{ sala.capacidad }} personas</span>
+                                    </div>
+                                </div>
+
+                                {% if sala.descripcion %}
+                                    <p class="text-sm text-gray-600">{{ sala.descripcion|truncatewords:15 }}</p>
+                                {% endif %}
+
+                                {% if sala.equipamiento %}
+                                    <div class="text-sm text-gray-600">
+                                        <span class="font-medium">Equipamiento:</span>
+                                        <p class="mt-1">{{ sala.equipamiento|truncatewords:10 }}</p>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Acciones -->
+                                <div class="flex space-x-2 pt-3 border-t border-gray-200">
+                                    <a href="/admin/intranet/sala/{{ sala.id }}/change/" target="_blank"
+                                       class="flex-1 text-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                        <i class="fas fa-edit mr-1"></i>Editar
+                                    </a>
+                                    <a href="/admin/intranet/sala/{{ sala.id }}/delete/" target="_blank"
+                                       class="flex-1 text-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                                        <i class="fas fa-trash mr-1"></i>Eliminar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-building text-gray-400 text-4xl mb-4"></i>
+                    <p class="text-gray-500">No hay salas registradas</p>
+                    <a href="/admin/intranet/sala/add/" target="_blank"
+                       class="mt-2 inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
+                        Crear primera sala <i class="fas fa-plus ml-1"></i>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-600"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-900">Información para Administradores</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Las salas se gestionan desde el panel de administración de Django</li>
+                        <li>Puedes crear, editar y eliminar salas usando los enlaces de arriba</li>
+                        <li>Las salas inactivas no aparecerán en las opciones de reserva</li>
+                        <li>Las salas en mantenimiento mostrarán un mensaje especial</li>
+                        <li>Se recomienda subir fotos de las salas para mejor identificación</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Contar salas por estado
+    document.addEventListener('DOMContentLoaded', function() {
+        const salas = document.querySelectorAll('[data-estado]');
+        let activas = 0, inactivas = 0, mantenimiento = 0;
+        
+        salas.forEach(sala => {
+            const estado = sala.dataset.estado;
+            if (estado === 'activa') activas++;
+            else if (estado === 'inactiva') inactivas++;
+            else if (estado === 'mantenimiento') mantenimiento++;
+        });
+        
+        // Actualizar contadores si es necesario
+        // Los contadores se calculan en la vista, pero aquí podríamos actualizarlos dinámicamente
+    });
+</script>
+{% endblock %} 

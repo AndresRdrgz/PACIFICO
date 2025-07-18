@@ -1,0 +1,423 @@
+{% extends 'intranet/base.html' %}
+
+{% block title %}Nueva Reserva - Intranet{% endblock %}
+
+{% block extra_css %}
+<style>
+    .flatpickr-calendar {
+        z-index: 1000;
+    }
+    .select2-container {
+        z-index: 1000;
+    }
+    .participante-tag {
+        display: inline-flex;
+        align-items: center;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        padding: 0.25rem 0.75rem;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+    }
+    .participante-tag .remove {
+        margin-left: 0.5rem;
+        cursor: pointer;
+        color: #6b7280;
+    }
+    .participante-tag .remove:hover {
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Nueva Reserva</h1>
+                <p class="text-gray-600 mt-1">Crea una nueva reserva de sala</p>
+            </div>
+            <a href="{% url 'intranet:calendario' %}" 
+               class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al Calendario
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <form id="reservaForm" class="space-y-6">
+            <!-- Información básica -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">
+                        Título de la Reunión <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="titulo" name="titulo" required
+                           class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+                           placeholder="Ej: Reunión de Planificación Semanal">
+                </div>
+
+                <div>
+                    <label for="sala_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Sala <span class="text-red-500">*</span>
+                    </label>
+                    <select id="sala_id" name="sala_id" required
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+                        <option value="">Selecciona una sala</option>
+                        {% for sala in salas %}
+                            <option value="{{ sala.id }}" 
+                                    data-capacidad="{{ sala.capacidad }}"
+                                    data-ubicacion="{{ sala.ubicacion }}">
+                                {{ sala.nombre }} - {{ sala.ubicacion }} ({{ sala.capacidad }} personas)
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Información de la sala seleccionada -->
+            <div id="salaInfo" class="hidden rounded-lg p-4" style="background-color: rgba(0, 156, 60, 0.1); border: 1px solid rgba(0, 156, 60, 0.2);">
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle mr-2" style="color: var(--verde-pacifico);"></i>
+                    <div>
+                        <h4 class="text-sm font-medium" id="salaNombre" style="color: var(--verde-oscuro);"></h4>
+                        <p class="text-sm" id="salaDetalles" style="color: var(--verde-pacifico);"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fechas y horarios -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha y Hora de Inicio <span class="text-red-500">*</span>
+                    </label>
+                    <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" required
+                           class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+                </div>
+
+                <div>
+                    <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha y Hora de Fin <span class="text-red-500">*</span>
+                    </label>
+                    <input type="datetime-local" id="fecha_fin" name="fecha_fin" required
+                           class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+                </div>
+            </div>
+
+            <!-- Duración calculada -->
+            <div id="duracionInfo" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i class="fas fa-clock text-gray-600 mr-2"></i>
+                    <span class="text-sm text-gray-700">Duración: <span id="duracionCalculada" class="font-medium"></span></span>
+                </div>
+            </div>
+
+            <!-- Descripción -->
+            <div>
+                <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                </label>
+                <textarea id="descripcion" name="descripcion" rows="3"
+                          class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+                          placeholder="Describe el propósito de la reunión, agenda, etc."></textarea>
+            </div>
+
+            <!-- Participantes -->
+            <div>
+                <label for="participantes" class="block text-sm font-medium text-gray-700 mb-1">
+                    Participantes
+                </label>
+                <select id="participantes" multiple
+                        class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+                    {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}" data-nombre="{{ usuario.get_full_name }}" data-email="{{ usuario.email }}">
+                            {{ usuario.get_full_name }} ({{ usuario.email }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="text-sm text-gray-500 mt-1">Selecciona los participantes de la reunión</p>
+                
+                <!-- Participantes seleccionados -->
+                <div id="participantesSeleccionados" class="mt-3 flex flex-wrap gap-2">
+                    <!-- Los participantes se mostrarán aquí -->
+                </div>
+            </div>
+
+            <!-- Validación de conflictos -->
+            <div id="conflictoInfo" class="hidden bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2 mt-0.5"></i>
+                    <div>
+                        <h4 class="text-sm font-medium text-red-900">Conflicto de Horario</h4>
+                        <p class="text-sm text-red-700 mt-1" id="conflictoMensaje"></p>
+                        <div id="conflictoDetalles" class="mt-2 text-sm text-red-700">
+                            <!-- Detalles del conflicto se mostrarán aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="{% url 'intranet:calendario' %}" 
+                   class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    Cancelar
+                </a>
+                <button type="submit" id="submitBtn"
+                        class="px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-save mr-2"></i>Crear Reserva
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="confirmacionModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Confirmar Reserva</h3>
+        </div>
+        <div class="px-6 py-4">
+            <p class="text-sm text-gray-600">¿Estás seguro de que quieres crear esta reserva?</p>
+            <div id="resumenReserva" class="mt-4 text-sm text-gray-700">
+                <!-- Resumen de la reserva -->
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+            <button onclick="closeConfirmacionModal()" 
+                    class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                Cancelar
+            </button>
+            <button onclick="confirmarReserva()" 
+                    class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('reservaForm');
+        const salaSelect = document.getElementById('sala_id');
+        const salaInfo = document.getElementById('salaInfo');
+        const salaNombre = document.getElementById('salaNombre');
+        const salaDetalles = document.getElementById('salaDetalles');
+        const fechaInicio = document.getElementById('fecha_inicio');
+        const fechaFin = document.getElementById('fecha_fin');
+        const duracionInfo = document.getElementById('duracionInfo');
+        const duracionCalculada = document.getElementById('duracionCalculada');
+        const participantesSelect = document.getElementById('participantes');
+        const participantesSeleccionados = document.getElementById('participantesSeleccionados');
+        const conflictoInfo = document.getElementById('conflictoInfo');
+        const conflictoMensaje = document.getElementById('conflictoMensaje');
+        const conflictoDetalles = document.getElementById('conflictoDetalles');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Pre-llenar fechas si vienen en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('fecha_inicio')) {
+            fechaInicio.value = urlParams.get('fecha_inicio') + 'T09:00';
+        }
+        if (urlParams.get('fecha_fin')) {
+            fechaFin.value = urlParams.get('fecha_fin') + 'T10:00';
+        }
+
+        // Mostrar información de la sala seleccionada
+        salaSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (this.value) {
+                const nombre = selectedOption.text.split(' - ')[0];
+                const ubicacion = selectedOption.getAttribute('data-ubicacion');
+                const capacidad = selectedOption.getAttribute('data-capacidad');
+                
+                salaNombre.textContent = nombre;
+                salaDetalles.textContent = `${ubicacion} • Capacidad: ${capacidad} personas`;
+                salaInfo.classList.remove('hidden');
+            } else {
+                salaInfo.classList.add('hidden');
+            }
+        });
+
+        // Calcular duración
+        function calcularDuracion() {
+            if (fechaInicio.value && fechaFin.value) {
+                const inicio = new Date(fechaInicio.value);
+                const fin = new Date(fechaFin.value);
+                
+                if (fin > inicio) {
+                    const diffMs = fin - inicio;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMins / 60);
+                    const mins = diffMins % 60;
+                    
+                    let duracion = '';
+                    if (diffHours > 0) {
+                        duracion = `${diffHours}h ${mins}min`;
+                    } else {
+                        duracion = `${mins}min`;
+                    }
+                    
+                    duracionCalculada.textContent = duracion;
+                    duracionInfo.classList.remove('hidden');
+                } else {
+                    duracionInfo.classList.add('hidden');
+                }
+            } else {
+                duracionInfo.classList.add('hidden');
+            }
+        }
+
+        fechaInicio.addEventListener('change', calcularDuracion);
+        fechaFin.addEventListener('change', calcularDuracion);
+
+        // Manejar participantes
+        participantesSelect.addEventListener('change', function() {
+            participantesSeleccionados.innerHTML = '';
+            
+            Array.from(this.selectedOptions).forEach(option => {
+                const tag = document.createElement('div');
+                tag.className = 'participante-tag';
+                tag.innerHTML = `
+                    ${option.getAttribute('data-nombre')}
+                    <span class="remove" onclick="removeParticipante('${option.value}')">&times;</span>
+                `;
+                participantesSeleccionados.appendChild(tag);
+            });
+        });
+
+        // Remover participante
+        window.removeParticipante = function(usuarioId) {
+            const option = participantesSelect.querySelector(`option[value="${usuarioId}"]`);
+            option.selected = false;
+            participantesSelect.dispatchEvent(new Event('change'));
+        };
+
+        // Validar conflictos de horario
+        async function validarConflictos() {
+            if (!salaSelect.value || !fechaInicio.value || !fechaFin.value) {
+                conflictoInfo.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('{% url "intranet:api_validar_conflicto" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        sala_id: salaSelect.value,
+                        fecha_inicio: fechaInicio.value,
+                        fecha_fin: fechaFin.value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.conflicto) {
+                    conflictoMensaje.textContent = data.mensaje;
+                    conflictoDetalles.innerHTML = data.detalles || '';
+                    conflictoInfo.classList.remove('hidden');
+                    submitBtn.disabled = true;
+                } else {
+                    conflictoInfo.classList.add('hidden');
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error validando conflictos:', error);
+            }
+        }
+
+        salaSelect.addEventListener('change', validarConflictos);
+        fechaInicio.addEventListener('change', validarConflictos);
+        fechaFin.addEventListener('change', validarConflictos);
+
+        // Manejar envío del formulario
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            showConfirmacionModal();
+        });
+
+        // Mostrar modal de confirmación
+        window.showConfirmacionModal = function() {
+            const modal = document.getElementById('confirmacionModal');
+            const resumen = document.getElementById('resumenReserva');
+            
+            const sala = salaSelect.options[salaSelect.selectedIndex];
+            const participantes = Array.from(participantesSelect.selectedOptions).map(opt => opt.getAttribute('data-nombre'));
+            
+            resumen.innerHTML = `
+                <div class="space-y-2">
+                    <p><strong>Título:</strong> ${document.getElementById('titulo').value}</p>
+                    <p><strong>Sala:</strong> ${sala.text}</p>
+                    <p><strong>Inicio:</strong> ${new Date(fechaInicio.value).toLocaleString('es-ES')}</p>
+                    <p><strong>Fin:</strong> ${new Date(fechaFin.value).toLocaleString('es-ES')}</p>
+                    <p><strong>Duración:</strong> ${duracionCalculada.textContent}</p>
+                    ${participantes.length > 0 ? `<p><strong>Participantes:</strong> ${participantes.join(', ')}</p>` : ''}
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        };
+
+        // Cerrar modal de confirmación
+        window.closeConfirmacionModal = function() {
+            document.getElementById('confirmacionModal').classList.add('hidden');
+        };
+
+        // Confirmar reserva
+        window.confirmarReserva = async function() {
+            const formData = new FormData(form);
+            
+            // Agregar participantes
+            const participantes = Array.from(participantesSelect.selectedOptions).map(opt => opt.value);
+            formData.append('participantes', JSON.stringify(participantes));
+
+            try {
+                showLoading();
+                
+                const response = await fetch('{% url "intranet:api_crear_reserva" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Reserva creada exitosamente', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 1500);
+                } else {
+                    showNotification(data.error || 'Error al crear la reserva', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Error al crear la reserva', 'error');
+            } finally {
+                hideLoading();
+                closeConfirmacionModal();
+            }
+        };
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('confirmacionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConfirmacionModal();
+            }
+        });
+    });
+</script>
+{% endblock %} 

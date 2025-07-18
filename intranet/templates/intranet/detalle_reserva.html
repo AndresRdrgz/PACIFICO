@@ -1,0 +1,308 @@
+{% extends 'intranet/base.html' %}
+
+{% block title %}Detalle de Reserva - Intranet{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ reserva.titulo }}</h1>
+                <p class="text-gray-600 mt-1">Detalles de la reserva</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{% url 'intranet:calendario' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <i class="fas fa-calendar-alt mr-2"></i>Ver Calendario
+                </a>
+                {% if es_organizador and reserva.estado == 'activa' %}
+                    <button onclick="cancelarReserva('{{ reserva.id }}')"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Cancelar Reserva
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Información principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Detalles de la reserva -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Información básica -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Información de la Reunión</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Estado</h4>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                            {% if reserva.estado == 'activa' %}bg-green-100 text-green-800
+                            {% elif reserva.estado == 'cancelada' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ reserva.get_estado_display }}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Duración</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.duracion_minutos }} minutos</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Fecha</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.fecha_inicio|date:"l, d \d\e F \d\e Y" }}</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Horario</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.fecha_inicio|date:"H:i" }} - {{ reserva.fecha_fin|date:"H:i" }}</p>
+                    </div>
+                </div>
+                
+                {% if reserva.descripcion %}
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Descripción</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.descripcion }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Información de la sala -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Información de la Sala</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Sala</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.sala.nombre }}</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Ubicación</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.sala.ubicacion }}</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Capacidad</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.sala.capacidad }} personas</p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Estado</h4>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                            {% if reserva.sala.estado == 'activa' %}bg-green-100 text-green-800
+                            {% elif reserva.sala.estado == 'inactiva' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ reserva.sala.get_estado_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if reserva.sala.descripcion %}
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Descripción de la Sala</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.sala.descripcion }}</p>
+                    </div>
+                {% endif %}
+                
+                {% if reserva.sala.equipamiento %}
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Equipamiento</h4>
+                        <p class="text-sm text-gray-900">{{ reserva.sala.equipamiento }}</p>
+                    </div>
+                {% endif %}
+                
+                {% if reserva.sala.foto %}
+                    <div class="mt-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Foto de la Sala</h4>
+                        <img src="{{ reserva.sala.foto.url }}" alt="{{ reserva.sala.nombre }}" 
+                             class="w-full max-w-md rounded-lg shadow-sm">
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Organizador -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Organizador</h3>
+                
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span class="text-white text-lg font-medium">
+                            {{ reserva.usuario_creador.first_name|first|upper }}{{ reserva.usuario_creador.last_name|first|upper }}
+                        </span>
+                    </div>
+                    <div class="ml-4">
+                        <h4 class="text-sm font-medium text-gray-900">{{ reserva.usuario_creador.get_full_name }}</h4>
+                        <p class="text-sm text-gray-500">{{ reserva.usuario_creador.email }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participantes -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Participantes ({{ participantes.count }})</h3>
+                
+                <div class="space-y-3">
+                    {% for participante in participantes %}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-xs font-medium">
+                                        {{ participante.usuario.first_name|first|upper }}{{ participante.usuario.last_name|first|upper }}
+                                    </span>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-gray-900">{{ participante.usuario.get_full_name }}</h4>
+                                    <p class="text-xs text-gray-500">{{ participante.usuario.email }}</p>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                {% if participante.estado_asistencia == 'confirmado' %}bg-green-100 text-green-800
+                                {% elif participante.estado_asistencia == 'declinado' %}bg-red-100 text-red-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ participante.get_estado_asistencia_display }}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <p class="text-sm text-gray-500">No hay participantes registrados</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Acciones para participantes -->
+            {% if es_participante and reserva.estado == 'activa' %}
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tu Participación</h3>
+                    
+                    <div class="space-y-3">
+                        <p class="text-sm text-gray-600">Estado actual: 
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                {% if estado_participacion == 'confirmado' %}bg-green-100 text-green-800
+                                {% elif estado_participacion == 'declinado' %}bg-red-100 text-red-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {% if estado_participacion == 'confirmado' %}Confirmado
+                                {% elif estado_participacion == 'declinado' %}Declinado
+                                {% else %}Pendiente{% endif %}
+                            </span>
+                        </p>
+                        
+                        {% if estado_participacion == 'pendiente' %}
+                            <div class="flex space-x-2">
+                                <button onclick="confirmarAsistencia('{{ reserva.id }}', true)"
+                                        class="flex-1 px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                                    <i class="fas fa-check mr-1"></i>Confirmar
+                                </button>
+                                <button onclick="confirmarAsistencia('{{ reserva.id }}', false)"
+                                        class="flex-1 px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                                    <i class="fas fa-times mr-1"></i>Declinar
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Información del sistema -->
+            <div class="bg-gray-50 rounded-lg p-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Información del Sistema</h3>
+                
+                <div class="space-y-2 text-xs text-gray-600">
+                    <div class="flex justify-between">
+                        <span>ID de Reserva:</span>
+                        <span class="font-mono">{{ reserva.id }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Creada:</span>
+                        <span>{{ reserva.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Última actualización:</span>
+                        <span>{{ reserva.updated_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function cancelarReserva(reservaId) {
+        if (confirm('¿Estás seguro de que quieres cancelar esta reserva? Esta acción notificará a todos los participantes y no se puede deshacer.')) {
+            showLoading();
+            
+            fetch('{% url "intranet:api_cancelar_reserva" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    reserva_id: reservaId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                
+                if (data.success) {
+                    showNotification('Reserva cancelada exitosamente', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "intranet:mis_reservas" %}';
+                    }, 1500);
+                } else {
+                    showNotification(data.error || 'Error al cancelar la reserva', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('Error al cancelar la reserva', 'error');
+            });
+        }
+    }
+
+    function confirmarAsistencia(reservaId, confirmar) {
+        const accion = confirmar ? 'confirmar' : 'declinar';
+        const mensaje = confirmar ? '¿Confirmar tu asistencia a esta reunión?' : '¿Declinar tu participación en esta reunión?';
+        
+        if (confirm(mensaje)) {
+            showLoading();
+            
+            fetch('{% url "intranet:api_confirmar_asistencia" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    reserva_id: reservaId,
+                    confirmar: confirmar
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification(data.error || 'Error al procesar la solicitud', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('Error al procesar la solicitud', 'error');
+            });
+        }
+    }
+</script>
+{% endblock %} 

@@ -1,0 +1,328 @@
+{% extends 'intranet/base.html' %}
+
+{% block title %}Calendario de Reservas - Intranet{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    .fc-event:hover {
+        opacity: 0.8;
+    }
+    .fc-event-title {
+        font-weight: 500;
+    }
+    .fc-event-time {
+        font-size: 0.75rem;
+    }
+    .fc-daygrid-event {
+        white-space: nowrap;
+        border-radius: 4px;
+    }
+    .fc-timegrid-event {
+        border-radius: 4px;
+    }
+    .fc-list-event {
+        border-radius: 4px;
+    }
+    .fc-button {
+        background-color: var(--verde-pacifico) !important;
+        border-color: var(--verde-pacifico) !important;
+    }
+    .fc-button:hover {
+        background-color: var(--verde-hover) !important;
+        border-color: var(--verde-hover) !important;
+    }
+    .fc-button:focus {
+        box-shadow: 0 0 0 2px rgba(0, 156, 60, 0.5) !important;
+    }
+    .fc-button-active {
+        background-color: var(--verde-oscuro) !important;
+        border-color: var(--verde-oscuro) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header del calendario -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Calendario de Reservas</h1>
+                <p class="text-gray-600 mt-1">Visualiza y gestiona todas las reservas de salas</p>
+            </div>
+            <div class="flex space-x-3 mt-4 sm:mt-0">
+                <a href="{% url 'intranet:nueva_reserva' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Reserva
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Filtros</h3>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Filtro por sala -->
+            <div>
+                <label for="sala_id" class="block text-sm font-medium text-gray-700 mb-1">Sala</label>
+                <select id="sala_id" name="sala_id" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+                    <option value="">Todas las salas</option>
+                    {% for sala in salas %}
+                        <option value="{{ sala.id }}" {% if sala_seleccionada and sala_seleccionada.id == sala.id %}selected{% endif %}>
+                            {{ sala.nombre }} - {{ sala.ubicacion }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtro por fecha inicio -->
+            <div>
+                <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                <input type="date" id="fecha_inicio" name="fecha_inicio" 
+                       value="{{ fecha_inicio|date:'Y-m-d' if fecha_inicio else '' }}"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <!-- Filtro por fecha fin -->
+            <div>
+                <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+                <input type="date" id="fecha_fin" name="fecha_fin" 
+                       value="{{ fecha_fin|date:'Y-m-d' if fecha_fin else '' }}"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500">
+            </div>
+
+            <!-- Botones -->
+            <div class="flex items-end space-x-2">
+                <button type="submit" 
+                        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-filter mr-2"></i>Filtrar
+                </button>
+                <a href="{% url 'intranet:calendario' %}" 
+                   class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Calendario -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Modal de detalles de reserva -->
+    <div id="reservaModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900" id="modalTitle">Detalles de la Reserva</h3>
+                    <button onclick="closeReservaModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-4" id="modalContent">
+                <!-- El contenido se llenará dinámicamente -->
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeReservaModal()" 
+                        class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    Cerrar
+                </button>
+                <a id="modalVerDetalle" href="#" 
+                   class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    Ver Detalle Completo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configuración del calendario
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            },
+            locale: 'es',
+            buttonText: {
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Día',
+                list: 'Lista'
+            },
+            height: 'auto',
+            selectable: true,
+            selectMirror: true,
+            dayMaxEvents: true,
+            weekends: true,
+            events: function(info, successCallback, failureCallback) {
+                // Cargar eventos desde la API
+                fetch('{% url "intranet:api_reservas" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const events = data.reservas.map(reserva => ({
+                                id: reserva.id,
+                                title: reserva.titulo,
+                                start: reserva.fecha_inicio,
+                                end: reserva.fecha_fin,
+                                backgroundColor: getEventColor(reserva.sala.nombre),
+                                borderColor: getEventColor(reserva.sala.nombre),
+                                textColor: '#ffffff',
+                                extendedProps: {
+                                    sala: reserva.sala,
+                                    organizador: reserva.organizador,
+                                    participantes: reserva.participantes,
+                                    descripcion: reserva.descripcion
+                                }
+                            }));
+                            successCallback(events);
+                        } else {
+                            failureCallback(data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error cargando eventos:', error);
+                        failureCallback(error);
+                    });
+            },
+            eventClick: function(info) {
+                showReservaModal(info.event);
+            },
+            select: function(info) {
+                // Redirigir a nueva reserva con fechas pre-seleccionadas
+                const startDate = info.startStr.split('T')[0];
+                const endDate = info.endStr.split('T')[0];
+                window.location.href = `{% url 'intranet:nueva_reserva' %}?fecha_inicio=${startDate}&fecha_fin=${endDate}`;
+            },
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            },
+            slotMinTime: '07:00:00',
+            slotMaxTime: '20:00:00',
+            allDaySlot: false,
+            slotDuration: '00:30:00',
+            slotLabelFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }
+        });
+
+        calendar.render();
+
+        // Función para obtener colores de eventos basados en la sala
+        function getEventColor(salaNombre) {
+            const colors = [
+                '#009c3c', // verde-pacifico
+                '#22a650', // verde-claro
+                '#00692b', // verde-oscuro
+                '#004d33', // verde-muy-oscuro
+                '#007529'  // verde-hover
+            ];
+            
+            // Usar el nombre de la sala para generar un color consistente
+            let hash = 0;
+            for (let i = 0; i < salaNombre.length; i++) {
+                hash = salaNombre.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // Función para mostrar el modal de detalles
+        window.showReservaModal = function(event) {
+            const modal = document.getElementById('reservaModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            const modalVerDetalle = document.getElementById('modalVerDetalle');
+
+            modalTitle.textContent = event.title;
+            
+            const props = event.extendedProps;
+            modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900">Sala</h4>
+                        <p class="text-gray-600">${props.sala.nombre} - ${props.sala.ubicacion}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">Organizador</h4>
+                        <p class="text-gray-600">${props.organizador}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">Horario</h4>
+                        <p class="text-gray-600">
+                            ${new Date(event.start).toLocaleString('es-ES', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })} - 
+                            ${new Date(event.end).toLocaleTimeString('es-ES', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })}
+                        </p>
+                    </div>
+                    ${props.descripcion ? `
+                    <div>
+                        <h4 class="font-medium text-gray-900">Descripción</h4>
+                        <p class="text-gray-600">${props.descripcion}</p>
+                    </div>
+                    ` : ''}
+                    ${props.participantes && props.participantes.length > 0 ? `
+                    <div>
+                        <h4 class="font-medium text-gray-900">Participantes (${props.participantes.length})</h4>
+                        <ul class="text-gray-600 text-sm">
+                            ${props.participantes.map(p => `<li>• ${p}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modalVerDetalle.href = `{% url 'intranet:detalle_reserva' '0' %}`.replace('0', event.id);
+            
+            modal.classList.remove('hidden');
+        };
+
+        // Función para cerrar el modal
+        window.closeReservaModal = function() {
+            document.getElementById('reservaModal').classList.add('hidden');
+        };
+
+        // Cerrar modal al hacer clic fuera de él
+        document.getElementById('reservaModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeReservaModal();
+            }
+        });
+
+        // Cerrar modal con Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeReservaModal();
+            }
+        });
+    });
+</script>
+{% endblock %} 

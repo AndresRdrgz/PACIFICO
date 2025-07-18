@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Intranet - Reservas de Salas{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.10/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.10/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.10/main.min.css' rel='stylesheet' />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --verde-pacifico: #009c3c;
+            --verde-hover: #007529;
+            --verde-oscuro: #00692b;
+            --verde-claro: #22a650;
+            --verde-muy-oscuro: #004d33;
+            --gris-texto: #4a4a4a;
+            --gris-fondo: #f9f9f9;
+            --gris-borde: #ddd;
+            --blanco: #ffffff;
+            --gris-claro: #f8f9fa;
+            --gris-medio: #6c757d;
+            --rojo: #dc3545;
+            --amarillo: #ffc107;
+            --azul: #0d6efd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--gris-fondo);
+            color: var(--gris-texto);
+        }
+
+        .fc-event {
+            cursor: pointer;
+        }
+        .fc-event:hover {
+            opacity: 0.8;
+        }
+        .loading {
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+
+        /* Custom green button styles */
+        .btn-verde {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: white;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-verde:hover {
+            background: linear-gradient(135deg, var(--verde-hover) 0%, var(--verde-pacifico) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+        }
+
+        /* Custom card styles */
+        .card-verde {
+            border-left: 4px solid var(--verde-pacifico);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Custom link styles */
+        .link-verde {
+            color: var(--verde-pacifico);
+            transition: color 0.3s ease;
+        }
+        .link-verde:hover {
+            color: var(--verde-hover);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo y título -->
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-building text-green-600 text-2xl" style="color: var(--verde-pacifico);"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h1 class="text-xl font-semibold text-gray-900">Intranet</h1>
+                        <p class="text-sm text-gray-500">Sistema de Reservas</p>
+                    </div>
+                </div>
+                
+                <!-- Navegación principal -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="{% url 'intranet:dashboard' %}" 
+                       class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors link-verde">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    <a href="{% url 'intranet:calendario' %}" 
+                       class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors link-verde">
+                        <i class="fas fa-calendar-alt mr-2"></i>Calendario
+                    </a>
+                    <a href="{% url 'intranet:nueva_reserva' %}" 
+                       class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors link-verde">
+                        <i class="fas fa-plus mr-2"></i>Nueva Reserva
+                    </a>
+                    <a href="{% url 'intranet:mis_reservas' %}" 
+                       class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors link-verde">
+                        <i class="fas fa-list mr-2"></i>Mis Reservas
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'intranet:gestion_salas' %}" 
+                       class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors link-verde">
+                        <i class="fas fa-cog mr-2"></i>Gestión Salas
+                    </a>
+                    {% endif %}
+                </nav>
+                
+                <!-- Usuario y menú móvil -->
+                <div class="flex items-center">
+                    <!-- Usuario actual -->
+                    <div class="hidden md:flex items-center mr-4">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);">
+                            <span class="text-white text-sm font-medium">
+                                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                            </span>
+                        </div>
+                        <div class="ml-2">
+                            <p class="text-sm font-medium text-gray-900">{{ user.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ user.email }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botón menú móvil -->
+                    <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-gray-700 hover:text-green-600 hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Botón logout -->
+                    <a href="{% url 'logout' %}" 
+                       class="ml-2 p-2 text-gray-700 hover:text-red-600 hover:bg-gray-100 rounded-md transition-colors"
+                       title="Cerrar sesión">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Menú móvil -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="{% url 'intranet:dashboard' %}" 
+                   class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                </a>
+                <a href="{% url 'intranet:calendario' %}" 
+                   class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-calendar-alt mr-2"></i>Calendario
+                </a>
+                <a href="{% url 'intranet:nueva_reserva' %}" 
+                   class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Reserva
+                </a>
+                <a href="{% url 'intranet:mis_reservas' %}" 
+                   class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-list mr-2"></i>Mis Reservas
+                </a>
+                {% if user.is_staff %}
+                <a href="{% url 'intranet:gestion_salas' %}" 
+                   class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-cog mr-2"></i>Gestión Salas
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Mensajes de alerta -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="rounded-md p-4 mb-4 {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-700{% elif message.tags == 'success' %}bg-green-50 border border-green-200 text-green-700{% elif message.tags == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                {% if message.tags == 'error' %}
+                                    <i class="fas fa-exclamation-circle"></i>
+                                {% elif message.tags == 'success' %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% elif message.tags == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium">{{ message }}</p>
+                            </div>
+                            <div class="ml-auto pl-3">
+                                <div class="-mx-1.5 -my-1.5">
+                                    <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" 
+                                            class="inline-flex rounded-md p-1.5 {% if message.tags == 'error' %}text-red-500 hover:bg-red-100{% elif message.tags == 'success' %}text-green-500 hover:bg-green-100{% elif message.tags == 'warning' %}text-yellow-500 hover:bg-yellow-100{% else %}text-blue-500 hover:bg-blue-100{% endif %}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Contenido de la página -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <div class="text-center text-sm text-gray-500">
+                <p>&copy; 2025 Financiera Pacífico. Sistema de Intranet - Reservas de Salas.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--verde-pacifico);"></div>
+            <span class="text-gray-700">Procesando...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.10/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.10/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.10/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.10/main.min.js"></script>
+    
+    <!-- CSRF Token para AJAX -->
+    <script>
+        // Obtener el token CSRF
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Configurar headers para AJAX
+        function setupAjaxHeaders() {
+            const csrftoken = getCSRFToken();
+            if (csrftoken) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Configurar headers para todas las peticiones AJAX
+                    const originalFetch = window.fetch;
+                    window.fetch = function(url, options = {}) {
+                        if (options.method && options.method !== 'GET') {
+                            options.headers = {
+                                ...options.headers,
+                                'X-CSRFToken': csrftoken,
+                                'Content-Type': 'application/json',
+                            };
+                        }
+                        return originalFetch(url, options);
+                    };
+                });
+            }
+        }
+
+        // Mostrar/ocultar loading
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        // Toggle menú móvil
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+
+            // Configurar AJAX
+            setupAjaxHeaders();
+        });
+
+        // Función para mostrar notificaciones
+        function showNotification(message, type = 'info') {
+            const colors = {
+                'success': 'bg-green-50 border-green-200 text-green-700',
+                'error': 'bg-red-50 border-red-200 text-red-700',
+                'warning': 'bg-yellow-50 border-yellow-200 text-yellow-700',
+                'info': 'bg-blue-50 border-blue-200 text-blue-700'
+            };
+
+            const icons = {
+                'success': 'fas fa-check-circle',
+                'error': 'fas fa-exclamation-circle',
+                'warning': 'fas fa-exclamation-triangle',
+                'info': 'fas fa-info-circle'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `rounded-md p-4 mb-4 border ${colors[type]}`;
+            notification.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="${icons[type]}"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium">${message}</p>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <div class="-mx-1.5 -my-1.5">
+                            <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" 
+                                    class="inline-flex rounded-md p-1.5 ${type === 'error' ? 'text-red-500 hover:bg-red-100' : type === 'success' ? 'text-green-500 hover:bg-green-100' : type === 'warning' ? 'text-yellow-500 hover:bg-yellow-100' : 'text-blue-500 hover:bg-blue-100'}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const main = document.querySelector('main');
+            const firstChild = main.firstChild;
+            main.insertBefore(notification, firstChild);
+
+            // Auto-remove después de 5 segundos
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

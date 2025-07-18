@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancelación de Reunión</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #ef4444;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #ef4444;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .meeting-info {
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .meeting-info h3 {
+            margin-top: 0;
+            color: #dc2626;
+        }
+        .info-row {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .info-label {
+            font-weight: bold;
+            min-width: 120px;
+            color: #374151;
+        }
+        .info-value {
+            color: #6b7280;
+        }
+        .button {
+            display: inline-block;
+            background-color: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #2563eb;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning h4 {
+            color: #d97706;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Cancelación de Reunión</h1>
+            <p>Una reunión ha sido cancelada</p>
+        </div>
+
+        <div class="content">
+            <p>Hola <strong>{{ usuario.first_name }} {{ usuario.last_name }}</strong>,</p>
+            
+            <p>Te informamos que la siguiente reunión ha sido <strong>cancelada</strong> por {{ organizador.first_name }} {{ organizador.last_name }}:</p>
+
+            <div class="meeting-info">
+                <h3>{{ reserva.titulo }}</h3>
+                
+                <div class="info-row">
+                    <span class="info-label">📅 Fecha:</span>
+                    <span class="info-value">{{ reserva.fecha_inicio|date:"l, d \d\e F \d\e Y" }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">🕐 Horario:</span>
+                    <span class="info-value">{{ reserva.fecha_inicio|date:"H:i" }} - {{ reserva.fecha_fin|date:"H:i" }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">📍 Sala:</span>
+                    <span class="info-value">{{ sala.nombre }} - {{ sala.ubicacion }}</span>
+                </div>
+                
+                {% if reserva.descripcion %}
+                <div class="info-row">
+                    <span class="info-label">📝 Descripción:</span>
+                    <span class="info-value">{{ reserva.descripcion }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Información Importante</h4>
+                <ul>
+                    <li>La sala {{ sala.nombre }} ahora está disponible para nuevas reservas</li>
+                    <li>Si necesitas programar una nueva reunión, puedes hacerlo desde el sistema</li>
+                    <li>Si tienes preguntas sobre la cancelación, contacta al organizador</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ site_url }}{% url 'intranet:calendario' %}" class="button">
+                    📅 Ver Calendario
+                </a>
+                <a href="{{ site_url }}{% url 'intranet:nueva_reserva' %}" class="button">
+                    ➕ Nueva Reserva
+                </a>
+            </div>
+
+            <p>Si tienes alguna pregunta sobre esta cancelación, contacta a {{ organizador.first_name }} {{ organizador.last_name }} en {{ organizador.email }}.</p>
+        </div>
+
+        <div class="footer">
+            <p>Este es un mensaje automático del Sistema de Reservas de Salas - Financiera Pacífico</p>
+            <p>No respondas a este correo. Para consultas, contacta al administrador del sistema.</p>
+        </div>
+    </div>
+</body>
+</html> 

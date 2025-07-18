@@ -1,0 +1,270 @@
+{% extends 'intranet/base.html' %}
+
+{% block title %}Dashboard - Intranet{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header del dashboard -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <p class="text-gray-600 mt-1">Bienvenido al sistema de reservas de salas</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{% url 'intranet:nueva_reserva' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white btn-verde focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Reserva
+                </a>
+                <a href="{% url 'intranet:calendario' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    <i class="fas fa-calendar-alt mr-2"></i>Ver Calendario
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total reservas creadas -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background-color: rgba(0, 156, 60, 0.1);">
+                        <i class="fas fa-calendar-plus" style="color: var(--verde-pacifico);"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Reservas Creadas</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_reservas_creadas }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total participaciones -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background-color: rgba(34, 166, 80, 0.1);">
+                        <i class="fas fa-users" style="color: var(--verde-claro);"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Participaciones</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ total_participaciones }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salas disponibles -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background-color: rgba(0, 105, 43, 0.1);">
+                        <i class="fas fa-building" style="color: var(--verde-oscuro);"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Salas Disponibles</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ salas_disponibles }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservas de hoy -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-verde">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 rounded-md flex items-center justify-center" style="background-color: rgba(0, 77, 51, 0.1);">
+                        <i class="fas fa-clock" style="color: var(--verde-muy-oscuro);"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Reservas Hoy</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ reservas_hoy.count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Mis próximas reservas -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 card-verde">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Mis Próximas Reservas</h3>
+                <p class="text-sm text-gray-500">Reservas que has creado</p>
+            </div>
+            <div class="p-6">
+                {% if mis_reservas %}
+                    <div class="space-y-4">
+                        {% for reserva in mis_reservas %}
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-medium text-gray-900">{{ reserva.titulo }}</h4>
+                                    <p class="text-xs text-gray-500">{{ reserva.sala.nombre }} - {{ reserva.sala.ubicacion }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ reserva.fecha_inicio|date:"d/m/Y H:i" }} - {{ reserva.fecha_fin|date:"H:i" }}
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'intranet:detalle_reserva' reserva.id %}" 
+                                       class="text-sm link-verde">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'intranet:mis_reservas' %}" 
+                           class="text-sm link-verde">
+                            Ver todas mis reservas <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-calendar-plus text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500">No tienes reservas programadas</p>
+                        <a href="{% url 'intranet:nueva_reserva' %}" 
+                           class="mt-2 inline-flex items-center text-sm link-verde">
+                            Crear nueva reserva <i class="fas fa-plus ml-1"></i>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reservas donde participo -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 card-verde">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Reservas donde Participo</h3>
+                <p class="text-sm text-gray-500">Reuniones a las que has sido invitado</p>
+            </div>
+            <div class="p-6">
+                {% if reservas_participante %}
+                    <div class="space-y-4">
+                        {% for reserva in reservas_participante %}
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-medium text-gray-900">{{ reserva.titulo }}</h4>
+                                    <p class="text-xs text-gray-500">
+                                        Organizado por: {{ reserva.usuario_creador.get_full_name }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">{{ reserva.sala.nombre }} - {{ reserva.sala.ubicacion }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ reserva.fecha_inicio|date:"d/m/Y H:i" }} - {{ reserva.fecha_fin|date:"H:i" }}
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'intranet:detalle_reserva' reserva.id %}" 
+                                       class="text-sm link-verde">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'intranet:mis_reservas' %}" 
+                           class="text-sm link-verde">
+                            Ver todas mis participaciones <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-users text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500">No tienes participaciones programadas</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reservas de hoy -->
+    {% if reservas_hoy %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 card-verde">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Reservas de Hoy ({{ hoy|date:"d/m/Y" }})</h3>
+            <p class="text-sm text-gray-500">Todas las reuniones programadas para hoy</p>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                {% for reserva in reservas_hoy %}
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <h4 class="text-sm font-medium text-gray-900">{{ reserva.titulo }}</h4>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: rgba(0, 156, 60, 0.1); color: var(--verde-pacifico);">
+                                    {{ reserva.sala.nombre }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                Organizado por: {{ reserva.usuario_creador.get_full_name }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                <i class="fas fa-clock mr-1"></i>
+                                {{ reserva.fecha_inicio|date:"H:i" }} - {{ reserva.fecha_fin|date:"H:i" }}
+                            </p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="{% url 'intranet:detalle_reserva' reserva.id %}" 
+                               class="text-sm link-verde">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones rápidas -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Acciones Rápidas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{% url 'intranet:nueva_reserva' %}" 
+               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-blue-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-sm font-medium text-gray-900">Nueva Reserva</h4>
+                    <p class="text-xs text-gray-500">Crear una nueva reserva de sala</p>
+                </div>
+            </a>
+            
+            <a href="{% url 'intranet:calendario' %}" 
+               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-calendar-alt text-green-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-sm font-medium text-gray-900">Ver Calendario</h4>
+                    <p class="text-xs text-gray-500">Explorar todas las reservas</p>
+                </div>
+            </a>
+            
+            <a href="{% url 'intranet:mis_reservas' %}" 
+               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-list text-purple-600"></i>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-sm font-medium text-gray-900">Mis Reservas</h4>
+                    <p class="text-xs text-gray-500">Gestionar mis reservas</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 
