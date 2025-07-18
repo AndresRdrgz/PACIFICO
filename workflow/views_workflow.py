@@ -6622,6 +6622,8 @@ def api_asignar_usuario_nivel_comite(request):
         
         usuario_id = data.get('usuario_id')
         nivel_id = data.get('nivel_id')
+        activo = data.get('activo', True)
+        observaciones = data.get('observaciones', '').strip()
         
         if not usuario_id or not nivel_id:
             return JsonResponse({'success': False, 'error': 'Usuario y nivel son requeridos'}, status=400)
@@ -6637,11 +6639,15 @@ def api_asignar_usuario_nivel_comite(request):
         asignacion, created = UsuarioNivelComite.objects.get_or_create(
             usuario=usuario,
             nivel=nivel,
-            defaults={'activo': True}
+            defaults={
+                'activo': activo,
+                'observaciones': observaciones
+            }
         )
         
         if not created:
-            asignacion.activo = True
+            asignacion.activo = activo
+            asignacion.observaciones = observaciones
             asignacion.save()
         
         return JsonResponse({
@@ -6659,7 +6665,8 @@ def api_asignar_usuario_nivel_comite(request):
                     'orden': nivel.orden
                 },
                 'fecha_asignacion': asignacion.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
-                'activo': asignacion.activo
+                'activo': asignacion.activo,
+                'observaciones': asignacion.observaciones or ''
             }
         })
         
@@ -6698,6 +6705,127 @@ def api_desasignar_usuario_nivel_comite(request, usuario_id, nivel_id):
         return JsonResponse({'success': False, 'error': 'Asignación no encontrada'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al desasignar usuario: {str(e)}'}, status=500)
+
+
+@login_required
+def api_obtener_asignaciones_comite(request):
+    """Obtener todas las asignaciones de usuarios a niveles del comité"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        
+        asignaciones = UsuarioNivelComite.objects.select_related(
+            'usuario', 'nivel', 'usuario__userprofile'
+        ).order_by('nivel__orden', 'usuario__username')
+        
+        data = []
+        for asignacion in asignaciones:
+            data.append({
+                'id': asignacion.id,
+                'usuario': {
+                    'id': asignacion.usuario.id,
+                    'username': asignacion.usuario.username,
+                    'full_name': asignacion.usuario.get_full_name() or asignacion.usuario.username,
+                    'email': asignacion.usuario.email,
+                    'profile_picture': asignacion.usuario.userprofile.profile_picture.url if hasattr(asignacion.usuario, 'userprofile') and asignacion.usuario.userprofile.profile_picture else None
+                },
+                'nivel': {
+                    'id': asignacion.nivel.id,
+                    'nombre': asignacion.nivel.nombre,
+                    'orden': asignacion.nivel.orden
+                },
+                'activo': asignacion.activo,
+                'fecha_asignacion': asignacion.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
+                'observaciones': asignacion.observaciones or ''
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'asignaciones': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener asignaciones: {str(e)}'
+        })
+
+
+@login_required
+def api_cambiar_estado_asignacion_comite(request, asignacion_id):
+    """Cambiar el estado activo/inactivo de una asignación"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        import json
+        
+        asignacion = get_object_or_404(UsuarioNivelComite, id=asignacion_id)
+        data = json.loads(request.body)
+        activo = data.get('activo', True)
+        
+        asignacion.activo = activo
+        asignacion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Asignación {"activada" if activo else "desactivada"} exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al cambiar estado: {str(e)}'
+        })
+
+
+@login_required
+def api_eliminar_asignacion_comite(request, asignacion_id):
+    """Eliminar una asignación de usuario a nivel"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        
+        asignacion = get_object_or_404(UsuarioNivelComite, id=asignacion_id)
+        asignacion.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Asignación eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar asignación: {str(e)}'
+        })
+
+
+@login_required
+def api_estadisticas_comite(request):
+    """Obtener estadísticas del comité"""
+    try:
+        from .modelsWorkflow import NivelComite, UsuarioNivelComite
+        
+        total_niveles = NivelComite.objects.count()
+        usuarios_asignados = UsuarioNivelComite.objects.count()
+        usuarios_activos = UsuarioNivelComite.objects.filter(activo=True).count()
+        
+        # Obtener el nivel más alto (menor orden)
+        nivel_mas_alto = NivelComite.objects.order_by('orden').first()
+        nivel_mas_alto_nombre = nivel_mas_alto.nombre if nivel_mas_alto else None
+        
+        return JsonResponse({
+            'success': True,
+            'estadisticas': {
+                'total_niveles': total_niveles,
+                'usuarios_asignados': usuarios_asignados,
+                'usuarios_activos': usuarios_activos,
+                'nivel_mas_alto': nivel_mas_alto_nombre
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener estadísticas: {str(e)}'
+        })
 
 
 @login_required
