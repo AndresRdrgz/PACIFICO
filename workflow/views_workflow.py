@@ -2995,7 +2995,9 @@ def api_cambiar_etapa(request, solicitud_id):
         print(f"🔍 DEBUG: Request data received: {data}")
         
         nueva_etapa_id = data.get('etapa_destino_id') or data.get('etapa_id')
+        nuevo_subestado_id = data.get('subestado_id')
         print(f"🔍 DEBUG: Nueva etapa ID extracted: {nueva_etapa_id}")
+        print(f"🔍 DEBUG: Nuevo subestado ID extracted: {nuevo_subestado_id}")
         
         if not nueva_etapa_id:
             print(f"❌ ERROR: No etapa ID found in request data")
@@ -3003,6 +3005,16 @@ def api_cambiar_etapa(request, solicitud_id):
         
         # Obtener la nueva etapa
         nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
+        
+        # Obtener el nuevo subestado si se especifica
+        nuevo_subestado = None
+        if nuevo_subestado_id:
+            try:
+                nuevo_subestado = get_object_or_404(SubEstado, id=nuevo_subestado_id, etapa=nueva_etapa)
+                print(f"🔍 DEBUG: Nuevo subestado found: {nuevo_subestado.nombre}")
+            except Exception as e:
+                print(f"❌ ERROR: Invalid subestado ID: {e}")
+                return JsonResponse({'error': 'ID de subestado inválido'}, status=400)
         
         # Verificar que la etapa sea diferente a la actual
         if solicitud.etapa_actual == nueva_etapa:
@@ -3077,9 +3089,11 @@ def api_cambiar_etapa(request, solicitud_id):
                 historial_actual.fecha_fin = timezone.now()
                 historial_actual.save()
         
-        # Cambiar la etapa
+        # Cambiar la etapa y subestado
         etapa_anterior = solicitud.etapa_actual
+        subestado_anterior = solicitud.subestado_actual
         solicitud.etapa_actual = nueva_etapa
+        solicitud.subestado_actual = nuevo_subestado
         solicitud.fecha_ultima_actualizacion = timezone.now()
         
         # Si la nueva etapa es grupal, quitar asignación individual
@@ -3178,15 +3192,23 @@ def api_cambiar_etapa(request, solicitud_id):
         
         return JsonResponse({
             'success': True,
-            'mensaje': f'Solicitud {solicitud.codigo} movida de "{etapa_anterior.nombre if etapa_anterior else "Sin etapa"}" a "{nueva_etapa.nombre}"',
+            'mensaje': f'Solicitud {solicitud.codigo} movida de "{etapa_anterior.nombre if etapa_anterior else "Sin etapa"}" a "{nueva_etapa.nombre}"' + (f' - {nuevo_subestado.nombre}' if nuevo_subestado else ''),
             'nueva_etapa': {
                 'id': nueva_etapa.id,
                 'nombre': nueva_etapa.nombre,
                 'orden': nueva_etapa.orden
             },
+            'nuevo_subestado': {
+                'id': nuevo_subestado.id if nuevo_subestado else None,
+                'nombre': nuevo_subestado.nombre if nuevo_subestado else None
+            },
             'etapa_anterior': {
                 'id': etapa_anterior.id if etapa_anterior else None,
                 'nombre': etapa_anterior.nombre if etapa_anterior else None
+            },
+            'subestado_anterior': {
+                'id': subestado_anterior.id if subestado_anterior else None,
+                'nombre': subestado_anterior.nombre if subestado_anterior else None
             }
         })
         
@@ -5243,6 +5265,48 @@ def api_obtener_transiciones_validas(request, solicitud_id):
         }, status=404)
     except Exception as e:
         print(f"Error en api_obtener_transiciones_validas: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_obtener_etapa_con_subestados(request, etapa_id):
+    """API para obtener información de una etapa específica con sus subestados"""
+    try:
+        etapa = get_object_or_404(Etapa, id=etapa_id)
+        
+        # Obtener subestados de la etapa
+        subestados = etapa.subestados.all().order_by('orden')
+        
+        subestados_data = []
+        for subestado in subestados:
+            subestados_data.append({
+                'id': subestado.id,
+                'nombre': subestado.nombre,
+                'orden': subestado.orden
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'etapa': {
+                'id': etapa.id,
+                'nombre': etapa.nombre,
+                'orden': etapa.orden,
+                'es_bandeja_grupal': etapa.es_bandeja_grupal,
+                'tiene_subestados': len(subestados_data) > 0
+            },
+            'subestados': subestados_data
+        })
+        
+    except Etapa.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': 'La etapa no existe'
+        }, status=404)
+    except Exception as e:
+        print(f"Error en api_obtener_etapa_con_subestados: {str(e)}")
         return JsonResponse({
             'success': False, 
             'error': f'Error interno del servidor: {str(e)}'

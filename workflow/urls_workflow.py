@@ -129,6 +129,9 @@ urlpatterns += [
     # API para obtener transiciones válidas
     path('api/solicitudes/<int:solicitud_id>/transiciones-validas/', views_workflow.api_obtener_transiciones_validas, name='api_obtener_transiciones_validas'),
     
+    # API para obtener etapa con subestados
+    path('api/etapas/<int:etapa_id>/subestados/', views_workflow.api_obtener_etapa_con_subestados, name='api_obtener_etapa_con_subestados'),
+    
     # APIs para modal de requisitos faltantes
     path('api/solicitudes/<int:solicitud_id>/requisitos-faltantes-detallado/', views_workflow.api_obtener_requisitos_faltantes_detallado, name='api_obtener_requisitos_faltantes_detallado'),
     path('api/solicitudes/<int:solicitud_id>/subir-requisito-modal/', views_workflow.api_subir_requisito_modal, name='api_subir_requisito_modal'),

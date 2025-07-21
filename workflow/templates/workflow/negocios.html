@@ -990,6 +990,23 @@
                             <span id="nombreEtapaDestino" class="fw-bold text-success" style="font-size: 1.1rem;">Nombre de la Etapa</span>
                         </div>
                     </div>
+                    
+                    <!-- Selector de subestado (mostrar solo si la etapa tiene subestados) -->
+                    <div id="selectorSubestado" class="mb-4" style="display: none;">
+                        <h6 class="fw-bold mb-3 text-dark" style="font-size: 1rem;">
+                            <i class="fas fa-list-ul text-primary me-2"></i>
+                            Seleccionar estado específico:
+                        </h6>
+                        <div class="bg-white border border-success border-opacity-25 rounded-3 p-3">
+                            <select id="subestadoSelect" class="form-select form-select-lg" style="border: 2px solid #e9ecef; border-radius: 8px; font-weight: 600;">
+                                <option value="">Seleccionar estado...</option>
+                            </select>
+                            <small class="text-muted mt-2 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo es requerido para esta etapa
+                            </small>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Información del cambio -->
@@ -1081,6 +1098,15 @@ $(document).ready(function() {
     
     // El sistema de toast regular del workflow ya está disponible
     // No necesitamos configuración adicional para toastr
+    
+    // =====================================
+    // UTILITY FUNCTIONS
+    // =====================================
+    
+    // Función para obtener el token CSRF
+    function getCsrfToken() {
+        return $('[name=csrfmiddlewaretoken]').val() || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
     
     // =====================================
     // INICIALIZACIÓN DE DATATABLES
@@ -1318,6 +1344,8 @@ $(document).ready(function() {
     // Variables globales para el modal
     let modalConfirmCallback = null;
     let modalCancelCallback = null;
+    let currentEtapaId = null;
+    let currentSubestados = [];
     
     // Función para mostrar modal de confirmación
     window.mostrarModalConfirmacion = function(nombreEtapa, onConfirm, onCancel, opciones) {
@@ -1328,13 +1356,17 @@ $(document).ready(function() {
             pregunta: '¿Está seguro del cambio?',
             descripcion: 'La solicitud se moverá a la siguiente etapa:',
             icono: 'fas fa-arrow-right',
-            tipo: 'cambio_etapa' // cambio_etapa, eliminar, accion_general
+            tipo: 'cambio_etapa', // cambio_etapa, eliminar, accion_general
+            etapaId: null
         };
         
         // Sobrescribir configuración si se proporcionan opciones
         if (opciones) {
             configuracion = Object.assign(configuracion, opciones);
         }
+        
+        // Guardar el ID de etapa actual
+        currentEtapaId = configuracion.etapaId;
         
         // Configurar para diferentes tipos de acción
         if (nombreEtapa === 'Eliminar Solicitud' || configuracion.tipo === 'eliminar') {
@@ -1343,9 +1375,18 @@ $(document).ready(function() {
             configuracion.descripcion = 'Esta acción no se puede deshacer:';
             configuracion.icono = 'fas fa-trash';
             $('#nombreEtapaDestino').html('<span class="text-danger fw-bold">Esta acción es permanente</span>');
+            // Ocultar selector de subestado para eliminación
+            $('#selectorSubestado').hide();
         } else {
             // Para cambio de etapa normal
             $('#nombreEtapaDestino').text(nombreEtapa);
+            
+            // Cargar subestados si se proporciona etapaId
+            if (currentEtapaId) {
+                cargarSubestados(currentEtapaId);
+            } else {
+                $('#selectorSubestado').hide();
+            }
         }
         
         // Actualizar contenido del modal
@@ -1362,16 +1403,99 @@ $(document).ready(function() {
         // Mostrar el modal
         var modal = new bootstrap.Modal(document.getElementById('modalConfirmacionEtapa'));
         modal.show();
+        
+        // Validar formulario inicial cuando se muestre el modal
+        $('#modalConfirmacionEtapa').on('shown.bs.modal', function() {
+            validarFormularioModal();
+        });
     };
+    
+    // Función para cargar subestados de una etapa
+    function cargarSubestados(etapaId) {
+        console.log('🔍 Cargando subestados para etapa:', etapaId);
+        
+        fetch(`/workflow/api/etapas/${etapaId}/subestados/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.subestados && data.subestados.length > 0) {
+                console.log('✅ Subestados cargados:', data.subestados);
+                currentSubestados = data.subestados;
+                mostrarSelectorSubestado(data.subestados);
+            } else {
+                console.log('ℹ️ No hay subestados para esta etapa');
+                $('#selectorSubestado').hide();
+                currentSubestados = [];
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando subestados:', error);
+            $('#selectorSubestado').hide();
+            currentSubestados = [];
+        });
+    }
+    
+    // Función para mostrar el selector de subestados
+    function mostrarSelectorSubestado(subestados) {
+        const select = $('#subestadoSelect');
+        select.empty();
+        select.append('<option value="">Seleccionar estado...</option>');
+        
+        subestados.forEach(subestado => {
+            select.append(`<option value="${subestado.id}">${subestado.nombre}</option>`);
+        });
+        
+        $('#selectorSubestado').show();
+        
+        // Validar selección al cambiar
+        select.on('change', function() {
+            validarFormularioModal();
+        });
+    }
+    
+    // Función para validar el formulario del modal
+    function validarFormularioModal() {
+        const btnAceptar = $('#btnAceptarModal');
+        
+        // Si hay subestados disponibles, debe seleccionar uno
+        if (currentSubestados.length > 0) {
+            const subestadoSeleccionado = $('#subestadoSelect').val();
+            if (!subestadoSeleccionado) {
+                btnAceptar.prop('disabled', true);
+                btnAceptar.html('<i class="fas fa-exclamation-triangle me-2"></i>Seleccionar Estado');
+                return false;
+            } else {
+                btnAceptar.prop('disabled', false);
+                btnAceptar.html('<i class="fas fa-check me-2"></i>Aceptar');
+                return true;
+            }
+        } else {
+            // No hay subestados, siempre válido
+            btnAceptar.prop('disabled', false);
+            btnAceptar.html('<i class="fas fa-check me-2"></i>Aceptar');
+            return true;
+        }
+    }
     
     // Event listeners para los botones del modal
     $('#btnAceptarModal').on('click', function() {
+        // Validar formulario antes de proceder
+        if (!validarFormularioModal()) {
+            return;
+        }
+        
         // Ocultar modal
         bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
         
-        // Ejecutar callback de confirmación
+        // Ejecutar callback de confirmación con datos de subestado
         if (modalConfirmCallback) {
-            modalConfirmCallback();
+            const subestadoSeleccionado = $('#subestadoSelect').val();
+            modalConfirmCallback(subestadoSeleccionado);
         }
     });
     
@@ -1652,7 +1776,7 @@ $(document).ready(function() {
                     window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nombreEtapa, function() {
                         // Callback de éxito - proceder con el cambio
                         console.log('✅ Requisitos completados, procediendo con cambio de etapa');
-                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
+                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select, null);
                     }, function() {
                         // Callback de cancelación
                         console.log('❌ Cambio de etapa cancelado');
@@ -1672,14 +1796,17 @@ $(document).ready(function() {
         }
         
         // Mostrar modal de confirmación personalizado
-        mostrarModalConfirmacion(nombreEtapa, function() {
+        mostrarModalConfirmacion(nombreEtapa, function(subestadoSeleccionado) {
             // CALLBACK DE CONFIRMACIÓN
             console.log('✅ Confirmado desde modal personalizado, ejecutando cambio de etapa');
-            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select);
+            console.log('🔍 Subestado seleccionado:', subestadoSeleccionado);
+            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select, subestadoSeleccionado);
         }, function() {
             // CALLBACK DE CANCELACIÓN
             console.log('❌ Cancelado desde modal personalizado');
             $select.val(etapaActual); // Revertir selección
+        }, {
+            etapaId: nuevaEtapaId
         });
     });
     
@@ -2707,7 +2834,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nuevaEtapaNombre, function() {
                                         // Callback de éxito - proceder con el cambio
                                         console.log('✅ Requisitos completados, procediendo con cambio de etapa');
-                                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
+                                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, null, true, nuevaEtapaNombre);
                                     }, function() {
                                         // Callback de cancelación
                                         console.log('❌ Cambio de etapa cancelado');
@@ -2751,7 +2878,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.mostrarModalConfirmacion(nuevaEtapaNombre, function() {
                         // Función que se ejecuta al confirmar - usar función unificada
                         console.log('Ejecutando cambio de etapa Drag & Drop:', solicitudId, nuevaEtapaId);
-                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, true, nuevaEtapaNombre);
+                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, null, null, null, true, nuevaEtapaNombre);
                     });
                 });
                 return;
@@ -4829,12 +4956,23 @@ window.probarSistemaRequisitos = function() {
 }
 
 // Función unificada para ejecutar el cambio de etapa (funciona para tabla y kanban)
-window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select, esKanban = false, etapaNombre = null) {
-    console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, esKanban, etapaNombre });
+window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select, subestadoSeleccionado = null, esKanban = false, etapaNombre = null) {
+    console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, subestadoSeleccionado, esKanban, etapaNombre });
     
     // Deshabilitar select mientras se procesa (solo para tabla)
     if ($select && !esKanban) {
         $select.prop('disabled', true);
+    }
+    
+    // Preparar datos de la petición
+    const requestData = {
+        etapa_id: nuevaEtapaId
+    };
+    
+    // Agregar subestado si se seleccionó uno
+    if (subestadoSeleccionado) {
+        requestData.subestado_id = subestadoSeleccionado;
+        console.log('🔍 Incluyendo subestado en la petición:', subestadoSeleccionado);
     }
     
     // Realizar petición AJAX
@@ -4844,9 +4982,7 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
             'Content-Type': 'application/json',
             'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
         },
-        body: JSON.stringify({
-            etapa_id: nuevaEtapaId
-        })
+        body: JSON.stringify(requestData)
     })
     .then(response => response.json())
     .then(data => {

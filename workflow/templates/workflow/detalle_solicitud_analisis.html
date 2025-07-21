@@ -3534,6 +3534,25 @@
                                     Este es un requisito obligatorio para el cambio de etapa.
                                 </div>
                             ` : ''}
+                            
+                            <!-- Selector de subestado (mostrar solo si la etapa tiene subestados) -->
+                            <div id="selectorSubestado" class="mt-3" style="display: none;">
+                                <div class="alert alert-warning">
+                                    <h6 class="fw-bold mb-3 text-dark" style="font-size: 1rem;">
+                                        <i class="fas fa-list-ul text-primary me-2"></i>
+                                        Seleccionar estado específico para <strong>${targetStageName}</strong>:
+                                    </h6>
+                                    <div class="bg-white border border-warning border-opacity-25 rounded-3 p-3">
+                                        <select id="subestadoSelect" class="form-select form-select-lg" style="border: 2px solid #e9ecef; border-radius: 8px; font-weight: 600;">
+                                            <option value="">Cargando estados...</option>
+                                        </select>
+                                        <small class="text-muted mt-2 d-block">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Debe seleccionar un estado específico para continuar
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -3557,14 +3576,110 @@
         const modal = new bootstrap.Modal(document.getElementById('stageChangeConfirmationModal'));
         modal.show();
         
+        // Load subestados for the target stage after modal is shown
+        modal._element.addEventListener('shown.bs.modal', async () => {
+            await loadSubestadosForStage(targetStageName);
+        });
+        
         // Add event listener for confirmation
         document.getElementById('confirmStageChange').addEventListener('click', () => {
+            // Validate subestado selection if subestados are available
+            const subestadoSelect = document.getElementById('subestadoSelect');
+            const selectorSubestado = document.getElementById('selectorSubestado');
+            
+            if (selectorSubestado && selectorSubestado.style.display !== 'none') {
+                const selectedSubestado = subestadoSelect.value;
+                if (!selectedSubestado) {
+                    alert('Debe seleccionar un estado específico para continuar.');
+                    return;
+                }
+            }
+            
             modal.hide();
             // Proceed with stage change
             proceedWithStageChange(targetStageName);
         });
         
         return true;
+    };
+
+    // Function to load subestados for a target stage
+    const loadSubestadosForStage = async (targetStageName) => {
+        try {
+            // Find the target stage ID from the dropdown menu
+            const stageButtons = document.querySelectorAll('.dropdown-item');
+            let targetStageId = null;
+            
+            for (const button of stageButtons) {
+                const buttonText = button.textContent.trim();
+                if (buttonText.includes(targetStageName)) {
+                    const onclick = button.getAttribute('onclick');
+                    if (onclick) {
+                        const match = onclick.match(/handleTransicionClick\((\d+),/);
+                        if (match) {
+                            targetStageId = parseInt(match[1]);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!targetStageId) {
+                console.log('Could not find stage ID for:', targetStageName);
+                return;
+            }
+            
+            console.log('Loading subestados for stage ID:', targetStageId);
+            
+            // Load subestados from API
+            const response = await fetch(`/workflow/api/etapas/${targetStageId}/subestados/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to load subestados:', response.status);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('Subestados response:', data);
+            
+            if (data.success && data.subestados && data.subestados.length > 0) {
+                // Show subestado selector
+                const selectorSubestado = document.getElementById('selectorSubestado');
+                const subestadoSelect = document.getElementById('subestadoSelect');
+                
+                if (selectorSubestado && subestadoSelect) {
+                    // Clear existing options
+                    subestadoSelect.innerHTML = '<option value="">Seleccionar estado...</option>';
+                    
+                    // Add subestado options
+                    data.subestados.forEach(subestado => {
+                        const option = document.createElement('option');
+                        option.value = subestado.id;
+                        option.textContent = subestado.nombre;
+                        subestadoSelect.appendChild(option);
+                    });
+                    
+                    // Show the selector
+                    selectorSubestado.style.display = 'block';
+                    console.log('Subestado selector shown with', data.subestados.length, 'options');
+                }
+            } else {
+                console.log('No subestados found for this stage');
+                // Hide the selector if it's visible
+                const selectorSubestado = document.getElementById('selectorSubestado');
+                if (selectorSubestado) {
+                    selectorSubestado.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading subestados:', error);
+        }
     };
 
     // Proceed with actual stage change
@@ -3619,10 +3734,20 @@
             // Show loading state
             showNotification(`Cambiando a etapa: ${etapaNombre}...`, 'info');
 
+            // Get selected subestado if available
+            const subestadoSelect = document.getElementById('subestadoSelect');
+            const selectedSubestado = subestadoSelect ? subestadoSelect.value : null;
+            
             const requestBody = {
                 etapa_destino_id: etapaId,
                 comentarios_analista: document.getElementById('comentario-analista-credito-text')?.value || ''
             };
+            
+            // Add subestado if selected
+            if (selectedSubestado) {
+                requestBody.subestado_id = parseInt(selectedSubestado);
+                console.log('Including subestado ID:', selectedSubestado);
+            }
             
             console.log('Request body:', requestBody);
 
