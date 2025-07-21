@@ -52,6 +52,12 @@
                             </button>
                         </div>
                         
+                        <!-- Botón APC Tracking -->
+                        <a href="{% url 'workflow:apc_tracking' %}" class="btn btn-info btn-sm" title="Tracking APC Makito">
+                            <i class="fas fa-robot me-1"></i>
+                            APC Tracking
+                        </a>
+                        
                         {% if pipeline %}
                         <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext('{{ pipeline.id }}')">
                             <i class="fas fa-plus me-1"></i>Nueva Solicitud
@@ -3309,6 +3315,15 @@ document.addEventListener('DOMContentLoaded', function() {
     display: block !important;
 }
 
+/* Ensure APC Makito section is hidden by default */
+#apcMakitoSection {
+    display: none !important;
+}
+
+#apcMakitoSection.show {
+    display: block !important;
+}
+
 .toast-notification.success {
     background: #28a745;
 }
@@ -3528,12 +3543,26 @@ window.resetForm = function() {
     // Hide dynamic sections
     const motivoSection = document.getElementById('motivoConsultaSection');
     const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
+    const apcMakitoSection = document.getElementById('apcMakitoSection');
     
     if (motivoSection) {
         motivoSection.classList.remove('show');
     }
     if (comoSeEnteroSection) {
         comoSeEnteroSection.classList.remove('show');
+    }
+    if (apcMakitoSection) {
+        apcMakitoSection.classList.remove('show');
+        // Reset APC specific fields
+        const apcCheckbox = document.getElementById('descargarApcMakito');
+        const apcCamposAdicionales = document.getElementById('apcCamposAdicionales');
+        const apcTipoDocumento = document.getElementById('apcTipoDocumento');
+        const apcNoCedula = document.getElementById('apcNoCedula');
+        
+        if (apcCheckbox) apcCheckbox.checked = false;
+        if (apcCamposAdicionales) apcCamposAdicionales.style.display = 'none';
+        if (apcTipoDocumento) apcTipoDocumento.value = '';
+        if (apcNoCedula) apcNoCedula.value = '';
     }
     
     hideSearchResults();
@@ -3590,6 +3619,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setupSearch();
         console.log('✅ Search functionality initialized');
     }
+    
+    // Setup APC Makito functionality
+    setupApcMakitoToggle();
+    console.log('✅ APC Makito functionality initialized');
     
     console.log('✅ Drawer functionality initialized successfully');
 });
@@ -3730,6 +3763,34 @@ window.renderRequisitos = function(requisitos) {
     }, 100);
     
     console.log('✅ Requisitos rendered successfully');
+};
+
+// Setup APC Makito toggle functionality
+window.setupApcMakitoToggle = function() {
+    console.log('🔧 setupApcMakitoToggle called');
+    
+    const apcCheckbox = document.getElementById('descargarApcMakito');
+    const apcCamposAdicionales = document.getElementById('apcCamposAdicionales');
+    
+    if (apcCheckbox && apcCamposAdicionales) {
+        apcCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                apcCamposAdicionales.style.display = 'block';
+                console.log('✅ APC campos adicionales shown');
+            } else {
+                apcCamposAdicionales.style.display = 'none';
+                // Clear the fields when hiding
+                const tipoDocumento = document.getElementById('apcTipoDocumento');
+                const noCedula = document.getElementById('apcNoCedula');
+                if (tipoDocumento) tipoDocumento.value = '';
+                if (noCedula) noCedula.value = '';
+                console.log('✅ APC campos adicionales hidden and cleared');
+            }
+        });
+        console.log('✅ APC checkbox event listener added');
+    } else {
+        console.log('⚠️ APC elements not found');
+    }
 };
 
 window.setupSearch = function() {
@@ -3919,6 +3980,12 @@ function selectItem(type, item) {
                     comoSeEnteroSection.classList.add('show');
                 }
                 
+                // Show APC Makito section
+                const apcMakitoSection = document.getElementById('apcMakitoSection');
+                if (apcMakitoSection) {
+                    apcMakitoSection.classList.add('show');
+                }
+                
                 // Auto-populate cliente from cotización
                 autoPopulateClienteFromCotizacion(item);
             } else {
@@ -4085,6 +4152,23 @@ window.submitSolicitud = function() {
     if (!comoSeEntero) {
         alert('Por favor selecciona cómo se enteró de nuestros servicios');
         return;
+    }
+    
+    // Validar campos APC si está activado
+    const descargarApc = formData.get('descargar_apc_makito');
+    if (descargarApc) {
+        const apcTipoDocumento = formData.get('apc_tipo_documento');
+        const apcNoCedula = formData.get('apc_no_cedula');
+        
+        if (!apcTipoDocumento) {
+            alert('Por favor selecciona el tipo de documento para APC');
+            return;
+        }
+        
+        if (!apcNoCedula || apcNoCedula.trim() === '') {
+            alert('Por favor ingresa el número de documento para APC');
+            return;
+        }
     }
     
     // If pipeline was locked, add it to form data

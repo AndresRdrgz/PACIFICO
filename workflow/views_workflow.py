@@ -10,6 +10,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.db import models
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 import os
 import tempfile
 from PyPDF2 import PdfMerger
@@ -28,6 +30,7 @@ from .modelsWorkflow import (
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
+import ssl
 import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -763,9 +766,14 @@ def nueva_solicitud(request):
             if cotizacion_id:
                 cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
             
-            # Obtener motivo de consulta y como se enteró del formulario
+            # Obtener motivo de consulta, como se enteró y APC fields del formulario
             motivo_consulta = request.POST.get('motivo_consulta', '')
             como_se_entero = request.POST.get('como_se_entero', '')
+            
+            # APC Makito fields
+            descargar_apc_makito = request.POST.get('descargar_apc_makito') == '1'
+            apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
+            apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
             
             # Crear solicitud
             solicitud = Solicitud.objects.create(
@@ -776,7 +784,10 @@ def nueva_solicitud(request):
                 cliente=cliente,
                 cotizacion=cotizacion,
                 motivo_consulta=motivo_consulta,
-                como_se_entero=como_se_entero if como_se_entero else None
+                como_se_entero=como_se_entero if como_se_entero else None,
+                descargar_apc_makito=descargar_apc_makito,
+                apc_no_cedula=apc_no_cedula,
+                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None
             )
             
             # Crear historial inicial
@@ -830,6 +841,10 @@ def nueva_solicitud(request):
                         valor_campo.valor_booleano = valor == 'true'
                     
                     valor_campo.save()
+            
+            # Send APC email if requested
+            if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
+                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento)
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2973,6 +2988,91 @@ def enviar_correo_comite_credito(solicitud, etapa):
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo del comité para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
+    """
+    Función para enviar correo automático cuando se solicita descargar APC con Makito.
+    """
+    try:
+        # Destinatario específico para APC
+        destinatarios = ["arodriguez@fpacifico.com"]
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        
+        # Obtener correo del solicitante
+        correo_solicitante = solicitud.creada_por.email or "No especificado"
+        
+        # Crear el asunto específico para APC
+        subject = f"workflowAPC - {cliente_nombre} - {no_cedula}"
+        
+        # Mensaje de texto plano
+        text_content = f"""
+        Solicitud de Descarga APC con Makito
+        
+        Hola,
+        
+        Se ha solicitado la descarga del APC para la siguiente solicitud:
+        
+        • Código de Solicitud: {solicitud.codigo}
+        • Cliente: {cliente_nombre}
+        • Tipo de Documento: {tipo_documento.title()}
+        • Número de Documento: {no_cedula}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Correo Solicitante: {correo_solicitante}
+        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        Información para APC:
+        Tipo de documento: {tipo_documento.title()}
+        Número de documento: {no_cedula}
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        # Actualizar el estado APC después de enviar el correo exitosamente
+        from django.utils import timezone
+        solicitud.apc_status = 'pending'
+        solicitud.apc_fecha_solicitud = timezone.now()
+        solicitud.save(update_fields=['apc_status', 'apc_fecha_solicitud'])
+        
+        print(f"✅ Correo APC enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"✅ Estado APC actualizado a 'pending'")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo APC para solicitud {solicitud.codigo}: {str(e)}")
 
 
 @login_required
@@ -6963,4 +7063,200 @@ def api_obtener_usuarios_disponibles_comite(request):
         return JsonResponse({
             'success': False,
             'error': f'Error al obtener usuarios: {str(e)}'
+        }, status=500)
+
+
+# ==========================================
+# VISTAS Y APIs PARA TRACKING DE APC MAKITO
+# ==========================================
+
+@login_required
+def apc_tracking_view(request):
+    """
+    Vista para mostrar el tracking de solicitudes APC pendientes con Makito
+    """
+    try:
+        # Obtener todas las solicitudes que tienen APC habilitado
+        solicitudes_apc = Solicitud.objects.filter(
+            descargar_apc_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+        ).order_by('-apc_fecha_solicitud')
+        
+        context = {
+            'solicitudes_apc': solicitudes_apc,
+            'title': 'Tracking APC Makito',
+        }
+        
+        return render(request, 'workflow/apc_tracking.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar el tracking de APC: {str(e)}')
+        return redirect('workflow:bandeja_general')
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_makito_update_status(request, solicitud_codigo):
+    """
+    API para que Makito RPA actualice el estado de una solicitud APC
+    URL: /workflow/api/makito/update-status/{codigo}/
+    
+    Body esperado:
+    {
+        "status": "in_progress" | "completed" | "error",
+        "observaciones": "Opcional: descripción del proceso"
+    }
+    """
+    try:
+        import json
+        from django.utils import timezone
+        
+        # Parsear datos JSON
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Datos JSON inválidos'
+            }, status=400)
+        
+        # Validar campos requeridos
+        nuevo_status = data.get('status')
+        observaciones = data.get('observaciones', '')
+        
+        if not nuevo_status:
+            return JsonResponse({
+                'success': False,
+                'error': 'Campo status es requerido'
+            }, status=400)
+        
+        # Validar que el status sea válido
+        status_validos = ['pending', 'in_progress', 'completed', 'error']
+        if nuevo_status not in status_validos:
+            return JsonResponse({
+                'success': False,
+                'error': f'Status inválido. Valores permitidos: {status_validos}'
+            }, status=400)
+        
+        # Buscar la solicitud por código
+        try:
+            solicitud = Solicitud.objects.get(codigo=solicitud_codigo, descargar_apc_makito=True)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada o no tiene APC habilitado'
+            }, status=404)
+        
+        # Actualizar el status y timestamps correspondientes
+        solicitud.apc_status = nuevo_status
+        solicitud.apc_observaciones = observaciones
+        
+        now = timezone.now()
+        fields_to_update = ['apc_status', 'apc_observaciones']
+        
+        if nuevo_status == 'in_progress' and not solicitud.apc_fecha_inicio:
+            solicitud.apc_fecha_inicio = now
+            fields_to_update.append('apc_fecha_inicio')
+        
+        if nuevo_status == 'completed' and not solicitud.apc_fecha_completado:
+            solicitud.apc_fecha_completado = now
+            fields_to_update.append('apc_fecha_completado')
+        
+        solicitud.save(update_fields=fields_to_update)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Status APC actualizado a {nuevo_status} para solicitud {solicitud_codigo}',
+            'data': {
+                'codigo': solicitud.codigo,
+                'status': solicitud.apc_status,
+                'fecha_solicitud': solicitud.apc_fecha_solicitud.isoformat() if solicitud.apc_fecha_solicitud else None,
+                'fecha_inicio': solicitud.apc_fecha_inicio.isoformat() if solicitud.apc_fecha_inicio else None,
+                'fecha_completado': solicitud.apc_fecha_completado.isoformat() if solicitud.apc_fecha_completado else None,
+                'observaciones': solicitud.apc_observaciones
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_apc_list(request):
+    """
+    API para obtener la lista de solicitudes APC con filtros
+    """
+    try:
+        # Parámetros de filtro
+        status_filter = request.GET.get('status', '')
+        fecha_desde = request.GET.get('fecha_desde', '')
+        fecha_hasta = request.GET.get('fecha_hasta', '')
+        
+        # Query base
+        queryset = Solicitud.objects.filter(
+            descargar_apc_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual'
+        )
+        
+        # Aplicar filtros
+        if status_filter:
+            queryset = queryset.filter(apc_status=status_filter)
+        
+        if fecha_desde:
+            try:
+                from datetime import datetime
+                fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+                queryset = queryset.filter(apc_fecha_solicitud__date__gte=fecha_desde_obj)
+            except ValueError:
+                pass
+        
+        if fecha_hasta:
+            try:
+                from datetime import datetime
+                fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+                queryset = queryset.filter(apc_fecha_solicitud__date__lte=fecha_hasta_obj)
+            except ValueError:
+                pass
+        
+        # Ordenar por fecha de solicitud más reciente
+        queryset = queryset.order_by('-apc_fecha_solicitud')
+        
+        # Construir respuesta
+        data = []
+        for solicitud in queryset:
+            data.append({
+                'codigo': solicitud.codigo,
+                'cliente_nombre': solicitud.cliente_nombre,
+                'apc_tipo_documento': solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else '',
+                'apc_no_cedula': solicitud.apc_no_cedula,
+                'apc_status': solicitud.apc_status,
+                'apc_status_display': solicitud.get_apc_status_display(),
+                'pipeline': solicitud.pipeline.nombre,
+                'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+                'creada_por_email': solicitud.creada_por.email,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+                'fecha_creacion': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_solicitud else '',
+                'apc_fecha_inicio': solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else '',
+                'apc_fecha_completado': solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_completado else '',
+                'apc_observaciones': solicitud.apc_observaciones or '',
+                'url_detail': f'/workflow/solicitud/{solicitud.id}/'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'total': len(data),
+            'solicitudes': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener lista APC: {str(e)}'
         }, status=500)

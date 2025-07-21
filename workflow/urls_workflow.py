@@ -173,6 +173,11 @@ urlpatterns += [
     # APIs para asignación de solicitudes
     path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),
     path('api/solicitudes/<int:solicitud_id>/asignar-usuario/', api.api_asignar_usuario, name='api_asignar_usuario'),
+    
+    # APC Makito Tracking URLs
+    path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
+    path('api/apc/list/', views_workflow.api_apc_list, name='api_apc_list'),
+    path('api/makito/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_update_status, name='api_makito_update_status'),
 ]
 
 

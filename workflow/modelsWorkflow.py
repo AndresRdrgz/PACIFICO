@@ -119,6 +119,28 @@ class Solicitud(models.Model):
     
     # Cómo se enteró del servicio
     como_se_entero = models.CharField(max_length=50, choices=COMO_SE_ENTERO_CHOICES, null=True, blank=True, help_text="Cómo se enteró del servicio")
+    
+    # APC con Makito fields
+    TIPO_DOCUMENTO_CHOICES = [
+        ('cedula', 'Cédula'),
+        ('pasaporte', 'Pasaporte'),
+    ]
+    
+    APC_STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('in_progress', 'En Proceso'),
+        ('completed', 'Completado'),
+        ('error', 'Error'),
+    ]
+    
+    descargar_apc_makito = models.BooleanField(default=False, help_text="Indica si se debe descargar APC con Makito")
+    apc_no_cedula = models.CharField(max_length=50, null=True, blank=True, help_text="Número de cédula o pasaporte para APC")
+    apc_tipo_documento = models.CharField(max_length=20, choices=TIPO_DOCUMENTO_CHOICES, null=True, blank=True, help_text="Tipo de documento para APC")
+    apc_status = models.CharField(max_length=20, choices=APC_STATUS_CHOICES, default='pending', help_text="Estado del proceso APC con Makito")
+    apc_fecha_solicitud = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se solicitó el APC")
+    apc_fecha_inicio = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando Makito inició el proceso")
+    apc_fecha_completado = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se completó el proceso APC")
+    apc_observaciones = models.TextField(blank=True, null=True, help_text="Observaciones del proceso APC")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"

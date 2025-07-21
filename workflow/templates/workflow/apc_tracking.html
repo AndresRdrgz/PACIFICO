@@ -1,0 +1,789 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Tracking APC Makito{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #2d5a2d;
+        --primary-hover: #1e5f2a;
+        --background-color: #f8fafc;
+        --card-background: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --border-radius: 12px;
+        --border-radius-sm: 8px;
+    }
+
+    /* Override with Pacifico green if available */
+    .apc-tracking-container {
+        --primary-color: var(--verde-pacifico, #2d5a2d) !important;
+    }
+
+    /* Ensure styles are applied with higher specificity */
+    body .apc-tracking-container {
+        padding: 24px;
+        background: var(--background-color);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    body .apc-header {
+        background: var(--card-background) !important;
+        border-radius: var(--border-radius);
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+    }
+
+    body .apc-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    }
+    
+    body .apc-filters {
+        background: var(--card-background) !important;
+        border-radius: var(--border-radius);
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    body .apc-table-container {
+        background: var(--card-background) !important;
+        border-radius: var(--border-radius);
+        padding: 24px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        transition: all 0.2s ease;
+    }
+    
+    .status-pending {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+        border: 1px solid #f59e0b;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+    }
+    
+    .status-in_progress {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+        border: 1px solid #3b82f6;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        animation: pulse 2s infinite;
+    }
+    
+    .status-completed {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        color: #065f46;
+        border: 1px solid #10b981;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-error {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #991b1b;
+        border: 1px solid #ef4444;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .apc-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 16px;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .apc-table th,
+    .apc-table td {
+        padding: 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+    
+    .apc-table th {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .apc-table th:first-child {
+        border-top-left-radius: var(--border-radius-sm);
+    }
+
+    .apc-table th:last-child {
+        border-top-right-radius: var(--border-radius-sm);
+    }
+    
+    .apc-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .apc-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .apc-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    body .refresh-btn {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)) !important;
+        color: white !important;
+        border: none;
+        padding: 12px 20px;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    body .refresh-btn:hover {
+        background: linear-gradient(135deg, var(--primary-hover), #155a15) !important;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        color: white !important;
+    }
+
+    body .refresh-btn:active {
+        transform: translateY(0);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        align-items: end;
+    }
+
+    @media (max-width: 768px) {
+        .filter-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        padding: 12px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        background: var(--card-background);
+        color: var(--text-primary);
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+    }
+
+    .filter-group select:hover,
+    .filter-group input:hover {
+        border-color: var(--primary-color);
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+        font-style: italic;
+    }
+
+    .no-data i {
+        font-size: 4rem;
+        color: var(--border-color);
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .no-data p {
+        font-size: 1.125rem;
+        margin: 0;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    body .stat-card {
+        background: var(--card-background) !important;
+        border-radius: var(--border-radius);
+        padding: 24px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+    }
+
+    body .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    body .stat-number {
+        font-size: 3rem !important;
+        font-weight: 800 !important;
+        color: var(--primary-color) !important;
+        line-height: 1;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    body .stat-label {
+        color: var(--text-secondary) !important;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--border-color);
+        border-top: 3px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .section-title {
+        margin: 0 0 20px 0;
+        color: var(--text-primary);
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .section-title i {
+        color: var(--primary-color);
+        font-size: 1.125rem;
+    }
+
+    .header-title {
+        margin: 0;
+        color: var(--primary-color);
+        font-size: 2rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .header-subtitle {
+        margin: 8px 0 0 0;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        font-weight: 400;
+    }
+
+    .btn-action {
+        background: var(--card-background);
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        padding: 8px 12px;
+        border-radius: var(--border-radius-sm);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .btn-action:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+        text-decoration: none;
+    }
+
+    .table-responsive {
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    @media (max-width: 768px) {
+        .apc-tracking-container {
+            padding: 16px;
+        }
+
+        .apc-header {
+            padding: 20px;
+        }
+
+        .apc-filters,
+        .apc-table-container {
+            padding: 20px;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+        }
+
+        .apc-table th,
+        .apc-table td {
+            padding: 12px 8px;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="apc-tracking-container">
+    <!-- Header -->
+    <div class="apc-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <h2 class="header-title">
+                    <i class="fas fa-robot"></i> Tracking APC Makito
+                </h2>
+                <p class="header-subtitle">
+                    Seguimiento de solicitudes de APC procesadas por Makito RPA
+                </p>
+            </div>
+            <button class="refresh-btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="stats-row" id="statsContainer">
+        <div class="stat-card">
+            <div class="stat-number" id="totalCount">-</div>
+            <div class="stat-label">Total APC</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="pendingCount">-</div>
+            <div class="stat-label">Pendientes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="inProgressCount">-</div>
+            <div class="stat-label">En Proceso</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="completedCount">-</div>
+            <div class="stat-label">Completados</div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="apc-filters">
+        <h4 class="section-title">
+            <i class="fas fa-filter"></i> Filtros
+        </h4>
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="statusFilter">Estado</label>
+                <select id="statusFilter" onchange="applyFilters()">
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="in_progress">En Proceso</option>
+                    <option value="completed">Completado</option>
+                    <option value="error">Error</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="fechaDesde">Fecha Desde</label>
+                <input type="date" id="fechaDesde" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label for="fechaHasta">Fecha Hasta</label>
+                <input type="date" id="fechaHasta" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>&nbsp;</label>
+                <button class="refresh-btn" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabla de solicitudes -->
+    <div class="apc-table-container">
+        <h4 class="section-title">
+            <i class="fas fa-list"></i> Solicitudes APC
+        </h4>
+        
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <span>Cargando datos...</span>
+        </div>
+        
+        <div id="tableContainer" class="table-responsive">
+            <table class="apc-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Cliente</th>
+                        <th>Documento</th>
+                        <th>Estado</th>
+                        <th>Pipeline</th>
+                        <th>Solicitado por</th>
+                        <th>Fecha Solicitud</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Completado</th>
+                        <th>Observaciones</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="apcTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="noDataMessage" class="no-data" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <p>No se encontraron solicitudes APC con los filtros aplicados</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentData = [];
+
+// Función para cargar datos iniciales
+document.addEventListener('DOMContentLoaded', function() {
+    loadApcData();
+});
+
+// Función para cargar datos de APC
+async function loadApcData() {
+    showLoading(true);
+    
+    try {
+        const params = new URLSearchParams();
+        
+        // Aplicar filtros
+        const statusFilter = document.getElementById('statusFilter').value;
+        const fechaDesde = document.getElementById('fechaDesde').value;
+        const fechaHasta = document.getElementById('fechaHasta').value;
+        
+        if (statusFilter) params.append('status', statusFilter);
+        if (fechaDesde) params.append('fecha_desde', fechaDesde);
+        if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+        
+        const response = await fetch(`/workflow/api/apc/list/?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentData = data.solicitudes;
+            updateStats(data.solicitudes);
+            renderTable(data.solicitudes);
+        } else {
+            console.error('Error al cargar datos:', data.error);
+            showError('Error al cargar los datos: ' + data.error);
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión al cargar los datos');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Función para mostrar/ocultar loading
+function showLoading(show) {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const tableContainer = document.getElementById('tableContainer');
+    const noDataMessage = document.getElementById('noDataMessage');
+    
+    if (show) {
+        loadingIndicator.style.display = 'block';
+        tableContainer.style.display = 'none';
+        noDataMessage.style.display = 'none';
+    } else {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+// Función para actualizar estadísticas
+function updateStats(solicitudes) {
+    const total = solicitudes.length;
+    const pending = solicitudes.filter(s => s.apc_status === 'pending').length;
+    const inProgress = solicitudes.filter(s => s.apc_status === 'in_progress').length;
+    const completed = solicitudes.filter(s => s.apc_status === 'completed').length;
+    
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('pendingCount').textContent = pending;
+    document.getElementById('inProgressCount').textContent = inProgress;
+    document.getElementById('completedCount').textContent = completed;
+}
+
+// Función para renderizar la tabla
+function renderTable(solicitudes) {
+    const tbody = document.getElementById('apcTableBody');
+    const tableContainer = document.getElementById('tableContainer');
+    const noDataMessage = document.getElementById('noDataMessage');
+    
+    if (solicitudes.length === 0) {
+        tableContainer.style.display = 'none';
+        noDataMessage.style.display = 'block';
+        return;
+    }
+    
+    tableContainer.style.display = 'block';
+    noDataMessage.style.display = 'none';
+    
+    tbody.innerHTML = '';
+    
+    solicitudes.forEach(solicitud => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+            <td>
+                <strong>${solicitud.codigo}</strong>
+            </td>
+            <td>${solicitud.cliente_nombre || 'Sin cliente'}</td>
+            <td>
+                ${solicitud.apc_tipo_documento} <br>
+                <small class="text-muted">${solicitud.apc_no_cedula}</small>
+            </td>
+            <td>
+                <span class="status-badge status-${solicitud.apc_status}">
+                    ${getStatusIcon(solicitud.apc_status)} ${solicitud.apc_status_display}
+                </span>
+            </td>
+            <td>${solicitud.pipeline}</td>
+            <td>
+                ${solicitud.creada_por}<br>
+                <small class="text-muted">${solicitud.creada_por_email}</small>
+            </td>
+            <td>${solicitud.apc_fecha_solicitud || '-'}</td>
+            <td>${solicitud.apc_fecha_inicio || '-'}</td>
+            <td>${solicitud.apc_fecha_completado || '-'}</td>
+            <td>
+                ${solicitud.apc_observaciones ? 
+                    `<span title="${solicitud.apc_observaciones}">${solicitud.apc_observaciones.substring(0, 50)}${solicitud.apc_observaciones.length > 50 ? '...' : ''}</span>` 
+                    : '-'}
+            </td>
+            <td>
+                <a href="${solicitud.url_detail}" class="btn-action" title="Ver detalles">
+                    <i class="fas fa-eye"></i> Ver
+                </a>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Función para obtener ícono de estado
+function getStatusIcon(status) {
+    const icons = {
+        'pending': '<i class="fas fa-clock"></i>',
+        'in_progress': '<i class="fas fa-cog fa-spin"></i>',
+        'completed': '<i class="fas fa-check-circle"></i>',
+        'error': '<i class="fas fa-exclamation-triangle"></i>'
+    };
+    return icons[status] || '<i class="fas fa-question"></i>';
+}
+
+// Función para aplicar filtros
+function applyFilters() {
+    loadApcData();
+}
+
+// Función para limpiar filtros
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('fechaDesde').value = '';
+    document.getElementById('fechaHasta').value = '';
+    loadApcData();
+}
+
+// Función para refrescar datos
+function refreshData() {
+    loadApcData();
+}
+
+// Función para mostrar errores
+function showError(message) {
+    // Crear toast de error
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #991b1b;
+        padding: 16px 20px;
+        border-radius: 12px;
+        border: 1px solid #ef4444;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        max-width: 400px;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>
+        ${message}
+    `;
+    
+    // Add slide-in animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => {
+            toast.remove();
+            style.remove();
+        }, 300);
+    }, 5000);
+}
+
+// Auto-refresh cada 30 segundos
+setInterval(() => {
+    refreshData();
+}, 30000);
+</script>
+{% endblock %}
