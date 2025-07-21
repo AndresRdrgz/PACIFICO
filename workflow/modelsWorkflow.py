@@ -88,6 +88,17 @@ class Solicitud(models.Model):
         ('Media', 'Media'),
         ('Baja', 'Baja'),
     ]
+    
+    COMO_SE_ENTERO_CHOICES = [
+        ('Sucursal', 'Sucursal'),
+        ('Ventas externas', 'Ventas externas'),
+        ('Telemercadeo', 'Telemercadeo'),
+        ('Promoción', 'Promoción'),
+        ('Feria', 'Feria'),
+        ('Plan chispa', 'Plan chispa'),
+        ('Carta de saldo', 'Carta de saldo'),
+    ]
+    
     codigo = models.CharField(max_length=50, unique=True)
     pipeline = models.ForeignKey(Pipeline, on_delete=models.PROTECT)
     etapa_actual = models.ForeignKey(Etapa, on_delete=models.SET_NULL, null=True, blank=True)
@@ -105,6 +116,9 @@ class Solicitud(models.Model):
     
     # Motivo de la consulta
     motivo_consulta = models.TextField(blank=True, null=True, help_text="Motivo de la consulta o observaciones del cliente")
+    
+    # Cómo se enteró del servicio
+    como_se_entero = models.CharField(max_length=50, choices=COMO_SE_ENTERO_CHOICES, null=True, blank=True, help_text="Cómo se enteró del servicio")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"

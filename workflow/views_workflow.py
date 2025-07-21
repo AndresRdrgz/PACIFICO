@@ -763,8 +763,9 @@ def nueva_solicitud(request):
             if cotizacion_id:
                 cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
             
-            # Obtener motivo de consulta del formulario
+            # Obtener motivo de consulta y como se enteró del formulario
             motivo_consulta = request.POST.get('motivo_consulta', '')
+            como_se_entero = request.POST.get('como_se_entero', '')
             
             # Crear solicitud
             solicitud = Solicitud.objects.create(
@@ -774,7 +775,8 @@ def nueva_solicitud(request):
                 creada_por=request.user,
                 cliente=cliente,
                 cotizacion=cotizacion,
-                motivo_consulta=motivo_consulta
+                motivo_consulta=motivo_consulta,
+                como_se_entero=como_se_entero if como_se_entero else None
             )
             
             # Crear historial inicial

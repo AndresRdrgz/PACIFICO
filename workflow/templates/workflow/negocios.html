@@ -3300,6 +3300,15 @@ document.addEventListener('DOMContentLoaded', function() {
     display: block !important;
 }
 
+/* Ensure como se entero section is hidden by default */
+#comoSeEnteroSection {
+    display: none !important;
+}
+
+#comoSeEnteroSection.show {
+    display: block !important;
+}
+
 .toast-notification.success {
     background: #28a745;
 }
@@ -3514,6 +3523,17 @@ window.resetForm = function() {
     if (pipelineLockedInfo) {
         pipelineLockedInfo.style.display = 'none';
         console.log('🔧 Pipeline locked info reset - display:', pipelineLockedInfo.style.display);
+    }
+    
+    // Hide dynamic sections
+    const motivoSection = document.getElementById('motivoConsultaSection');
+    const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
+    
+    if (motivoSection) {
+        motivoSection.classList.remove('show');
+    }
+    if (comoSeEnteroSection) {
+        comoSeEnteroSection.classList.remove('show');
     }
     
     hideSearchResults();
@@ -3892,6 +3912,15 @@ function selectItem(type, item) {
                         }, 100);
                     }
                 }
+                
+                // Show como se entero section
+                const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
+                if (comoSeEnteroSection) {
+                    comoSeEnteroSection.classList.add('show');
+                }
+                
+                // Auto-populate cliente from cotización
+                autoPopulateClienteFromCotizacion(item);
             } else {
                 detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
             }
@@ -4048,6 +4077,13 @@ window.submitSolicitud = function() {
     
     if (!pipelineId) {
         alert('Por favor selecciona un pipeline');
+        return;
+    }
+    
+    // Validar como se enteró (required field)
+    const comoSeEntero = formData.get('como_se_entero');
+    if (!comoSeEntero) {
+        alert('Por favor selecciona cómo se enteró de nuestros servicios');
         return;
     }
     
