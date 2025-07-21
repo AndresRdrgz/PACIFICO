@@ -1169,12 +1169,23 @@ window.mostrarModalSolicitud = function(solicitudId) {
     }
     
     console.log('Opening modal for solicitud:', solicitudId);
+    console.log('Type of solicitudId:', typeof solicitudId);
+    console.log('solicitudId is valid:', solicitudId && solicitudId !== 'null' && solicitudId !== 'undefined');
+    
+    // Validate solicitudId
+    if (!solicitudId || solicitudId === 'null' || solicitudId === 'undefined' || solicitudId === '') {
+        console.error('Invalid solicitudId provided:', solicitudId);
+        alert('ID de solicitud inválido: ' + solicitudId);
+        return;
+    }
     
     // Store the solicitudId globally for use in the modal
     window.currentSolicitudId = solicitudId;
     
     // Set the solicitudId on the Ver Detalle button
     $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
+    
+    console.log('Set button data-solicitud-id to:', $('#modalBtnVerDetalle').attr('data-solicitud-id'));
     
     // Show loading state
     showLoadingState();
@@ -1595,6 +1606,26 @@ window.testModalSolicitud = function() {
     mostrarModalSolicitud('test-123');
 };
 
+// Add test function for checking button data attribute
+window.testButtonData = function() {
+    if (typeof $ === 'undefined') {
+        console.error('jQuery not available for testButtonData');
+        return;
+    }
+    
+    const button = $('#modalBtnVerDetalle');
+    console.log('Button exists:', button.length > 0);
+    console.log('Button data-solicitud-id:', button.attr('data-solicitud-id'));
+    console.log('Global currentSolicitudId:', window.currentSolicitudId);
+    console.log('Button HTML:', button[0] ? button[0].outerHTML : 'Button not found');
+    
+    // Try to trigger click programmatically
+    if (button.length > 0) {
+        console.log('Triggering click programmatically...');
+        button.trigger('click');
+    }
+};
+
 // Add a helper function to test API directly
 window.testApiDirectly = function(solicitudId = 1) {
     if (typeof $ === 'undefined') {
@@ -1692,12 +1723,28 @@ function initializeModalLayout() {
     });
 
     // Add click handler for 'Ver Detalle' button
-    $('#modalBtnVerDetalle').on('click', function() {
+    $(document).off('click', '#modalBtnVerDetalle').on('click', '#modalBtnVerDetalle', function() {
         let solicitudId = $(this).attr('data-solicitud-id');
-        console.log('Ver Detalle clicked, solicitudId:', solicitudId);
-        if (solicitudId && solicitudId !== 'null' && solicitudId !== 'undefined') {
-            window.location.href = `/workflow/solicitudes/${solicitudId}/detalle/`;
+        let globalSolicitudId = window.currentSolicitudId;
+        
+        console.log('Ver Detalle clicked');
+        console.log('Button data-solicitud-id:', solicitudId);
+        console.log('Global currentSolicitudId:', globalSolicitudId);
+        console.log('Button element:', this);
+        console.log('All data attributes:', $(this).data());
+        
+        // Try to get solicitudId from multiple sources
+        const finalSolicitudId = solicitudId || globalSolicitudId;
+        
+        if (finalSolicitudId && finalSolicitudId !== 'null' && finalSolicitudId !== 'undefined' && finalSolicitudId !== '') {
+            console.log('Navigating to:', `/workflow/solicitud/${finalSolicitudId}/`);
+            window.location.href = `/workflow/solicitud/${finalSolicitudId}/`;
         } else {
+            console.error('No valid solicitud ID found:', {
+                buttonAttribute: solicitudId,
+                globalVariable: globalSolicitudId,
+                buttonElement: this
+            });
             alert('No se pudo determinar el ID de la solicitud.');
         }
     });

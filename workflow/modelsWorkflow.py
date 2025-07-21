@@ -369,6 +369,7 @@ class UsuarioNivelComite(models.Model):
     nivel = models.ForeignKey(NivelComite, on_delete=models.CASCADE)
     fecha_asignacion = models.DateTimeField(auto_now_add=True)
     activo = models.BooleanField(default=True)
+    observaciones = models.TextField(blank=True, null=True, help_text="Observaciones sobre esta asignación")
     
     class Meta:
         unique_together = ('usuario', 'nivel')
@@ -387,7 +388,7 @@ class ParticipacionComite(models.Model):
         ('PENDIENTE', 'Pendiente'),
         ('APROBADO', 'Aprobado'),
         ('RECHAZADO', 'Rechazado'),
-        ('OBSERVACIONES', 'Con Observaciones'),
+        ('OBSERVACIONES', 'Alternativa'),
     ]
     
     solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='participaciones_comite')

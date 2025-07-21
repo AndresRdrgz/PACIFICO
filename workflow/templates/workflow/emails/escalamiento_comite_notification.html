@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escalamiento de Solicitud - Comité de Crédito</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header .subtitle {
+            margin-top: 10px;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            color: #007bff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 8px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            color: #212529;
+            font-size: 16px;
+        }
+        .comentario-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .comentario-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .comentario-text {
+            color: #856404;
+            font-style: italic;
+            line-height: 1.5;
+        }
+        .action-section {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-title {
+            color: #0056b3;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .action-text {
+            color: #0056b3;
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        @media (max-width: 600px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚨 Escalamiento de Solicitud</h1>
+            <div class="subtitle">Comité de Crédito - Pacífico</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Información General -->
+            <div class="section">
+                <div class="section-title">📋 Información de la Solicitud</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Código de Solicitud</div>
+                        <div class="info-value">{{ solicitud.codigo }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Fecha de Escalamiento</div>
+                        <div class="info-value">{{ fecha_escalamiento|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Nivel Solicitado</div>
+                        <div class="info-value">{{ nivel_solicitado.nombre }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Solicitado por</div>
+                        <div class="info-value">{{ solicitado_por.get_full_name|default:solicitado_por.username }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Cliente -->
+            {% if solicitud.cliente %}
+            <div class="section">
+                <div class="section-title">👤 Información del Cliente</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Nombre del Cliente</div>
+                        <div class="info-value">{{ solicitud.cliente.nombreCliente|default:"No especificado" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cédula</div>
+                        <div class="info-value">{{ solicitud.cliente.cedulaCliente|default:"No especificada" }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Información de la Cotización -->
+            {% if solicitud.cotizacion %}
+            <div class="section">
+                <div class="section-title">💰 Información de la Cotización</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Producto</div>
+                        <div class="info-value">{{ solicitud.cotizacion.producto|default:"No especificado" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Monto</div>
+                        <div class="info-value">${{ solicitud.cotizacion.monto|floatformat:2|default:"0.00" }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Motivo del Escalamiento -->
+            <div class="section">
+                <div class="section-title">💬 Motivo del Escalamiento</div>
+                <div class="comentario-box">
+                    <div class="comentario-title">Comentario del {{ solicitado_por.get_full_name|default:solicitado_por.username }}:</div>
+                    <div class="comentario-text">{{ comentario|linebreaks }}</div>
+                </div>
+            </div>
+
+            <!-- Alerta de Acción Requerida -->
+            <div class="action-section">
+                <div class="alert alert-warning">
+                    <strong>⚠️ Acción Requerida</strong><br>
+                    Se requiere su participación en la revisión de esta solicitud como miembro del nivel <strong>{{ nivel_solicitado.nombre }}</strong>.
+                </div>
+                
+                <div class="action-title">¿Qué debe hacer?</div>
+                <div class="action-text">
+                    1. Revisar la solicitud completa en el sistema<br>
+                    2. Analizar la información del cliente y la cotización<br>
+                    3. Evaluar el motivo del escalamiento<br>
+                    4. Registrar su participación con su decisión final
+                </div>
+                
+                <a href="{{ request.scheme }}://{{ request.get_host }}/workflow/comite/solicitud/{{ solicitud.id }}/" class="btn">
+                    📋 Ver Solicitud Completa
+                </a>
+            </div>
+
+            <!-- Información Adicional -->
+            <div class="section">
+                <div class="section-title">ℹ️ Información Adicional</div>
+                <div class="alert alert-info">
+                    <strong>Proceso del Comité:</strong><br>
+                    • Su participación es obligatoria para continuar el proceso<br>
+                    • Debe registrar su decisión: Aprobado, Rechazado o Alternativa<br>
+                    • Puede agregar comentarios detallados sobre su decisión<br>
+                    • Una vez registrada su participación, podrá avanzar la solicitud a la siguiente etapa
+                </div>
+            </div>
+
+            <!-- Usuarios del Nivel -->
+            <div class="section">
+                <div class="section-title">👥 Usuarios del Nivel {{ nivel_solicitado.nombre }}</div>
+                <div class="info-grid">
+                    {% for usuario_nivel in usuarios_nivel %}
+                    <div class="info-item">
+                        <div class="info-label">Usuario</div>
+                        <div class="info-value">{{ usuario_nivel.usuario.get_full_name|default:usuario_nivel.usuario.username }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Pacífico - Sistema de Gestión de Solicitudes</strong></p>
+            <p>Este es un correo automático del sistema. No responda a este mensaje.</p>
+            <p>Fecha de envío: {{ fecha_escalamiento|date:"d/m/Y H:i:s" }}</p>
+        </div>
+    </div>
+</body>
+</html> 

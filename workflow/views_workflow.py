@@ -22,11 +22,13 @@ from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
-    RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja
+    RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja,
+    NivelComite, UsuarioNivelComite
 )
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
+import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
 import time
@@ -2652,6 +2654,7 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
             from django.core.mail import get_connection
             connection = get_connection()
             connection.ssl_context = ssl_context
+            email.connection = connection
             email.send()
         
         print(f"✅ Correo de asignación enviado correctamente para solicitud {solicitud.codigo} - Asignada a: {usuario_asignado.username}, correo enviado a: {solicitud.creada_por.email}")
@@ -4404,6 +4407,283 @@ def api_solicitud_brief(request, solicitud_id):
         }, status=500)
 
 
+@login_required
+def api_solicitud_detalle(request, solicitud_id):
+    """API completa para obtener todos los datos de una solicitud específica"""
+    try:
+        print(f"DEBUG: Starting api_solicitud_detalle for solicitud_id: {solicitud_id}")
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"DEBUG: Solicitud found: {solicitud.codigo}")
+        
+        # Verificar permisos
+        if solicitud.asignada_a and solicitud.asignada_a != request.user:
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para ver esta solicitud.'}, status=403)
+
+        # Calcular SLA detallado
+        sla_info = calcular_sla_detallado(solicitud)
+        
+        # Información general de la solicitud
+        general = {
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline': {
+                'id': solicitud.pipeline.id if solicitud.pipeline else None,
+                'nombre': solicitud.pipeline.nombre if solicitud.pipeline else ''
+            } if solicitud.pipeline else None,
+            'etapa_actual': {
+                'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
+                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False,
+                'sla': solicitud.etapa_actual.sla.total_seconds() / 86400 if (solicitud.etapa_actual and solicitud.etapa_actual.sla) else None  # días
+            } if solicitud.etapa_actual else None,
+            'subestado_actual': {
+                'id': solicitud.subestado_actual.id if solicitud.subestado_actual else None,
+                'nombre': solicitud.subestado_actual.nombre if solicitud.subestado_actual else ''
+            } if solicitud.subestado_actual else None,
+            'creada_por': {
+                'id': solicitud.creada_por.id if solicitud.creada_por else None,
+                'nombre_completo': solicitud.creada_por.get_full_name() if solicitud.creada_por else '',
+                'username': solicitud.creada_por.username if solicitud.creada_por else ''
+            } if solicitud.creada_por else None,
+            'asignada_a': {
+                'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else '',
+                'username': solicitud.asignada_a.username if solicitud.asignada_a else ''
+            } if solicitud.asignada_a else None,
+            'fecha_creacion': solicitud.fecha_creacion.isoformat() if solicitud.fecha_creacion else None,
+            'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat() if solicitud.fecha_ultima_actualizacion else None,
+            'motivo_consulta': getattr(solicitud, 'motivo_consulta', ''),
+            'sla': sla_info,
+            'puede_asignar': not solicitud.asignada_a and solicitud.etapa_actual and getattr(solicitud.etapa_actual, 'es_bandeja_grupal', False),
+            'puede_devolver': solicitud.asignada_a == request.user,
+            'puede_cambiar_estado': True  # TODO: implementar lógica de permisos específica
+        }
+
+        # Información del cliente
+        cliente_info = {}
+        if solicitud.cliente:
+            cliente_info = {
+                'id': solicitud.cliente.id,
+                'nombre': getattr(solicitud.cliente, 'nombreCliente', ''),
+                'cedula': getattr(solicitud.cliente, 'cedulaCliente', ''),
+                'telefono': getattr(solicitud.cliente, 'telefono', None),
+                'email': getattr(solicitud.cliente, 'email', None),
+                'direccion': getattr(solicitud.cliente, 'direccion', None),
+                'fecha_creacion': solicitud.cliente.created_at.isoformat() if hasattr(solicitud.cliente, 'created_at') and solicitud.cliente.created_at else None
+            }
+
+        # Información de la cotización
+        cotizacion_info = {}
+        if solicitud.cotizacion:
+            cotizacion_info = {
+                'id': solicitud.cotizacion.id,
+                'monto_prestamo': float(getattr(solicitud.cotizacion, 'montoPrestamo', 0)) if getattr(solicitud.cotizacion, 'montoPrestamo', None) else 0,
+                'plazo_pago': getattr(solicitud.cotizacion, 'plazoPago', None),
+                'tasa_interes': float(getattr(solicitud.cotizacion, 'tasaInteres', 0)) if getattr(solicitud.cotizacion, 'tasaInteres', None) else 0,
+                'nombre_cliente': getattr(solicitud.cotizacion, 'nombreCliente', ''),
+                'cedula_cliente': getattr(solicitud.cotizacion, 'cedulaCliente', ''),
+                'nombre_empresa': getattr(solicitud.cotizacion, 'nombreEmpresa', ''),
+                'posicion': getattr(solicitud.cotizacion, 'posicion', ''),
+                'ingresos': float(getattr(solicitud.cotizacion, 'ingresos', 0)) if getattr(solicitud.cotizacion, 'ingresos', None) else 0,
+                'cartera': getattr(solicitud.cotizacion, 'cartera', ''),
+                'referencias_apc': getattr(solicitud.cotizacion, 'referenciasAPC', ''),
+                'edad': getattr(solicitud.cotizacion, 'edad', None),
+                'sexo': getattr(solicitud.cotizacion, 'sexo', ''),
+                'aux_monto2': float(getattr(solicitud.cotizacion, 'auxMonto2', 0)) if getattr(solicitud.cotizacion, 'auxMonto2', None) is not None else 0,
+                'wrk_monto_letra': float(getattr(solicitud.cotizacion, 'wrkMontoLetra', 0)) if hasattr(solicitud.cotizacion, 'wrkMontoLetra') and getattr(solicitud.cotizacion, 'wrkMontoLetra', None) else 0
+            }
+
+        # Transiciones disponibles
+        transiciones_disponibles = []
+        if solicitud.etapa_actual:
+            transiciones = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=solicitud.etapa_actual
+            )
+            
+            for transicion in transiciones:
+                requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+                
+                # Verificar permisos para la transición
+                puede_realizar = True
+                if transicion.requiere_permiso and not (request.user.is_superuser or request.user.is_staff):
+                    grupos_usuario = request.user.groups.all()
+                    tiene_permiso = PermisoEtapa.objects.filter(
+                        etapa=transicion.etapa_destino,
+                        grupo__in=grupos_usuario
+                    ).exists()
+                    puede_realizar = tiene_permiso
+                
+                transiciones_disponibles.append({
+                    'id': transicion.id,
+                    'nombre': transicion.nombre,
+                    'etapa_destino': {
+                        'id': transicion.etapa_destino.id,
+                        'nombre': transicion.etapa_destino.nombre
+                    },
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'puede_realizar': puede_realizar and len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': [
+                        {
+                            'id': req.id,
+                            'nombre': req.nombre,
+                            'descripcion': req.descripcion
+                        } for req in requisitos_faltantes
+                    ]
+                })
+
+        # Historial de actividades
+        historial = []
+        for h in solicitud.historial.all().order_by('-fecha_inicio'):
+            historial.append({
+                'id': h.id,
+                'etapa': {
+                    'id': h.etapa.id,
+                    'nombre': h.etapa.nombre
+                } if h.etapa else None,
+                'subestado': {
+                    'id': h.subestado.id,
+                    'nombre': h.subestado.nombre
+                } if h.subestado else None,
+                'usuario_responsable': {
+                    'id': h.usuario_responsable.id,
+                    'nombre_completo': h.usuario_responsable.get_full_name(),
+                    'username': h.usuario_responsable.username
+                } if h.usuario_responsable else None,
+                'fecha_inicio': h.fecha_inicio.isoformat() if h.fecha_inicio else None,
+                'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None,
+                'comentarios': h.comentarios
+            })
+
+        # Requisitos de la solicitud
+        requisitos = []
+        for req in solicitud.requisitos.all():
+            requisitos.append({
+                'id': req.id,
+                'requisito': {
+                    'id': req.requisito.id,
+                    'nombre': req.requisito.nombre,
+                    'descripcion': req.requisito.descripcion,
+                    'es_obligatorio': req.requisito.es_obligatorio
+                },
+                'cumplido': req.cumplido,
+                'archivo': req.archivo.url if req.archivo else None,
+                'observaciones': req.observaciones,
+                'fecha_cumplimiento': req.fecha_cumplimiento.isoformat() if req.fecha_cumplimiento else None
+            })
+
+        # Campos personalizados
+        campos_personalizados = []
+        valores_dict = {v.campo.id: v for v in solicitud.valores_personalizados.all()}
+        
+        for campo in CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline):
+            valor = valores_dict.get(campo.id)
+            valor_actual = None
+            
+            if valor:
+                if campo.tipo == 'texto':
+                    valor_actual = valor.valor_texto
+                elif campo.tipo == 'numero':
+                    valor_actual = valor.valor_numero
+                elif campo.tipo == 'entero':
+                    valor_actual = valor.valor_entero
+                elif campo.tipo == 'fecha':
+                    valor_actual = valor.valor_fecha.isoformat() if valor.valor_fecha else None
+                elif campo.tipo == 'booleano':
+                    valor_actual = valor.valor_booleano
+            
+            campos_personalizados.append({
+                'id': campo.id,
+                'nombre': campo.nombre,
+                'tipo': campo.tipo,
+                'obligatorio': campo.obligatorio,
+                'valor': valor_actual
+            })
+
+        # Progreso del pipeline
+        progreso = 0
+        if solicitud.pipeline and solicitud.etapa_actual:
+            etapas_pipeline = solicitud.pipeline.etapas.order_by('orden')
+            total_etapas = etapas_pipeline.count()
+            if total_etapas > 0:
+                try:
+                    etapa_actual_orden = solicitud.etapa_actual.orden
+                    progreso = min(100, int((etapa_actual_orden / total_etapas) * 100))
+                except:
+                    progreso = 0
+
+        return JsonResponse({
+            'success': True,
+            'general': general,
+            'cliente': cliente_info,
+            'cotizacion': cotizacion_info,
+            'transiciones_disponibles': transiciones_disponibles,
+            'historial': historial,
+            'requisitos': requisitos,
+            'campos_personalizados': campos_personalizados,
+            'progreso': progreso
+        }, encoder=DjangoJSONEncoder)
+        
+    except Exception as e:
+        import traceback
+        print(f"DEBUG: Exception in api_solicitud_detalle: {str(e)}")
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener datos de la solicitud: {str(e)}',
+            'traceback': traceback.format_exc() if settings.DEBUG else None
+        }, status=500)
+
+
+@login_required
+def api_test_solicitud_detalle(request, solicitud_id):
+    """API de prueba para verificar que el endpoint funciona"""
+    try:
+        print(f"DEBUG: Testing api_test_solicitud_detalle for solicitud_id: {solicitud_id}")
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"DEBUG: Test solicitud found: {solicitud.codigo}")
+        
+        # Test basic fields
+        basic_info = {
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline_id': solicitud.pipeline.id if solicitud.pipeline else None,
+            'etapa_actual_id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+            'creada_por_id': solicitud.creada_por.id if solicitud.creada_por else None,
+            'asignada_a_id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+        }
+        
+        print(f"DEBUG: Basic info created: {basic_info}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'API funcionando correctamente',
+            'solicitud_id': solicitud.id,
+            'solicitud_codigo': solicitud.codigo,
+            'basic_info': basic_info,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"DEBUG: Exception in test endpoint: {str(e)}")
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc() if settings.DEBUG else None
+        }, status=500)
+
+
 # ==========================================
 # VISTAS DE API PARA COMENTARIOS
 # ==========================================
@@ -6146,3 +6426,475 @@ def api_download_merged_pdf(request, solicitud_id):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al generar el PDF: {str(e)}'})
+
+
+@login_required
+def api_obtener_niveles_comite(request):
+    """API para obtener todos los niveles de comité"""
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        niveles = NivelComite.objects.all().order_by('orden')
+        
+        data = []
+        for nivel in niveles:
+            # Contar usuarios asignados
+            usuarios_count = nivel.usuarionivelcomite_set.filter(activo=True).count()
+            
+            data.append({
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden,
+                'usuarios_count': usuarios_count,
+                'usuarios': [
+                    {
+                        'id': u.usuario.id,
+                        'username': u.usuario.username,
+                        'nombre_completo': u.usuario.get_full_name() or u.usuario.username,
+                        'fecha_asignacion': u.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
+                        'activo': u.activo
+                    }
+                    for u in nivel.usuarionivelcomite_set.select_related('usuario').filter(activo=True)
+                ]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'niveles': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener niveles: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_crear_nivel_comite(request):
+    """API para crear un nuevo nivel de comité"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        
+        nombre = data.get('nombre', '').strip()
+        orden = data.get('orden')
+        
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre es requerido'}, status=400)
+        
+        if not orden:
+            return JsonResponse({'success': False, 'error': 'El orden es requerido'}, status=400)
+        
+        # Verificar que no exista un nivel con el mismo nombre
+        if NivelComite.objects.filter(nombre=nombre).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese nombre'}, status=400)
+        
+        # Verificar que no exista un nivel con el mismo orden
+        if NivelComite.objects.filter(orden=orden).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese orden'}, status=400)
+        
+        # Crear el nivel
+        nivel = NivelComite.objects.create(
+            nombre=nombre,
+            orden=orden
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'nivel': {
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden,
+                'usuarios_count': 0
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al crear nivel: {str(e)}'}, status=500)
+
+
+@login_required
+def api_actualizar_nivel_comite(request, nivel_id):
+    """API para actualizar un nivel de comité"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        
+        nivel = NivelComite.objects.get(id=nivel_id)
+        
+        nombre = data.get('nombre', '').strip()
+        orden = data.get('orden')
+        
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre es requerido'}, status=400)
+        
+        if not orden:
+            return JsonResponse({'success': False, 'error': 'El orden es requerido'}, status=400)
+        
+        # Verificar que no exista otro nivel con el mismo nombre
+        if NivelComite.objects.filter(nombre=nombre).exclude(id=nivel_id).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese nombre'}, status=400)
+        
+        # Verificar que no exista otro nivel con el mismo orden
+        if NivelComite.objects.filter(orden=orden).exclude(id=nivel_id).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un nivel con ese orden'}, status=400)
+        
+        # Actualizar el nivel
+        nivel.nombre = nombre
+        nivel.orden = orden
+        nivel.save()
+        
+        return JsonResponse({
+            'success': True,
+            'nivel': {
+                'id': nivel.id,
+                'nombre': nivel.nombre,
+                'orden': nivel.orden,
+                'usuarios_count': nivel.usuarionivecomite_set.filter(activo=True).count()
+            }
+        })
+        
+    except NivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Nivel no encontrado'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al actualizar nivel: {str(e)}'}, status=500)
+
+
+@login_required
+def api_eliminar_nivel_comite(request, nivel_id):
+    """API para eliminar un nivel de comité"""
+    if request.method != 'DELETE':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        nivel = NivelComite.objects.get(id=nivel_id)
+        
+        # Verificar que no tenga usuarios asignados
+        if nivel.usuarionivecomite_set.filter(activo=True).exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'No se puede eliminar un nivel que tiene usuarios asignados'
+            }, status=400)
+        
+        # Verificar que no tenga participaciones en comité
+        if nivel.participacioncomite_set.exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'No se puede eliminar un nivel que tiene participaciones registradas'
+            }, status=400)
+        
+        nivel.delete()
+        
+        return JsonResponse({'success': True})
+        
+    except NivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Nivel no encontrado'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al eliminar nivel: {str(e)}'}, status=500)
+
+
+@login_required
+def api_asignar_usuario_nivel_comite(request):
+    """API para asignar un usuario a un nivel de comité"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        
+        usuario_id = data.get('usuario_id')
+        nivel_id = data.get('nivel_id')
+        activo = data.get('activo', True)
+        observaciones = data.get('observaciones', '').strip()
+        
+        if not usuario_id or not nivel_id:
+            return JsonResponse({'success': False, 'error': 'Usuario y nivel son requeridos'}, status=400)
+        
+        # Verificar que el usuario y nivel existen
+        try:
+            usuario = User.objects.get(id=usuario_id)
+            nivel = NivelComite.objects.get(id=nivel_id)
+        except (User.DoesNotExist, NivelComite.DoesNotExist):
+            return JsonResponse({'success': False, 'error': 'Usuario o nivel no encontrado'}, status=404)
+        
+        # Crear o actualizar la asignación
+        asignacion, created = UsuarioNivelComite.objects.get_or_create(
+            usuario=usuario,
+            nivel=nivel,
+            defaults={
+                'activo': activo,
+                'observaciones': observaciones
+            }
+        )
+        
+        if not created:
+            asignacion.activo = activo
+            asignacion.observaciones = observaciones
+            asignacion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'asignacion': {
+                'id': asignacion.id,
+                'usuario': {
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'nombre_completo': usuario.get_full_name() or usuario.username
+                },
+                'nivel': {
+                    'id': nivel.id,
+                    'nombre': nivel.nombre,
+                    'orden': nivel.orden
+                },
+                'fecha_asignacion': asignacion.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
+                'activo': asignacion.activo,
+                'observaciones': asignacion.observaciones or ''
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al asignar usuario: {str(e)}'}, status=500)
+
+
+@login_required
+def api_desasignar_usuario_nivel_comite(request, usuario_id, nivel_id):
+    """API para desasignar un usuario de un nivel de comité"""
+    if request.method != 'DELETE':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        asignacion = UsuarioNivelComite.objects.get(
+            usuario_id=usuario_id,
+            nivel_id=nivel_id
+        )
+        
+        # En lugar de eliminar, desactivar
+        asignacion.activo = False
+        asignacion.save()
+        
+        return JsonResponse({'success': True})
+        
+    except UsuarioNivelComite.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Asignación no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al desasignar usuario: {str(e)}'}, status=500)
+
+
+@login_required
+def api_obtener_asignaciones_comite(request):
+    """Obtener todas las asignaciones de usuarios a niveles del comité"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        
+        asignaciones = UsuarioNivelComite.objects.select_related(
+            'usuario', 'nivel', 'usuario__userprofile'
+        ).order_by('nivel__orden', 'usuario__username')
+        
+        data = []
+        for asignacion in asignaciones:
+            data.append({
+                'id': asignacion.id,
+                'usuario': {
+                    'id': asignacion.usuario.id,
+                    'username': asignacion.usuario.username,
+                    'full_name': asignacion.usuario.get_full_name() or asignacion.usuario.username,
+                    'email': asignacion.usuario.email,
+                    'profile_picture': asignacion.usuario.userprofile.profile_picture.url if hasattr(asignacion.usuario, 'userprofile') and asignacion.usuario.userprofile.profile_picture else None
+                },
+                'nivel': {
+                    'id': asignacion.nivel.id,
+                    'nombre': asignacion.nivel.nombre,
+                    'orden': asignacion.nivel.orden
+                },
+                'activo': asignacion.activo,
+                'fecha_asignacion': asignacion.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
+                'observaciones': asignacion.observaciones or ''
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'asignaciones': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener asignaciones: {str(e)}'
+        })
+
+
+@login_required
+def api_cambiar_estado_asignacion_comite(request, asignacion_id):
+    """Cambiar el estado activo/inactivo de una asignación"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        import json
+        
+        asignacion = get_object_or_404(UsuarioNivelComite, id=asignacion_id)
+        data = json.loads(request.body)
+        activo = data.get('activo', True)
+        
+        asignacion.activo = activo
+        asignacion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Asignación {"activada" if activo else "desactivada"} exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al cambiar estado: {str(e)}'
+        })
+
+
+@login_required
+def api_eliminar_asignacion_comite(request, asignacion_id):
+    """Eliminar una asignación de usuario a nivel"""
+    try:
+        from .modelsWorkflow import UsuarioNivelComite
+        
+        asignacion = get_object_or_404(UsuarioNivelComite, id=asignacion_id)
+        asignacion.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Asignación eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar asignación: {str(e)}'
+        })
+
+
+@login_required
+def api_estadisticas_comite(request):
+    """Obtener estadísticas del comité"""
+    try:
+        from .modelsWorkflow import NivelComite, UsuarioNivelComite
+        
+        total_niveles = NivelComite.objects.count()
+        usuarios_asignados = UsuarioNivelComite.objects.count()
+        usuarios_activos = UsuarioNivelComite.objects.filter(activo=True).count()
+        
+        # Obtener el nivel más alto (menor orden)
+        nivel_mas_alto = NivelComite.objects.order_by('orden').first()
+        nivel_mas_alto_nombre = nivel_mas_alto.nombre if nivel_mas_alto else None
+        
+        return JsonResponse({
+            'success': True,
+            'estadisticas': {
+                'total_niveles': total_niveles,
+                'usuarios_asignados': usuarios_asignados,
+                'usuarios_activos': usuarios_activos,
+                'nivel_mas_alto': nivel_mas_alto_nombre
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener estadísticas: {str(e)}'
+        })
+
+
+@login_required
+def api_obtener_usuarios_disponibles_comite(request):
+    """API para obtener usuarios disponibles para asignar al comité"""
+    try:
+        # Verificar permisos manualmente
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para acceder a esta funcionalidad'
+            }, status=403)
+        
+        # Obtener usuarios activos
+        usuarios = User.objects.filter(is_active=True).order_by('username')
+        
+        data = []
+        for usuario in usuarios:
+            # Obtener niveles asignados
+            niveles_asignados = usuario.usuarionivelcomite_set.filter(activo=True).select_related('nivel')
+            
+            data.append({
+                'id': usuario.id,
+                'username': usuario.username,
+                'nombre_completo': usuario.get_full_name() or usuario.username,
+                'email': usuario.email,
+                'is_staff': usuario.is_staff,
+                'is_superuser': usuario.is_superuser,
+                'niveles_asignados': [
+                    {
+                        'id': n.nivel.id,
+                        'nombre': n.nivel.nombre,
+                        'orden': n.nivel.orden
+                    }
+                    for n in niveles_asignados
+                ]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'usuarios': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener usuarios: {str(e)}'
+        }, status=500)
