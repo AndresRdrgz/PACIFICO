@@ -436,7 +436,7 @@
         {% endif %}
     </div>
 
-    <!-- Tabla Desktop Mejorada con DataTable -->
+    <!-- Tabla Desktop Mejorada con Vanilla JavaScript -->
     <div class="vista-desktop d-none d-sm-block">
         <div class="card card-custom">
             <!-- Filtros Responsivos Mejorados -->
@@ -474,25 +474,38 @@
                     </div>
                 </div>
             </div>
-            <div class="card-body p-0" style="border: none;">
-                <div class="table-container" style="height: 80vh; overflow: hidden; border: none;">
-                    <div class="table-responsive" style="height: 100%; border: none;">
-                        <table class="table table-hover workflow-table mb-0" id="tablaSolicitudes" style="border: none;">
-                            <thead class="table-light sticky-top">
-                                <tr>
-                                    <th class="fw-bold" style="width: 200px;">Cliente</th>
-                                    <th class="fw-bold" style="width: 150px;">Producto</th>
-                                    <th class="fw-bold" style="width: 120px;">Monto</th>
-                                    <th class="fw-bold" style="width: 150px;">Propietario</th>
-                                    <th class="fw-bold" style="width: 120px;">Etapa</th>
-                                    <th class="fw-bold" style="width: 100px;">Estado</th>
-                                    <th class="fw-bold" style="width: 200px;">Fecha<br>SLA</th>
-                                    <th class="fw-bold" style="width: 120px;">SLA</th>
-                                    <th class="fw-bold" style="width: 120px;">Etiquetas</th>
-                                    <th class="fw-bold" style="width: 100px;">Prioridad</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+
+            <!-- tabla-->
+             <div id="tableContainer" class="table-responsive" style="position: relative;">
+                    <!-- Horizontal Scroll Indicators -->
+                    <div class="table-scroll-indicator left" id="scrollLeftIndicator" onclick="scrollTable('left')">
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                    <div class="table-scroll-indicator right" id="scrollRightIndicator" onclick="scrollTable('right')">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <!-- Scroll Hint -->
+                    <div class="scroll-hint" id="scrollHint">
+                        <i class="fas fa-hand-pointer me-1"></i>
+                        Desliza horizontalmente para ver más columnas
+                    </div>
+                    
+                    <table class="workflow-table apc-table" id="tablaSolicitudes">
+                        <thead>
+                            <tr>
+                                <th style="width: 200px;">Cliente</th>
+                                <th style="width: 150px;">Producto</th>
+                                <th style="width: 120px;">Monto</th>
+                                <th style="width: 150px;">Propietario</th>
+                                <th style="width: 120px;">Etapa</th>
+                                <th style="width: 100px;">Estado</th>
+                                <th style="width: 200px;">Fecha SLA</th>
+                                <th style="width: 120px;">SLA</th>
+                                <th style="width: 120px;">Etiquetas</th>
+                                <th style="width: 100px;">Prioridad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                                 {% for s in solicitudes_tabla %}
                                 <tr class="align-middle table-row-hover clickable-row {% if s.sla_color == 'text-danger' %}bg-danger bg-opacity-10{% endif %}" 
                                     data-solicitud-id="{{ s.id }}"
@@ -635,37 +648,12 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                        </table>
-                    </div>
+                    </table>
                 </div>
-                <!-- Paginación -->
-                {% if page_obj.has_other_pages %}
-                <nav aria-label="Paginación de solicitudes" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Anterior</a>
-                        </li>
-                        {% endif %}
-                        {% for num in page_obj.paginator.page_range %}
-                            {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
-                            </li>
-                            {% endif %}
-                        {% endfor %}
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Siguiente</a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                {% endif %}
+            
+            
+      
+               
             </div>
         </div>
     </div>
@@ -1056,23 +1044,25 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- DataTables CSS y JS desde CDN -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-
-
 <script>
-// Stub functions to prevent recursion errors
-window.showLoading = function(title, message) {
-    console.log('📡 Loading:', title, message);
-};
+// Global utility functions
+function showLoading(show) {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const tableContainer = document.getElementById('tableContainer');
+    const noDataMessage = document.getElementById('noDataMessage');
+    
+    if (show) {
+        if (loadingIndicator) loadingIndicator.style.display = 'block';
+        if (tableContainer) tableContainer.style.display = 'none';
+        if (noDataMessage) noDataMessage.style.display = 'none';
+    } else {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+}
 
-window.hideLoading = function() {
-    console.log('📡 Loading hidden');
-};
+function hideLoading() {
+    showLoading(false);
+}
 
 // Función global para manejar clicks en filas de la tabla
 function handleRowClick(event, solicitudId) {
@@ -1097,125 +1087,323 @@ function handleRowClick(event, solicitudId) {
     }
 }
 
-$(document).ready(function() {
-    // =====================================
-    // CONFIGURACIÓN DE NOTIFICACIONES
-    // =====================================
+// Variables globales
+let currentSolicitudes = [];
+let currentFilters = {
+    cliente: '',
+    producto: '', 
+    estado: '',
+    asignado: '',
+    sla: '',
+    prioridad: '',
+    search: ''
+};
+
+// Función para obtener el token CSRF
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+// Función para inicializar datos de la tabla desde el DOM
+function initializeTableData() {
+    const tableBody = document.querySelector('#tablaSolicitudes tbody');
+    if (!tableBody) return;
     
-    // El sistema de toast regular del workflow ya está disponible
-    // No necesitamos configuración adicional para toastr
+    currentSolicitudes = [];
+    const rows = tableBody.querySelectorAll('tr');
     
-    // =====================================
-    // UTILITY FUNCTIONS
-    // =====================================
+    rows.forEach(row => {
+        if (row.querySelector('td[colspan]')) return; // Skip empty/no-data rows
+        
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 10) return; // Ensure we have enough cells
+        
+        const solicitud = {
+            id: row.getAttribute('data-solicitud-id'),
+            cliente: cells[0].textContent.trim(),
+            producto: cells[1].textContent.trim(),
+            monto: cells[2].textContent.trim(),
+            propietario: cells[3].textContent.trim(),
+            etapa: row.getAttribute('data-etapa') || cells[4].textContent.trim(),
+            estado: cells[5].textContent.trim(),
+            fechaSla: cells[6].textContent.trim(),
+            sla: row.getAttribute('data-sla') || cells[7].textContent.trim(),
+            etiquetas: cells[8].textContent.trim(),
+            prioridad: cells[9].textContent.trim(),
+            element: row
+        };
+        
+        currentSolicitudes.push(solicitud);
+    });
     
-    // Función para obtener el token CSRF
-    function getCsrfToken() {
-        return $('[name=csrfmiddlewaretoken]').val() || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    console.log('📊 Datos de tabla inicializados:', currentSolicitudes.length, 'solicitudes');
+}
+
+// Función para configurar filtros
+function setupFilters() {
+    // Poblar selectores de filtros con valores únicos
+    populateFilterOptions();
+    
+    // Configurar event listeners para filtros
+    const filterElements = [
+        'filtroCliente', 'filtroProducto', 'filtroEstado', 
+        'filtroAsignado', 'filtroSLA', 'filtroPrioridad'
+    ];
+    
+    filterElements.forEach(filterId => {
+        const element = document.getElementById(filterId);
+        if (element) {
+            element.addEventListener('change', applyFilters);
+        }
+    });
+    
+    // Botón limpiar filtros
+    const clearButton = document.getElementById('limpiarFiltros');
+    if (clearButton) {
+        clearButton.addEventListener('click', clearFilters);
     }
-    
-    // =====================================
-    // INICIALIZACIÓN DE DATATABLES
-    // =====================================
-    
-    // Verificar si la tabla existe y tiene datos antes de inicializar DataTables
-    var $tabla = $('#tablaSolicitudes');
-    var table;
-    
-    if ($tabla.length > 0) {
-        // Only count rows that do NOT have a colspan attribute (i.e., real data rows)
-        var hasDataRows = $tabla.find('tbody tr').filter(function() {
-            return !$(this).find('td[colspan]').length;
-        }).length > 0;
+}
 
-        if (hasDataRows) {
-            // Inicializar DataTable con configuración mejorada
-            table = $tabla.DataTable({
-                paging: true,
-                searching: true,
-                ordering: true,
-                scrollX: true,
-                scrollY: '70vh',
-                scrollCollapse: true,
-                language: {
-                    search: 'Buscar:',
-                    lengthMenu: 'Mostrar _MENU_ registros',
-                    info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
-                    emptyTable: 'No hay solicitudes para mostrar',
-                    zeroRecords: 'No se encontraron solicitudes que coincidan con los filtros',
-                    paginate: {
-                        previous: 'Anterior',
-                        next: 'Siguiente'
-                    }
-                },
-                columnDefs: [
-                    { orderable: false, targets: [8, 9] }, // Etiquetas y Prioridad no ordenables
-                    { width: '200px', targets: 0 }, // Cliente
-                    { width: '150px', targets: 1 }, // Producto
-                    { width: '120px', targets: 2 }, // Monto
-                    { width: '150px', targets: 3 }, // Propietario
-                    { width: '120px', targets: 4 }, // Etapa
-                    { width: '100px', targets: 5 }, // Estado
-                    { width: '150px', targets: 6 }, // Fecha SLA
-                    { width: '120px', targets: 7 }, // SLA
-                    { width: '180px', targets: 8 }, // Etiquetas
-                    { width: '100px', targets: 9 }, // Prioridad
-                ],
-                autoWidth: false,
-                pageLength: 25,
-                responsive: false,
-                deferRender: true,
-                processing: true,
-                dom: 'rt<"bottom d-flex justify-content-between align-items-center mt-3"<"d-flex align-items-center gap-2"l<"text-muted small"i>>p><"clear">',
-                // Manejar tablas vacías correctamente
-                initComplete: function(settings, json) {
-                    // Verificar si la tabla está vacía y mostrar mensaje personalizado
-                    if (this.api().data().length === 0) {
-                        var tbody = this.api().table().body();
-                        $(tbody).html('<tr><td colspan="10" class="text-center py-4"><i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i><p class="text-muted">No hay solicitudes para mostrar</p></td></tr>');
-                    }
-                }
-            });
+// Función para poblar opciones de filtros
+function populateFilterOptions() {
+    const filterConfigs = [
+        { id: 'filtroCliente', field: 'cliente' },
+        { id: 'filtroProducto', field: 'producto' },
+        { id: 'filtroEstado', field: 'estado' },
+        { id: 'filtroAsignado', field: 'propietario' },
+        { id: 'filtroSLA', field: 'sla' },
+        { id: 'filtroPrioridad', field: 'prioridad' }
+    ];
+    
+    filterConfigs.forEach(config => {
+        const select = document.getElementById(config.id);
+        if (!select) return;
+        
+        const uniqueValues = [...new Set(
+            currentSolicitudes.map(s => s[config.field])
+                .filter(value => value && value.trim() !== '')
+        )].sort();
+        
+        // Clear existing options except first one
+        while (select.children.length > 1) {
+            select.removeChild(select.lastChild);
+        }
+        
+        uniqueValues.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+    });
+}
 
-            // Ocultar el buscador nativo de DataTables
-            $('.dataTables_filter').hide();
-            // Configurar filtros dinámicos solo si la tabla tiene datos
-            if (table) {
-                setTimeout(function() {
-                    configurarFiltros();
-                }, 500);
-            }
+// Función para configurar búsqueda global
+function setupGlobalSearch() {
+    const searchInput = document.getElementById('busquedaGlobal');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            currentFilters.search = this.value.toLowerCase();
+            applyFilters();
+        });
+    }
+}
+
+// Función para aplicar filtros
+function applyFilters() {
+    // Actualizar filtros actuales
+    const filterElements = {
+        cliente: document.getElementById('filtroCliente'),
+        producto: document.getElementById('filtroProducto'),
+        estado: document.getElementById('filtroEstado'),
+        asignado: document.getElementById('filtroAsignado'),
+        sla: document.getElementById('filtroSLA'),
+        prioridad: document.getElementById('filtroPrioridad')
+    };
+    
+    Object.keys(filterElements).forEach(key => {
+        const element = filterElements[key];
+        if (element) {
+            currentFilters[key] = element.value;
+        }
+    });
+    
+    // Filtrar solicitudes
+    const filteredSolicitudes = currentSolicitudes.filter(solicitud => {
+        // Filtros de select
+        if (currentFilters.cliente && solicitud.cliente !== currentFilters.cliente) return false;
+        if (currentFilters.producto && solicitud.producto !== currentFilters.producto) return false;
+        if (currentFilters.estado && solicitud.estado !== currentFilters.estado) return false;
+        if (currentFilters.asignado && solicitud.propietario !== currentFilters.asignado) return false;
+        if (currentFilters.sla && solicitud.sla !== currentFilters.sla) return false;
+        if (currentFilters.prioridad && solicitud.prioridad !== currentFilters.prioridad) return false;
+        
+        // Búsqueda global
+        if (currentFilters.search) {
+            const searchTerms = [
+                solicitud.cliente, solicitud.producto, solicitud.propietario,
+                solicitud.etapa, solicitud.estado, solicitud.etiquetas
+            ].join(' ').toLowerCase();
+            
+            if (!searchTerms.includes(currentFilters.search)) return false;
+        }
+        
+        return true;
+    });
+    
+    // Mostrar/ocultar filas
+    currentSolicitudes.forEach(solicitud => {
+        const isVisible = filteredSolicitudes.includes(solicitud);
+        solicitud.element.style.display = isVisible ? '' : 'none';
+    });
+    
+    // Actualizar contador de resultados
+    updateResultsCounter(filteredSolicitudes.length, currentSolicitudes.length);
+}
+
+// Función para limpiar filtros
+function clearFilters() {
+    const filterElements = [
+        'filtroCliente', 'filtroProducto', 'filtroEstado',
+        'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'busquedaGlobal'
+    ];
+    
+    filterElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = '';
+        }
+    });
+    
+    // Reset filters object
+    Object.keys(currentFilters).forEach(key => {
+        currentFilters[key] = '';
+    });
+    
+    // Show all rows
+    currentSolicitudes.forEach(solicitud => {
+        solicitud.element.style.display = '';
+    });
+    
+    updateResultsCounter(currentSolicitudes.length, currentSolicitudes.length);
+}
+
+// Función para actualizar contador de resultados
+function updateResultsCounter(showing, total) {
+    const counter = document.getElementById('resultsCounter');
+    if (counter) {
+        if (showing === total) {
+            counter.textContent = `Mostrando ${total} solicitudes`;
         } else {
-            // Si no hay datos, mostrar mensaje personalizado sin DataTables
-            console.log('📋 Tabla sin datos - no inicializando DataTables');
+            counter.textContent = `Mostrando ${showing} de ${total} solicitudes`;
         }
     }
+}
+
+// Función para configurar scroll de tabla
+function setupTableScroll() {
+    const tableContainer = document.getElementById('tableContainer');
+    if (!tableContainer) return;
+    
+    const leftIndicator = document.getElementById('scrollLeftIndicator');
+    const rightIndicator = document.getElementById('scrollRightIndicator');
+    const scrollHint = document.getElementById('scrollHint');
+    
+    function updateScrollIndicators() {
+        const scrollLeft = tableContainer.scrollLeft;
+        const scrollWidth = tableContainer.scrollWidth;
+        const clientWidth = tableContainer.clientWidth;
+        
+        if (leftIndicator) {
+            leftIndicator.style.display = scrollLeft > 0 ? 'flex' : 'none';
+        }
+        
+        if (rightIndicator) {
+            rightIndicator.style.display = scrollLeft < (scrollWidth - clientWidth - 5) ? 'flex' : 'none';
+        }
+        
+        if (scrollHint) {
+            scrollHint.style.display = scrollWidth > clientWidth ? 'block' : 'none';
+        }
+    }
+    
+    tableContainer.addEventListener('scroll', updateScrollIndicators);
+    window.addEventListener('resize', updateScrollIndicators);
+    
+    // Initial check
+    setTimeout(updateScrollIndicators, 100);
+}
+
+// Función para scroll manual de tabla
+function scrollTable(direction) {
+    const tableContainer = document.getElementById('tableContainer');
+    if (!tableContainer) return;
+    
+    const scrollAmount = 300;
+    const currentScroll = tableContainer.scrollLeft;
+    
+    if (direction === 'left') {
+        tableContainer.scrollTo({
+            left: currentScroll - scrollAmount,
+            behavior: 'smooth'
+        });
+    } else {
+        tableContainer.scrollTo({
+            left: currentScroll + scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+}
+
+// Función para inicializar la aplicación
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando sistema de tabla mejorado...');
+    
+    // Inicializar datos de la tabla desde el DOM
+    initializeTableData();
+    
+    // Configurar filtros
+    setupFilters();
+    
+    // Configurar búsqueda global
+    setupGlobalSearch();
+    
+    // Configurar scroll de tabla
+    setupTableScroll();
+    
+    // Ocultar loading
+    hideLoading();
+    
+    console.log('✅ Sistema inicializado correctamente');
+});
+
+document.addEventListener('DOMContentLoaded', function() {
     
     // =====================================
     // FUNCIONES DE NOTIFICACIÓN PERSONALIZADA
     // =====================================
     
     function mostrarNotificacionExito(mensaje) {
-        var $notificacion = $(`
-            <div class="notificacion-personalizada notificacion-exito">
-                <div class="notificacion-contenido">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <span>${mensaje}</span>
-                </div>
+        const notificacion = document.createElement('div');
+        notificacion.className = 'notificacion-personalizada notificacion-exito';
+        notificacion.innerHTML = `
+            <div class="notificacion-contenido">
+                <i class="fas fa-check-circle me-2"></i>
+                <span>${mensaje}</span>
             </div>
-        `);
+        `;
         
-        $('body').append($notificacion);
+        document.body.appendChild(notificacion);
         
         // Animar entrada
         setTimeout(() => {
-            $notificacion.addClass('show');
+            notificacion.classList.add('show');
         }, 100);
         
         // Auto-remover después de 4 segundos
         setTimeout(() => {
-            $notificacion.removeClass('show');
-            setTimeout(() => $notificacion.remove(), 300);
+            notificacion.classList.remove('show');
+            setTimeout(() => notificacion.remove(), 300);
         }, 4000);
     }
     
@@ -1225,26 +1413,26 @@ $(document).ready(function() {
     function mostrarNotificacionError(mensaje) {
         console.log('🚨 Mostrando notificación de error:', mensaje);
         
-        var $notificacion = $(`
-            <div class="notificacion-personalizada notificacion-error">
-                <div class="notificacion-contenido">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <span>${mensaje}</span>
-                </div>
+        const notificacion = document.createElement('div');
+        notificacion.className = 'notificacion-personalizada notificacion-error';
+        notificacion.innerHTML = `
+            <div class="notificacion-contenido">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span>${mensaje}</span>
             </div>
-        `);
+        `;
         
-        $('body').append($notificacion);
+        document.body.appendChild(notificacion);
         
         // Animar entrada
         setTimeout(() => {
-            $notificacion.addClass('show');
+            notificacion.classList.add('show');
         }, 100);
         
         // Auto-remover después de 5 segundos (más tiempo para errores)
         setTimeout(() => {
-            $notificacion.removeClass('show');
-            setTimeout(() => $notificacion.remove(), 300);
+            notificacion.classList.remove('show');
+            setTimeout(() => notificacion.remove(), 300);
         }, 5000);
     }
     
@@ -1254,94 +1442,34 @@ $(document).ready(function() {
     function mostrarNotificacionAdvertencia(mensaje) {
         console.log('⚠️ Mostrando notificación de advertencia:', mensaje);
         
-        var $notificacion = $(`
-            <div class="notificacion-personalizada notificacion-advertencia">
-                <div class="notificacion-contenido">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <span>${mensaje}</span>
-                </div>
+        const notificacion = document.createElement('div');
+        notificacion.className = 'notificacion-personalizada notificacion-advertencia';
+        notificacion.innerHTML = `
+            <div class="notificacion-contenido">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span>${mensaje}</span>
             </div>
-        `);
+        `;
         
-        $('body').append($notificacion);
+        document.body.appendChild(notificacion);
         
         // Animar entrada
         setTimeout(() => {
-            $notificacion.addClass('show');
+            notificacion.classList.add('show');
         }, 100);
         
         // Auto-remover después de 6 segundos (más tiempo para advertencias)
         setTimeout(() => {
-            $notificacion.removeClass('show');
-            setTimeout(() => $notificacion.remove(), 300);
+            notificacion.classList.remove('show');
+            setTimeout(() => notificacion.remove(), 300);
         }, 6000);
     }
     
-    function configurarFiltros() {
-        console.log('Configurando filtros...');
-        
-        // Obtener valores únicos de cada columna
-        var etapas = new Set();
-        var slas = new Set();
-        
-        // Usar selector directo para obtener todas las filas
-        $('#tablaSolicitudes tbody tr').each(function() {
-            var $row = $(this);
-            
-            // Extraer datos de los atributos data-*
-            var etapa = $row.attr('data-etapa');
-            var sla = $row.attr('data-sla');
-            
-            console.log('Datos de fila:', { etapa, sla });
-            
-            if (etapa && etapa !== 'Sin etapa') etapas.add(etapa);
-            if (sla && sla !== 'sin sla') slas.add(sla);
-        });
-        
-        // Poblar filtros
-        poblarFiltro('#filtroEtapa', Array.from(etapas));
-        poblarFiltro('#filtroSLA', Array.from(slas));
-        
-        console.log('Filtros configurados:', {
-            etapas: Array.from(etapas),
-            slas: Array.from(slas)
-        });
-    }
+    // Hacer la función globalmente accesible
+    window.mostrarNotificacionAdvertencia = mostrarNotificacionAdvertencia;
     
-    function poblarFiltro(selector, valores) {
-        var $select = $(selector);
-        $select.find('option:not(:first)').remove();
-        
-        valores.sort().forEach(function(valor) {
-            var texto = valor.charAt(0).toUpperCase() + valor.slice(1);
-            $select.append('<option value="' + valor + '">' + texto + '</option>');
-        });
-    }
-    
-    // Aplicar filtros en tiempo real (solo si la tabla existe)
-    $('#filtroEtapa, #filtroSLA').on('change', function() {
-        console.log('Filtro cambiado:', $(this).attr('id'), '=', $(this).val());
-        if (table) {
-            aplicarFiltrosAvanzados();
-        }
-    });
-    
-    // Búsqueda global (solo si la tabla existe)
-    $('#busquedaGlobal').on('keyup', function() {
-        if (table) {
-            table.search(this.value).draw();
-        }
-    });
-    
-    // Limpiar filtros (solo si la tabla existe)
-    $('#limpiarFiltros').on('click', function() {
-        $('#filtroCliente, #filtroProducto, #filtroEstado, #filtroAsignado, #filtroSLA, #filtroPrioridad').val('');
-        $('#busquedaGlobal').val('');
-        if (table) {
-            table.search('').draw();
-            aplicarFiltrosAvanzados();
-        }
-    });
+    // Hacer la función globalmente accesible
+    window.mostrarNotificacionAdvertencia = mostrarNotificacionAdvertencia;
     
     // =====================================
     // MODAL DE CONFIRMACIÓN PERSONALIZADO
@@ -1380,38 +1508,68 @@ $(document).ready(function() {
             configuracion.pregunta = '¿Está seguro de eliminar esta solicitud?';
             configuracion.descripcion = 'Esta acción no se puede deshacer:';
             configuracion.icono = 'fas fa-trash';
-            $('#nombreEtapaDestino').html('<span class="text-danger fw-bold">Esta acción es permanente</span>');
+            const nombreEtapaDestino = document.getElementById('nombreEtapaDestino');
+            if (nombreEtapaDestino) {
+                nombreEtapaDestino.innerHTML = '<span class="text-danger fw-bold">Esta acción es permanente</span>';
+            }
             // Ocultar selector de subestado para eliminación
-            $('#selectorSubestado').hide();
+            const selectorSubestado = document.getElementById('selectorSubestado');
+            if (selectorSubestado) selectorSubestado.style.display = 'none';
         } else {
             // Para cambio de etapa normal
-            $('#nombreEtapaDestino').text(nombreEtapa);
+            const nombreEtapaDestino = document.getElementById('nombreEtapaDestino');
+            if (nombreEtapaDestino) {
+                nombreEtapaDestino.textContent = nombreEtapa;
+            }
             
             // Cargar subestados si se proporciona etapaId
             if (currentEtapaId) {
                 cargarSubestados(currentEtapaId);
             } else {
-                $('#selectorSubestado').hide();
+                const selectorSubestado = document.getElementById('selectorSubestado');
+                if (selectorSubestado) selectorSubestado.style.display = 'none';
             }
         }
         
         // Actualizar contenido del modal
-        $('#modalConfirmacionEtapaLabel').html(`<i class="${configuracion.icono} me-2"></i>${configuracion.titulo}`);
-        $('#modalConfirmacionEtapaLabel').next('p').text(configuracion.subtitulo);
-        $('.modal-body h5').text(configuracion.pregunta);
-        $('.modal-body p.text-muted').text(configuracion.descripcion);
-        $('.modal-body .text-center .fas').removeClass().addClass(configuracion.icono).css('font-size', '2rem').css('color', '#28a745');
+        const modalLabel = document.getElementById('modalConfirmacionEtapaLabel');
+        if (modalLabel) {
+            modalLabel.innerHTML = `<i class="${configuracion.icono} me-2"></i>${configuracion.titulo}`;
+        }
+        
+        const modalSubtitle = modalLabel?.nextElementSibling;
+        if (modalSubtitle) {
+            modalSubtitle.textContent = configuracion.subtitulo;
+        }
+        
+        const modalBodyH5 = document.querySelector('.modal-body h5');
+        if (modalBodyH5) {
+            modalBodyH5.textContent = configuracion.pregunta;
+        }
+        
+        const modalBodyP = document.querySelector('.modal-body p.text-muted');
+        if (modalBodyP) {
+            modalBodyP.textContent = configuracion.descripcion;
+        }
+        
+        const modalIcon = document.querySelector('.modal-body .text-center .fas');
+        if (modalIcon) {
+            modalIcon.className = configuracion.icono;
+            modalIcon.style.fontSize = '2rem';
+            modalIcon.style.color = '#28a745';
+        }
         
         // Guardar callbacks
         modalConfirmCallback = onConfirm;
         modalCancelCallback = onCancel || function() {};
         
         // Mostrar el modal
-        var modal = new bootstrap.Modal(document.getElementById('modalConfirmacionEtapa'));
+        const modalElement = document.getElementById('modalConfirmacionEtapa');
+        const modal = new bootstrap.Modal(modalElement);
         modal.show();
         
         // Validar formulario inicial cuando se muestre el modal
-        $('#modalConfirmacionEtapa').on('shown.bs.modal', function() {
+        modalElement.addEventListener('shown.bs.modal', function() {
             validarFormularioModal();
         });
     };
@@ -1435,105 +1593,104 @@ $(document).ready(function() {
                 mostrarSelectorSubestado(data.subestados);
             } else {
                 console.log('ℹ️ No hay subestados para esta etapa');
-                $('#selectorSubestado').hide();
+                const selectorSubestado = document.getElementById('selectorSubestado');
+                if (selectorSubestado) selectorSubestado.style.display = 'none';
                 currentSubestados = [];
             }
         })
         .catch(error => {
             console.error('❌ Error cargando subestados:', error);
-            $('#selectorSubestado').hide();
+            const selectorSubestado = document.getElementById('selectorSubestado');
+            if (selectorSubestado) selectorSubestado.style.display = 'none';
             currentSubestados = [];
         });
     }
     
     // Función para mostrar el selector de subestados
     function mostrarSelectorSubestado(subestados) {
-        const select = $('#subestadoSelect');
-        select.empty();
-        select.append('<option value="">Seleccionar estado...</option>');
+        const select = document.getElementById('subestadoSelect');
+        if (!select) return;
+        
+        select.innerHTML = '';
+        select.appendChild(new Option('Seleccionar estado...', ''));
         
         subestados.forEach(subestado => {
-            select.append(`<option value="${subestado.id}">${subestado.nombre}</option>`);
+            select.appendChild(new Option(subestado.nombre, subestado.id));
         });
         
-        $('#selectorSubestado').show();
+        const selectorSubestado = document.getElementById('selectorSubestado');
+        if (selectorSubestado) selectorSubestado.style.display = 'block';
         
         // Validar selección al cambiar
-        select.on('change', function() {
+        select.addEventListener('change', function() {
             validarFormularioModal();
         });
     }
     
     // Función para validar el formulario del modal
     function validarFormularioModal() {
-        const btnAceptar = $('#btnAceptarModal');
+        const btnAceptar = document.getElementById('btnAceptarModal');
+        if (!btnAceptar) return false;
         
         // Si hay subestados disponibles, debe seleccionar uno
         if (currentSubestados.length > 0) {
-            const subestadoSeleccionado = $('#subestadoSelect').val();
+            const subestadoSelect = document.getElementById('subestadoSelect');
+            const subestadoSeleccionado = subestadoSelect ? subestadoSelect.value : '';
+            
             if (!subestadoSeleccionado) {
-                btnAceptar.prop('disabled', true);
-                btnAceptar.html('<i class="fas fa-exclamation-triangle me-2"></i>Seleccionar Estado');
+                btnAceptar.disabled = true;
+                btnAceptar.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Seleccionar Estado';
                 return false;
             } else {
-                btnAceptar.prop('disabled', false);
-                btnAceptar.html('<i class="fas fa-check me-2"></i>Aceptar');
+                btnAceptar.disabled = false;
+                btnAceptar.innerHTML = '<i class="fas fa-check me-2"></i>Aceptar';
                 return true;
             }
         } else {
             // No hay subestados, siempre válido
-            btnAceptar.prop('disabled', false);
-            btnAceptar.html('<i class="fas fa-check me-2"></i>Aceptar');
+            btnAceptar.disabled = false;
+            btnAceptar.innerHTML = '<i class="fas fa-check me-2"></i>Aceptar';
             return true;
         }
     }
     
     // Event listeners para los botones del modal
-    $('#btnAceptarModal').on('click', function() {
-        // Validar formulario antes de proceder
-        if (!validarFormularioModal()) {
-            return;
-        }
-        
-        // Ocultar modal
-        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
-        
-        // Ejecutar callback de confirmación con datos de subestado
-        if (modalConfirmCallback) {
-            const subestadoSeleccionado = $('#subestadoSelect').val();
-            modalConfirmCallback(subestadoSeleccionado);
-        }
-    });
+    const btnAceptarModal = document.getElementById('btnAceptarModal');
+    if (btnAceptarModal) {
+        btnAceptarModal.addEventListener('click', function() {
+            // Validar formulario antes de proceder
+            if (!validarFormularioModal()) {
+                return;
+            }
+            
+            // Ocultar modal
+            const modalElement = document.getElementById('modalConfirmacionEtapa');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) modalInstance.hide();
+            
+            // Ejecutar callback de confirmación con datos de subestado
+            if (modalConfirmCallback) {
+                const subestadoSelect = document.getElementById('subestadoSelect');
+                const subestadoSeleccionado = subestadoSelect ? subestadoSelect.value : '';
+                modalConfirmCallback(subestadoSeleccionado);
+            }
+        });
+    }
     
-    $('#btnCancelarModal').on('click', function() {
-        // Ocultar modal
-        bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionEtapa')).hide();
-        
-        // Ejecutar callback de cancelación
-        if (modalCancelCallback) {
-            modalCancelCallback();
-        }
-    });
-    
-    // Función para cargar transiciones válidas y actualizar dropdown
-    function cargarTransicionesValidas(solicitudId, $select, callback) {
-        console.log('🔍 DEBUG: cargarTransicionesValidas llamado con solicitudId:', solicitudId);
-        console.log('🔍 DEBUG: URL a llamar:', `/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`);
-        
-        // Verificar si ya se cargaron las transiciones para evitar llamadas duplicadas
-        if ($select.data('transiciones-cargadas')) {
-            console.log('✅ Transiciones ya cargadas para solicitud:', solicitudId);
-            return;
-        }
-        
-        // Mostrar estado de carga
-        var etapaActual = $select.data('etapa-actual');
-        var opcionSeleccionada = $select.val();
-        $select.prop('disabled', true);
-        $select.html('<option value="">Cargando transiciones...</option>');
-        
-        fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-validas/`)
-        .then(response => {
+    const btnCancelarModal = document.getElementById('btnCancelarModal');
+    if (btnCancelarModal) {
+        btnCancelarModal.addEventListener('click', function() {
+            // Ocultar modal
+            const modalElement = document.getElementById('modalConfirmacionEtapa');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) modalInstance.hide();
+            
+            // Ejecutar callback de cancelación
+            if (modalCancelCallback) {
+                modalCancelCallback();
+            }
+        });
+    }
             console.log('🔍 DEBUG cargarTransicionesValidas: Response status:', response.status);
             console.log('🔍 DEBUG cargarTransicionesValidas: Response ok:', response.ok);
             console.log('🔍 DEBUG cargarTransicionesValidas: Content-Type:', response.headers.get('content-type'));
@@ -1556,17 +1713,18 @@ $(document).ready(function() {
             console.log('🔍 DEBUG cargarTransicionesValidas: Data recibida:', data);
             if (data.success) {
                 // Limpiar el select
-                $select.empty();
+                select.innerHTML = '';
                 
                 // SIEMPRE agregar la etapa actual primero (si existe)
                 if (data.etapa_actual && data.etapa_actual.id) {
-                    $select.append(`<option value="${data.etapa_actual.id}" 
-                                            class="text-primary fw-bold"
-                                            data-puede-realizar="true"
-                                            data-requisitos-faltantes="0"
-                                            selected>
-                        📍 ${data.etapa_actual.nombre} (Actual)
-                    </option>`);
+                    const optionActual = document.createElement('option');
+                    optionActual.value = data.etapa_actual.id;
+                    optionActual.className = 'text-primary fw-bold';
+                    optionActual.setAttribute('data-puede-realizar', 'true');
+                    optionActual.setAttribute('data-requisitos-faltantes', '0');
+                    optionActual.selected = true;
+                    optionActual.textContent = `📍 ${data.etapa_actual.nombre} (Actual)`;
+                    select.appendChild(optionActual);
                 }
                 
                 // Agregar las etapas válidas según las transiciones
@@ -1580,31 +1738,33 @@ $(document).ready(function() {
                     var requisitosInfo = transicion.total_requisitos_faltantes > 0 ? 
                         ` (${transicion.total_requisitos_faltantes} requisitos faltantes)` : '';
                     
-                    $select.append(`<option value="${transicion.etapa_destino.id}" 
-                                            class="${warningClass}"
-                                            data-puede-realizar="${transicion.puede_realizar}"
-                                            data-requisitos-faltantes="${transicion.total_requisitos_faltantes}">
-                        ➡️ ${transicion.etapa_destino.nombre}${requisitosInfo}
-                    </option>`);
+                    const optionTransicion = document.createElement('option');
+                    optionTransicion.value = transicion.etapa_destino.id;
+                    optionTransicion.className = warningClass;
+                    optionTransicion.setAttribute('data-puede-realizar', transicion.puede_realizar);
+                    optionTransicion.setAttribute('data-requisitos-faltantes', transicion.total_requisitos_faltantes);
+                    optionTransicion.textContent = `➡️ ${transicion.etapa_destino.nombre}${requisitosInfo}`;
+                    select.appendChild(optionTransicion);
                 });
                 
                 // Si no hay etapa actual en los datos pero sí en el select original, agregarla
                 if ((!data.etapa_actual || !data.etapa_actual.id) && etapaActual) {
-                    $select.append(`<option value="${etapaActual}" 
-                                            class="text-primary fw-bold"
-                                            data-puede-realizar="true"
-                                            data-requisitos-faltantes="0"
-                                            selected>
-                        📍 Etapa actual (ID: ${etapaActual})
-                    </option>`);
+                    const optionFallback = document.createElement('option');
+                    optionFallback.value = etapaActual;
+                    optionFallback.className = 'text-primary fw-bold';
+                    optionFallback.setAttribute('data-puede-realizar', 'true');
+                    optionFallback.setAttribute('data-requisitos-faltantes', '0');
+                    optionFallback.selected = true;
+                    optionFallback.textContent = `📍 Etapa actual (ID: ${etapaActual})`;
+                    select.appendChild(optionFallback);
                 }
                 
                 // Actualizar data attributes
-                $select.data('etapa-actual', etapaActual);
-                $select.data('transiciones-cargadas', true);
+                select.setAttribute('data-etapa-actual', etapaActual);
+                select.setAttribute('data-transiciones-cargadas', 'true');
                 
                 // Habilitar el select
-                $select.prop('disabled', false);
+                select.disabled = false;
                 
                 console.log('✅ Transiciones válidas cargadas:', data.transiciones);
                 
@@ -1615,7 +1775,7 @@ $(document).ready(function() {
             } else {
                 console.error('❌ Error al cargar transiciones válidas:', data.error);
                 // Restaurar opciones originales en caso de error
-                restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada);
+                restaurarOpcionesOriginales(select, etapaActual, opcionSeleccionada);
                 // Mostrar notificación de error
                 if (typeof showToast !== 'undefined') {
                     showToast('Error al cargar transiciones: ' + (data.error || 'Error desconocido'), 'error', 5000);
@@ -1632,7 +1792,7 @@ $(document).ready(function() {
         .catch(error => {
             console.error('❌ Error en la petición de transiciones válidas:', error);
             // Restaurar opciones originales en caso de error
-            restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada);
+            restaurarOpcionesOriginales(select, etapaActual, opcionSeleccionada);
             // Mostrar notificación de error más específica
             let mensajeError = 'Error al cargar transiciones válidas';
             if (error.message.includes('404')) {
@@ -1656,55 +1816,70 @@ $(document).ready(function() {
                 callback();
             }
         });
-    }
+    
     
     // Función auxiliar para restaurar opciones originales en caso de error
-    function restaurarOpcionesOriginales($select, etapaActual, opcionSeleccionada) {
-        $select.prop('disabled', false);
-        $select.empty();
+    function restaurarOpcionesOriginales(select, etapaActual, opcionSeleccionada) {
+        select.disabled = false;
+        select.innerHTML = '';
         
         // Restaurar la opción seleccionada originalmente con mejor formato
         if (etapaActual) {
-            $select.append(`<option value="${etapaActual}" selected class="text-primary fw-bold">
-                📍 Etapa actual (ID: ${etapaActual})
-            </option>`);
+            const option = document.createElement('option');
+            option.value = etapaActual;
+            option.selected = true;
+            option.className = 'text-primary fw-bold';
+            option.textContent = `📍 Etapa actual (ID: ${etapaActual})`;
+            select.appendChild(option);
         }
         
         // Marcar como no cargado para permitir reintentos
-        $select.data('transiciones-cargadas', false);
+        select.setAttribute('data-transiciones-cargadas', 'false');
     }
     
     // Cargar transiciones válidas inmediatamente al cargar la página
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 Cargando transiciones válidas para todos los selects de etapa...');
         
         // Mostrar indicador de carga global
-        var $loadingIndicator = $('<div class="text-center py-2"><small class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Cargando transiciones válidas...</small></div>');
-        $('.etapa-select').first().closest('td').before($loadingIndicator);
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'text-center py-2';
+        loadingIndicator.innerHTML = '<small class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Cargando transiciones válidas...</small>';
         
-        var totalSelects = $('.etapa-select:not(:disabled)').length;
+        const firstSelect = document.querySelector('.etapa-select');
+        if (firstSelect) {
+            const closestTd = firstSelect.closest('td');
+            if (closestTd) {
+                closestTd.parentNode.insertBefore(loadingIndicator, closestTd);
+            }
+        }
+        
+        const etapaSelects = document.querySelectorAll('.etapa-select:not([disabled])');
+        const totalSelects = etapaSelects.length;
         var loadedSelects = 0;
         
-        $('.etapa-select').each(function() {
-            var $select = $(this);
-            
+        etapaSelects.forEach(function(select) {
             // No cargar transiciones si el select está deshabilitado (bandeja grupal)
-            if ($select.prop('disabled')) {
+            if (select.disabled) {
                 console.log('❌ Select deshabilitado - no cargando transiciones');
                 return;
             }
             
-            var solicitudId = $select.data('solicitud-id');
+            var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
             console.log('📋 Cargando transiciones para solicitud:', solicitudId);
             
             // Modificar la función para incluir callback de completado
-            cargarTransicionesValidas(solicitudId, $select, function() {
+            cargarTransicionesValidas(solicitudId, select, function() {
                 loadedSelects++;
                 if (loadedSelects >= totalSelects) {
                     // Ocultar indicador de carga cuando todos estén listos
-                    $loadingIndicator.fadeOut(300, function() {
-                        $(this).remove();
-                    });
+                    loadingIndicator.style.transition = 'opacity 0.3s';
+                    loadingIndicator.style.opacity = '0';
+                    setTimeout(function() {
+                        if (loadingIndicator.parentNode) {
+                            loadingIndicator.parentNode.removeChild(loadingIndicator);
+                        }
+                    }, 300);
                     console.log('✅ Todas las transiciones han sido cargadas');
                 }
             });
@@ -1712,34 +1887,40 @@ $(document).ready(function() {
         
         // Si no hay selects para cargar, remover el indicador inmediatamente
         if (totalSelects === 0) {
-            $loadingIndicator.remove();
+            if (loadingIndicator.parentNode) {
+                loadingIndicator.parentNode.removeChild(loadingIndicator);
+            }
         }
     });
     
     // Mantener el evento focus como fallback para casos donde se agreguen selects dinámicamente
-    $(document).on('focus', '.etapa-select', function() {
-        var $select = $(this);
-        
-        // No cargar transiciones si el select está deshabilitado (bandeja grupal)
-        if ($select.prop('disabled')) {
-            console.log('❌ Select deshabilitado - no cargando transiciones');
-            return;
+    document.addEventListener('focus', function(event) {
+        if (event.target.classList.contains('etapa-select')) {
+            const select = event.target;
+            
+            // No cargar transiciones si el select está deshabilitado (bandeja grupal)
+            if (select.disabled) {
+                console.log('❌ Select deshabilitado - no cargando transiciones');
+                return;
+            }
+            
+            // Solo cargar si no se han cargado ya las transiciones (verificar si tiene data-transiciones-cargadas)
+            const transicionesCargadas = select.getAttribute('data-transiciones-cargadas') === 'true';
+            if (!transicionesCargadas) {
+                var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
+                console.log('📋 Cargando transiciones en focus para solicitud:', solicitudId);
+                cargarTransicionesValidas(solicitudId, select);
+            }
         }
-        
-        // Solo cargar si no se han cargado ya las transiciones (verificar si tiene data-transiciones-cargadas)
-        if (!$select.data('transiciones-cargadas')) {
-            var solicitudId = $select.data('solicitud-id');
-            console.log('📋 Cargando transiciones en focus para solicitud:', solicitudId);
-            cargarTransicionesValidas(solicitudId, $select);
-        }
-    });
+    }, true);
     
     // Manejar cambio de etapa con modal personalizado
-    $(document).on('change', '.etapa-select', function() {
-        var $select = $(this);
+    document.addEventListener('change', function(event) {
+        if (event.target.classList.contains('etapa-select')) {
+            const select = event.target;
         
         // Verificar si el select está deshabilitado (bandeja grupal)
-        if ($select.prop('disabled')) {
+        if (select.disabled) {
             console.log('❌ Select deshabilitado - solicitud en bandeja grupal');
             // Mostrar mensaje informativo
             if (typeof showToast !== 'undefined') {
@@ -1750,10 +1931,10 @@ $(document).ready(function() {
             return; // No permitir cambios
         }
         
-        var solicitudId = $select.data('solicitud-id');
-        var etapaActual = $select.data('etapa-actual');
-        var nuevaEtapaId = $select.val();
-        var nombreEtapa = $select.find('option:selected').text();
+        var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
+        var etapaActual = select.getAttribute('data-etapa-actual') || select.dataset.etapaActual;
+        var nuevaEtapaId = select.value;
+        var nombreEtapa = select.options[select.selectedIndex]?.text || '';
         
         console.log('🔥 CAMBIO DE ETAPA DETECTADO:');
         console.log('- Solicitud ID:', solicitudId);
@@ -1767,9 +1948,9 @@ $(document).ready(function() {
         }
         
         // Verificar si hay requisitos faltantes
-        var $opcionSeleccionada = $select.find('option:selected');
-        var puedeRealizar = $opcionSeleccionada.data('puede-realizar');
-        var requisitosFaltantes = $opcionSeleccionada.data('requisitos-faltantes');
+        const opcionSeleccionada = select.options[select.selectedIndex];
+        const puedeRealizar = opcionSeleccionada?.getAttribute('data-puede-realizar') === 'true';
+        const requisitosFaltantes = parseInt(opcionSeleccionada?.getAttribute('data-requisitos-faltantes') || '0');
         
         if (puedeRealizar === false || requisitosFaltantes > 0) {
             console.log('🔍 Requisitos faltantes detectados, mostrando modal');
@@ -1782,21 +1963,21 @@ $(document).ready(function() {
                     window.mostrarModalRequisitosFaltantes(solicitudId, nuevaEtapaId, nombreEtapa, function() {
                         // Callback de éxito - proceder con el cambio
                         console.log('✅ Requisitos completados, procediendo con cambio de etapa');
-                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select, null);
+                        window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, select, null);
                     }, function() {
                         // Callback de cancelación
                         console.log('❌ Cambio de etapa cancelado');
-                        $select.val(etapaActual); // Revertir selección
+                        select.value = etapaActual; // Revertir selección
                     });
                 } catch (error) {
                     console.error('❌ Error al llamar mostrarModalRequisitosFaltantes:', error);
                     alert('Error al mostrar modal de requisitos: ' + error.message);
-                    $select.val(etapaActual); // Revertir selección
+                    select.value = etapaActual; // Revertir selección
                 }
             } else {
                 console.error('❌ Función mostrarModalRequisitosFaltantes no disponible');
                 alert('Error: Función de requisitos no disponible');
-                $select.val(etapaActual); // Revertir selección
+                select.value = etapaActual; // Revertir selección
             }
             return;
         }
@@ -1806,73 +1987,15 @@ $(document).ready(function() {
             // CALLBACK DE CONFIRMACIÓN
             console.log('✅ Confirmado desde modal personalizado, ejecutando cambio de etapa');
             console.log('🔍 Subestado seleccionado:', subestadoSeleccionado);
-            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, $select, subestadoSeleccionado);
+            window.ejecutarCambioEtapa(solicitudId, nuevaEtapaId, etapaActual, select, subestadoSeleccionado);
         }, function() {
             // CALLBACK DE CANCELACIÓN
             console.log('❌ Cancelado desde modal personalizado');
-            $select.val(etapaActual); // Revertir selección
+            select.value = etapaActual; // Revertir selección
         }, {
             etapaId: nuevaEtapaId
         });
     });
-    
-    function aplicarFiltrosAvanzados() {
-        console.log('Aplicando filtros avanzados...');
-        
-        // Verificar si la tabla existe antes de aplicar filtros
-        if (!table) {
-            console.log('📋 Tabla no inicializada - saltando filtros');
-            return;
-        }
-        
-        // Limpiar filtros anteriores
-        $.fn.dataTable.ext.search.splice(0, $.fn.dataTable.ext.search.length);
-        
-        var filtros = {
-            etapa: $('#filtroEtapa').val(),
-            sla: $('#filtroSLA').val()
-        };
-        
-        console.log('Filtros activos:', filtros);
-        
-        // Solo aplicar filtros si hay valores seleccionados
-        var hayFiltros = Object.values(filtros).some(valor => valor !== '');
-        
-        if (hayFiltros) {
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                // Verificar que estamos en la tabla correcta
-                if (settings.nTable.id !== 'tablaSolicitudes') {
-                    return true;
-                }
-                
-                // Obtener la fila del DOM usando el API de DataTables
-                var row = table.row(dataIndex);
-                if (!row.node()) {
-                    return true;
-                }
-                
-                var $row = $(row.node());
-                var match = true;
-                
-                if (filtros.etapa) {
-                    var dataEtapa = $row.attr('data-etapa');
-                    match = match && (dataEtapa === filtros.etapa);
-                    console.log('Etapa:', dataEtapa, '===', filtros.etapa, '?', match);
-                }
-                if (filtros.sla) {
-                    var dataSla = $row.attr('data-sla');
-                    match = match && (dataSla === filtros.sla);
-                    console.log('SLA:', dataSla, '===', filtros.sla, '?', match);
-                }
-                
-                console.log('Fila', dataIndex, 'match final:', match);
-                return match;
-            });
-        }
-        
-        table.draw();
-        console.log('Filtros aplicados, tabla redibujada');
-    }
     
     // Función para cambiar entre vistas
     window.cambiarVista = function(vista) {
@@ -1895,15 +2018,30 @@ $(document).ready(function() {
     };
     
     // Actualizar estado de botones según vista actual
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         var currentView = '{{ request.GET.view|default:"table" }}';
         
+        const btnVistaTabla = document.getElementById('btnVistaTabla');
+        const btnVistaKanban = document.getElementById('btnVistaKanban');
+        
         if (currentView === 'kanban') {
-            $('#btnVistaTabla').removeClass('active btn-light').addClass('btn-outline-light');
-            $('#btnVistaKanban').removeClass('btn-outline-light').addClass('active btn-light');
+            if (btnVistaTabla) {
+                btnVistaTabla.classList.remove('active', 'btn-light');
+                btnVistaTabla.classList.add('btn-outline-light');
+            }
+            if (btnVistaKanban) {
+                btnVistaKanban.classList.remove('btn-outline-light');
+                btnVistaKanban.classList.add('active', 'btn-light');
+            }
         } else {
-            $('#btnVistaTabla').removeClass('btn-outline-light').addClass('active btn-light');
-            $('#btnVistaKanban').removeClass('active btn-light').addClass('btn-outline-light');
+            if (btnVistaTabla) {
+                btnVistaTabla.classList.remove('btn-outline-light');
+                btnVistaTabla.classList.add('active', 'btn-light');
+            }
+            if (btnVistaKanban) {
+                btnVistaKanban.classList.remove('active', 'btn-light');
+                btnVistaKanban.classList.add('btn-outline-light');
+            }
         }
     });
 });
@@ -1928,6 +2066,70 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Modal de requisitos faltantes encontrado');
   } else {
     console.error('❌ Modal de requisitos faltantes no encontrado');
+  }
+  
+  // Horizontal scroll functionality for table - Matching APC Tracking
+  const tableContainer = document.getElementById('tableContainer');
+  const scrollLeftIndicator = document.getElementById('scrollLeftIndicator');
+  const scrollRightIndicator = document.getElementById('scrollRightIndicator');
+  const scrollHint = document.getElementById('scrollHint');
+  
+  if (tableContainer && scrollLeftIndicator && scrollRightIndicator) {
+    let scrollHintTimeout;
+    
+    // Function to update scroll indicators visibility
+    function updateScrollIndicators() {
+      const scrollLeft = tableContainer.scrollLeft;
+      const scrollWidth = tableContainer.scrollWidth;
+      const clientWidth = tableContainer.clientWidth;
+      const maxScrollLeft = scrollWidth - clientWidth;
+      
+      // Show/hide left indicator
+      if (scrollLeft > 10) {
+        scrollLeftIndicator.classList.add('visible');
+      } else {
+        scrollLeftIndicator.classList.remove('visible');
+      }
+      
+      // Show/hide right indicator
+      if (scrollLeft < maxScrollLeft - 10) {
+        scrollRightIndicator.classList.add('visible');
+      } else {
+        scrollRightIndicator.classList.remove('visible');
+      }
+    }
+    
+    // Function to show scroll hint
+    function showScrollHint() {
+      if (scrollHint) {
+        scrollHint.classList.add('visible');
+        clearTimeout(scrollHintTimeout);
+        scrollHintTimeout = setTimeout(() => {
+          scrollHint.classList.remove('visible');
+        }, 3000);
+      }
+    }
+    
+    // Update indicators on scroll
+    tableContainer.addEventListener('scroll', updateScrollIndicators);
+    
+    // Initial check and show hint if scrollable
+    setTimeout(() => {
+      updateScrollIndicators();
+      if (tableContainer.scrollWidth > tableContainer.clientWidth) {
+        showScrollHint();
+      }
+    }, 500);
+    
+    // Update on window resize
+    window.addEventListener('resize', updateScrollIndicators);
+    
+    // Hide hint on user interaction
+    tableContainer.addEventListener('scroll', () => {
+      if (scrollHint) {
+        scrollHint.classList.remove('visible');
+      }
+    });
   }
   
   // Manejar edición de etiquetas con select
@@ -2019,6 +2221,27 @@ function getCookie(name) {
   }
   return cookieValue;
 }
+
+// Function to scroll table horizontally - Matching APC Tracking
+window.scrollTable = function(direction) {
+  const tableContainer = document.getElementById('tableContainer');
+  if (tableContainer) {
+    const scrollAmount = 300;
+    const currentScroll = tableContainer.scrollLeft;
+    
+    if (direction === 'left') {
+      tableContainer.scrollTo({
+        left: currentScroll - scrollAmount,
+        behavior: 'smooth'
+      });
+    } else if (direction === 'right') {
+      tableContainer.scrollTo({
+        left: currentScroll + scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  }
+};
 </script>
 
 <!-- JavaScript para Vista Móvil -->
@@ -2375,7 +2598,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar filtros Kanban
     function configurarFiltrosKanban() {
-        if ($('.kanban-board').length === 0) return; // Solo si estamos en vista Kanban
+        const kanbanBoard = document.querySelector('.kanban-board');
+        if (!kanbanBoard) return; // Solo si estamos en vista Kanban
         
         console.log('Configurando filtros Kanban...');
         
@@ -2385,13 +2609,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var asignados = new Set();
         var slas = new Set();
         
-        $('.kanban-card').each(function() {
-            var $card = $(this);
-            
-            var cliente = $card.attr('data-cliente');
-            var estado = $card.attr('data-estado');
-            var asignado = $card.attr('data-asignado');
-            var sla = $card.attr('data-sla');
+        const kanbanCards = document.querySelectorAll('.kanban-card');
+        kanbanCards.forEach(function(card) {
+            var cliente = card.getAttribute('data-cliente');
+            var estado = card.getAttribute('data-estado');
+            var asignado = card.getAttribute('data-asignado');
+            var sla = card.getAttribute('data-sla');
             
             if (cliente && cliente !== 'Sin cliente') clientes.add(cliente);
             if (estado && estado !== 'Sin estado') estados.add(estado);
@@ -2400,35 +2623,71 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Poblar filtros
-        var $filtroCliente = $('#kanbanFiltroCliente');
-        var $filtroEstado = $('#kanbanFiltroEstado');
-        var $filtroAsignado = $('#kanbanFiltroAsignado');
-        var $filtroSLA = $('#kanbanFiltroSLA');
+        var filtroCliente = document.getElementById('kanbanFiltroCliente');
+        var filtroEstado = document.getElementById('kanbanFiltroEstado');
+        var filtroAsignado = document.getElementById('kanbanFiltroAsignado');
+        var filtroSLA = document.getElementById('kanbanFiltroSLA');
         
         // Limpiar opciones existentes (excepto la primera)
-        $filtroCliente.find('option:not(:first)').remove();
-        $filtroEstado.find('option:not(:first)').remove();
-        $filtroAsignado.find('option:not(:first)').remove();
-        $filtroSLA.find('option:not(:first)').remove();
+        if (filtroCliente) {
+            const firstOption = filtroCliente.querySelector('option:first-child');
+            filtroCliente.innerHTML = '';
+            if (firstOption) filtroCliente.appendChild(firstOption);
+        }
+        if (filtroEstado) {
+            const firstOption = filtroEstado.querySelector('option:first-child');
+            filtroEstado.innerHTML = '';
+            if (firstOption) filtroEstado.appendChild(firstOption);
+        }
+        if (filtroAsignado) {
+            const firstOption = filtroAsignado.querySelector('option:first-child');
+            filtroAsignado.innerHTML = '';
+            if (firstOption) filtroAsignado.appendChild(firstOption);
+        }
+        if (filtroSLA) {
+            const firstOption = filtroSLA.querySelector('option:first-child');
+            filtroSLA.innerHTML = '';
+            if (firstOption) filtroSLA.appendChild(firstOption);
+        }
         
         // Agregar nuevas opciones
         Array.from(clientes).sort().forEach(function(cliente) {
-            $filtroCliente.append(`<option value="${cliente}">${cliente}</option>`);
+            if (filtroCliente) {
+                const option = document.createElement('option');
+                option.value = cliente;
+                option.textContent = cliente;
+                filtroCliente.appendChild(option);
+            }
         });
         
         Array.from(estados).sort().forEach(function(estado) {
-            $filtroEstado.append(`<option value="${estado}">${estado}</option>`);
+            if (filtroEstado) {
+                const option = document.createElement('option');
+                option.value = estado;
+                option.textContent = estado;
+                filtroEstado.appendChild(option);
+            }
         });
         
         Array.from(asignados).sort().forEach(function(asignado) {
-            $filtroAsignado.append(`<option value="${asignado}">${asignado}</option>`);
+            if (filtroAsignado) {
+                const option = document.createElement('option');
+                option.value = asignado;
+                option.textContent = asignado;
+                filtroAsignado.appendChild(option);
+            }
         });
         
         Array.from(slas).sort().forEach(function(sla) {
-            var texto = sla === 'vencido' ? 'Vencido' : 
-                       sla === 'por vencer' ? 'Por vencer' : 
-                       sla === 'en tiempo' ? 'En tiempo' : sla;
-            $filtroSLA.append(`<option value="${sla}">${texto}</option>`);
+            if (filtroSLA) {
+                var texto = sla === 'vencido' ? 'Vencido' : 
+                           sla === 'por vencer' ? 'Por vencer' : 
+                           sla === 'en tiempo' ? 'En tiempo' : sla;
+                const option = document.createElement('option');
+                option.value = sla;
+                option.textContent = texto;
+                filtroSLA.appendChild(option);
+            }
         });
         
         console.log('Filtros Kanban configurados:', {
@@ -2444,44 +2703,51 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Aplicar filtros Kanban
     function aplicarFiltrosKanban() {
-        if ($('.kanban-card').length === 0) return;
+        const kanbanCards = document.querySelectorAll('.kanban-card');
+        if (kanbanCards.length === 0) return;
         
-        var filtroCliente = $('#kanbanFiltroCliente').val();
-        var filtroEstado = $('#kanbanFiltroEstado').val();
-        var filtroAsignado = $('#kanbanFiltroAsignado').val();
-        var filtroSLA = $('#kanbanFiltroSLA').val();
-        var busquedaGlobal = $('#kanbanBusquedaGlobal').val().toLowerCase();
+        const filtroClienteEl = document.getElementById('kanbanFiltroCliente');
+        const filtroEstadoEl = document.getElementById('kanbanFiltroEstado');
+        const filtroAsignadoEl = document.getElementById('kanbanFiltroAsignado');
+        const filtroSLAEl = document.getElementById('kanbanFiltroSLA');
+        const busquedaGlobalEl = document.getElementById('kanbanBusquedaGlobal');
         
-        $('.kanban-card').each(function() {
-            var $card = $(this);
+        var filtroCliente = filtroClienteEl ? filtroClienteEl.value : '';
+        var filtroEstado = filtroEstadoEl ? filtroEstadoEl.value : '';
+        var filtroAsignado = filtroAsignadoEl ? filtroAsignadoEl.value : '';
+        var filtroSLA = filtroSLAEl ? filtroSLAEl.value : '';
+        var busquedaGlobal = busquedaGlobalEl ? busquedaGlobalEl.value.toLowerCase() : '';
+        
+        kanbanCards.forEach(function(card) {
             var mostrar = true;
             
             // Filtro cliente
-            if (filtroCliente && $card.attr('data-cliente') !== filtroCliente) {
+            if (filtroCliente && card.getAttribute('data-cliente') !== filtroCliente) {
                 mostrar = false;
             }
             
             // Filtro estado
-            if (filtroEstado && $card.attr('data-estado') !== filtroEstado) {
+            if (filtroEstado && card.getAttribute('data-estado') !== filtroEstado) {
                 mostrar = false;
             }
             
             // Filtro asignado
-            if (filtroAsignado && $card.attr('data-asignado') !== filtroAsignado) {
+            if (filtroAsignado && card.getAttribute('data-asignado') !== filtroAsignado) {
                 mostrar = false;
             }
             
             // Filtro SLA
-            if (filtroSLA && $card.attr('data-sla') !== filtroSLA) {
+            if (filtroSLA && card.getAttribute('data-sla') !== filtroSLA) {
                 mostrar = false;
             }
             
             // Búsqueda global
-            if (busquedaGlobal && !$card.attr('data-search').includes(busquedaGlobal)) {
+            const searchData = card.getAttribute('data-search');
+            if (busquedaGlobal && searchData && !searchData.includes(busquedaGlobal)) {
                 mostrar = false;
             }
             
-            $card.toggle(mostrar);
+            card.style.display = mostrar ? '' : 'none';
         });
         
         // Actualizar contadores y mostrar mensajes cuando no hay solicitudes
@@ -2491,85 +2757,148 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Actualizar contadores de etapas
     function actualizarContadoresKanban() {
-        $('.kanban-column').each(function() {
-            var $column = $(this);
-            var etapaId = $column.find('.kanban-column-body').attr('data-etapa-id');
-            var count = $column.find('.kanban-card:visible').length;
-            $('#count-etapa-' + etapaId).text(count);
+        const kanbanColumns = document.querySelectorAll('.kanban-column');
+        kanbanColumns.forEach(function(column) {
+            const columnBody = column.querySelector('.kanban-column-body');
+            if (columnBody) {
+                const etapaId = columnBody.getAttribute('data-etapa-id');
+                const visibleCards = columnBody.querySelectorAll('.kanban-card:not([style*="display: none"])');
+                const count = visibleCards.length;
+                const countElement = document.getElementById('count-etapa-' + etapaId);
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+            }
         });
     }
     
     // Mostrar mensajes cuando no hay solicitudes visibles
     function mostrarMensajesVacios() {
-        $('.kanban-column-body').each(function() {
-            var $body = $(this);
-            var hasVisible = $body.find('.kanban-card:visible').length > 0;
-            $body.find('.no-solicitudes').toggle(!hasVisible);
+        const kanbanColumnBodies = document.querySelectorAll('.kanban-column-body');
+        kanbanColumnBodies.forEach(function(body) {
+            const visibleCards = body.querySelectorAll('.kanban-card:not([style*="display: none"])');
+            const hasVisible = visibleCards.length > 0;
+            const noSolicitudesElement = body.querySelector('.no-solicitudes');
+            if (noSolicitudesElement) {
+                noSolicitudesElement.style.display = hasVisible ? 'none' : '';
+            }
         });
     }
     
-    // Búsqueda por etapa
-    $('.etapa-search').on('input', function() {
-        var $input = $(this);
-        var etapaId = $input.attr('data-etapa-id');
-        var searchTerm = $input.val().toLowerCase();
-        
-        $('.kanban-column-body[data-etapa-id="' + etapaId + '"] .kanban-card').each(function() {
-            var $card = $(this);
-            var searchData = $card.attr('data-search');
-            var shouldShow = !searchTerm || searchData.includes(searchTerm);
-            $card.toggle(shouldShow);
-        });
-        
-        actualizarContadoresKanban();
-        mostrarMensajesVacios();
+    // Búsqueda por etapa - Event delegation
+    document.addEventListener('input', function(event) {
+        if (event.target.classList.contains('etapa-search')) {
+            const input = event.target;
+            const etapaId = input.getAttribute('data-etapa-id');
+            const searchTerm = input.value.toLowerCase();
+            
+            const columnBody = document.querySelector(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+            if (columnBody) {
+                const cards = columnBody.querySelectorAll('.kanban-card');
+                cards.forEach(function(card) {
+                    const searchData = card.getAttribute('data-search');
+                    const shouldShow = !searchTerm || (searchData && searchData.includes(searchTerm));
+                    card.style.display = shouldShow ? '' : 'none';
+                });
+            }
+            
+            actualizarContadoresKanban();
+            mostrarMensajesVacios();
+        }
     });
     
     // Event listeners para filtros Kanban
-    $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').on('change', aplicarFiltrosKanban);
-    $('#kanbanBusquedaGlobal').on('input', aplicarFiltrosKanban);
+    const kanbanFilters = [
+        'kanbanFiltroCliente', 
+        'kanbanFiltroEstado', 
+        'kanbanFiltroAsignado', 
+        'kanbanFiltroSLA'
+    ];
     
-    // Limpiar filtros Kanban
-    $('#kanbanLimpiarFiltros').on('click', function() {
-        $('#kanbanFiltroCliente, #kanbanFiltroEstado, #kanbanFiltroAsignado, #kanbanFiltroSLA').val('');
-        $('#kanbanBusquedaGlobal').val('');
-        $('.etapa-search').val('');
-        $('.kanban-card').show();
-        actualizarContadoresKanban();
-        mostrarMensajesVacios();
+    kanbanFilters.forEach(function(filterId) {
+        const filterElement = document.getElementById(filterId);
+        if (filterElement) {
+            filterElement.addEventListener('change', aplicarFiltrosKanban);
+        }
     });
     
-    // Cambio de etapa desde dropdown en Kanban
-    $(document).on('click', '.cambiar-etapa-kanban', function(e) {
-        e.preventDefault();
-        
-        var $link = $(this);
-        var solicitudId = $link.data('solicitud-id');
-        var etapaId = $link.data('etapa-id');
-        var etapaNombre = $link.data('etapa-nombre');
-        
-        // Confirmar cambio con modal personalizado
-        mostrarModalConfirmacion(etapaNombre, function() {
-            // Función que se ejecuta al confirmar - AJAX directo para Kanban
-            console.log('Ejecutando cambio de etapa Kanban:', solicitudId, etapaId);
+    const busquedaGlobal = document.getElementById('kanbanBusquedaGlobal');
+    if (busquedaGlobal) {
+        busquedaGlobal.addEventListener('input', aplicarFiltrosKanban);
+    }
+    
+    // Limpiar filtros Kanban
+    const limpiarFiltros = document.getElementById('kanbanLimpiarFiltros');
+    if (limpiarFiltros) {
+        limpiarFiltros.addEventListener('click', function() {
+            // Limpiar filtros principales
+            kanbanFilters.forEach(function(filterId) {
+                const filterElement = document.getElementById(filterId);
+                if (filterElement) {
+                    filterElement.value = '';
+                }
+            });
             
-            // Realizar petición AJAX para cambiar etapa
-            $.ajax({
-                url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                },
-                data: JSON.stringify({
-                    etapa_id: etapaId
-                }),
-                contentType: 'application/json',
-                success: function(response) {
-                    console.log('Respuesta del servidor Kanban:', response);
-                    if (response.success) {
+            // Limpiar búsqueda global
+            if (busquedaGlobal) {
+                busquedaGlobal.value = '';
+            }
+            
+            // Limpiar búsquedas por etapa
+            const etapaSearches = document.querySelectorAll('.etapa-search');
+            etapaSearches.forEach(function(search) {
+                search.value = '';
+            });
+            
+            // Mostrar todas las tarjetas
+            const kanbanCards = document.querySelectorAll('.kanban-card');
+            kanbanCards.forEach(function(card) {
+                card.style.display = '';
+            });
+            
+            actualizarContadoresKanban();
+            mostrarMensajesVacios();
+        });
+    }
+    
+    // Cambio de etapa desde dropdown en Kanban
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('cambiar-etapa-kanban')) {
+            event.preventDefault();
+            
+            const link = event.target;
+            const solicitudId = link.getAttribute('data-solicitud-id') || link.dataset.solicitudId;
+            const etapaId = link.getAttribute('data-etapa-id') || link.dataset.etapaId;
+            const etapaNombre = link.getAttribute('data-etapa-nombre') || link.dataset.etapaNombre;
+            
+            // Confirmar cambio con modal personalizado
+            mostrarModalConfirmacion(etapaNombre, function() {
+                // Función que se ejecuta al confirmar - Fetch API para Kanban
+                console.log('Ejecutando cambio de etapa Kanban:', solicitudId, etapaId);
+                
+                // Obtener CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrfValue = csrfToken ? csrfToken.value : '';
+                
+                // Realizar petición Fetch para cambiar etapa
+                fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfValue,
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        etapa_id: etapaId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Respuesta del servidor Kanban:', data);
+                    if (data.success) {
                         // Mostrar mensaje de éxito
                         if (typeof showToast !== 'undefined') {
-                            showToast(response.mensaje || 'Etapa cambiada exitosamente', 'success', 4000);
+                            showToast(data.mensaje || 'Etapa cambiada exitosamente', 'success', 4000);
                         } else {
                             alert('Etapa cambiada exitosamente');
                         }
@@ -2579,23 +2908,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             location.reload();
                         }, 1000);
                     } else {
-                        alert('Error: ' + (response.error || 'No se pudo cambiar la etapa'));
+                        alert('Error: ' + (data.error || 'No se pudo cambiar la etapa'));
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error AJAX Kanban:', xhr, status, error);
+                })
+                .catch(error => {
+                    console.error('Error Fetch Kanban:', error);
                     var errorMsg = 'Error al cambiar etapa';
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        errorMsg = response.error || errorMsg;
-                    } catch(e) {
+                    
+                    if (error.message) {
+                        errorMsg = error.message;
+                    } else {
                         errorMsg = 'Error de conexión';
                     }
                     
                     alert(errorMsg);
-                }
+                });
             });
-        });
+        }
+    });
         return;
     });
     
@@ -2607,115 +2937,131 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Agregar indicador visual de carga
-        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
-        $card.addClass('updating').css('opacity', '0.6');
+        const card = document.querySelector(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        if (card) {
+            card.classList.add('updating');
+            card.style.opacity = '0.6';
+        }
         
-        // Realizar petición AJAX
-        $.ajax({
-            url: `/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`,
-            type: 'POST',
+        // Obtener CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfValue = csrfToken ? csrfToken.value : '';
+        
+        // Realizar petición Fetch
+        fetch(`/workflow/api/solicitudes/${solicitudId}/cambiar-etapa/`, {
+            method: 'POST',
             headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                'X-CSRFToken': csrfValue,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            data: JSON.stringify({
+            body: JSON.stringify({
                 etapa_id: etapaId
-            }),
-            contentType: 'application/json',
-            success: function(response) {
-                console.log('✅ KANBAN: Respuesta exitosa del servidor', response);
-                
-                if (response.success) {
-                    // Mostrar toast de éxito
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.mensaje || `Solicitud movida a ${etapaNombre}`, 'Etapa Actualizada', {
-                            positionClass: 'toast-top-right',
-                            timeOut: 3000,
-                            showMethod: 'slideDown',
-                            hideMethod: 'slideUp'
-                        });
-                    } else {
-                        mostrarNotificacionExito(response.mensaje || `Solicitud movida a ${etapaNombre}`);
-                    }
-                    
-                    console.log('🔄 KANBAN: Actualizando vista...');
-                    
-                    // Animar movimiento de tarjeta
-                    $card.fadeOut(300, function() {
-                        // Mover la tarjeta a la nueva columna
-                        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
-                        
-                        // Actualizar atributos de la tarjeta
-                        $card.attr('data-etapa-id', etapaId);
-                        
-                        // Mover físicamente la tarjeta
-                        $card.appendTo($nuevaColumna);
-                        
-                        // Restablecer opacidad y animar aparición
-                        $card.css('opacity', '1').removeClass('updating').fadeIn(300);
-                        
-                        // Actualizar contadores
-                        actualizarContadoresKanban();
-                        
-                        console.log('✅ KANBAN: Vista actualizada correctamente');
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ KANBAN: Respuesta exitosa del servidor', data);
+            
+            if (data.success) {
+                // Mostrar toast de éxito
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(data.mensaje || `Solicitud movida a ${etapaNombre}`, 'Etapa Actualizada', {
+                        positionClass: 'toast-top-right',
+                        timeOut: 3000,
+                        showMethod: 'slideDown',
+                        hideMethod: 'slideUp'
                     });
-                    
-                    // Sincronizar con otras vistas
-                    sincronizarCambioEtapa(solicitudId, etapaId, response);
-                    
                 } else {
-                    console.error('❌ KANBAN: Error en respuesta del servidor', response.error);
-                    
-                    // Mostrar toast de error
-                    if (typeof toastr !== 'undefined') {
-                        toastr.error(response.error || 'Error desconocido', 'Error al Cambiar Etapa', {
-                            positionClass: 'toast-top-right',
-                            timeOut: 5000
-                        });
-                    } else {
-                        mostrarNotificacionError(response.error || 'Error al cambiar etapa');
-                    }
+                    mostrarNotificacionExito(data.mensaje || `Solicitud movida a ${etapaNombre}`);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('❌ KANBAN: Error AJAX', {
-                    status: status,
-                    error: error,
-                    response: xhr.responseText
-                });
                 
-                var errorMsg = 'Error al cambiar etapa';
-                try {
-                    var response = JSON.parse(xhr.responseText);
-                    errorMsg = response.error || errorMsg;
-                } catch(e) {
-                    errorMsg = 'Error de conexión con el servidor';
+                console.log('🔄 KANBAN: Actualizando vista...');
+                
+                // Animar movimiento de tarjeta
+                if (card) {
+                    card.style.transition = 'opacity 0.3s';
+                    card.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        // Mover la tarjeta a la nueva columna
+                        const nuevaColumna = document.querySelector(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+                        
+                        if (nuevaColumna) {
+                            // Actualizar atributos de la tarjeta
+                            card.setAttribute('data-etapa-id', etapaId);
+                            
+                            // Mover físicamente la tarjeta
+                            nuevaColumna.appendChild(card);
+                            
+                            // Restablecer opacidad y animar aparición
+                            card.style.opacity = '1';
+                            card.classList.remove('updating');
+                            
+                            // Actualizar contadores
+                            actualizarContadoresKanban();
+                            
+                            console.log('✅ KANBAN: Vista actualizada correctamente');
+                        }
+                    }, 300);
                 }
+                
+                // Sincronizar con otras vistas
+                sincronizarCambioEtapa(solicitudId, etapaId, data);
+                
+            } else {
+                console.error('❌ KANBAN: Error en respuesta del servidor', data.error);
                 
                 // Mostrar toast de error
                 if (typeof toastr !== 'undefined') {
-                    toastr.error(errorMsg, 'Error de Conexión', {
+                    toastr.error(data.error || 'Error desconocido', 'Error al Cambiar Etapa', {
                         positionClass: 'toast-top-right',
                         timeOut: 5000
                     });
                 } else {
-                    mostrarNotificacionError(errorMsg);
+                    mostrarNotificacionError(data.error || 'Error al cambiar etapa');
                 }
-            },
-            complete: function() {
-                // Asegurar que se remueva el indicador de carga
-                $card.removeClass('updating').css('opacity', '1');
-                console.log('🏁 KANBAN: Petición completada');
             }
+        })
+        .catch(error => {
+            console.error('❌ KANBAN: Error Fetch', error);
+            
+            var errorMsg = 'Error al cambiar etapa';
+            if (error.message) {
+                errorMsg = error.message;
+            } else {
+                errorMsg = 'Error de conexión con el servidor';
+            }
+            
+            // Mostrar toast de error
+            if (typeof toastr !== 'undefined') {
+                toastr.error(errorMsg, 'Error de Conexión', {
+                    positionClass: 'toast-top-right',
+                    timeOut: 5000
+                });
+            } else {
+                mostrarNotificacionError(errorMsg);
+            }
+        })
+        .finally(() => {
+            // Asegurar que se remueva el indicador de carga
+            if (card) {
+                card.classList.remove('updating');
+                card.style.opacity = '1';
+            }
+            console.log('🏁 KANBAN: Petición completada');
         });
     }
     
     // Inicializar drag and drop cuando la página esté lista
-    if ($('.kanban-board').length > 0) {
+    const kanbanBoard = document.querySelector('.kanban-board');
+    if (kanbanBoard) {
         console.log('Inicializando drag and drop para Kanban...');
         inicializarDragAndDrop();
         
         // Solo configurar filtros si existen los elementos de filtro
-        if ($('#kanbanFiltroCliente').length > 0) {
+        const kanbanFiltroCliente = document.getElementById('kanbanFiltroCliente');
+        if (kanbanFiltroCliente) {
             configurarFiltrosKanban();
         }
     }
@@ -2726,111 +3072,124 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function inicializarDragAndDrop() {
         // Evitar inicialización múltiple
-        if ($('.kanban-card').data('drag-initialized')) {
+        const kanbanCards = document.querySelectorAll('.kanban-card');
+        if (kanbanCards.length > 0 && kanbanCards[0].dataset.dragInitialized === 'true') {
             console.log('Drag and drop ya inicializado, saltando...');
             return;
         }
         
         console.log('Configurando eventos de drag and drop...');
-        console.log('Tarjetas Kanban encontradas:', $('.kanban-card').length);
-        console.log('Columnas Kanban encontradas:', $('.kanban-column-body').length);
+        console.log('Tarjetas Kanban encontradas:', kanbanCards.length);
+        console.log('Columnas Kanban encontradas:', document.querySelectorAll('.kanban-column-body').length);
         
         // Marcar como inicializado
-        $('.kanban-card').data('drag-initialized', true);
-        
-
-        
-        // Configurar eventos de drag para las tarjetas
-        $('.kanban-card').on('dragstart', function(e) {
-            var solicitudId = $(this).attr('data-solicitud-id');
-            var etapaActual = $(this).attr('data-etapa-id');
-            
-            console.log('🔄 Iniciando drag de solicitud:', solicitudId, 'desde etapa:', etapaActual);
-            
-            var dragData = JSON.stringify({
-                solicitudId: solicitudId,
-                etapaActual: etapaActual
-            });
-            
-            e.originalEvent.dataTransfer.setData('text/plain', dragData);
-            e.originalEvent.dataTransfer.effectAllowed = 'move';
-            
-            console.log('📦 Datos de drag configurados:', dragData);
-            
-            $(this).addClass('dragging');
-            
-            // Agregar efecto visual a las zonas de drop
-            $('.kanban-column-body').addClass('drop-zone-active');
+        kanbanCards.forEach(function(card) {
+            card.dataset.dragInitialized = 'true';
         });
         
-        $('.kanban-card').on('dragend', function(e) {
-            $(this).removeClass('dragging');
-            $('.kanban-column-body').removeClass('drop-zone-active');
+        // Configurar eventos de drag para las tarjetas
+        kanbanCards.forEach(function(card) {
+            card.addEventListener('dragstart', function(e) {
+                var solicitudId = this.getAttribute('data-solicitud-id');
+                var etapaActual = this.getAttribute('data-etapa-id');
+                
+                console.log('🔄 Iniciando drag de solicitud:', solicitudId, 'desde etapa:', etapaActual);
+                
+                var dragData = JSON.stringify({
+                    solicitudId: solicitudId,
+                    etapaActual: etapaActual
+                });
+                e.dataTransfer.setData('text/plain', dragData);
+                e.dataTransfer.effectAllowed = 'move';
+                
+                console.log('📦 Datos de drag configurados:', dragData);
+                
+                this.classList.add('dragging');
+                
+                // Agregar efecto visual a las zonas de drop
+                const dropZones = document.querySelectorAll('.kanban-column-body');
+                dropZones.forEach(function(zone) {
+                    zone.classList.add('drop-zone-active');
+                });
+            });
+            
+            card.addEventListener('dragend', function(e) {
+                this.classList.remove('dragging');
+                const dropZones = document.querySelectorAll('.kanban-column-body');
+                dropZones.forEach(function(zone) {
+                    zone.classList.remove('drop-zone-active');
+                });
+            });
         });
         
         // Configurar eventos de drop para las columnas
-        $('.kanban-column-body').on('dragover', function(e) {
-            e.preventDefault();
-            
-            // Obtener información de la tarjeta que se está arrastrando
-            var dragData = null;
-            try {
-                // Solo intentar obtener datos si hay tipos de datos disponibles
-                if (e.originalEvent.dataTransfer.types.includes('text/plain')) {
-                    dragData = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
-                }
-            } catch (e) {
-                console.log('No se pudieron obtener datos del drag:', e);
-                // Si no hay datos, permitir hover normal
-                $(this).addClass('drop-zone-hover');
-                return;
-            }
-            
-            var solicitudId = dragData.solicitudId;
-            var nuevaEtapaId = $(this).attr('data-etapa-id');
-            
-            // Simplemente mostrar hover visual sin validación en dragover
-            $(this).addClass('drop-zone-hover');
-        });
-        
-        $('.kanban-column-body').on('dragleave', function(e) {
-            $(this).removeClass('drop-zone-hover drop-zone-valid drop-zone-invalid');
-        });
-        
-        $('.kanban-column-body').on('drop', function(e) {
-            e.preventDefault();
-            
-            var $dropZone = $(this);
-            var nuevaEtapaId = $dropZone.attr('data-etapa-id');
-            
-            console.log('🎯 Drop detectado en etapa:', nuevaEtapaId);
-            
-            // Remover clases de hover
-            $dropZone.removeClass('drop-zone-hover drop-zone-active');
-            $('.kanban-column-body').removeClass('drop-zone-active');
-            
-            try {
-                var data = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
-                var solicitudId = data.solicitudId;
-                var etapaActual = data.etapaActual;
+        const kanbanColumnBodies = document.querySelectorAll('.kanban-column-body');
+        kanbanColumnBodies.forEach(function(columnBody) {
+            columnBody.addEventListener('dragover', function(e) {
+                e.preventDefault();
                 
-                console.log('📥 Datos de drop recibidos:', data);
-                
-                // Verificar si es un movimiento válido
-                if (nuevaEtapaId === etapaActual) {
-                    console.log('Movimiento cancelado: misma etapa');
+                // Obtener información de la tarjeta que se está arrastrando
+                var dragData = null;
+                try {
+                    // Solo intentar obtener datos si hay tipos de datos disponibles
+                    if (e.dataTransfer.types.includes('text/plain')) {
+                        dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    }
+                } catch (error) {
+                    console.log('No se pudieron obtener datos del drag:', error);
+                    // Si no hay datos, permitir hover normal
+                    this.classList.add('drop-zone-hover');
                     return;
                 }
                 
-                // NUEVO: Validar transición antes de permitir el drop
-                validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje, requisitosFaltantes) {
+                var solicitudId = dragData.solicitudId;
+                var nuevaEtapaId = this.getAttribute('data-etapa-id');
+                
+                // Simplemente mostrar hover visual sin validación en dragover
+                this.classList.add('drop-zone-hover');
+            });
+            
+            columnBody.addEventListener('dragleave', function(e) {
+                this.classList.remove('drop-zone-hover', 'drop-zone-valid', 'drop-zone-invalid');
+            });
+            
+            columnBody.addEventListener('drop', function(e) {
+                e.preventDefault();
+                
+                const dropZone = this;
+                const nuevaEtapaId = dropZone.getAttribute('data-etapa-id');
+                
+                console.log('🎯 Drop detectado en etapa:', nuevaEtapaId);
+                
+                // Remover clases de hover
+                dropZone.classList.remove('drop-zone-hover', 'drop-zone-active');
+                const allDropZones = document.querySelectorAll('.kanban-column-body');
+                allDropZones.forEach(function(zone) {
+                    zone.classList.remove('drop-zone-active');
+                });
+                
+                try {
+                    var data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    var solicitudId = data.solicitudId;
+                    var etapaActual = data.etapaActual;
+                    
+                    console.log('📥 Datos de drop recibidos:', data);
+                    
+                    // Verificar si es un movimiento válido
+                    if (nuevaEtapaId === etapaActual) {
+                        console.log('Movimiento cancelado: misma etapa');
+                        return;
+                    }
+                    
+                    // NUEVO: Validar transición antes de permitir el drop
+                    validarTransicionKanban(solicitudId, nuevaEtapaId, function(esValida, mensaje, requisitosFaltantes) {
                     if (!esValida) {
                         // Si hay requisitos faltantes, mostrar el modal de requisitos
                         if (requisitosFaltantes && requisitosFaltantes.length > 0) {
                             console.log('📋 Mostrando modal de requisitos faltantes:', requisitosFaltantes);
                             
                             // Obtener nombre de la nueva etapa
-                            var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
+                            var nuevaEtapaNombre = dropZone.closest('.kanban-column').querySelector('.card-header h6').textContent.trim();
                             nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                             
                             // Usar la función global correcta que maneja la carga de requisitos
@@ -2877,7 +3236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Obtener nombre de la nueva etapa
-                    var nuevaEtapaNombre = $dropZone.closest('.kanban-column').find('.card-header h6').text().trim();
+                    var nuevaEtapaNombre = dropZone.closest('.kanban-column').querySelector('.card-header h6').textContent.trim();
                     nuevaEtapaNombre = nuevaEtapaNombre.replace(/\d+$/, '').trim(); // Remover contador
                     
                     // Confirmar movimiento con modal personalizado
@@ -2991,20 +3350,23 @@ document.addEventListener('DOMContentLoaded', function() {
             etapaNombre: etapaNombre
         });
         
-        var $card = $(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
-        var $nuevaColumna = $(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
+        const card = document.querySelector(`.kanban-card[data-solicitud-id="${solicitudId}"]`);
+        const nuevaColumna = document.querySelector(`.kanban-column-body[data-etapa-id="${nuevaEtapaId}"]`);
         
-        if ($card.length && $nuevaColumna.length) {
+        if (card && nuevaColumna) {
             // Animar movimiento suave
-            $card.fadeOut(300, function() {
+            card.style.transition = 'opacity 0.3s';
+            card.style.opacity = '0';
+            
+            setTimeout(() => {
                 // Actualizar atributos
-                $card.attr('data-etapa-id', nuevaEtapaId);
+                card.setAttribute('data-etapa-id', nuevaEtapaId);
                 
                 // Mover a nueva columna
-                $card.appendTo($nuevaColumna);
+                nuevaColumna.appendChild(card);
                 
                 // Mostrar con animación
-                $card.fadeIn(400);
+                card.style.opacity = '1';
                 
                 // Actualizar contadores
                 if (typeof actualizarContadoresKanban === 'function') {
@@ -3012,7 +3374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 console.log('✅ Kanban actualizado dinámicamente');
-            });
+            }, 300);
         } else {
             console.warn('⚠️ No se pudo encontrar la tarjeta o columna para actualizar');
             // Fallback: recargar página después de un breve delay
@@ -3025,24 +3387,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function mostrarNotificacionExito(mensaje) {
         // Crear notificación flotante
-        var $notificacion = $(`
-            <div class="drag-notification">
-                <i class="fas fa-check-circle me-2"></i>
-                ${mensaje}
-            </div>
-        `);
+        const notificacion = document.createElement('div');
+        notificacion.className = 'drag-notification';
+        notificacion.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            ${mensaje}
+        `;
         
-        $('body').append($notificacion);
+        document.body.appendChild(notificacion);
         
         // Animar entrada
         setTimeout(() => {
-            $notificacion.addClass('show');
+            notificacion.classList.add('show');
         }, 100);
         
         // Auto-remover después de 3 segundos
         setTimeout(() => {
-            $notificacion.removeClass('show');
-            setTimeout(() => $notificacion.remove(), 300);
+            notificacion.classList.remove('show');
+            setTimeout(() => {
+                if (notificacion.parentNode) {
+                    notificacion.parentNode.removeChild(notificacion);
+                }
+            }, 300);
         }, 3000);
     }
     
@@ -3094,210 +3460,628 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
     }
     
+    // BroadcastChannel para sincronización entre pestañas
+    if ('BroadcastChannel' in window) {
+        if (!window.workflowChannel) {
+            window.workflowChannel = new BroadcastChannel('workflow_updates');
+        }
         
+        window.workflowChannel.onmessage = function(event) {
+            if (event.data.type === 'etapa_changed') {
+                console.log('🔄 Sincronización recibida:', event.data);
+                // Recargar página para mostrar cambios
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        };
+    }
 });
 </script>
 
 <style>
-/* Tamaño intermedio de letra en vista tabla */
-.workflow-table {
-    font-size: 0.9rem !important;
+/* APC Tracking Style Variables */
+:root {
+    --primary-color: #2d5a2d;
+    --primary-hover: #1e5f2a;
+    --background-color: #f8fafc;
+    --card-background: #ffffff;
+    --border-color: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
 }
 
-.workflow-table th {
-    font-size: 0.85rem !important;
-    padding: 0.6rem !important;
+/* Override with Pacifico green if available */
+.negocios-container {
+    --primary-color: var(--verde-pacifico, #2d5a2d) !important;
 }
 
-.workflow-table td {
+/* Status Badge Styles - Matching APC Tracking */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    transition: all 0.2s ease;
+}
+
+.status-pending {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border: 1px solid #f59e0b;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+.status-in_progress {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af;
+    border: 1px solid #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    animation: pulse 2s infinite;
+}
+
+.status-completed {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+    border: 1px solid #10b981;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.status-error {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #991b1b;
+    border: 1px solid #ef4444;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Modern Table Styles - Matching APC Tracking */
+body .workflow-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 16px;
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body .workflow-table th,
+body .workflow-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+body .workflow-table th {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+body .workflow-table th:first-child {
+    border-top-left-radius: var(--border-radius-sm);
+}
+
+body .workflow-table th:last-child {
+    border-top-right-radius: var(--border-radius-sm);
+}
+
+body .workflow-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+body .workflow-table tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+body .workflow-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Table Container Styles */
+body .apc-table-container,
+body .table-responsive {
+    background: var(--card-background) !important;
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Container position for scroll indicators */
+.table-container {
+    position: relative !important;
+}
+
+.table-responsive {
+    position: relative !important;
+}
+
+/* Enhanced Badge Styles */
+.workflow-table .badge {
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.workflow-table .badge.bg-success {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important;
+    color: #065f46 !important;
+    border: 1px solid #10b981;
+}
+
+.workflow-table .badge.bg-warning {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    color: #92400e !important;
+    border: 1px solid #f59e0b;
+}
+
+.workflow-table .badge.bg-danger {
+    background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+    color: #991b1b !important;
+    border: 1px solid #ef4444;
+}
+
+.workflow-table .badge.bg-info {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+    color: #1e40af !important;
+    border: 1px solid #3b82f6;
+}
+
+.workflow-table .badge.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)) !important;
+    color: white !important;
+    border: 1px solid var(--primary-color);
+}
+
+/* Form Controls Styling */
+.workflow-table .form-select-sm,
+.workflow-table .form-control-sm {
+    font-size: 0.875rem !important;
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+    background: var(--card-background);
+    color: var(--text-primary);
+}
+
+.workflow-table .form-select-sm:focus,
+.workflow-table .form-control-sm:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+}
+
+.workflow-table .form-select-sm:hover,
+.workflow-table .form-control-sm:hover {
+    border-color: var(--primary-color);
+}
+
+/* Link Styles */
+.workflow-table .solicitud-link {
     font-size: 0.9rem !important;
-    padding: 0.6rem !important;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.workflow-table .solicitud-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+/* Text Styles */
+.workflow-table .text-muted {
+    font-size: 0.8rem !important;
+    color: var(--text-muted);
 }
 
 .workflow-table .fw-semibold {
     font-size: 0.9rem !important;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .workflow-table small {
     font-size: 0.75rem !important;
+    color: var(--text-secondary);
 }
 
-.workflow-table .badge {
-    font-size: 0.75rem !important;
-}
-
-.workflow-table .form-select-sm {
-    font-size: 0.85rem !important;
-}
-
-.workflow-table .form-control-sm {
-    font-size: 0.85rem !important;
-}
-
-.workflow-table .solicitud-link {
-    font-size: 0.9rem !important;
-}
-
-.workflow-table .text-muted {
-    font-size: 0.8rem !important;
-}
-
+/* Icon Styles */
 .workflow-table .fas {
     font-size: 0.8rem !important;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
 }
 
-/* Eliminar completamente el borde vacío debajo del encabezado */
+.workflow-table .fas:hover {
+    color: var(--primary-color);
+}
+
+/* Remove table border and spacing issues */
 .workflow-table thead {
-    border-bottom: none !important;
-    border-collapse: collapse !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
 }
 
 .workflow-table thead tr {
-    border-bottom: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .workflow-table thead th {
-    border-bottom: none !important;
     border-top: none !important;
-    vertical-align: middle !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    margin: 0 !important;
+    padding: 16px !important;
 }
 
 .workflow-table thead::after,
 .workflow-table thead tr::after,
 .workflow-table thead th::after {
-    display: none !important;
     content: none !important;
+    display: none !important;
 }
 
-/* Eliminar cualquier margen o padding que cause el espacio vacío */
-.workflow-table thead {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-
+/* Clean table layout */
 .workflow-table tbody {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.workflow-table tbody tr:first-child {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
-.workflow-table tbody tr:first-child {
-    border-top: none !important;
-}
-
 .workflow-table tbody tr:first-child td {
-    border-top: none !important;
+    margin-top: 0 !important;
+    padding-top: 16px !important;
 }
 
-/* Forzar que la tabla no tenga separación entre thead y tbody */
-.workflow-table {
-    border-collapse: collapse !important;
-    border-spacing: 0 !important;
-}
-
-/* Eliminar todos los bordes del contenedor de tabla */
+/* Remove container borders */
 .table-container {
     border: none !important;
-    border-top: none !important;
-    border-bottom: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .table-responsive {
     border: none !important;
-    border-top: none !important;
-    border-bottom: none !important;
+    margin: 0 !important;
+    background: var(--card-background) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--shadow-md) !important;
 }
 
 .card-body {
-    border-top: none !important;
+    padding: 24px !important;
+    background: var(--card-background) !important;
 }
 
-/* Eliminar cualquier borde superior o inferior de la tabla */
+/* Table border consistency */
 .workflow-table {
     border: none !important;
-    border-top: none !important;
-    border-bottom: none !important;
+    background: var(--card-background) !important;
+    border-radius: var(--border-radius-sm) !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
 }
 
-.workflow-table thead {
-    border-top: none !important;
-}
-
-.workflow-table tbody {
-    border-bottom: none !important;
-}
-
-/* Asegurar que los dropdowns Kanban aparezcan al frente */
+/* Dropdown and select improvements */
 .kanban-column .dropdown {
-    z-index: 1050 !important;
+    z-index: 1020 !important;
 }
 
 .kanban-column .dropdown-menu {
-    z-index: 1052 !important;
-    position: fixed !important;
-    will-change: transform !important;
+    z-index: 1025 !important;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow-lg);
 }
 
 .kanban-column .dropdown-toggle {
-    z-index: 1051 !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
 }
 
-/* Hacer más sutil el indicador de ordenamiento */
+/* Modern sorting indicators */
 .workflow-table th {
     position: relative !important;
-    padding-right: 1.5rem !important;
+    padding-right: 2rem !important;
 }
 
 .workflow-table th.sortable::after {
-    content: '⇅' !important;
+    content: '↕' !important;
     position: absolute !important;
-    right: 0.5rem !important;
+    right: 8px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    font-size: 0.7rem !important;
-    color: #6c757d !important;
-    opacity: 0.5 !important;
-    transition: opacity 0.2s ease !important;
+    font-size: 0.75rem !important;
+    color: var(--text-muted) !important;
+    opacity: 0.3 !important;
+    transition: all 0.2s ease !important;
 }
 
 .workflow-table th.sortable:hover::after {
-    opacity: 1 !important;
-    color: #495057 !important;
+    opacity: 0.6 !important;
+    color: var(--text-secondary) !important;
 }
 
 .workflow-table th.sorted-asc::after {
     content: '↑' !important;
     opacity: 1 !important;
-    color: var(--verde-pacifico) !important;
+    color: var(--primary-color) !important;
 }
 
 .workflow-table th.sorted-desc::after {
     content: '↓' !important;
     opacity: 1 !important;
-    color: var(--verde-pacifico) !important;
+    color: var(--primary-color) !important;
 }
 
-/* Toast notification styles */
+/* Custom scrollbar for table */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Ensure table maintains minimum width for scrolling */
+.workflow-table {
+    min-width: 1200px;
+}
+
+/* Horizontal Scroll Indicators - Matching APC Tracking */
+.table-scroll-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(45, 90, 45, 0.8);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.table-scroll-indicator:hover {
+    background: rgba(45, 90, 45, 1);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.table-scroll-indicator:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.table-scroll-indicator.left {
+    left: 10px;
+}
+
+.table-scroll-indicator.right {
+    right: 10px;
+}
+
+.table-scroll-indicator.visible {
+    opacity: 1;
+}
+
+/* Scroll hint for users */
+.scroll-hint {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.scroll-hint.visible {
+    opacity: 1;
+}
+
+/* Modern Table Styling - Matching APC Tracking */
+
+/* Card and Container Styles - Matching APC Tracking */
+.card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 1px solid var(--border-color);
+    padding: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.card-body {
+    padding: 24px !important;
+    background: var(--card-background) !important;
+}
+
+/* Button Styles - Matching APC Tracking */
+.btn {
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-hover), #155a15);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-outline-primary {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Input Styles - Matching APC Tracking */
+.form-control,
+.form-select {
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--card-background);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+}
+
+.form-control:hover,
+.form-select:hover {
+    border-color: var(--primary-color);
+}
+
+/* Loading Styles */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modern toast notification styles */
 .toast-notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: #28a745;
+    padding: 16px 20px;
+    border-radius: var(--border-radius-sm);
     color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 10001;
+    font-weight: 600;
+    z-index: 9999;
+    opacity: 0;
     transform: translateX(100%);
-    transition: transform 0.3s ease;
-    max-width: 300px;
-    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-lg);
+    max-width: 350px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .toast-notification.show {
+    opacity: 1;
     transform: translateX(0);
 }
 
-/* Ensure motivo consulta section is hidden by default */
+/* Ensure sections are hidden by default */
 #motivoConsultaSection {
     display: none !important;
 }
@@ -3306,7 +4090,6 @@ document.addEventListener('DOMContentLoaded', function() {
     display: block !important;
 }
 
-/* Ensure como se entero section is hidden by default */
 #comoSeEnteroSection {
     display: none !important;
 }
@@ -3315,7 +4098,6 @@ document.addEventListener('DOMContentLoaded', function() {
     display: block !important;
 }
 
-/* Ensure APC Makito section is hidden by default */
 #apcMakitoSection {
     display: none !important;
 }
@@ -3325,42 +4107,51 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .toast-notification.success {
-    background: #28a745;
+    background: linear-gradient(135deg, #10b981, #059669);
 }
 
 .toast-notification.error {
-    background: #dc3545;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
-/* Auto-populated indicator styles */
+/* Modern auto-populated indicator styles */
 .selected-item.auto-populated {
-    border-left: 3px solid #28a745;
-    background-color: #f8fff9;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+    border: 1px solid #3b82f6 !important;
+    border-radius: var(--border-radius-sm);
 }
 
 .auto-populated-indicator {
-    color: #28a745 !important;
+    color: #1e40af !important;
     font-size: 0.75rem !important;
+    font-weight: 600;
     display: block !important;
     margin-top: 4px !important;
     font-style: italic;
 }
 
-/* Cliente placeholder styles */
+/* Modern cliente placeholder styles */
 #clientePlaceholder {
-    background-color: #f8f9fa;
-    border: 1px dashed #dee2e6;
-    border-radius: 6px;
-    padding: 20px;
+    background: var(--card-background);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 24px;
     text-align: center;
-    color: #6c757d;
+    color: var(--text-muted);
     font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+#clientePlaceholder:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
 }
 
 #clientePlaceholder i {
     font-size: 1.2rem;
     margin-bottom: 8px;
     display: block;
+    color: var(--text-secondary);
 }
 </style>
 
@@ -5076,12 +5867,12 @@ window.probarSistemaRequisitos = function() {
 }
 
 // Función unificada para ejecutar el cambio de etapa (funciona para tabla y kanban)
-window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $select, subestadoSeleccionado = null, esKanban = false, etapaNombre = null) {
+window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, selectElement, subestadoSeleccionado = null, esKanban = false, etapaNombre = null) {
     console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, subestadoSeleccionado, esKanban, etapaNombre });
     
     // Deshabilitar select mientras se procesa (solo para tabla)
-    if ($select && !esKanban) {
-        $select.prop('disabled', true);
+    if (selectElement && !esKanban) {
+        selectElement.disabled = true;
     }
     
     // Preparar datos de la petición
@@ -5100,7 +5891,8 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify(requestData)
     })
@@ -5109,8 +5901,8 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
         console.log('Respuesta del servidor:', data);
         if (data.success) {
             // Actualizar data attribute (solo para tabla)
-            if ($select && !esKanban) {
-                $select.data('etapa-actual', nuevaEtapaId);
+            if (selectElement && !esKanban) {
+                selectElement.setAttribute('data-etapa-actual', nuevaEtapaId);
             }
             
             // Mostrar mensaje de éxito
@@ -5153,8 +5945,8 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
             }
             
             // Revertir selección
-            if ($select && !esKanban) {
-                $select.val(etapaActual);
+            if (selectElement && !esKanban) {
+                selectElement.value = etapaActual;
             }
         }
     })
@@ -5167,14 +5959,14 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
         }
         
         // Revertir selección
-        if ($select && !esKanban) {
-            $select.val(etapaActual);
+        if (selectElement && !esKanban) {
+            selectElement.value = etapaActual;
         }
     })
     .finally(() => {
         // Habilitar select (solo para tabla)
-        if ($select && !esKanban) {
-            $select.prop('disabled', false);
+        if (selectElement && !esKanban) {
+            selectElement.disabled = false;
         }
     });
 }
@@ -5183,12 +5975,16 @@ window.ejecutarCambioEtapa = function(solicitudId, nuevaEtapaId, etapaActual, $s
 
 // Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
 setTimeout(function() {
-    if ($('.kanban-board').length > 0 && $('.kanban-card').length > 0) {
+    const kanbanBoard = document.querySelector('.kanban-board');
+    const kanbanCards = document.querySelectorAll('.kanban-card');
+    if (kanbanBoard && kanbanCards.length > 0) {
         console.log('Fallback: Verificando drag and drop...');
-        if (!$('.kanban-card').data('drag-initialized')) {
+        if (!kanbanCards[0].dataset.dragInitialized) {
             console.log('Fallback: Inicializando drag and drop...');
             inicializarDragAndDrop();
-            $('.kanban-card').data('drag-initialized', true);
+            kanbanCards.forEach(function(card) {
+                card.dataset.dragInitialized = 'true';
+            });
         }
     }
 }, 1000);
