@@ -319,7 +319,10 @@ def tablaAmortizacion(params):
                 elif 6 <= wrkDia <= 20:
                     calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month, 20)
                 else:
-                    calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month + 1, 5)
+                    if calcsobtFechaFin.month == 12:
+                        calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year + 1, 1, 5)
+                    else:
+                        calcsobtFechaFin = datetime.datetime(calcsobtFechaFin.year, calcsobtFechaFin.month + 1, 5)
 
                 if auxXI == auxL:
                     calcsobtFechaFin = calcsobtFechaFin + datetime.timedelta(days=30)
