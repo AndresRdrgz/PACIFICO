@@ -7,6 +7,14 @@ from . import api
 from . import views_comite
 from . import apicomite
 from . import dashboard_views
+
+# Import reportes views with error handling
+try:
+    from . import views_reportes
+except ImportError as e:
+    print(f"Error importing views_reportes: {e}")
+    views_reportes = None
+
 import os
 
 app_name = 'workflow'
@@ -176,5 +184,20 @@ urlpatterns += [
     path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),
     path('api/solicitudes/<int:solicitud_id>/asignar-usuario/', api.api_asignar_usuario, name='api_asignar_usuario'),
 ]
+
+# Add reportes URLs only if views_reportes imported successfully
+if views_reportes is not None:
+    urlpatterns += [
+        # Reportes URLs
+        path('reportes/', views_reportes.reportes_dashboard, name='reportes'),
+        
+        # Reportes API URLs
+        path('reportes/api/crear/', views_reportes.api_crear_reporte, name='api_crear_reporte'),
+        path('reportes/api/<int:reporte_id>/ejecutar/', views_reportes.api_ejecutar_reporte, name='api_ejecutar_reporte'),
+        path('reportes/api/<int:reporte_id>/exportar/', views_reportes.api_exportar_reporte, name='api_exportar_reporte'),
+        path('reportes/api/reportes-predefinidos/', views_reportes.api_reportes_predefinidos, name='api_reportes_predefinidos'),
+        path('reportes/api/estadisticas/', views_reportes.api_estadisticas, name='api_estadisticas'),
+        path('reportes/api/exportar-excel/', views_reportes.api_exportar_excel, name='api_exportar_excel'),
+    ]
 
 

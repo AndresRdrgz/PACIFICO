@@ -521,3 +521,90 @@ class RequisitoTransicion(models.Model):
 
     def __str__(self):
         return f"{self.transicion} - {self.requisito.nombre} ({'Obligatorio' if self.obligatorio else 'Opcional'})"
+
+
+# --------------------------------------
+# REPORTES PERSONALIZADOS
+# --------------------------------------
+
+class ReportePersonalizado(models.Model):
+    """
+    Modelo para guardar reportes personalizados creados por los usuarios
+    """
+    nombre = models.CharField(max_length=200, help_text="Nombre descriptivo del reporte")
+    descripcion = models.TextField(blank=True, null=True, help_text="Descripción detallada del reporte")
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reportes_personalizados')
+    filtros_json = models.JSONField(default=dict, help_text="Filtros aplicados al reporte en formato JSON")
+    campos_json = models.JSONField(default=list, help_text="Campos incluidos en el reporte en formato JSON")
+    configuracion_json = models.JSONField(default=dict, help_text="Configuración adicional del reporte")
+    
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    es_favorito = models.BooleanField(default=False, help_text="Marcar como favorito")
+    es_publico = models.BooleanField(default=False, help_text="Compartir con otros usuarios del mismo grupo")
+    veces_ejecutado = models.PositiveIntegerField(default=0, help_text="Contador de ejecuciones")
+    ultima_ejecucion = models.DateTimeField(null=True, blank=True, help_text="Última vez que se ejecutó")
+    
+    # Grupos que pueden ver este reporte (si es público)
+    grupos_compartidos = models.ManyToManyField(Group, blank=True, related_name='reportes_compartidos')
+    
+    class Meta:
+        ordering = ['-fecha_modificacion']
+        verbose_name = "Reporte Personalizado"
+        verbose_name_plural = "Reportes Personalizados"
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.usuario.get_full_name()})"
+    
+    def marcar_ejecutado(self):
+        """Actualiza los contadores de ejecución"""
+        self.veces_ejecutado += 1
+        self.ultima_ejecucion = timezone.now()
+        self.save(update_fields=['veces_ejecutado', 'ultima_ejecucion'])
+    
+    def puede_ver(self, usuario):
+        """Verifica si un usuario puede ver este reporte"""
+        # El creador siempre puede ver
+        if self.usuario == usuario:
+            return True
+        
+        # Superusuarios pueden ver todo
+        if usuario.is_superuser:
+            return True
+        
+        # Si es público y el usuario está en los grupos compartidos
+        if self.es_publico:
+            usuario_grupos = set(usuario.groups.all())
+            reporte_grupos = set(self.grupos_compartidos.all())
+            return bool(usuario_grupos & reporte_grupos)
+        
+        return False
+    
+    def get_tipo_display(self):
+        """Retorna el tipo de reporte basado en la configuración"""
+        config = self.configuracion_json
+        return config.get('tipo', 'General')
+
+
+class EjecucionReporte(models.Model):
+    """
+    Modelo para guardar el historial de ejecuciones de reportes
+    """
+    reporte = models.ForeignKey(ReportePersonalizado, on_delete=models.CASCADE, related_name='ejecuciones')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    fecha_ejecucion = models.DateTimeField(auto_now_add=True)
+    parametros_json = models.JSONField(default=dict, help_text="Parámetros usados en la ejecución")
+    tiempo_ejecucion = models.FloatField(null=True, blank=True, help_text="Tiempo de ejecución en segundos")
+    registros_resultantes = models.PositiveIntegerField(default=0, help_text="Número de registros en el resultado")
+    exitosa = models.BooleanField(default=True, help_text="Si la ejecución fue exitosa")
+    mensaje_error = models.TextField(blank=True, null=True, help_text="Mensaje de error si falló")
+    
+    class Meta:
+        ordering = ['-fecha_ejecucion']
+        verbose_name = "Ejecución de Reporte"
+        verbose_name_plural = "Ejecuciones de Reportes"
+    
+    def __str__(self):
+        status = "✓" if self.exitosa else "✗"
+        return f"{status} {self.reporte.nombre} - {self.fecha_ejecucion.strftime('%d/%m/%Y %H:%M')}"

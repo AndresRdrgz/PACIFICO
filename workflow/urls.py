@@ -28,7 +28,6 @@ urlpatterns = [
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
     path('admin/requisitos/', views_workflow.administrar_requisitos, name='admin_requisitos'),
     path('admin/campos-personalizados/', views_workflow.administrar_campos_personalizados, name='admin_campos_personalizados'),
-    path('reportes/', views_workflow.reportes_workflow, name='reportes'),
     
     # API URLs
     path('api/pipelines/crear/', views_workflow.api_crear_pipeline, name='api_crear_pipeline'),
