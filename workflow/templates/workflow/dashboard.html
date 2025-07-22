@@ -1,275 +1,748 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
 
-{% block title %}Dashboard - Sistema de Workflow{% endblock %}
+{% block title %}Dashboard Operativo - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
 
 {% block content %}
 <div class="fade-in-up">
-    <!-- Header del Dashboard -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h2 mb-1 text-dark fw-bold">
-                <i class="fas fa-tachometer-alt me-2 text-success"></i>
-                Dashboard de Workflow
-            </h1>
-            <p class="text-muted mb-0">Bienvenido, {{ user.get_full_name|default:user.username }}</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-pacifico">
-                <i class="fas fa-plus me-2"></i>Nueva Solicitud
-            </a>
-            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico">
-                <i class="fas fa-inbox me-2"></i>Ver Bandeja
-            </a>
-        </div>
-    </div>
-
-    <!-- Tarjetas de Estadísticas -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card card-custom h-100">
-                <div class="card-body text-center">
-                    <div class="d-flex align-items-center justify-content-center mb-3">
-                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-tasks text-success fa-2x"></i>
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-tachometer-alt fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard Operativo</h1>
+                            <p class="mb-0 text-white-50">Análisis detallado y métricas del sistema de workflow</p>
                         </div>
                     </div>
-                    <h3 class="fw-bold text-dark mb-1">{{ total_solicitudes }}</h3>
-                    <p class="text-muted mb-0">Total Solicitudes</p>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card card-custom h-100">
-                <div class="card-body text-center">
-                    <div class="d-flex align-items-center justify-content-center mb-3">
-                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-1">{{ solicitudes_vencidas }}</h3>
-                    <p class="text-muted mb-0">Solicitudes Vencidas</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card card-custom h-100">
-                <div class="card-body text-center">
-                    <div class="d-flex align-items-center justify-content-center mb-3">
-                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-clock text-info fa-2x"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-1">{{ solicitudes_proximo_vencer }}</h3>
-                    <p class="text-muted mb-0">Por Vencer</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card card-custom h-100">
-                <div class="card-body text-center">
-                    <div class="d-flex align-items-center justify-content-center mb-3">
-                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-users text-primary fa-2x"></i>
-                        </div>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-1">{{ etapas_grupales.count }}</h3>
-                    <p class="text-muted mb-0">Bandejas Grupales</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Solicitudes Asignadas -->
-        <div class="col-lg-6 mb-4">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-check me-2"></i>
-                        Mis Solicitudes Asignadas
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if solicitudes_asignadas %}
-                        <div class="list-group list-group-flush">
-                            {% for solicitud in solicitudes_asignadas %}
-                            <div class="list-group-item border-0 px-0 py-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <h6 class="mb-0 fw-bold text-dark">{{ solicitud.codigo }}</h6>
-                                            <span class="badge-pacifico ms-2">{{ solicitud.tipo_solicitud.nombre }}</span>
-                                        </div>
-                                        <p class="text-muted mb-1 small">
-                                            <i class="fas fa-project-diagram me-1"></i>
-                                            {{ solicitud.pipeline.nombre }}
-                                        </p>
-                                        <p class="text-muted mb-0 small">
-                                            <i class="fas fa-map-marker-alt me-1"></i>
-                                            {{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}
-                                        </p>
-                                    </div>
-                                    <div class="text-end">
-                                        <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-outline-pacifico">
-                                            <i class="fas fa-eye me-1"></i>Ver
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="text-center mt-3">
-                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico btn-sm">
-                                Ver Todas <i class="fas fa-arrow-right ms-1"></i>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a>
+                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-inbox me-2"></i>Ver Bandeja
                             </a>
                         </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">No tienes solicitudes asignadas</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Bandejas Grupales -->
-        <div class="col-lg-6 mb-4">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-users me-2"></i>
-                        Bandejas Grupales Disponibles
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if solicitudes_grupales %}
-                        <div class="list-group list-group-flush">
-                            {% for solicitud in solicitudes_grupales %}
-                            <div class="list-group-item border-0 px-0 py-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-2">
-                                            <h6 class="mb-0 fw-bold text-dark">{{ solicitud.codigo }}</h6>
-                                            <span class="badge-pacifico ms-2">{{ solicitud.tipo_solicitud.nombre }}</span>
-                                        </div>
-                                        <p class="text-muted mb-1 small">
-                                            <i class="fas fa-project-diagram me-1"></i>
-                                            {{ solicitud.pipeline.nombre }}
-                                        </p>
-                                        <p class="text-muted mb-0 small">
-                                            <i class="fas fa-map-marker-alt me-1"></i>
-                                            {{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}
-                                        </p>
-                                    </div>
-                                    <div class="text-end">
-                                        <a href="{% url 'workflow:auto_asignar_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-pacifico me-1">
-                                            <i class="fas fa-hand-paper me-1"></i>Tomar
-                                        </a>
-                                        <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-outline-pacifico">
-                                            <i class="fas fa-eye me-1"></i>Ver
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="text-center mt-3">
-                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-pacifico btn-sm">
-                                Ver Todas <i class="fas fa-arrow-right ms-1"></i>
-                            </a>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">No hay solicitudes en bandejas grupales</p>
-                        </div>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Pipelines Disponibles -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-project-diagram me-2"></i>
-                        Pipelines Disponibles
+    <!-- ==========================================
+    CONTENEDOR DE NAVEGACIÓN HORIZONTAL
+    ========================================== -->
+    <div class="dashboard-nav-horizontal">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0 me-3 text-muted">
+                                <i class="fas fa-th-large me-2"></i>Tipo de Tablero:
+                            </h6>
+                        </div>
+                        <div class="dashboard-nav-buttons-horizontal">
+                            <a href="{% url 'workflow:dashboard_operativo' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-chart-pie me-1"></i>📊 Operativo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_usuario' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-users me-1"></i>👥 Por Usuario
+                            </a>
+                            <a href="{% url 'workflow:dashboard_cumplimiento' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-shield-alt me-1"></i>✅ Cumplimiento
+                            </a>
+                            <a href="{% url 'workflow:dashboard_flujo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-project-diagram me-1"></i>🔄 Flujo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_comite' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-gavel me-1"></i>🏛️ Comité
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    DASHBOARD OPERATIVO
+    ========================================== -->
+    <div class="dashboard-block">
+        <!-- ==========================================
+        SECCIÓN DE FILTROS MODERNA
+        ========================================== -->
+        <div class="search-section">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-filter me-2"></i>Filtros de Análisis
                     </h5>
                 </div>
-                <div class="card-body">
-                    {% if pipelines %}
-                        <div class="row">
-                            {% for pipeline in pipelines %}
-                            <div class="col-md-4 mb-3">
-                                <div class="card border-0 bg-light h-100">
-                                    <div class="card-body text-center">
-                                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                            <i class="fas fa-project-diagram text-success fa-lg"></i>
-                                        </div>
-                                        <h6 class="fw-bold text-dark mb-2">{{ pipeline.nombre }}</h6>
-                                        <p class="text-muted small mb-3">{{ pipeline.descripcion|default:"Sin descripción" }}</p>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <a href="{% url 'workflow:nueva_solicitud' %}?pipeline={{ pipeline.id }}" 
-                                               class="btn btn-sm btn-pacifico">
-                                                <i class="fas fa-plus me-1"></i>Crear
-                                            </a>
-                                            <a href="#" class="btn btn-sm btn-outline-pacifico">
+                <div class="col-md-6 text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="submit" class="btn btn-pacifico btn-sm">
+                            <i class="fas fa-search me-2"></i>Aplicar Filtros
+                        </button>
+                        <a href="{% url 'workflow:dashboard_operativo' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-2"></i>Limpiar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="GET" class="row g-3">
+                <!-- Filtros de fecha -->
+                <div class="col-md-3">
+                    <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                           value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                           value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+                </div>
+                
+                <!-- Filtros de pipeline y etapa -->
+                <div class="col-md-2">
+                    <label for="pipeline_id" class="form-label">Pipeline</label>
+                    <select class="form-select form-select-sm" id="pipeline_id" name="pipeline_id">
+                        <option value="">Todos</option>
+                        {% for pipeline in pipelines %}
+                            <option value="{{ pipeline.id }}" {% if filtros_aplicados.pipeline_id == pipeline.id|stringformat:"s" %}selected{% endif %}>
+                                {{ pipeline.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="etapa_id" class="form-label">Etapa</label>
+                    <select class="form-select form-select-sm" id="etapa_id" name="etapa_id">
+                        <option value="">Todas</option>
+                        {% for etapa in etapas %}
+                            <option value="{{ etapa.id }}" {% if filtros_aplicados.etapa_id == etapa.id|stringformat:"s" %}selected{% endif %}>
+                                {{ etapa.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Filtros de usuario y prioridad -->
+                <div class="col-md-2">
+                    <label for="usuario_id" class="form-label">Usuario</label>
+                    <select class="form-select form-select-sm" id="usuario_id" name="usuario_id">
+                        <option value="">Todos</option>
+                        {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}" {% if filtros_aplicados.usuario_id == usuario.id|stringformat:"s" %}selected{% endif %}>
+                                {{ usuario.get_full_name|default:usuario.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="prioridad" class="form-label">Prioridad</label>
+                    <select class="form-select form-select-sm" id="prioridad" name="prioridad">
+                        <option value="">Todas</option>
+                        {% for valor, etiqueta in prioridades %}
+                            <option value="{{ valor }}" {% if filtros_aplicados.prioridad == valor %}selected{% endif %}>
+                                {{ etiqueta }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Filtro de estado SLA -->
+                <div class="col-md-2">
+                    <label for="estado_sla" class="form-label">Estado SLA</label>
+                    <select class="form-select form-select-sm" id="estado_sla" name="estado_sla">
+                        <option value="">Todos</option>
+                        <option value="vigente" {% if filtros_aplicados.estado_sla == 'vigente' %}selected{% endif %}>Vigente</option>
+                        <option value="vencido" {% if filtros_aplicados.estado_sla == 'vencido' %}selected{% endif %}>Vencido</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- ==========================================
+        KPIs PRINCIPALES
+        ========================================== -->
+        <div class="row mb-4">
+            <!-- Total Solicitudes -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card primary">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon">
+                                <i class="fas fa-file-alt text-primary fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h3 class="fw-bold text-dark mb-1">{{ total_solicitudes }}</h3>
+                                <p class="text-muted mb-0">Total Solicitudes</p>
+                                <small class="text-muted">Filtradas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Vencidas -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card vencido">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon">
+                                <i class="fas fa-exclamation-triangle text-danger fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h3 class="fw-bold text-dark mb-1">{{ solicitudes_vencidas }}</h3>
+                                <p class="text-muted mb-0">SLA Vencido</p>
+                                <small class="text-muted">{{ porcentaje_vencidas|floatformat:1 }}% del total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Vigentes -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card vigente">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon">
+                                <i class="fas fa-check-circle text-success fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h3 class="fw-bold text-dark mb-1">{{ solicitudes_vigentes }}</h3>
+                                <p class="text-muted mb-0">SLA Vigente</p>
+                                <small class="text-muted">En tiempo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promedio Días -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card warning">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon">
+                                <i class="fas fa-clock text-warning fa-2x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h3 class="fw-bold text-dark mb-1">
+                                    {% if promedios_etapa %}
+                                        {{ promedios_etapa.0.dias_promedio|floatformat:1 }}
+                                    {% else %}
+                                        0.0
+                                    {% endif %}
+                                </h3>
+                                <p class="text-muted mb-0">Días Promedio</p>
+                                <small class="text-muted">Por etapa</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        GRÁFICAS Y ANÁLISIS
+        ========================================== -->
+        <div class="row mb-4">
+            <!-- Gráfica de Distribución por Etapa -->
+            <div class="col-lg-8 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>Distribución por Etapa
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="etapaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfica de Estado SLA -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-doughnut me-2"></i>Estado SLA
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="slaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        TABLAS DE ANÁLISIS
+        ========================================== -->
+        <div class="row mb-4">
+            <!-- Top 5 Usuarios -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>Top 5 Usuarios
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if top_usuarios %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Total</th>
+                                            <th>Vencidas</th>
+                                            <th>% Vencidas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for usuario in top_usuarios %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ usuario.full_name }}</strong>
+                                                </td>
+                                                <td>{{ usuario.total_solicitudes }}</td>
+                                                <td>
+                                                    <span class="badge bg-danger">{{ usuario.solicitudes_vencidas }}</span>
+                                                </td>
+                                                <td>
+                                                    {% if usuario.total_solicitudes > 0 %}
+                                                        {% widthratio usuario.solicitudes_vencidas usuario.total_solicitudes 100 %}%
+                                                    {% else %}
+                                                        0%
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center">No hay datos disponibles</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calificaciones de Compliance -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Calificaciones Compliance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if calificaciones_compliance %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Estado</th>
+                                            <th>Cantidad</th>
+                                            <th>Porcentaje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for cal in calificaciones_compliance %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge 
+                                                        {% if cal.estado == 'bueno' %}bg-success
+                                                        {% elif cal.estado == 'malo' %}bg-danger
+                                                        {% else %}bg-warning{% endif %}">
+                                                        {{ cal.estado|title }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ cal.total }}</td>
+                                                <td>
+                                                    {% if cal.total > 0 %}
+                                                        {{ cal.total|floatformat:1 }}%
+                                                    {% else %}
+                                                        0%
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center">No hay calificaciones disponibles</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        TIEMPO POR ETAPA - NUEVA SECCIÓN
+        ========================================== -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Duración por Etapa
+                    <span class="badge bg-info ms-2">Análisis Detallado</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Pestañas para las dos vistas -->
+                <ul class="nav nav-tabs" id="tiempoEtapaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab">
+                            <i class="fas fa-list me-2"></i>Por Solicitud Individual
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="promedio-tab" data-bs-toggle="tab" data-bs-target="#promedio" type="button" role="tab">
+                            <i class="fas fa-chart-bar me-2"></i>Promedio Global
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="tiempoEtapaTabContent">
+                    <!-- Vista Individual -->
+                    <div class="tab-pane fade show active" id="individual" role="tabpanel">
+                        <div class="mt-3">
+                            <h6 class="text-muted mb-3">Historial detallado de cada etapa por solicitud</h6>
+                            {% if historiales_con_duracion %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Solicitud</th>
+                                                <th>Etapa</th>
+                                                <th>Fecha Inicio</th>
+                                                <th>Fecha Fin</th>
+                                                <th>Duración</th>
+                                                <th>SLA Etapa</th>
+                                                <th>SLA Cumplido</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for historial in historiales_con_duracion %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ historial.solicitud_codigo }}</strong>
+                                                    </td>
+                                                    <td>{{ historial.etapa_nombre }}</td>
+                                                    <td>{{ historial.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                                                    <td>{{ historial.fecha_fin|date:"d/m/Y H:i" }}</td>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ historial.duracion_formateada }}</span>
+                                                    </td>
+                                                    <td>
+                                                        {% if historial.sla_etapa_formateado != 'N/A' %}
+                                                            <span class="badge bg-secondary">{{ historial.sla_etapa_formateado }}</span>
+                                                        {% else %}
+                                                            <span class="text-muted">N/A</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if historial.sla_cumplido %}
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check me-1"></i>Cumplido
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger">
+                                                                <i class="fas fa-times me-1"></i>Vencido
+                                                            </span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No hay historiales disponibles</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Vista Promedio Global -->
+                    <div class="tab-pane fade" id="promedio" role="tabpanel">
+                        <div class="mt-3">
+                            <h6 class="text-muted mb-3">Estadísticas globales por etapa</h6>
+                            {% if promedios_etapa %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Etapa</th>
+                                                <th>Duración Promedio</th>
+                                                <th>SLA Promedio</th>
+                                                <th>% SLA Cumplido</th>
+                                                <th>Total Casos</th>
+                                                <th>Casos Cumplidos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for etapa in promedios_etapa %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ etapa.etapa__nombre }}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">{{ etapa.promedio_formateado }}</span>
+                                                    </td>
+                                                    <td>
+                                                        {% if etapa.sla_etapa_formateado != 'N/A' %}
+                                                            <span class="badge bg-secondary">{{ etapa.sla_etapa_formateado }}</span>
+                                                        {% else %}
+                                                            <span class="text-muted">N/A</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                                <div class="progress-bar 
+                                                                    {% if etapa.porcentaje_sla_cumplido >= 80 %}bg-success
+                                                                    {% elif etapa.porcentaje_sla_cumplido >= 60 %}bg-warning
+                                                                    {% else %}bg-danger{% endif %}" 
+                                                                    style="width: {{ etapa.porcentaje_sla_cumplido }}%">
+                                                                </div>
+                                                            </div>
+                                                            <span class="small">{{ etapa.porcentaje_sla_cumplido|floatformat:1 }}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ etapa.total_casos }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ etapa.sla_cumplidas }}</span>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Gráfico de comparación -->
+                                <div class="mt-4">
+                                    <h6 class="text-muted mb-3">Comparación: Duración Promedio vs SLA</h6>
+                                    <div class="chart-container">
+                                        <canvas id="duracionChart"></canvas>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No hay estadísticas disponibles</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        TABLA DE SOLICITUDES MODERNA
+        ========================================== -->
+        <div class="table-modern">
+            <div class="card-header-custom">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Solicitudes Recientes
+                    <span class="badge bg-secondary ms-2">{{ solicitudes|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if solicitudes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Pipeline</th>
+                                    <th>Etapa</th>
+                                    <th>Asignada a</th>
+                                    <th>Prioridad</th>
+                                    <th>SLA</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solicitud in solicitudes %}
+                                    <tr class="{% if solicitud.sla_vencido %}table-danger{% endif %}">
+                                        <td>
+                                            <strong>{{ solicitud.codigo }}</strong>
+                                        </td>
+                                        <td>{{ solicitud.pipeline.nombre }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}</span>
+                                        </td>
+                                        <td>
+                                            {% if solicitud.asignada_a %}
+                                                {{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}
+                                            {% else %}
+                                                <span class="text-muted">Sin asignar</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if solicitud.prioridad %}
+                                                <span class="badge 
+                                                    {% if solicitud.prioridad == 'Alta' %}bg-danger
+                                                    {% elif solicitud.prioridad == 'Media' %}bg-warning
+                                                    {% else %}bg-success{% endif %}">
+                                                    {{ solicitud.prioridad }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if solicitud.sla_vencido %}
+                                                <span class="sla-badge overdue">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Vencido
+                                                </span>
+                                            {% else %}
+                                                <span class="sla-badge current">
+                                                    <i class="fas fa-check-circle me-1"></i>Vigente
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye me-1"></i>Ver
                                             </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">No hay pipelines configurados</p>
-                        </div>
-                    {% endif %}
-                </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No hay solicitudes que coincidan con los filtros aplicados</p>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Gráficos de Actividad -->
-    <div class="row mt-4">
-        <div class="col-lg-8">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2"></i>
-                        Actividad Reciente
-                    </h5>
+    <!-- ==========================================
+    DASHBOARD DE CUMPLIMIENTO
+    ========================================== -->
+    <div id="dashboard_cumplimiento" style="display:none;">
+        <div class="row mb-4">
+            <!-- Tarjetas de KPIs -->
+            <div class="col-md-3">
+                <div class="metric-card vigente">
+                    <div class="card-body text-center">
+                        <div class="metric-icon"><i class="fas fa-check-circle text-success fa-2x"></i></div>
+                        <h3 class="fw-bold text-success mb-1">{{ datos_cumplimiento.buenos|default:0 }}</h3>
+                        <p class="text-muted mb-0">Campos Buenos</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="activityChart" height="100"></canvas>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card vencido">
+                    <div class="card-body text-center">
+                        <div class="metric-icon"><i class="fas fa-times-circle text-danger fa-2x"></i></div>
+                        <h3 class="fw-bold text-danger mb-1">{{ datos_cumplimiento.malos|default:0 }}</h3>
+                        <p class="text-muted mb-0">Campos Malos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card info">
+                    <div class="card-body text-center">
+                        <div class="metric-icon"><i class="fas fa-question-circle text-secondary fa-2x"></i></div>
+                        <h3 class="fw-bold text-secondary mb-1">{{ datos_cumplimiento.sin_calificar|default:0 }}</h3>
+                        <p class="text-muted mb-0">Sin Calificar</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card primary">
+                    <div class="card-body text-center">
+                        <div class="metric-icon"><i class="fas fa-percentage text-primary fa-2x"></i></div>
+                        <h3 class="fw-bold text-primary mb-1">{{ datos_cumplimiento.porcentaje_cumplimiento|default:0|floatformat:1 }}%</h3>
+                        <p class="text-muted mb-0">Cumplimiento Global</p>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-4">
-            <div class="card card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        Distribución por Pipeline
-                    </h5>
+        <!-- Requisitos -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><i class="fas fa-file-check me-2"></i>Requisitos</div>
+                    <div class="card-body d-flex justify-content-around align-items-center">
+                        <div>
+                            <span class="badge bg-success fs-5">{{ datos_cumplimiento.requisitos_cumplidos|default:0 }}</span>
+                            <span class="text-muted ms-2">Cumplidos</span>
+                        </div>
+                        <div>
+                            <span class="badge bg-danger fs-5">{{ datos_cumplimiento.requisitos_pendientes|default:0 }}</span>
+                            <span class="text-muted ms-2">Pendientes</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="pipelineChart" height="200"></canvas>
+            </div>
+            <!-- Pie Chart -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><i class="fas fa-chart-pie me-2"></i>Distribución de Calificaciones</div>
+                    <div class="card-body">
+                        <canvas id="pieCalifChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Tabla de solicitudes más observadas -->
+        <div class="card mb-4">
+            <div class="card-header"><i class="fas fa-exclamation-triangle me-2"></i>Solicitudes con más observaciones</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Campos Malos</th>
+                                <th>Requisitos Pendientes</th>
+                                <th>Total Fallos</th>
+                                <th>Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in datos_cumplimiento.top_solicitudes_observadas|default:"" %}
+                            <tr>
+                                <td>{{ s.cliente }}</td>
+                                <td><span class="badge bg-danger">{{ s.malos }}</span></td>
+                                <td><span class="badge bg-warning">{{ s.pendientes }}</span></td>
+                                <td><span class="badge bg-secondary">{{ s.malos|add:s.pendientes }}</span></td>
+                                <td>
+                                    <a href="{% url 'workflow:detalle_solicitud' s.solicitud_id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">No hay solicitudes con observaciones</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -278,85 +751,182 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Datos para gráficas -->
+{{ chart_data|json_script:"chart-data" }}
+{{ sla_chart_data|json_script:"sla-chart-data" }}
+{{ duracion_chart_data|json_script:"duracion-chart-data" }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico de actividad
-    const activityCtx = document.getElementById('activityChart').getContext('2d');
-    const activityChart = new Chart(activityCtx, {
-        type: 'line',
-        data: {
-            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-            datasets: [{
-                label: 'Solicitudes Creadas',
-                data: [12, 19, 15, 25, 22, 18, 24],
-                borderColor: '#009c3c',
-                backgroundColor: 'rgba(0, 156, 60, 0.1)',
-                tension: 0.4,
-                fill: true
-            }, {
-                label: 'Solicitudes Completadas',
-                data: [8, 15, 12, 20, 18, 14, 19],
-                borderColor: '#22a650',
-                backgroundColor: 'rgba(34, 166, 80, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
+    // ==========================================
+    // GRÁFICAS DEL DASHBOARD OPERATIVO
+    // ==========================================
+    
+    // Gráfica de Distribución por Etapa
+    const etapaCtx = document.getElementById('etapaChart');
+    if (etapaCtx) {
+        const chartData = JSON.parse(document.getElementById('chart-data').textContent);
+        console.log('Datos para gráfica de etapas:', chartData);
+        
+        new Chart(etapaCtx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
                 }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
+            }
+        });
+    }
+    
+    // Gráfica de Estado SLA
+    const slaCtx = document.getElementById('slaChart');
+    if (slaCtx) {
+        const slaChartData = JSON.parse(document.getElementById('sla-chart-data').textContent);
+        console.log('Datos para gráfica de SLA:', slaChartData);
+        
+        new Chart(slaCtx, {
+            type: 'pie',
+            data: slaChartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Duración vs SLA
+    const duracionCtx = document.getElementById('duracionChart');
+    if (duracionCtx) {
+        const duracionChartData = JSON.parse(document.getElementById('duracion-chart-data').textContent);
+        console.log('Datos para gráfica de duración:', duracionChartData);
+        
+        new Chart(duracionCtx, {
+            type: 'bar',
+            data: duracionChartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                return `${label}: ${value.toFixed(1)} horas`;
+                            }
+                        }
                     }
                 },
-                x: {
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
                     }
                 }
             }
-        }
-    });
-
-    // Gráfico de distribución por pipeline
-    const pipelineCtx = document.getElementById('pipelineChart').getContext('2d');
-    const pipelineChart = new Chart(pipelineCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Préstamo Personal', 'Préstamo Auto', 'Hipotecario'],
-            datasets: [{
-                data: [45, 30, 25],
-                backgroundColor: [
-                    '#009c3c',
-                    '#22a650',
-                    '#00692b'
-                ],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
+        });
+    }
+    
+    // Auto-submit del formulario cuando cambien los filtros
+    const filterForm = document.querySelector('form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+    
+    // ==========================================
+    // FUNCIONALIDAD DEL DASHBOARD DE CUMPLIMIENTO
+    // ==========================================
+    
+    // Función para mostrar/ocultar el bloque de cumplimiento
+    function mostrarCumplimiento() {
+        document.getElementById('dashboard_cumplimiento').style.display = 'block';
+    }
+    
+    function ocultarCumplimiento() {
+        document.getElementById('dashboard_cumplimiento').style.display = 'none';
+    }
+    
+    // Detectar si estamos en la página de cumplimiento
+    const currentUrl = window.location.pathname;
+    if (currentUrl.includes('dashboard-cumplimiento')) {
+        mostrarCumplimiento();
+    } else {
+        ocultarCumplimiento();
+    }
+    
+    // Pie Chart para calificaciones
+    const pieCtx = document.getElementById('pieCalifChart');
+    if (pieCtx) {
+        const buenos = parseInt('{{ datos_cumplimiento.buenos|default:0 }}') || 0;
+        const malos = parseInt('{{ datos_cumplimiento.malos|default:0 }}') || 0;
+        const sinCalificar = parseInt('{{ datos_cumplimiento.sin_calificar|default:0 }}') || 0;
+        
+        new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Buenos', 'Malos', 'Sin Calificar'],
+                datasets: [{
+                    data: [buenos, malos, sinCalificar],
+                    backgroundColor: ['#28a745', '#dc3545', '#adb5bd'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 });
 </script>
 {% endblock %} 

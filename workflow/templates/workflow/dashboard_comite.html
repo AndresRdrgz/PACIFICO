@@ -1,0 +1,593 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Comité - Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-gavel fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard de Comité</h1>
+                            <p class="mb-0 text-white-50">Análisis de participación y decisiones del comité</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a>
+                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-inbox me-2"></i>Ver Bandeja
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    CONTENEDOR DE NAVEGACIÓN HORIZONTAL
+    ========================================== -->
+    <div class="dashboard-nav-horizontal">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0 me-3 text-muted">
+                                <i class="fas fa-th-large me-2"></i>Tipo de Tablero:
+                            </h6>
+                        </div>
+                        <div class="dashboard-nav-buttons-horizontal">
+                            <a href="{% url 'workflow:dashboard_operativo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-chart-pie me-1"></i>📊 Operativo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_usuario' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-users me-1"></i>👥 Por Usuario
+                            </a>
+                            <a href="{% url 'workflow:dashboard_cumplimiento' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-shield-alt me-1"></i>✅ Cumplimiento
+                            </a>
+                            <a href="{% url 'workflow:dashboard_flujo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-project-diagram me-1"></i>🔄 Flujo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_comite' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-gavel me-1"></i>🏛️ Comité
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SECCIÓN DE FILTROS
+    ========================================== -->
+    <div class="search-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtros de Análisis
+                </h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-pacifico btn-sm">
+                        <i class="fas fa-search me-2"></i>Aplicar Filtros
+                    </button>
+                    <a href="{% url 'workflow:dashboard_comite' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-2"></i>Limpiar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <form method="GET" class="row g-3">
+            <!-- Filtros de fecha -->
+            <div class="col-md-4">
+                <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                       value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                       value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <label for="nivel_id" class="form-label">Nivel de Comité</label>
+                <select class="form-select form-select-sm" id="nivel_id" name="nivel_id">
+                    <option value="">Todos</option>
+                    {% for nivel in niveles %}
+                        <option value="{{ nivel.id }}" {% if filtros_aplicados.nivel_id == nivel.id|stringformat:"s" %}selected{% endif %}>
+                            {{ nivel.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================
+    KPIs DE COMITÉ
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Total Participaciones -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card primary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-users text-primary fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if participacion_niveles %}
+                                    {% for participacion in participacion_niveles %}
+                                        {% if forloop.first %}
+                                            {{ participacion.total_participaciones }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Total Participaciones</p>
+                            <small class="text-muted">En comité</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Escalamientos -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card info">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-level-up-alt text-info fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if escalamientos_niveles %}
+                                    {% for escalamiento in escalamientos_niveles %}
+                                        {% if forloop.first %}
+                                            {{ escalamiento.total_escalamientos }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Escalamientos</p>
+                            <small class="text-muted">Solicitados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tiempo de Respuesta -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card warning">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-clock text-warning fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if tiempo_respuesta %}
+                                    {{ tiempo_respuesta.0.horas_promedio|floatformat:1 }}h
+                                {% else %}
+                                    0.0h
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Tiempo Respuesta</p>
+                            <small class="text-muted">Promedio</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Niveles Activos -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card vigente">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-layer-group text-success fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if niveles %}
+                                    {{ niveles|length }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Niveles Activos</p>
+                            <small class="text-muted">Configurados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    GRÁFICAS DE COMITÉ
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Gráfica de Participación por Nivel -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Participación por Nivel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="participacionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfica de Resultados por Usuario -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Resultados por Usuario
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="resultadosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    TABLAS DETALLADAS
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Tabla de Participación por Nivel -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Participación por Nivel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if participacion_niveles %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nivel</th>
+                                        <th>Resultado</th>
+                                        <th>Total Participaciones</th>
+                                        <th>Porcentaje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for participacion in participacion_niveles %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ participacion.nivel__nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if participacion.resultado == 'APROBADO' %}bg-success
+                                                    {% elif participacion.resultado == 'RECHAZADO' %}bg-danger
+                                                    {% elif participacion.resultado == 'OBSERVACIONES' %}bg-warning
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ participacion.resultado }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ participacion.total_participaciones }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">
+                                                    {% widthratio participacion.total_participaciones participacion_niveles|length 100 %}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de participación disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla de Resultados por Usuario -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>Resultados por Usuario
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if resultados_usuarios %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Resultado</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for resultado in resultados_usuarios %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ resultado.full_name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if resultado.resultado == 'APROBADO' %}bg-success
+                                                    {% elif resultado.resultado == 'RECHAZADO' %}bg-danger
+                                                    {% elif resultado.resultado == 'OBSERVACIONES' %}bg-warning
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ resultado.resultado }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ resultado.total_participaciones }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de resultados disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    ESCALAMIENTOS Y TIEMPO DE RESPUESTA
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Gráfica de Escalamientos -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-level-up-alt me-2"></i>Escalamientos por Nivel
+                        <span class="badge bg-info ms-2">Análisis Detallado</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if escalamientos_niveles %}
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="chart-container">
+                                    <canvas id="escalamientosChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Nivel</th>
+                                                <th>Total</th>
+                                                <th>Atendidos</th>
+                                                <th>% Atendidos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for escalamiento in escalamientos_niveles %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ escalamiento.nivel_solicitado__nombre }}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">{{ escalamiento.total_escalamientos }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ escalamiento.atendidos }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge 
+                                                            {% if escalamiento.porcentaje_atendidos >= 80 %}bg-success
+                                                            {% elif escalamiento.porcentaje_atendidos >= 60 %}bg-warning
+                                                            {% else %}bg-danger{% endif %}">
+                                                            {{ escalamiento.porcentaje_atendidos|floatformat:1 }}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de escalamientos disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla de Tiempo de Respuesta -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Tiempo de Respuesta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if tiempo_respuesta %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nivel</th>
+                                        <th>Tiempo Promedio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tiempo in tiempo_respuesta %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ tiempo.nivel__nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ tiempo.horas_promedio|floatformat:1 }}h</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de tiempo de respuesta disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Datos para gráficas -->
+{{ participacion_chart_data|json_script:"participacion-chart-data" }}
+{{ resultados_chart_data|json_script:"resultados-chart-data" }}
+{{ escalamientos_chart_data|json_script:"escalamientos-chart-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de Participación por Nivel
+    const participacionCtx = document.getElementById('participacionChart');
+    if (participacionCtx) {
+        const chartData = JSON.parse(document.getElementById('participacion-chart-data').textContent);
+        new Chart(participacionCtx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Participaciones'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Resultados por Usuario
+    const resultadosCtx = document.getElementById('resultadosChart');
+    if (resultadosCtx) {
+        const chartData = JSON.parse(document.getElementById('resultados-chart-data').textContent);
+        new Chart(resultadosCtx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Escalamientos
+    const escalamientosCtx = document.getElementById('escalamientosChart');
+    if (escalamientosCtx) {
+        const chartData = JSON.parse(document.getElementById('escalamientos-chart-data').textContent);
+        new Chart(escalamientosCtx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Cantidad'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-submit del formulario cuando cambien los filtros
+    const filterForm = document.querySelector('form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+});
+</script>
+{% endblock %} 

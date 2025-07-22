@@ -66,7 +66,7 @@ def superuser_permission_required(permission):
 
 @login_required
 def dashboard_workflow(request):
-    """Dashboard principal del sistema de workflow"""
+    """Dashboard principal del sistema de workflow (vista original)"""
     
     # Obtener solicitudes del usuario
     solicitudes_asignadas = Solicitud.objects.filter(
