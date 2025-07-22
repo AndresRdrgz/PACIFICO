@@ -298,7 +298,7 @@
                             <span class="text-gray-500">Propietario:</span>
                             <div class="flex items-center space-x-1">
                                 {% if s.propietario_user %}
-                                    {% if s.propietario_user.userprofile.profile_picture %}
+                                    {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
                                         <img src="{{ s.propietario_user.userprofile.profile_picture.url }}" 
                                              alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
                                              class="w-4 h-4 rounded-full object-cover border">
@@ -321,9 +321,9 @@
                         <!-- Asignación -->
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-xs text-gray-500 uppercase tracking-wide font-medium">Asignado a</span>
-                            {% if s.asignado_a != 'Sin asignar' %}
+                            {% if s.asignado_a != 'Sin asignar' and s.asignado_a_user %}
                                 <div class="flex items-center space-x-1">
-                                    {% if s.asignado_a_user.userprofile.profile_picture %}
+                                    {% if s.asignado_a_user.userprofile and s.asignado_a_user.userprofile.profile_picture %}
                                         <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}" 
                                              alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
                                              class="w-4 h-4 rounded-full object-cover border">
@@ -578,18 +578,25 @@
                             <td><span class="fw-bold text-success">{{ s.monto_formateado }}</span></td>
                             <td class="text-dark">
                                 <div class="d-flex align-items-center">
-                                    {% if s.propietario_user.userprofile.profile_picture %}
-                                        <img src="{{ s.propietario_user.userprofile.profile_picture.url }}" 
-                                             alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                             class="me-2 rounded-circle object-cover border"
-                                             style="width: 24px; height: 24px; object-fit: cover;">
+                                    {% if s.propietario_user %}
+                                        {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
+                                            <img src="{{ s.propietario_user.userprofile.profile_picture.url }}" 
+                                                 alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                                 class="me-2 rounded-circle object-cover border"
+                                                 style="width: 24px; height: 24px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                                 style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
+                                                {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
+                                            </div>
+                                        {% endif %}
                                     {% else %}
                                         <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                             style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
-                                            {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
+                                             style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
+                                            ?
                                         </div>
                                     {% endif %}
-                                    <span class="small">{{ s.propietario }}</span>
+                                    <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
                                 </div>
                             </td>
                             <td>
@@ -829,9 +836,9 @@
                                                 <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ s.monto_formateado }}</span>
                                             </div>
                                             
-                                            {% if s.asignado_a != 'Sin asignar' %}
+                                            {% if s.asignado_a != 'Sin asignar' and s.asignado_a_user %}
                                             <div class="d-flex align-items-center">
-                                                {% if s.asignado_a_user.userprofile.profile_picture %}
+                                                {% if s.asignado_a_user.userprofile and s.asignado_a_user.userprofile.profile_picture %}
                                                     <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}" 
                                                          alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
                                                          class="w-4 h-4 rounded-full object-cover me-1">

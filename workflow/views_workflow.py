@@ -545,8 +545,8 @@ def negocios_view(request):
                 'cedula': cedula,
                 'producto': producto,
                 'monto': monto_formateado,
-                'propietario': (solicitud.propietario.get_full_name() or solicitud.propietario.username) if solicitud.propietario else 'Sin propietario',
-                'propietario_user': solicitud.propietario,  # Pasar el objeto usuario completo
+                'propietario': (solicitud.propietario.get_full_name() or solicitud.propietario.username) if solicitud.propietario else (solicitud.creada_por.get_full_name() or solicitud.creada_por.username),
+                'propietario_user': solicitud.propietario or solicitud.creada_por,  # Pasar el objeto usuario completo
                 'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
                 'asignado_a_user': solicitud.asignada_a,  # Pasar el objeto usuario completo
                 'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
