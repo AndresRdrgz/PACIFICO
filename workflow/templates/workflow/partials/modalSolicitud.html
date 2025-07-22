@@ -1397,6 +1397,11 @@ function populateModalData(data) {
             btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
         }
         
+        // Populate the cards with actual content
+        populateSummaryCard(data);
+        populateClientCard(data);
+        populateCotizacionCard(data);
+        
         // General info with fallbacks
         const general = data.general || {};
         setElementText('modalSolicitudCodigo', general.codigo || 'N/A');
@@ -1484,9 +1489,6 @@ function populateModalData(data) {
         setTimeout(() => {
             const modernCards = document.querySelectorAll('.summary-card-modern, .client-card-modern, .cotizacion-card-modern');
             modernCards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                
                 setTimeout(() => {
                     card.style.transition = 'all 0.3s ease';
                     card.style.opacity = '1';
@@ -1496,9 +1498,6 @@ function populateModalData(data) {
             
             const mainContent = document.querySelector('.modal-main-content');
             if (mainContent) {
-                mainContent.style.opacity = '0';
-                mainContent.style.transform = 'translateY(20px)';
-                
                 setTimeout(() => {
                     mainContent.style.transition = 'all 0.3s ease';
                     mainContent.style.opacity = '1';
@@ -1513,6 +1512,255 @@ function populateModalData(data) {
         console.error('Error populating modal:', error);
         showErrorState('Error al procesar los datos');
     }
+}
+
+// Function to populate summary card
+function populateSummaryCard(data) {
+    const summaryCard = document.querySelector('.summary-card-modern');
+    if (!summaryCard) return;
+    
+    const general = data.general || {};
+    const solicitud = data.solicitud || {};
+    
+    const summaryHtml = `
+        <div class="summary-header">
+            <div class="summary-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="summary-title-section">
+                <h3 class="summary-title">Resumen</h3>
+                <p class="summary-subtitle">Información general</p>
+            </div>
+        </div>
+        <div class="summary-content">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-hashtag"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Código</span>
+                        <span class="summary-item-value">${general.codigo || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Fecha Creación</span>
+                        <span class="summary-item-value">${general.fecha_inicio || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Propietario</span>
+                        <span class="summary-item-value">${general.propietario || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Pipeline</span>
+                        <span class="summary-item-value">${general.tipo || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-flag"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Etapa</span>
+                        <span class="summary-item-value">${general.etapa_actual || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Estado</span>
+                        <span class="summary-item-value">${general.estado_actual || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    summaryCard.innerHTML = summaryHtml;
+}
+
+// Function to populate client card
+function populateClientCard(data) {
+    const clientCard = document.querySelector('.client-card-modern');
+    if (!clientCard) return;
+    
+    const cliente = data.cliente || {};
+    
+    const clientHtml = `
+        <div class="client-header">
+            <div class="client-icon">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="client-title-section">
+                <h3 class="client-title">Cliente</h3>
+                <p class="client-subtitle">Información del cliente</p>
+            </div>
+        </div>
+        <div class="client-content">
+            <div class="client-grid">
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Nombre</span>
+                        <span class="client-item-value">${cliente.nombre || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Cédula</span>
+                        <span class="client-item-value">${cliente.cedula || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Teléfono</span>
+                        <span class="client-item-value">${cliente.telefono || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Email</span>
+                        <span class="client-item-value">${cliente.email || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Ocupación</span>
+                        <span class="client-item-value">${cliente.ocupacion || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Ingresos</span>
+                        <span class="client-item-value">${cliente.ingresos_formateados || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    clientCard.innerHTML = clientHtml;
+}
+
+// Function to populate cotización card
+function populateCotizacionCard(data) {
+    const cotizacionCard = document.querySelector('.cotizacion-card-modern');
+    if (!cotizacionCard) return;
+    
+    const cotizacion = data.cotizacion || {};
+    
+    // Determine if it's a car loan
+    const isCarLoan = cotizacion.tipoPrestamo === 'auto';
+    
+    // Get vehicle data for car loans
+    const vehicleData = isCarLoan && cotizacion.marca && cotizacion.modelo 
+        ? `${cotizacion.marca} ${cotizacion.modelo}` 
+        : 'N/A';
+    
+    const cotizacionHtml = `
+        <div class="cotizacion-header">
+            <div class="cotizacion-icon">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <div class="cotizacion-title-section">
+                <h3 class="cotizacion-title">Cotización</h3>
+                <p class="cotizacion-subtitle">Detalles financieros</p>
+            </div>
+        </div>
+        <div class="cotizacion-content">
+            <div class="cotizacion-grid">
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-${isCarLoan ? 'car' : 'user'}"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Producto</span>
+                        <span class="cotizacion-item-value">${cotizacion.tipoPrestamo === 'auto' ? 'Préstamo de Auto' : cotizacion.tipoPrestamo === 'personal' ? 'Préstamo Personal' : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Monto</span>
+                        <span class="cotizacion-item-value">${cotizacion.auxMonto2 ? `$${cotizacion.auxMonto2.toLocaleString()}` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Plazo</span>
+                        <span class="cotizacion-item-value">${cotizacion.plazo ? `${cotizacion.plazo} meses` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Tasa</span>
+                        <span class="cotizacion-item-value">${cotizacion.tasa ? `${cotizacion.tasa}%` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Letra</span>
+                        <span class="cotizacion-item-value">${cotizacion.cuota ? `$${cotizacion.cuota.toLocaleString()}` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-${isCarLoan ? 'car-side' : 'chart-line'}"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">${isCarLoan ? 'Datos Vehículo' : 'Prima'}</span>
+                        <span class="cotizacion-item-value">${isCarLoan ? vehicleData : (cotizacion.prima_formateada || 'N/A')}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    cotizacionCard.innerHTML = cotizacionHtml;
 }
 
 // Helper function to set element text safely

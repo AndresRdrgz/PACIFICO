@@ -749,10 +749,6 @@ def nueva_solicitud(request):
         if pipeline_id:
             pipeline = get_object_or_404(Pipeline, id=pipeline_id)
             
-            # Generar código único
-            import uuid
-            codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
-            
             # Obtener primera etapa del pipeline
             primera_etapa = pipeline.etapas.order_by('orden').first()
             
@@ -775,9 +771,8 @@ def nueva_solicitud(request):
             apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
             apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
             
-            # Crear solicitud
+            # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
-                codigo=codigo,
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
@@ -852,10 +847,10 @@ def nueva_solicitud(request):
                     'success': True,
                     'solicitud_id': solicitud.id,
                     'codigo': solicitud.codigo,
-                    'message': f'Solicitud {codigo} creada exitosamente.'
+                    'message': f'Solicitud {solicitud.codigo} creada exitosamente.'
                 })
             
-            messages.success(request, f'Solicitud {codigo} creada exitosamente.')
+            messages.success(request, f'Solicitud {solicitud.codigo} creada exitosamente.')
             return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
     
     # Obtener clientes y cotizaciones para el formulario
@@ -4561,6 +4556,9 @@ def api_solicitud_brief(request, solicitud_id):
                 'edad': cotizacion.edad if cotizacion.edad is not None else None,
                 'sexo': cotizacion.sexo if cotizacion.sexo else None,
                 'cartera': cotizacion.cartera if cotizacion.cartera else None,
+                'tipoPrestamo': cotizacion.tipoPrestamo if cotizacion.tipoPrestamo else None,
+                'marca': cotizacion.marca if cotizacion.marca else None,
+                'modelo': cotizacion.modelo if cotizacion.modelo else None,
             }
             
             logger.debug(f"Final cotizacion_info: {cotizacion_info}")

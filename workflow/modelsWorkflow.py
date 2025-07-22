@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import re
 
 # --------------------------------------
 # PIPELINE Y ETAPAS
@@ -99,7 +102,7 @@ class Solicitud(models.Model):
         ('Carta de saldo', 'Carta de saldo'),
     ]
     
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50, unique=True, blank=True, null=True)
     pipeline = models.ForeignKey(Pipeline, on_delete=models.PROTECT)
     etapa_actual = models.ForeignKey(Etapa, on_delete=models.SET_NULL, null=True, blank=True)
     subestado_actual = models.ForeignKey(SubEstado, on_delete=models.SET_NULL, null=True, blank=True)
@@ -146,6 +149,33 @@ class Solicitud(models.Model):
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
     
+    def generar_codigo(self):
+        """
+        Genera el código secuencial basado en el ID de la solicitud y el prefijo del pipeline
+        Formato: {PIPELINE_PREFIX}-{ID}
+        """
+        if not self.id:
+            return None
+        
+        # Obtener prefijo del pipeline (primeras 3 letras, sin espacios ni caracteres especiales)
+        pipeline_nombre = self.pipeline.nombre
+        # Limpiar el nombre del pipeline: remover espacios, caracteres especiales y convertir a mayúsculas
+        pipeline_clean = re.sub(r'[^a-zA-Z0-9]', '', pipeline_nombre)
+        pipeline_prefix = pipeline_clean[:3].upper()
+        
+        # Si no hay suficientes caracteres, usar el nombre completo
+        if len(pipeline_prefix) < 3:
+            pipeline_prefix = pipeline_clean.upper()
+        
+        # Generar código con formato: PREFIX-ID
+        return f"{pipeline_prefix}-{self.id}"
+    
+    def save(self, *args, **kwargs):
+        # Si no tiene código y ya tiene ID, generarlo
+        if not self.codigo and self.id:
+            self.codigo = self.generar_codigo()
+        super().save(*args, **kwargs)
+    
     @property
     def cliente_nombre(self):
         """Obtiene el nombre del cliente de forma consistente"""
@@ -182,9 +212,9 @@ class Solicitud(models.Model):
         if self.cotizacion:
             if self.cotizacion.tipoPrestamo == 'auto':
                 return "Auto"
-            else:
+            elif self.cotizacion.tipoPrestamo == 'personal':
                 return "Préstamo Personal"
-        return ""  # Campo en blanco si no hay cotización
+        return "N/A"
 
 
 class HistorialSolicitud(models.Model):
@@ -558,3 +588,15 @@ class RequisitoTransicion(models.Model):
 
     def __str__(self):
         return f"{self.transicion} - {self.requisito.nombre} ({'Obligatorio' if self.obligatorio else 'Opcional'})"
+
+
+@receiver(post_save, sender=Solicitud)
+def generar_codigo_solicitud(sender, instance, created, **kwargs):
+    """
+    Signal para generar automáticamente el código de la solicitud después de ser creada
+    """
+    if created and not instance.codigo:
+        # Generar el código usando el ID que ya fue asignado
+        instance.codigo = instance.generar_codigo()
+        # Guardar solo el código sin disparar el signal nuevamente
+        Solicitud.objects.filter(id=instance.id).update(codigo=instance.codigo)
