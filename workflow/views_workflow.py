@@ -3007,6 +3007,13 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
         # Crear el asunto específico para APC
         subject = f"workflowAPC - {cliente_nombre} - {no_cedula}"
         
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Use SITE_URL from settings directly instead of Sites framework
+        base_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8002')
+        print(f"🔍 DEBUG: Base URL: {base_url}")
+        
         # Mensaje de texto plano
         text_content = f"""
         Solicitud de Descarga APC con Makito
@@ -3027,6 +3034,55 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
         Información para APC:
         Tipo de documento: {tipo_documento.title()}
         Número de documento: {no_cedula}
+        
+        ==========================================
+        INSTRUCCIONES PARA MAKITO RPA
+        ==========================================
+        
+        Para actualizar el estado de esta solicitud, utiliza las siguientes APIs:
+        
+        1. MARCAR COMO "EN PROGRESO":
+           URL: {base_url}/workflow/api/makito/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "in_progress",
+               "observaciones": "Iniciando procesamiento del APC"
+           }}
+        
+        2. MARCAR COMO "COMPLETADO" Y SUBIR ARCHIVO:
+           URL: {base_url}/workflow/api/makito/upload-apc/{solicitud.codigo}/
+           Método: POST
+           Content-Type: multipart/form-data
+           Form Data:
+           - apc_file: [archivo PDF del APC]
+           - observaciones: "APC generado exitosamente"
+        
+        3. MARCAR COMO "ERROR" (si es necesario):
+           URL: {base_url}/workflow/api/makito/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "error",
+               "observaciones": "Descripción del error encontrado"
+           }}
+        
+        ==========================================
+        FLUJO RECOMENDADO:
+        ==========================================
+        1. Al iniciar el procesamiento → Usar API #1 con status "in_progress"
+        2. Al completar exitosamente → Usar API #2 para subir el archivo
+        3. En caso de error → Usar API #3 con status "error"
+        
+        ==========================================
+        NOTAS IMPORTANTES:
+        ==========================================
+        • El archivo debe ser un PDF válido
+        • Tamaño máximo del archivo: 10MB
+        • El sistema automáticamente marcará la solicitud como completada
+        • Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -7185,6 +7241,287 @@ def api_makito_update_status(request, solicitud_codigo):
         }, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_makito_upload_apc(request, solicitud_codigo):
+    """
+    API para que Makito RPA suba el archivo APC y marque como completado
+    URL: /workflow/api/makito/upload-apc/{codigo}/
+    
+    Form data esperado:
+    - apc_file: archivo PDF
+    - observaciones: (opcional) descripción del proceso
+    """
+    try:
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.db import transaction
+        import uuid
+        
+        # Buscar la solicitud por código
+        try:
+            solicitud = Solicitud.objects.get(codigo=solicitud_codigo, descargar_apc_makito=True)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada o no tiene APC habilitado'
+            }, status=404)
+        
+        # Verificar que hay un archivo
+        if 'apc_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó archivo APC'
+            }, status=400)
+        
+        apc_file = request.FILES['apc_file']
+        
+        # Validar que es un PDF
+        if not apc_file.name.lower().endswith('.pdf'):
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo debe ser un PDF'
+            }, status=400)
+        
+        # Validar tamaño del archivo (máx 10MB)
+        if apc_file.size > 10 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo es demasiado grande (máx 10MB)'
+            }, status=400)
+        
+        # Generar nombre único para el archivo
+        file_extension = '.pdf'
+        unique_filename = f"apc_{solicitud.codigo}_{uuid.uuid4().hex[:8]}{file_extension}"
+        
+        # Actualizar la solicitud
+        with transaction.atomic():
+            # Guardar el archivo directamente en el campo FileField
+            solicitud.apc_archivo.save(unique_filename, apc_file)
+            
+            # Actualizar campos de estado
+            solicitud.apc_status = 'completed'
+            solicitud.apc_fecha_completado = timezone.now()
+            solicitud.apc_observaciones = request.POST.get('observaciones', 'APC generado exitosamente por Makito RPA')
+            solicitud.save()
+            
+            # Crear historial
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=solicitud.etapa_actual,
+                usuario_responsable=None,  # Sistema automático
+                fecha_inicio=timezone.now()
+            )
+        
+        # Notificar al propietario de la solicitud
+        try:
+            print(f"🔔 Enviando correo de APC completado para solicitud {solicitud.codigo}...")
+            enviar_correo_apc_completado(solicitud)
+            print(f"✅ Correo de APC completado enviado exitosamente")
+        except Exception as e:
+            print(f"❌ Error enviando correo APC completado: {e}")
+            import traceback
+            print(f"❌ Traceback completo: {traceback.format_exc()}")
+            # No fallar la operación si el correo falla
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'APC subido y marcado como completado exitosamente',
+            'data': {
+                'codigo': solicitud.codigo,
+                'apc_status': solicitud.apc_status,
+                'apc_observaciones': solicitud.apc_observaciones,
+                'apc_fecha_completado': solicitud.apc_fecha_completado.isoformat(),
+                'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+def enviar_correo_apc_completado(solicitud):
+    """
+    Función para enviar correo automático cuando el APC es completado por Makito.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre solicitud {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # If we have access to request in the context, use it for better URL building
+        # For now, use the settings fallback
+        
+        # URL para ver la solicitud
+        solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
+        
+        # URL para descargar el archivo APC (si está disponible)
+        archivo_url = None
+        if solicitud.apc_archivo:
+            try:
+                archivo_url = f"{base_url}{solicitud.apc_archivo.url}"
+            except:
+                archivo_url = "Archivo disponible en el sistema"
+        
+        # Crear el asunto
+        subject = f'✅ APC Completado - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano
+        text_content = f"""
+APC Completado Exitosamente
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+El proceso de APC para la solicitud {solicitud.codigo} ha sido completado exitosamente por Makito RPA.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha de completado: {solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M')}
+• Tipo de documento: {solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else 'No especificado'}
+• Número de documento: {solicitud.apc_no_cedula or 'No especificado'}
+
+ARCHIVO APC:
+{f'• Archivo disponible: {archivo_url}' if archivo_url else '• El archivo está disponible en el sistema'}
+
+OBSERVACIONES:
+{solicitud.apc_observaciones or 'Sin observaciones adicionales'}
+
+Para ver todos los detalles de la solicitud:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo APC completado enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo APC completado enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo APC completado: {str(e)}")
+            raise  # Re-raise para que se maneje en el nivel superior
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo APC completado para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+
+
+@login_required
+def test_apc_upload_email(request):
+    """
+    Vista para probar el envío de correo de APC completado
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con APC habilitado para testing
+        solicitud = Solicitud.objects.filter(descargar_apc_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con APC habilitado para testing'
+            })
+        
+        # Simular que se completó el APC
+        from django.utils import timezone
+        solicitud.apc_status = 'completed'
+        solicitud.apc_fecha_completado = timezone.now()
+        solicitud.apc_observaciones = 'APC de prueba completado - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo APC completado para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            enviar_correo_apc_completado(solicitud)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo APC completado enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
 @login_required
 @require_http_methods(["GET"])
 def api_apc_list(request):
@@ -7246,6 +7583,8 @@ def api_apc_list(request):
                 'apc_fecha_inicio': solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else '',
                 'apc_fecha_completado': solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_completado else '',
                 'apc_observaciones': solicitud.apc_observaciones or '',
+                'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None,
+                'apc_archivo_disponible': bool(solicitud.apc_archivo),
                 'url_detail': f'/workflow/solicitud/{solicitud.id}/'
             })
         
@@ -7259,4 +7598,59 @@ def api_apc_list(request):
         return JsonResponse({
             'success': False,
             'error': f'Error al obtener lista APC: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_apc_detail(request, solicitud_codigo):
+    """
+    API para obtener detalles completos de una solicitud APC específica
+    """
+    try:
+        # Buscar la solicitud por código
+        solicitud = Solicitud.objects.filter(
+            codigo=solicitud_codigo,
+            descargar_apc_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual'
+        ).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada'
+            }, status=404)
+        
+        # Construir respuesta detallada
+        data = {
+            'codigo': solicitud.codigo,
+            'cliente_nombre': solicitud.cliente_nombre,
+            'apc_tipo_documento': solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else '',
+            'apc_no_cedula': solicitud.apc_no_cedula,
+            'apc_status': solicitud.apc_status,
+            'apc_status_display': solicitud.get_apc_status_display(),
+            'pipeline': solicitud.pipeline.nombre,
+            'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+            'creada_por_email': solicitud.creada_por.email,
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+            'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.isoformat() if solicitud.apc_fecha_solicitud else None,
+            'apc_fecha_inicio': solicitud.apc_fecha_inicio.isoformat() if solicitud.apc_fecha_inicio else None,
+            'apc_fecha_completado': solicitud.apc_fecha_completado.isoformat() if solicitud.apc_fecha_completado else None,
+            'apc_observaciones': solicitud.apc_observaciones or '',
+            'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None,
+            'apc_archivo_disponible': bool(solicitud.apc_archivo),
+            'apc_archivo_nombre': solicitud.apc_archivo.name.split('/')[-1] if solicitud.apc_archivo else None,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'solicitud': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener detalles APC: {str(e)}'
         }, status=500)

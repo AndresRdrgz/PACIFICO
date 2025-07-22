@@ -141,6 +141,7 @@ class Solicitud(models.Model):
     apc_fecha_inicio = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando Makito inició el proceso")
     apc_fecha_completado = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se completó el proceso APC")
     apc_observaciones = models.TextField(blank=True, null=True, help_text="Observaciones del proceso APC")
+    apc_archivo = models.FileField(upload_to='apc_files/', null=True, blank=True, help_text="Archivo APC generado por Makito")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
