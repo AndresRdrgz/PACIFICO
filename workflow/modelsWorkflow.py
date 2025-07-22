@@ -145,6 +145,18 @@ class Solicitud(models.Model):
     apc_fecha_completado = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se completó el proceso APC")
     apc_observaciones = models.TextField(blank=True, null=True, help_text="Observaciones del proceso APC")
     apc_archivo = models.FileField(upload_to='apc_files/', null=True, blank=True, help_text="Archivo APC generado por Makito")
+    # Origen de la solicitud (para etiquetas distintivas)
+    origen = models.CharField(max_length=100, blank=True, null=True, help_text="Origen de la solicitud (ej: Canal Digital, Presencial, etc.)")
+    
+    # Campos adicionales para solicitudes del canal digital
+    cliente_nombre = models.CharField(max_length=200, blank=True, null=True, help_text="Nombre completo del cliente")
+    cliente_cedula = models.CharField(max_length=50, blank=True, null=True, help_text="Cédula del cliente")
+    cliente_telefono = models.CharField(max_length=20, blank=True, null=True, help_text="Teléfono del cliente")
+    cliente_email = models.EmailField(blank=True, null=True, help_text="Email del cliente")
+    producto_solicitado = models.CharField(max_length=100, blank=True, null=True, help_text="Producto de interés")
+    monto_solicitado = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, help_text="Monto solicitado")
+    propietario = models.ForeignKey(User, related_name='solicitudes_propias', on_delete=models.SET_NULL, null=True, blank=True, help_text="Usuario propietario de la solicitud")
+    observaciones = models.TextField(blank=True, null=True, help_text="Observaciones adicionales")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
@@ -177,9 +189,13 @@ class Solicitud(models.Model):
         super().save(*args, **kwargs)
     
     @property
-    def cliente_nombre(self):
+    def cliente_nombre_completo(self):
         """Obtiene el nombre del cliente de forma consistente"""
-        if self.cotizacion and self.cotizacion.nombreCliente:
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        nombre_directo = self.__dict__.get('cliente_nombre', None)
+        if nombre_directo:
+            return nombre_directo
+        elif self.cotizacion and self.cotizacion.nombreCliente:
             return self.cotizacion.nombreCliente
         elif self.cliente and self.cliente.nombreCliente:
             return self.cliente.nombreCliente
@@ -187,19 +203,38 @@ class Solicitud(models.Model):
             return ""  # Campo en blanco si no hay cliente
     
     @property
-    def cliente_cedula(self):
+    def cliente_cedula_completa(self):
         """Obtiene la cédula del cliente de forma consistente"""
-        if self.cotizacion and self.cotizacion.cedulaCliente:
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        cedula_directa = self.__dict__.get('cliente_cedula', None)
+        if cedula_directa:
+            return cedula_directa
+        elif self.cotizacion and self.cotizacion.cedulaCliente:
             return self.cotizacion.cedulaCliente
         elif self.cliente and self.cliente.cedulaCliente:
             return self.cliente.cedulaCliente
         else:
             return ""  # Campo en blanco si no hay cédula
     
+    # Mantener compatibilidad con propiedades existentes
+    # @property
+    # def cliente_nombre(self):
+    #     """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+    #     return self.cliente_nombre_completo
+    
+    # @property  
+    # def cliente_cedula(self):
+    #     """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+    #     return self.cliente_cedula_completa
+    
     @property
     def monto_formateado(self):
-        """Obtiene el monto financiado formateado (auxMonto2)"""
-        if self.cotizacion and self.cotizacion.auxMonto2:
+        """Obtiene el monto financiado formateado"""
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        monto_directo = self.__dict__.get('monto_solicitado', None)
+        if monto_directo:
+            return f"$ {monto_directo:,.2f}"
+        elif self.cotizacion and self.cotizacion.auxMonto2:
             return f"$ {self.cotizacion.auxMonto2:,.2f}"
         elif self.cotizacion and self.cotizacion.montoPrestamo:
             # Fallback to montoPrestamo if auxMonto2 is not available
@@ -208,13 +243,18 @@ class Solicitud(models.Model):
     
     @property
     def producto_descripcion(self):
-        """Obtiene el tipo de producto (auto vs préstamo personal)"""
-        if self.cotizacion:
+        """Obtiene el tipo de producto"""
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        producto_directo = self.__dict__.get('producto_solicitado', None)
+        if producto_directo:
+            return producto_directo
+        elif self.cotizacion:
             if self.cotizacion.tipoPrestamo == 'auto':
                 return "Auto"
             elif self.cotizacion.tipoPrestamo == 'personal':
                 return "Préstamo Personal"
         return "N/A"
+        
 
 
 class HistorialSolicitud(models.Model):
@@ -600,3 +640,144 @@ def generar_codigo_solicitud(sender, instance, created, **kwargs):
         instance.codigo = instance.generar_codigo()
         # Guardar solo el código sin disparar el signal nuevamente
         Solicitud.objects.filter(id=instance.id).update(codigo=instance.codigo)
+# --------------------------------------
+# REPORTES PERSONALIZADOS
+# --------------------------------------
+
+class ReportePersonalizado(models.Model):
+    """
+    Modelo para guardar reportes personalizados creados por los usuarios
+    """
+    nombre = models.CharField(max_length=200, help_text="Nombre descriptivo del reporte")
+    descripcion = models.TextField(blank=True, null=True, help_text="Descripción detallada del reporte")
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reportes_personalizados')
+    filtros_json = models.JSONField(default=dict, help_text="Filtros aplicados al reporte en formato JSON")
+    campos_json = models.JSONField(default=list, help_text="Campos incluidos en el reporte en formato JSON")
+    configuracion_json = models.JSONField(default=dict, help_text="Configuración adicional del reporte")
+    
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    es_favorito = models.BooleanField(default=False, help_text="Marcar como favorito")
+    es_publico = models.BooleanField(default=False, help_text="Compartir con otros usuarios del mismo grupo")
+    veces_ejecutado = models.PositiveIntegerField(default=0, help_text="Contador de ejecuciones")
+    ultima_ejecucion = models.DateTimeField(null=True, blank=True, help_text="Última vez que se ejecutó")
+    
+    # Grupos que pueden ver este reporte (si es público)
+    grupos_compartidos = models.ManyToManyField(Group, blank=True, related_name='reportes_compartidos')
+    
+    class Meta:
+        ordering = ['-fecha_modificacion']
+        verbose_name = "Reporte Personalizado"
+        verbose_name_plural = "Reportes Personalizados"
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.usuario.get_full_name()})"
+    
+    def marcar_ejecutado(self):
+        """Actualiza los contadores de ejecución"""
+        self.veces_ejecutado += 1
+        self.ultima_ejecucion = timezone.now()
+        self.save(update_fields=['veces_ejecutado', 'ultima_ejecucion'])
+    
+    def puede_ver(self, usuario):
+        """Verifica si un usuario puede ver este reporte"""
+        # El creador siempre puede ver
+        if self.usuario == usuario:
+            return True
+        
+        # Superusuarios pueden ver todo
+        if usuario.is_superuser:
+            return True
+        
+        # Si es público y el usuario está en los grupos compartidos
+        if self.es_publico:
+            usuario_grupos = set(usuario.groups.all())
+            reporte_grupos = set(self.grupos_compartidos.all())
+            return bool(usuario_grupos & reporte_grupos)
+        
+        return False
+    
+    def get_tipo_display(self):
+        """Retorna el tipo de reporte basado en la configuración"""
+        config = self.configuracion_json
+        return config.get('tipo', 'General')
+
+
+class EjecucionReporte(models.Model):
+    """
+    Modelo para guardar el historial de ejecuciones de reportes
+    """
+    reporte = models.ForeignKey(ReportePersonalizado, on_delete=models.CASCADE, related_name='ejecuciones')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    fecha_ejecucion = models.DateTimeField(auto_now_add=True)
+    parametros_json = models.JSONField(default=dict, help_text="Parámetros usados en la ejecución")
+    tiempo_ejecucion = models.FloatField(null=True, blank=True, help_text="Tiempo de ejecución en segundos")
+    registros_resultantes = models.PositiveIntegerField(default=0, help_text="Número de registros en el resultado")
+    exitosa = models.BooleanField(default=True, help_text="Si la ejecución fue exitosa")
+    mensaje_error = models.TextField(blank=True, null=True, help_text="Mensaje de error si falló")
+    
+    class Meta:
+        ordering = ['-fecha_ejecucion']
+        verbose_name = "Ejecución de Reporte"
+        verbose_name_plural = "Ejecuciones de Reportes"
+    
+    def __str__(self):
+        status = "✓" if self.exitosa else "✗"
+        return f"{status} {self.reporte.nombre} - {self.fecha_ejecucion.strftime('%d/%m/%Y %H:%M')}"
+
+# --------------------------------------
+# CONFIGURACIÓN DEL CANAL DIGITAL
+# --------------------------------------
+
+class ConfiguracionCanalDigital(models.Model):
+    """
+    Modelo para configurar el comportamiento del Canal Digital
+    """
+    nombre = models.CharField(max_length=100, default="Configuración Canal Digital")
+    pipeline_por_defecto = models.ForeignKey(Pipeline, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
+    etapa_por_defecto = models.ForeignKey(Etapa, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
+    activo = models.BooleanField(default=True, help_text="Si esta configuración está activa")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Configuración Canal Digital"
+        verbose_name_plural = "Configuraciones Canal Digital"
+        ordering = ['-fecha_modificacion']
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.pipeline_por_defecto.nombre}"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Verificar que la etapa pertenece al pipeline
+        if self.etapa_por_defecto and self.pipeline_por_defecto:
+            if self.etapa_por_defecto.pipeline != self.pipeline_por_defecto:
+                raise ValidationError('La etapa debe pertenecer al pipeline seleccionado')
+    
+    @classmethod
+    def get_configuracion_activa(cls):
+        """Obtiene la configuración activa del Canal Digital"""
+        return cls.objects.filter(activo=True).first()
+    
+    @classmethod
+    def get_pipeline_por_defecto(cls):
+        """Obtiene el pipeline por defecto"""
+        config = cls.get_configuracion_activa()
+        if config:
+            return config.pipeline_por_defecto
+        # Fallback al primer pipeline disponible
+        return Pipeline.objects.first()
+    
+    @classmethod
+    def get_etapa_por_defecto(cls):
+        """Obtiene la etapa por defecto"""
+        config = cls.get_configuracion_activa()
+        if config:
+            return config.etapa_por_defecto
+        # Fallback a la primera etapa del pipeline por defecto
+        pipeline = cls.get_pipeline_por_defecto()
+        if pipeline:
+            return pipeline.etapas.first()
+        return None

@@ -1,0 +1,552 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} - Sistema de Workflow - Pacífico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 156, 60, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 48px rgba(0, 156, 60, 0.3);
+    }
+    
+    .kpi-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .kpi-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .digital-icon {
+        font-size: 3rem;
+        opacity: 0.2;
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
+    
+    .section-header {
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        color: var(--gris-texto);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .section-subtitle {
+        color: var(--gris-medio);
+        font-size: 1rem;
+    }
+    
+    /* Estilos para la tabla de formularios */
+    .workflow-table {
+        font-size: 0.9rem;
+    }
+    
+    .workflow-table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: var(--gris-texto);
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .workflow-table td {
+        vertical-align: middle;
+        border-color: #f1f3f4;
+    }
+    
+    .table-row-pending {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+    
+    .table-row-pending:hover {
+        background-color: rgba(255, 193, 7, 0.2);
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    /* Estilos responsivos */
+    @media (max-width: 768px) {
+        .kpi-number {
+            font-size: 2rem;
+        }
+        
+        .workflow-table {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-1">
+                        <i class="fas fa-mobile-alt text-success me-2"></i>
+                        {{ titulo }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ subtitulo }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'workflow:formulario_web' %}" class="btn btn-pacifico" target="_blank">
+                        <i class="fas fa-plus me-2"></i>
+                        Nueva Solicitud Digital
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Row -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="kpi-card position-relative">
+                <div class="kpi-number">{{ solicitudes_canal_digital }}</div>
+                <div class="kpi-label">Total Formularios</div>
+                <i class="fas fa-mobile-alt digital-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="kpi-card position-relative">
+                <div class="kpi-number">{{ solicitudes_pendientes }}</div>
+                <div class="kpi-label">Pendientes</div>
+                <i class="fas fa-clock digital-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="kpi-card position-relative">
+                <div class="kpi-number">{{ solicitudes_procesadas }}</div>
+                <div class="kpi-label">Procesados</div>
+                <i class="fas fa-check-circle digital-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="kpi-card position-relative">
+                <div class="kpi-number">{% if solicitudes_canal_digital > 0 %}{{ solicitudes_procesadas|floatformat:0 }}/{{ solicitudes_canal_digital }}{% else %}0/0{% endif %}</div>
+                <div class="kpi-label">Ratio Procesamiento</div>
+                <i class="fas fa-chart-line digital-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formularios del Canal Digital -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card-custom">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="fas fa-table me-2"></i>
+                            Formularios del Canal Digital
+                        </h5>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Todas las solicitudes se crean automáticamente como solicitudes en el workflow con la etiqueta "Canal Digital"
+                        </p>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-pacifico btn-sm" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i>
+                            Actualizar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if formularios_tabla %}
+                        <div class="row mb-3">
+                            <div class="col-md-12 text-end">
+                                <small class="text-muted">
+                                    Total: {{ formularios_page.paginator.count }} formularios
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Tabla responsive -->
+                        <div class="table-responsive">
+                            <table class="table table-hover workflow-table" id="tablaFormularios">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Cédula</th>
+                                        <th>Contacto</th>
+                                        <th>Producto</th>
+                                        <th>Monto</th>
+                                        <th>Fecha</th>
+                                        <th>Estado</th>
+                                        <th>IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for formulario in formularios_tabla %}
+                                    <tr {% if not formulario.procesado %}class="table-row-pending"{% endif %}>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-2">
+                                                    <div class="bg-success bg-opacity-10 rounded-circle p-1" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-user text-success"></i>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-semibold">{{ formulario.nombre_completo }}</div>
+                                                    {% if formulario.correo %}
+                                                        <small class="text-muted">{{ formulario.correo }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">{{ formulario.cedula }}</span>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div><i class="fas fa-phone me-1 text-muted"></i>{{ formulario.celular }}</div>
+                                                {% if formulario.correo %}
+                                                    <small class="text-muted"><i class="fas fa-envelope me-1"></i>{{ formulario.correo|truncatechars:25 }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ formulario.producto_interesado }}</span>
+                                        </td>
+                                        <td>
+                                            <strong class="text-success">{{ formulario.monto_solicitar }}</strong>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div>{{ formulario.fecha_creacion|date:"d/m/Y" }}</div>
+                                                <small class="text-muted">{{ formulario.fecha_creacion|date:"H:i" }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if formulario.procesado %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>
+                                                    Procesado Automáticamente
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    Procesando...
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ formulario.ip_address|default:"-" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        {% if formularios_page.has_other_pages %}
+                        <nav aria-label="Paginación de formularios" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                {% if formularios_page.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ formularios_page.previous_page_number }}">Anterior</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in formularios_page.paginator.page_range %}
+                                    {% if num == formularios_page.number %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if formularios_page.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ formularios_page.next_page_number }}">Siguiente</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                        
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox text-muted mb-3" style="font-size: 4rem; opacity: 0.3;"></i>
+                            <h5 class="text-muted">No hay formularios aún</h5>
+                            <p class="text-muted">Los formularios aparecerán aquí cuando los usuarios completen el formulario web.</p>
+                            <a href="{% url 'workflow:formulario_web' %}" class="btn btn-outline-pacifico" target="_blank">
+                                <i class="fas fa-external-link-alt me-1"></i>
+                                Ver Formulario Web
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración del Canal Digital -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cog text-primary me-2"></i>
+                        <h5 class="mb-0">Configuración del Canal Digital</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pipelineSelect" class="form-label fw-semibold">Pipeline por Defecto</label>
+                                <select class="form-select" id="pipelineSelect">
+                                    <option value="">Seleccionar pipeline...</option>
+                                    {% for pipeline in pipelines_disponibles %}
+                                        <option value="{{ pipeline.id }}" 
+                                                {% if pipeline_por_defecto and pipeline_por_defecto.id == pipeline.id %}selected{% endif %}>
+                                            {{ pipeline.nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="etapaSelect" class="form-label fw-semibold">Etapa por Defecto</label>
+                                <select class="form-select" id="etapaSelect" disabled>
+                                    <option value="">Primero selecciona un pipeline...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-info-circle me-3" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <h6 class="mb-1">Configuración Automatizada</h6>
+                                        <p class="mb-0">
+                                            Los formularios del canal digital se procesarán automáticamente y crearán solicitudes en el pipeline y etapa seleccionados. 
+                                            <strong>Configuración actual:</strong> 
+                                            {% if pipeline_por_defecto and etapa_por_defecto %}
+                                                <span class="badge bg-success">{{ pipeline_por_defecto.nombre }} - {{ etapa_por_defecto.nombre }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No configurado</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary" id="guardarConfiguracion">
+                            <i class="fas fa-save me-1"></i>
+                            Guardar Configuración
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animación de KPI cards al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        const kpiCards = document.querySelectorAll('.kpi-card');
+        kpiCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100);
+            }, index * 100);
+        });
+        
+        // Inicializar configuración del Canal Digital
+        inicializarConfiguracionCanalDigital();
+    });
+    
+    // Configuración del Canal Digital
+    function inicializarConfiguracionCanalDigital() {
+        const pipelineSelect = document.getElementById('pipelineSelect');
+        const etapaSelect = document.getElementById('etapaSelect');
+        const guardarBtn = document.getElementById('guardarConfiguracion');
+        
+        // Cargar etapas cuando se selecciona un pipeline
+        pipelineSelect.addEventListener('change', function() {
+            const pipelineId = this.value;
+            if (pipelineId) {
+                cargarEtapasPipeline(pipelineId);
+            } else {
+                etapaSelect.innerHTML = '<option value="">Primero selecciona un pipeline...</option>';
+                etapaSelect.disabled = true;
+            }
+        });
+        
+        // Guardar configuración
+        guardarBtn.addEventListener('click', function() {
+            guardarConfiguracion();
+        });
+        
+        // Cargar configuración actual si existe
+        cargarConfiguracionActual();
+    }
+    
+    function cargarEtapasPipeline(pipelineId) {
+        const etapaSelect = document.getElementById('etapaSelect');
+        
+        return fetch(`{% url 'workflow:api_obtener_etapas_pipeline' 0 %}`.replace('0', pipelineId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    etapaSelect.innerHTML = '<option value="">Seleccionar etapa...</option>';
+                    
+                    data.etapas.forEach(etapa => {
+                        const option = document.createElement('option');
+                        option.value = etapa.id;
+                        option.textContent = `${etapa.nombre} (Orden: ${etapa.orden})`;
+                        etapaSelect.appendChild(option);
+                    });
+                    
+                    etapaSelect.disabled = false;
+                } else {
+                    console.error('Error al cargar etapas:', data.error);
+                    mostrarToast('Error al cargar etapas', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarToast('Error de conexión', 'error');
+            });
+    }
+    
+    function cargarConfiguracionActual() {
+        fetch('{% url "workflow:api_obtener_configuracion_canal_digital" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.configuracion) {
+                    const pipelineSelect = document.getElementById('pipelineSelect');
+                    const etapaSelect = document.getElementById('etapaSelect');
+                    
+                    // Seleccionar pipeline
+                    pipelineSelect.value = data.configuracion.pipeline_id;
+                    
+                    // Cargar y seleccionar etapa
+                    if (data.configuracion.pipeline_id) {
+                        cargarEtapasPipeline(data.configuracion.pipeline_id).then(() => {
+                            setTimeout(() => {
+                                etapaSelect.value = data.configuracion.etapa_id;
+                            }, 500);
+                        }).catch(error => {
+                            console.error('Error al cargar etapas:', error);
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar configuración:', error);
+            });
+    }
+    
+    function guardarConfiguracion() {
+        const pipelineId = document.getElementById('pipelineSelect').value;
+        const etapaId = document.getElementById('etapaSelect').value;
+        
+        if (!pipelineId) {
+            mostrarToast('Debes seleccionar un pipeline', 'warning');
+            return;
+        }
+        
+        const data = {
+            pipeline_id: pipelineId,
+            etapa_id: etapaId
+        };
+        
+        fetch('{% url "workflow:api_guardar_configuracion_canal_digital" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast(data.mensaje, 'success');
+                // Recargar la página para mostrar la nueva configuración
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                mostrarToast(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error al guardar configuración', 'error');
+        });
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    function mostrarToast(mensaje, tipo) {
+        // Crear toast simple
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'warning'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}
