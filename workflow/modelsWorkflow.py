@@ -105,14 +105,31 @@ class Solicitud(models.Model):
     
     # Motivo de la consulta
     motivo_consulta = models.TextField(blank=True, null=True, help_text="Motivo de la consulta o observaciones del cliente")
+    
+    # Origen de la solicitud (para etiquetas distintivas)
+    origen = models.CharField(max_length=100, blank=True, null=True, help_text="Origen de la solicitud (ej: Canal Digital, Presencial, etc.)")
+    
+    # Campos adicionales para solicitudes del canal digital
+    cliente_nombre = models.CharField(max_length=200, blank=True, null=True, help_text="Nombre completo del cliente")
+    cliente_cedula = models.CharField(max_length=50, blank=True, null=True, help_text="Cédula del cliente")
+    cliente_telefono = models.CharField(max_length=20, blank=True, null=True, help_text="Teléfono del cliente")
+    cliente_email = models.EmailField(blank=True, null=True, help_text="Email del cliente")
+    producto_solicitado = models.CharField(max_length=100, blank=True, null=True, help_text="Producto de interés")
+    monto_solicitado = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, help_text="Monto solicitado")
+    propietario = models.ForeignKey(User, related_name='solicitudes_propias', on_delete=models.SET_NULL, null=True, blank=True, help_text="Usuario propietario de la solicitud")
+    observaciones = models.TextField(blank=True, null=True, help_text="Observaciones adicionales")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
     
     @property
-    def cliente_nombre(self):
+    def cliente_nombre_completo(self):
         """Obtiene el nombre del cliente de forma consistente"""
-        if self.cotizacion and self.cotizacion.nombreCliente:
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        nombre_directo = self.__dict__.get('cliente_nombre', None)
+        if nombre_directo:
+            return nombre_directo
+        elif self.cotizacion and self.cotizacion.nombreCliente:
             return self.cotizacion.nombreCliente
         elif self.cliente and self.cliente.nombreCliente:
             return self.cliente.nombreCliente
@@ -120,19 +137,38 @@ class Solicitud(models.Model):
             return ""  # Campo en blanco si no hay cliente
     
     @property
-    def cliente_cedula(self):
+    def cliente_cedula_completa(self):
         """Obtiene la cédula del cliente de forma consistente"""
-        if self.cotizacion and self.cotizacion.cedulaCliente:
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        cedula_directa = self.__dict__.get('cliente_cedula', None)
+        if cedula_directa:
+            return cedula_directa
+        elif self.cotizacion and self.cotizacion.cedulaCliente:
             return self.cotizacion.cedulaCliente
         elif self.cliente and self.cliente.cedulaCliente:
             return self.cliente.cedulaCliente
         else:
             return ""  # Campo en blanco si no hay cédula
     
+    # Mantener compatibilidad con propiedades existentes
+    @property
+    def cliente_nombre(self):
+        """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+        return self.cliente_nombre_completo
+    
+    @property  
+    def cliente_cedula(self):
+        """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+        return self.cliente_cedula_completa
+    
     @property
     def monto_formateado(self):
-        """Obtiene el monto financiado formateado (auxMonto2)"""
-        if self.cotizacion and self.cotizacion.auxMonto2:
+        """Obtiene el monto financiado formateado"""
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        monto_directo = self.__dict__.get('monto_solicitado', None)
+        if monto_directo:
+            return f"$ {monto_directo:,.2f}"
+        elif self.cotizacion and self.cotizacion.auxMonto2:
             return f"$ {self.cotizacion.auxMonto2:,.2f}"
         elif self.cotizacion and self.cotizacion.montoPrestamo:
             # Fallback to montoPrestamo if auxMonto2 is not available
@@ -141,13 +177,17 @@ class Solicitud(models.Model):
     
     @property
     def producto_descripcion(self):
-        """Obtiene el tipo de producto (auto vs préstamo personal)"""
-        if self.cotizacion:
+        """Obtiene el tipo de producto"""
+        # Acceder directamente al campo de la base de datos para evitar recursión
+        producto_directo = self.__dict__.get('producto_solicitado', None)
+        if producto_directo:
+            return producto_directo
+        elif self.cotizacion:
             if self.cotizacion.tipoPrestamo == 'auto':
                 return "Auto"
             else:
                 return "Préstamo Personal"
-        return ""  # Campo en blanco si no hay cotización
+        return ""  # Campo en blanco si no hay producto
 
 
 class HistorialSolicitud(models.Model):

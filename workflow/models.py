@@ -250,3 +250,137 @@ class OtroIngreso(models.Model):
     def __str__(self):
         return self.fuente
 
+
+# ==========================================
+# MODELO PARA FORMULARIO WEB CANAL DIGITAL
+# ==========================================
+
+# Importamos las opciones desde pacifico
+from pacifico.models import OFICIAL_OPCIONES
+
+SEXO_FORMULARIO_CHOICES = [
+    ('MASCULINO', 'Masculino'),
+    ('FEMENINO', 'Femenino'),
+]
+
+SECTOR_CHOICES = [
+    ('Sector público', 'Sector público'),
+    ('Empresa privada', 'Empresa privada'),
+    ('Jubilado', 'Jubilado'),
+    ('Independiente', 'Independiente')
+]
+
+SALARIO_CHOICES = [
+    ('Menor a $600.00', 'Menor a $600.00'),
+    ('Entre $600.00 y $850.00', 'Entre $600.00 y $850.00'),
+    ('Menor a $850.00', 'Menor a $850.00'),
+    ('Entre $850.00 y $1,000.00', 'Entre $850.00 y $1,000.00'),
+    ('Mayor que $1,000.00 hasta $2,000.00', 'Mayor que $1,000.00 hasta $2,000.00'),
+    ('Mayor a $2,000.00', 'Mayor a $2,000.00'),
+]
+
+PRODUCTO_INTERESADO_CHOICES = [
+    ('Préstamos personal', 'Préstamos personal'),
+    ('Préstamo de auto', 'Préstamo de auto'),
+]
+
+class FormularioWeb(models.Model):
+    """Modelo para capturar solicitudes del formulario web del canal digital"""
+    
+    # Campos básicos
+    nombre = models.CharField(max_length=100, verbose_name="Nombres")
+    apellido = models.CharField(max_length=100, verbose_name="Apellidos")
+    cedulaCliente = models.CharField(max_length=255, verbose_name="Cédula")
+    celular = models.CharField(max_length=20, verbose_name="Celular")
+    correo_electronico = models.EmailField(max_length=100, blank=True, null=True, verbose_name="Correo Electrónico")
+    
+    # Información personal
+    fecha_nacimiento = models.DateField(blank=True, null=True, verbose_name="Fecha de Nacimiento")
+    edad = models.IntegerField(blank=True, null=True, verbose_name="Edad")
+    sexo = models.CharField(
+        max_length=10, 
+        choices=SEXO_FORMULARIO_CHOICES, 
+        default='MASCULINO',
+        verbose_name="Sexo"
+    )
+    
+    # Información laboral
+    sector = models.CharField(
+        max_length=100,
+        choices=SECTOR_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Sector"
+    )
+    
+    salario = models.CharField(
+        max_length=50,
+        choices=SALARIO_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Salario"
+    )
+    
+    # Información del producto
+    producto_interesado = models.CharField(
+        max_length=100,
+        choices=PRODUCTO_INTERESADO_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Producto Interesado"
+    )
+    
+    dinero_a_solicitar = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        blank=True, 
+        null=True,
+        verbose_name="Dinero a Solicitar"
+    )
+    
+    # Autorizaciones
+    autorizacion_apc = models.BooleanField(
+        default=False,
+        verbose_name="Autorización APC"
+    )
+    acepta_condiciones = models.BooleanField(
+        default=False,
+        verbose_name="Acepta Condiciones"
+    )
+    
+    # Campos de control
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de Creación"
+    )
+    ip_address = models.GenericIPAddressField(
+        blank=True, 
+        null=True,
+        verbose_name="Dirección IP"
+    )
+    user_agent = models.TextField(
+        blank=True, 
+        null=True,
+        verbose_name="User Agent"
+    )
+    procesado = models.BooleanField(
+        default=False,
+        verbose_name="Procesado"
+    )
+    
+    class Meta:
+        db_table = 'workflow_formulario_web'
+        verbose_name = 'Formulario Web'
+        verbose_name_plural = 'Formularios Web'
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f"{self.nombre} {self.apellido} - {self.cedulaCliente}"
+    
+    def get_nombre_completo(self):
+        return f"{self.nombre} {self.apellido}"
+    
+    def get_salario_display_formatted(self):
+        """Retorna el salario con formato amigable"""
+        return self.get_salario_display() if self.salario else "No especificado"
+

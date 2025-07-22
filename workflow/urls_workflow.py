@@ -91,6 +91,12 @@ urlpatterns += [
     # Vistas de reportes
     path('reportes/', views_workflow.reportes_workflow, name='reportes'),
     
+    # Canales Alternos
+    path('canal-digital/', views_workflow.canal_digital, name='canal_digital'),
+    path('formulario-web/', views_workflow.formulario_web, name='formulario_web'),
+    path('api/convertir-formulario/', views_workflow.convertir_formulario_a_solicitud, name='convertir_formulario_a_solicitud'),
+    path('api/procesar-formularios-masivo/', views_workflow.procesar_formularios_masivo, name='procesar_formularios_masivo'),
+    
     # APIs
     path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
     path('api/estadisticas/', views_workflow.api_estadisticas, name='api_estadisticas'),
@@ -196,8 +202,6 @@ if views_reportes is not None:
         path('reportes/api/<int:reporte_id>/ejecutar/', views_reportes.api_ejecutar_reporte, name='api_ejecutar_reporte'),
         path('reportes/api/<int:reporte_id>/exportar/', views_reportes.api_exportar_reporte, name='api_exportar_reporte'),
         path('reportes/api/reportes-predefinidos/', views_reportes.api_reportes_predefinidos, name='api_reportes_predefinidos'),
-        path('reportes/api/estadisticas/', views_reportes.api_estadisticas, name='api_estadisticas'),
-        path('reportes/api/exportar-excel/', views_reportes.api_exportar_excel, name='api_exportar_excel'),
     ]
 
 

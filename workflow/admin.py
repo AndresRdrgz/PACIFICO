@@ -277,3 +277,139 @@ class SolicitudEscalamientoComiteAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('solicitud', 'solicitado_por', 'nivel_solicitado', 'atendido_por')
+
+
+# ==========================================
+# ADMIN PARA FORMULARIO WEB CANAL DIGITAL
+# ==========================================
+
+from .models import FormularioWeb
+
+@admin.register(FormularioWeb)
+class FormularioWebAdmin(admin.ModelAdmin):
+    """Administración para los formularios web del canal digital"""
+    
+    list_display = (
+        'get_nombre_completo', 
+        'cedulaCliente', 
+        'celular', 
+        'correo_electronico',
+        'producto_interesado',
+        'dinero_a_solicitar',
+        'procesado',
+        'fecha_creacion'
+    )
+    
+    list_display_links = ('get_nombre_completo', 'cedulaCliente')
+    
+    search_fields = (
+        'nombre', 
+        'apellido', 
+        'cedulaCliente', 
+        'celular', 
+        'correo_electronico'
+    )
+    
+    list_filter = (
+        'procesado',
+        'sexo',
+        'sector',
+        'salario',
+        'producto_interesado',
+        'autorizacion_apc',
+        'acepta_condiciones',
+        'fecha_creacion'
+    )
+    
+    readonly_fields = (
+        'fecha_creacion', 
+        'ip_address', 
+        'user_agent'
+    )
+    
+    fieldsets = (
+        ('Información Personal', {
+            'fields': (
+                ('nombre', 'apellido'),
+                'cedulaCliente',
+                ('celular', 'correo_electronico'),
+                ('fecha_nacimiento', 'sexo'),
+            )
+        }),
+        ('Información Laboral', {
+            'fields': (
+                'sector',
+                'salario',
+            )
+        }),
+        ('Información del Producto', {
+            'fields': (
+                'producto_interesado',
+                'dinero_a_solicitar',
+            )
+        }),
+        ('Autorizaciones', {
+            'fields': (
+                'autorizacion_apc',
+                'acepta_condiciones',
+            )
+        }),
+        ('Control y Seguimiento', {
+            'fields': (
+                'procesado',
+                'fecha_creacion',
+                'ip_address',
+                'user_agent',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    list_per_page = 25
+    date_hierarchy = 'fecha_creacion'
+    ordering = ('-fecha_creacion',)
+    
+    actions = ['marcar_como_procesado', 'marcar_como_no_procesado', 'exportar_excel']
+    
+    def get_nombre_completo(self, obj):
+        return obj.get_nombre_completo()
+    get_nombre_completo.short_description = 'Nombre Completo'
+    get_nombre_completo.admin_order_field = 'nombre'
+    
+    def marcar_como_procesado(self, request, queryset):
+        """Marcar formularios seleccionados como procesados"""
+        count = queryset.update(procesado=True)
+        self.message_user(request, f'{count} formularios marcados como procesados.')
+    marcar_como_procesado.short_description = 'Marcar como procesado'
+    
+    def marcar_como_no_procesado(self, request, queryset):
+        """Marcar formularios seleccionados como no procesados"""
+        count = queryset.update(procesado=False)
+        self.message_user(request, f'{count} formularios marcados como no procesados.')
+    marcar_como_no_procesado.short_description = 'Marcar como no procesado'
+    
+    def exportar_excel(self, request, queryset):
+        """Exportar los formularios seleccionados a Excel"""
+        # Esta función se puede implementar más adelante si se necesita
+        self.message_user(request, 'Función de exportación en desarrollo.')
+    exportar_excel.short_description = 'Exportar a Excel'
+    
+    def get_queryset(self, request):
+        """Optimizar las consultas"""
+        return super().get_queryset(request).select_related()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Solo superusuarios pueden eliminar formularios"""
+        return request.user.is_superuser
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Los campos de información personal son readonly después de creación"""
+        readonly = list(self.readonly_fields)
+        if obj:  # Si está editando (no creando)
+            readonly.extend([
+                'nombre', 'apellido', 'cedulaCliente', 'celular', 
+                'correo_electronico', 'fecha_nacimiento', 'sexo',
+                'sector', 'salario', 'producto_interesado', 
+                'dinero_a_solicitar', 'autorizacion_apc', 'acepta_condiciones'
+            ])
+        return readonly

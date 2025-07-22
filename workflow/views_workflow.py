@@ -10,6 +10,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.db import models
+from django.views.decorators.csrf import csrf_exempt
 import os
 import tempfile
 from PyPDF2 import PdfMerger
@@ -562,6 +563,7 @@ def negocios_view(request):
                 'etapa_color': etapa_color,
                 'prioridad': solicitud.prioridad or '',
                 'etiquetas_oficial': solicitud.etiquetas_oficial or '',
+                'origen': solicitud.origen or '',  # Campo para identificar el origen (Canal Digital, etc.)
             })
 
         # Para vista kanban, crear datos enriquecidos por etapa
@@ -1240,21 +1242,36 @@ def reportes_workflow(request):
         total=Count('solicitud')
     ).values('nombre', 'total')
     
-    # Solicitudes vencidas
-    solicitudes_vencidas = Solicitud.objects.filter(
-        etapa_actual__isnull=False
-    ).extra(
-        where=['fecha_ultima_actualizacion < NOW() - INTERVAL etapa_actual_sla']
-    ).count()
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    from datetime import timedelta
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
     
-    # Tiempo promedio por etapa
-    tiempos_promedio = HistorialSolicitud.objects.filter(
+    # Tiempo promedio por etapa - Calculamos usando Python para compatibilidad con SQLite
+    tiempos_promedio = []
+    historiales = HistorialSolicitud.objects.filter(
         fecha_fin__isnull=False
-    ).extra(
-        select={'tiempo': 'EXTRACT(EPOCH FROM (fecha_fin - fecha_inicio))/3600'}
-    ).values('etapa__nombre').annotate(
-        tiempo_promedio=Avg('tiempo')
-    )
+    ).select_related('etapa')
+    
+    etapas_tiempos = {}
+    for historial in historiales:
+        etapa_nombre = historial.etapa.nombre
+        if etapa_nombre not in etapas_tiempos:
+            etapas_tiempos[etapa_nombre] = []
+        
+        tiempo_horas = (historial.fecha_fin - historial.fecha_inicio).total_seconds() / 3600
+        etapas_tiempos[etapa_nombre].append(tiempo_horas)
+    
+    for etapa_nombre, tiempos in etapas_tiempos.items():
+        tiempo_promedio = sum(tiempos) / len(tiempos) if tiempos else 0
+        tiempos_promedio.append({
+            'etapa__nombre': etapa_nombre,
+            'tiempo_promedio': tiempo_promedio
+        })
     
     context = {
         'total_solicitudes': total_solicitudes,
@@ -1266,6 +1283,356 @@ def reportes_workflow(request):
     }
     
     return render(request, 'workflow/reportes.html', context)
+
+
+# ==========================================
+# VISTAS DE CANALES ALTERNOS
+# ==========================================
+
+@login_required
+def canal_digital(request):
+    """Vista principal del Canal Digital"""
+    
+    # Importar el modelo aquí para evitar problemas de importación circular
+    from .models import FormularioWeb
+    from django.core.paginator import Paginator
+    
+    # Estadísticas específicas del canal digital
+    solicitudes_canal_digital = FormularioWeb.objects.count()
+    solicitudes_procesadas = FormularioWeb.objects.filter(procesado=True).count()
+    solicitudes_pendientes = FormularioWeb.objects.filter(procesado=False).count()
+    
+    # Obtener todas las solicitudes para la tabla (ordenadas por fecha más reciente)
+    formularios_queryset = FormularioWeb.objects.order_by('-fecha_creacion')
+    
+    # Paginación
+    paginator = Paginator(formularios_queryset, 25)  # 25 formularios por página
+    page_number = request.GET.get('page')
+    formularios_page = paginator.get_page(page_number)
+    
+    # Preparar datos para la tabla
+    formularios_tabla = []
+    for formulario in formularios_page:
+        formularios_tabla.append({
+            'id': formulario.id,
+            'nombre_completo': formulario.get_nombre_completo(),
+            'cedula': formulario.cedulaCliente,
+            'celular': formulario.celular,
+            'correo': formulario.correo_electronico,
+            'producto_interesado': formulario.producto_interesado or 'No especificado',
+            'monto_solicitar': f"${formulario.dinero_a_solicitar:,.2f}" if formulario.dinero_a_solicitar else 'N/A',
+            'fecha_creacion': formulario.fecha_creacion,
+            'procesado': formulario.procesado,
+            'ip_address': formulario.ip_address,
+        })
+    
+    # KPIs del canal digital
+    context = {
+        'solicitudes_canal_digital': solicitudes_canal_digital,
+        'solicitudes_procesadas': solicitudes_procesadas,
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'formularios_tabla': formularios_tabla,
+        'formularios_page': formularios_page,
+        'titulo': 'Canal Digital',
+        'subtitulo': 'Gestión de solicitudes del canal digital',
+    }
+    
+    return render(request, 'workflow/canal_digital.html', context)
+
+
+@csrf_exempt
+@login_required
+def convertir_formulario_a_solicitud(request):
+    """Convierte un FormularioWeb en una Solicitud del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_id = data.get('formulario_id')
+        pipeline_id = data.get('pipeline_id', 1)  # Pipeline por defecto
+        
+        if not formulario_id:
+            return JsonResponse({'success': False, 'error': 'ID de formulario requerido'})
+        
+        # Obtener el formulario
+        formulario = get_object_or_404(FormularioWeb, id=formulario_id)
+        
+        if formulario.procesado:
+            return JsonResponse({'success': False, 'error': 'Este formulario ya ha sido procesado'})
+        
+        # Obtener el pipeline y la etapa "Nuevo Lead"
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+        
+        if not etapa_nuevo_lead:
+            return JsonResponse({'success': False, 'error': 'No se encontró la etapa "Nuevo Lead" en el pipeline'})
+        
+        # Buscar o crear cliente basado en la cédula
+        cliente = None
+        if formulario.cedulaCliente:
+            try:
+                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+            except:
+                pass
+        
+        # Crear la solicitud
+        import uuid
+        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        
+        solicitud = Solicitud()
+        solicitud.codigo = codigo
+        solicitud.pipeline = pipeline
+        solicitud.etapa_actual = etapa_nuevo_lead
+        # Asignar datos del formulario directamente a los campos del modelo
+        solicitud.cliente_nombre = formulario.get_nombre_completo()
+        solicitud.cliente_cedula = formulario.cedulaCliente
+        solicitud.cliente_telefono = formulario.celular
+        solicitud.cliente_email = formulario.correo_electronico
+        solicitud.producto_solicitado = formulario.producto_interesado
+        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+        solicitud.propietario = request.user
+        solicitud.creada_por = request.user
+        solicitud.cliente = cliente
+        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+        solicitud.observaciones = f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+        solicitud.save()
+        
+        # Crear historial inicial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=etapa_nuevo_lead,
+            usuario_responsable=request.user
+        )
+        
+        # Marcar formulario como procesado
+        formulario.procesado = True
+        formulario.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'mensaje': f'Solicitud {solicitud.codigo} creada exitosamente',
+            'solicitud_id': solicitud.id,
+            'solicitud_codigo': solicitud.codigo
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def procesar_formularios_masivo(request):
+    """Convierte múltiples FormularioWeb en Solicitudes del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_ids = data.get('formulario_ids', [])
+        pipeline_id = data.get('pipeline_id', 1)
+        
+        if not formulario_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron formularios'})
+        
+        # Obtener el pipeline y la etapa "Nuevo Lead"
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+        
+        if not etapa_nuevo_lead:
+            return JsonResponse({'success': False, 'error': 'No se encontró la etapa "Nuevo Lead" en el pipeline'})
+        
+        formularios = FormularioWeb.objects.filter(id__in=formulario_ids, procesado=False)
+        solicitudes_creadas = []
+        errores = []
+        
+        for formulario in formularios:
+            try:
+                # Buscar cliente
+                cliente = None
+                if formulario.cedulaCliente:
+                    try:
+                        cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                    except:
+                        pass
+                
+                # Crear la solicitud
+                solicitud = Solicitud.objects.create(
+                    pipeline=pipeline,
+                    etapa_actual=etapa_nuevo_lead,
+                    cliente_nombre=formulario.get_nombre_completo(),
+                    cliente_cedula=formulario.cedulaCliente,
+                    cliente_telefono=formulario.celular,
+                    cliente_email=formulario.correo_electronico,
+                    producto_solicitado=formulario.producto_interesado,
+                    monto_solicitado=formulario.dinero_a_solicitar or 0,
+                    propietario=request.user,
+                    cliente=cliente,
+                    origen='Canal Digital',
+                    observaciones=f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+                )
+                
+                # Crear historial inicial
+                HistorialSolicitud.objects.create(
+                    solicitud=solicitud,
+                    etapa_anterior=None,
+                    etapa_nueva=etapa_nuevo_lead,
+                    usuario=request.user,
+                    observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})",
+                    es_automatico=True
+                )
+                
+                # Marcar formulario como procesado
+                formulario.procesado = True
+                formulario.save()
+                
+                solicitudes_creadas.append({
+                    'formulario_id': formulario.id,
+                    'solicitud_codigo': solicitud.codigo,
+                    'solicitud_id': solicitud.id
+                })
+                
+            except Exception as e:
+                errores.append({
+                    'formulario_id': formulario.id,
+                    'nombre': formulario.get_nombre_completo(),
+                    'error': str(e)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes_creadas': len(solicitudes_creadas),
+            'errores': len(errores),
+            'detalle_solicitudes': solicitudes_creadas,
+            'detalle_errores': errores
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def formulario_web(request):
+    """Vista para el formulario web del canal digital - Crea solicitud automáticamente"""
+    
+    if request.method == 'POST':
+        from .forms import FormularioWebForm
+        form = FormularioWebForm(request.POST)
+        
+        if form.is_valid():
+            # Guardar el formulario
+            formulario = form.save(commit=False)
+            
+            # Agregar información adicional
+            if request.META.get('HTTP_X_FORWARDED_FOR'):
+                formulario.ip_address = request.META.get('HTTP_X_FORWARDED_FOR').split(',')[0]
+            else:
+                formulario.ip_address = request.META.get('REMOTE_ADDR')
+            
+            formulario.user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]  # Limitar tamaño
+            formulario.save()
+            
+            # CREAR SOLICITUD AUTOMÁTICAMENTE
+            try:
+                from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+                from pacifico.models import Cliente
+                from django.contrib.auth.models import User
+                
+                # Buscar el pipeline "Flujo de consulta de Auto"
+                pipeline = Pipeline.objects.filter(nombre__icontains='Flujo de consulta de Auto').first()
+                if not pipeline:
+                    # Fallback al primer pipeline disponible
+                    pipeline = Pipeline.objects.first()
+                
+                if pipeline:
+                    # Buscar la etapa "Nuevo Lead"
+                    etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+                    
+                    if etapa_nuevo_lead:
+                        # Buscar o crear cliente basado en la cédula
+                        cliente = None
+                        if formulario.cedulaCliente:
+                            try:
+                                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                            except:
+                                pass
+                        
+                        # Obtener usuario del sistema para crear la solicitud (primer superuser disponible)
+                        usuario_sistema = User.objects.filter(is_superuser=True).first()
+                        if not usuario_sistema:
+                            usuario_sistema = User.objects.first()  # Fallback
+                        
+                        # Crear la solicitud automáticamente
+                        import uuid
+                        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+                        
+                        solicitud = Solicitud()
+                        solicitud.codigo = codigo
+                        solicitud.pipeline = pipeline
+                        solicitud.etapa_actual = etapa_nuevo_lead
+                        # Asignar datos del formulario directamente a los campos del modelo
+                        solicitud.cliente_nombre = formulario.get_nombre_completo()
+                        solicitud.cliente_cedula = formulario.cedulaCliente
+                        solicitud.cliente_telefono = formulario.celular
+                        solicitud.cliente_email = formulario.correo_electronico
+                        solicitud.producto_solicitado = formulario.producto_interesado
+                        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+                        solicitud.propietario = usuario_sistema
+                        solicitud.creada_por = usuario_sistema
+                        solicitud.cliente = cliente
+                        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+                        solicitud.observaciones = f"Solicitud creada automáticamente desde Canal Digital - IP: {formulario.ip_address}"
+                        solicitud.save()
+                        
+                        # Crear historial inicial
+                        HistorialSolicitud.objects.create(
+                            solicitud=solicitud,
+                            etapa=etapa_nuevo_lead,
+                            usuario_responsable=usuario_sistema
+                        )
+                        
+                        # Marcar formulario como procesado
+                        formulario.procesado = True
+                        formulario.save()
+                        
+                        print(f"✅ Solicitud {solicitud.codigo} creada automáticamente desde Canal Digital")
+                        
+            except Exception as e:
+                # Si hay error creando la solicitud, continuar pero logear el error
+                print(f"❌ Error creando solicitud automática: {str(e)}")
+                # El formulario se guarda de todas formas
+            
+            # Redirigir a página de éxito
+            return redirect('https://fpacifico.com/prestamos/')
+        else:
+            # Si hay errores, mostrar el formulario con errores
+            context = {
+                'form': form,
+                'error_message': True,
+            }
+            return render(request, 'workflow/formulario_web.html', context)
+    else:
+        # GET request - mostrar formulario vacío
+        from .forms import FormularioWebForm
+        form = FormularioWebForm()
+        
+        context = {
+            'form': form,
+            'error_message': False,
+        }
+        return render(request, 'workflow/formulario_web.html', context)
 
 
 # ==========================================
@@ -1972,12 +2339,13 @@ def api_estadisticas(request):
         total=Count('solicitud')
     ).values('nombre', 'total')
     
-    # Solicitudes vencidas
-    solicitudes_vencidas = Solicitud.objects.filter(
-        etapa_actual__isnull=False
-    ).extra(
-        where=['fecha_ultima_actualizacion < NOW() - INTERVAL etapa_actual_sla']
-    ).count()
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
     
     return JsonResponse({
         'total_solicitudes': total_solicitudes,
