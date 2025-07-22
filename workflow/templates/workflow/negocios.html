@@ -291,16 +291,23 @@
                                                     <div class="flex items-center justify-between text-sm">
                             <span class="text-gray-500">Propietario:</span>
                             <div class="flex items-center space-x-1">
-                                {% if s.propietario_user.userprofile.profile_picture %}
-                                    <img src="{{ s.propietario_user.userprofile.profile_picture.url }}" 
-                                         alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                         class="w-4 h-4 rounded-full object-cover border">
+                                {% if s.propietario_user %}
+                                    {% if s.propietario_user.userprofile.profile_picture %}
+                                        <img src="{{ s.propietario_user.userprofile.profile_picture.url }}" 
+                                             alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                             class="w-4 h-4 rounded-full object-cover border">
+                                    {% else %}
+                                        <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                            {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                    <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 {% else %}
-                                    <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                        {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
+                                    <div class="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500">
+                                        <i class="fas fa-user-slash"></i>
                                     </div>
+                                    <span class="text-gray-500 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 {% endif %}
-                                <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
                             </div>
                         </div>
                         </div>
@@ -1148,6 +1155,9 @@ $(document).ready(function() {
         }).length > 0;
 
         if (hasDataRows) {
+            console.log('📋 Tabla con datos - DataTables temporalmente deshabilitado para debugging');
+            // TEMPORALMENTE DESHABILITADO PARA DEBUGGING
+            /*
             // Inicializar DataTable con configuración mejorada
             table = $tabla.DataTable({
                 paging: true,
@@ -1204,6 +1214,7 @@ $(document).ready(function() {
                     configurarFiltros();
                 }, 500);
             }
+            */
         } else {
             // Si no hay datos, mostrar mensaje personalizado sin DataTables
             console.log('📋 Tabla sin datos - no inicializando DataTables');

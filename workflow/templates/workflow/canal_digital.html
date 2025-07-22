@@ -98,6 +98,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
@@ -309,17 +310,69 @@
         </div>
     </div>
 
-    <!-- Información Adicional -->
+    <!-- Configuración del Canal Digital -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="alert alert-info border-0">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-info-circle me-3" style="font-size: 1.5rem;"></i>
-                    <div>
-                        <h6 class="mb-1">Sistema Automatizado</h6>
-                        <p class="mb-0">
-                            Los formularios del canal digital se procesan automáticamente y crean solicitudes en el workflow con la etiqueta "Canal Digital" en la etapa "Nuevo Lead".
-                        </p>
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cog text-primary me-2"></i>
+                        <h5 class="mb-0">Configuración del Canal Digital</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pipelineSelect" class="form-label fw-semibold">Pipeline por Defecto</label>
+                                <select class="form-select" id="pipelineSelect">
+                                    <option value="">Seleccionar pipeline...</option>
+                                    {% for pipeline in pipelines_disponibles %}
+                                        <option value="{{ pipeline.id }}" 
+                                                {% if pipeline_por_defecto and pipeline_por_defecto.id == pipeline.id %}selected{% endif %}>
+                                            {{ pipeline.nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="etapaSelect" class="form-label fw-semibold">Etapa por Defecto</label>
+                                <select class="form-select" id="etapaSelect" disabled>
+                                    <option value="">Primero selecciona un pipeline...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-info border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-info-circle me-3" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <h6 class="mb-1">Configuración Automatizada</h6>
+                                        <p class="mb-0">
+                                            Los formularios del canal digital se procesarán automáticamente y crearán solicitudes en el pipeline y etapa seleccionados. 
+                                            <strong>Configuración actual:</strong> 
+                                            {% if pipeline_por_defecto and etapa_por_defecto %}
+                                                <span class="badge bg-success">{{ pipeline_por_defecto.nombre }} - {{ etapa_por_defecto.nombre }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No configurado</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary" id="guardarConfiguracion">
+                            <i class="fas fa-save me-1"></i>
+                            Guardar Configuración
+                        </button>
                     </div>
                 </div>
             </div>
@@ -345,6 +398,155 @@
                 }, 100);
             }, index * 100);
         });
+        
+        // Inicializar configuración del Canal Digital
+        inicializarConfiguracionCanalDigital();
     });
+    
+    // Configuración del Canal Digital
+    function inicializarConfiguracionCanalDigital() {
+        const pipelineSelect = document.getElementById('pipelineSelect');
+        const etapaSelect = document.getElementById('etapaSelect');
+        const guardarBtn = document.getElementById('guardarConfiguracion');
+        
+        // Cargar etapas cuando se selecciona un pipeline
+        pipelineSelect.addEventListener('change', function() {
+            const pipelineId = this.value;
+            if (pipelineId) {
+                cargarEtapasPipeline(pipelineId);
+            } else {
+                etapaSelect.innerHTML = '<option value="">Primero selecciona un pipeline...</option>';
+                etapaSelect.disabled = true;
+            }
+        });
+        
+        // Guardar configuración
+        guardarBtn.addEventListener('click', function() {
+            guardarConfiguracion();
+        });
+        
+        // Cargar configuración actual si existe
+        cargarConfiguracionActual();
+    }
+    
+    function cargarEtapasPipeline(pipelineId) {
+        const etapaSelect = document.getElementById('etapaSelect');
+        
+        return fetch(`{% url 'workflow:api_obtener_etapas_pipeline' 0 %}`.replace('0', pipelineId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    etapaSelect.innerHTML = '<option value="">Seleccionar etapa...</option>';
+                    
+                    data.etapas.forEach(etapa => {
+                        const option = document.createElement('option');
+                        option.value = etapa.id;
+                        option.textContent = `${etapa.nombre} (Orden: ${etapa.orden})`;
+                        etapaSelect.appendChild(option);
+                    });
+                    
+                    etapaSelect.disabled = false;
+                } else {
+                    console.error('Error al cargar etapas:', data.error);
+                    mostrarToast('Error al cargar etapas', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarToast('Error de conexión', 'error');
+            });
+    }
+    
+    function cargarConfiguracionActual() {
+        fetch('{% url "workflow:api_obtener_configuracion_canal_digital" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.configuracion) {
+                    const pipelineSelect = document.getElementById('pipelineSelect');
+                    const etapaSelect = document.getElementById('etapaSelect');
+                    
+                    // Seleccionar pipeline
+                    pipelineSelect.value = data.configuracion.pipeline_id;
+                    
+                    // Cargar y seleccionar etapa
+                    if (data.configuracion.pipeline_id) {
+                        cargarEtapasPipeline(data.configuracion.pipeline_id).then(() => {
+                            setTimeout(() => {
+                                etapaSelect.value = data.configuracion.etapa_id;
+                            }, 500);
+                        }).catch(error => {
+                            console.error('Error al cargar etapas:', error);
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar configuración:', error);
+            });
+    }
+    
+    function guardarConfiguracion() {
+        const pipelineId = document.getElementById('pipelineSelect').value;
+        const etapaId = document.getElementById('etapaSelect').value;
+        
+        if (!pipelineId) {
+            mostrarToast('Debes seleccionar un pipeline', 'warning');
+            return;
+        }
+        
+        const data = {
+            pipeline_id: pipelineId,
+            etapa_id: etapaId
+        };
+        
+        fetch('{% url "workflow:api_guardar_configuracion_canal_digital" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast(data.mensaje, 'success');
+                // Recargar la página para mostrar la nueva configuración
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                mostrarToast(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error al guardar configuración', 'error');
+        });
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    function mostrarToast(mensaje, tipo) {
+        // Crear toast simple
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'warning'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
 </script>
 {% endblock %}

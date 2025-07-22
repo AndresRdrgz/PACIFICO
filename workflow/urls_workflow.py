@@ -88,14 +88,20 @@ urlpatterns += [
     path('admin/campos-personalizados/', views_workflow.administrar_campos_personalizados, name='admin_campos_personalizados'),
     path('admin/usuarios/', views_workflow.administrar_usuarios, name='admin_usuarios'),
     
-    # Vistas de reportes
-    path('reportes/', views_workflow.reportes_workflow, name='reportes'),
+    # Vistas de reportes (comentada para usar la nueva vista)
+    # path('reportes/', views_workflow.reportes_workflow, name='reportes'),
     
     # Canales Alternos
     path('canal-digital/', views_workflow.canal_digital, name='canal_digital'),
     path('formulario-web/', views_workflow.formulario_web, name='formulario_web'),
     path('api/convertir-formulario/', views_workflow.convertir_formulario_a_solicitud, name='convertir_formulario_a_solicitud'),
     path('api/procesar-formularios-masivo/', views_workflow.procesar_formularios_masivo, name='procesar_formularios_masivo'),
+    
+    # APIs para Canal Digital
+    path('api/canal-digital/pipelines/', views_workflow.api_obtener_pipelines_canal_digital, name='api_obtener_pipelines_canal_digital'),
+    path('api/canal-digital/pipelines/<int:pipeline_id>/etapas/', views_workflow.api_obtener_etapas_pipeline, name='api_obtener_etapas_pipeline'),
+    path('api/canal-digital/configuracion/', views_workflow.api_obtener_configuracion_canal_digital, name='api_obtener_configuracion_canal_digital'),
+    path('api/canal-digital/configuracion/guardar/', views_workflow.api_guardar_configuracion_canal_digital, name='api_guardar_configuracion_canal_digital'),
     
     # APIs
     path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
@@ -199,8 +205,11 @@ if views_reportes is not None:
         
         # Reportes API URLs
         path('reportes/api/crear/', views_reportes.api_crear_reporte, name='api_crear_reporte'),
+        path('reportes/api/crear-prueba/', views_reportes.api_crear_reporte_prueba, name='api_crear_reporte_prueba'),
+        path('reportes/api/obtener-usuario/', views_reportes.api_obtener_reportes_usuario, name='api_obtener_reportes_usuario'),
         path('reportes/api/<int:reporte_id>/ejecutar/', views_reportes.api_ejecutar_reporte, name='api_ejecutar_reporte'),
         path('reportes/api/<int:reporte_id>/exportar/', views_reportes.api_exportar_reporte, name='api_exportar_reporte'),
+        path('reportes/api/<int:reporte_id>/eliminar/', views_reportes.api_eliminar_reporte, name='api_eliminar_reporte'),
         path('reportes/api/reportes-predefinidos/', views_reportes.api_reportes_predefinidos, name='api_reportes_predefinidos'),
     ]
 

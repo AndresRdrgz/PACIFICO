@@ -459,10 +459,10 @@ def negocios_view(request):
             valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
             get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
 
-            # Cliente, cédula, producto y monto usando las nuevas propiedades del modelo
-            cliente = solicitud.cliente_nombre
-            cedula = solicitud.cliente_cedula
-            producto = solicitud.producto_descripcion
+            # Cliente, cédula, producto y monto usando los campos directos del modelo
+            cliente = solicitud.cliente_nombre or solicitud.cliente_nombre_completo
+            cedula = solicitud.cliente_cedula or solicitud.cliente_cedula_completa
+            producto = solicitud.producto_solicitado or solicitud.producto_descripcion
             monto_formateado = solicitud.monto_formateado
 
             # Fechas
@@ -543,8 +543,8 @@ def negocios_view(request):
                 'cedula': cedula,
                 'producto': producto,
                 'monto': monto_formateado,
-                'propietario': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
-                'propietario_user': solicitud.creada_por,  # Pasar el objeto usuario completo
+                'propietario': (solicitud.propietario.get_full_name() or solicitud.propietario.username) if solicitud.propietario else 'Sin propietario',
+                'propietario_user': solicitud.propietario,  # Pasar el objeto usuario completo
                 'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
                 'asignado_a_user': solicitud.asignada_a,  # Pasar el objeto usuario completo
                 'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
@@ -1295,6 +1295,7 @@ def canal_digital(request):
     
     # Importar el modelo aquí para evitar problemas de importación circular
     from .models import FormularioWeb
+    from .modelsWorkflow import Pipeline, ConfiguracionCanalDigital
     from django.core.paginator import Paginator
     
     # Estadísticas específicas del canal digital
@@ -1326,6 +1327,14 @@ def canal_digital(request):
             'ip_address': formulario.ip_address,
         })
     
+    # Obtener configuración del Canal Digital
+    configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
+    pipeline_por_defecto = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+    etapa_por_defecto = ConfiguracionCanalDigital.get_etapa_por_defecto()
+    
+    # Obtener todos los pipelines disponibles
+    pipelines_disponibles = Pipeline.objects.all()
+    
     # KPIs del canal digital
     context = {
         'solicitudes_canal_digital': solicitudes_canal_digital,
@@ -1335,6 +1344,10 @@ def canal_digital(request):
         'formularios_page': formularios_page,
         'titulo': 'Canal Digital',
         'subtitulo': 'Gestión de solicitudes del canal digital',
+        'configuracion': configuracion,
+        'pipeline_por_defecto': pipeline_por_defecto,
+        'etapa_por_defecto': etapa_por_defecto,
+        'pipelines_disponibles': pipelines_disponibles,
     }
     
     return render(request, 'workflow/canal_digital.html', context)
@@ -1350,13 +1363,14 @@ def convertir_formulario_a_solicitud(request):
     
     try:
         from .models import FormularioWeb
-        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
         from pacifico.models import Cliente
         import json
         
         data = json.loads(request.body)
         formulario_id = data.get('formulario_id')
-        pipeline_id = data.get('pipeline_id', 1)  # Pipeline por defecto
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
         
         if not formulario_id:
             return JsonResponse({'success': False, 'error': 'ID de formulario requerido'})
@@ -1367,12 +1381,25 @@ def convertir_formulario_a_solicitud(request):
         if formulario.procesado:
             return JsonResponse({'success': False, 'error': 'Este formulario ya ha sido procesado'})
         
-        # Obtener el pipeline y la etapa "Nuevo Lead"
-        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
-        etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
         
-        if not etapa_nuevo_lead:
-            return JsonResponse({'success': False, 'error': 'No se encontró la etapa "Nuevo Lead" en el pipeline'})
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
         
         # Buscar o crear cliente basado en la cédula
         cliente = None
@@ -1389,7 +1416,7 @@ def convertir_formulario_a_solicitud(request):
         solicitud = Solicitud()
         solicitud.codigo = codigo
         solicitud.pipeline = pipeline
-        solicitud.etapa_actual = etapa_nuevo_lead
+        solicitud.etapa_actual = etapa
         # Asignar datos del formulario directamente a los campos del modelo
         solicitud.cliente_nombre = formulario.get_nombre_completo()
         solicitud.cliente_cedula = formulario.cedulaCliente
@@ -1397,7 +1424,8 @@ def convertir_formulario_a_solicitud(request):
         solicitud.cliente_email = formulario.correo_electronico
         solicitud.producto_solicitado = formulario.producto_interesado
         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-        solicitud.propietario = request.user
+        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+        solicitud.propietario = None
         solicitud.creada_por = request.user
         solicitud.cliente = cliente
         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -1407,7 +1435,7 @@ def convertir_formulario_a_solicitud(request):
         # Crear historial inicial
         HistorialSolicitud.objects.create(
             solicitud=solicitud,
-            etapa=etapa_nuevo_lead,
+            etapa=etapa,
             usuario_responsable=request.user
         )
         
@@ -1417,9 +1445,11 @@ def convertir_formulario_a_solicitud(request):
         
         return JsonResponse({
             'success': True, 
-            'mensaje': f'Solicitud {solicitud.codigo} creada exitosamente',
+            'mensaje': f'Solicitud {solicitud.codigo} creada exitosamente en {pipeline.nombre} - {etapa.nombre}',
             'solicitud_id': solicitud.id,
-            'solicitud_codigo': solicitud.codigo
+            'solicitud_codigo': solicitud.codigo,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
         })
         
     except Exception as e:
@@ -1436,23 +1466,37 @@ def procesar_formularios_masivo(request):
     
     try:
         from .models import FormularioWeb
-        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
         from pacifico.models import Cliente
         import json
         
         data = json.loads(request.body)
         formulario_ids = data.get('formulario_ids', [])
-        pipeline_id = data.get('pipeline_id', 1)
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
         
         if not formulario_ids:
             return JsonResponse({'success': False, 'error': 'No se seleccionaron formularios'})
         
-        # Obtener el pipeline y la etapa "Nuevo Lead"
-        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
-        etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
         
-        if not etapa_nuevo_lead:
-            return JsonResponse({'success': False, 'error': 'No se encontró la etapa "Nuevo Lead" en el pipeline'})
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
         
         formularios = FormularioWeb.objects.filter(id__in=formulario_ids, procesado=False)
         solicitudes_creadas = []
@@ -1471,14 +1515,15 @@ def procesar_formularios_masivo(request):
                 # Crear la solicitud
                 solicitud = Solicitud.objects.create(
                     pipeline=pipeline,
-                    etapa_actual=etapa_nuevo_lead,
+                    etapa_actual=etapa,
                     cliente_nombre=formulario.get_nombre_completo(),
                     cliente_cedula=formulario.cedulaCliente,
                     cliente_telefono=formulario.celular,
                     cliente_email=formulario.correo_electronico,
                     producto_solicitado=formulario.producto_interesado,
                     monto_solicitado=formulario.dinero_a_solicitar or 0,
-                    propietario=request.user,
+                    # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                    propietario=None,
                     cliente=cliente,
                     origen='Canal Digital',
                     observaciones=f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
@@ -1488,7 +1533,7 @@ def procesar_formularios_masivo(request):
                 HistorialSolicitud.objects.create(
                     solicitud=solicitud,
                     etapa_anterior=None,
-                    etapa_nueva=etapa_nuevo_lead,
+                    etapa_nueva=etapa,
                     usuario=request.user,
                     observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})",
                     es_automatico=True
@@ -1516,7 +1561,9 @@ def procesar_formularios_masivo(request):
             'solicitudes_creadas': len(solicitudes_creadas),
             'errores': len(errores),
             'detalle_solicitudes': solicitudes_creadas,
-            'detalle_errores': errores
+            'detalle_errores': errores,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
         })
         
     except Exception as e:
@@ -1546,21 +1593,24 @@ def formulario_web(request):
             
             # CREAR SOLICITUD AUTOMÁTICAMENTE
             try:
-                from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud
+                from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
                 from pacifico.models import Cliente
                 from django.contrib.auth.models import User
                 
-                # Buscar el pipeline "Flujo de consulta de Auto"
-                pipeline = Pipeline.objects.filter(nombre__icontains='Flujo de consulta de Auto').first()
+                # Usar configuración del Canal Digital
+                pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+                etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+                
                 if not pipeline:
                     # Fallback al primer pipeline disponible
                     pipeline = Pipeline.objects.first()
                 
                 if pipeline:
-                    # Buscar la etapa "Nuevo Lead"
-                    etapa_nuevo_lead = pipeline.etapas.filter(nombre__icontains='Nuevo Lead').first()
+                    # Si no hay etapa configurada o no pertenece al pipeline, usar la primera
+                    if not etapa or etapa.pipeline != pipeline:
+                        etapa = pipeline.etapas.first()
                     
-                    if etapa_nuevo_lead:
+                    if etapa:
                         # Buscar o crear cliente basado en la cédula
                         cliente = None
                         if formulario.cedulaCliente:
@@ -1581,15 +1631,25 @@ def formulario_web(request):
                         solicitud = Solicitud()
                         solicitud.codigo = codigo
                         solicitud.pipeline = pipeline
-                        solicitud.etapa_actual = etapa_nuevo_lead
+                        solicitud.etapa_actual = etapa
                         # Asignar datos del formulario directamente a los campos del modelo
                         solicitud.cliente_nombre = formulario.get_nombre_completo()
                         solicitud.cliente_cedula = formulario.cedulaCliente
                         solicitud.cliente_telefono = formulario.celular
                         solicitud.cliente_email = formulario.correo_electronico
-                        solicitud.producto_solicitado = formulario.producto_interesado
+                        
+                        # Convertir el producto antes de guardarlo
+                        producto_original = formulario.producto_interesado
+                        if producto_original == 'Préstamos personal':
+                            solicitud.producto_solicitado = 'Personal'
+                        elif producto_original == 'Préstamo de auto':
+                            solicitud.producto_solicitado = 'Auto'
+                        else:
+                            solicitud.producto_solicitado = producto_original
+                            
                         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-                        solicitud.propietario = usuario_sistema
+                        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                        solicitud.propietario = None
                         solicitud.creada_por = usuario_sistema
                         solicitud.cliente = cliente
                         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -1599,7 +1659,7 @@ def formulario_web(request):
                         # Crear historial inicial
                         HistorialSolicitud.objects.create(
                             solicitud=solicitud,
-                            etapa=etapa_nuevo_lead,
+                            etapa=etapa,
                             usuario_responsable=usuario_sistema
                         )
                         
@@ -4754,9 +4814,10 @@ def api_solicitud_brief(request, solicitud_id):
 
         # Cotización info
         cotizacion_info = {}
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if cotizacion:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.debug(f"Cotizacion found: {cotizacion}")
             logger.debug(f"Cotizacion edad: {cotizacion.edad} (type: {type(cotizacion.edad)})")
             logger.debug(f"Cotizacion sexo: {cotizacion.sexo} (type: {type(cotizacion.sexo)})")
@@ -7330,3 +7391,152 @@ def api_obtener_usuarios_disponibles_comite(request):
             'success': False,
             'error': f'Error al obtener usuarios: {str(e)}'
         }, status=500)
+
+# ==========================================
+# APIs PARA CANAL DIGITAL
+# ==========================================
+
+@login_required
+def api_obtener_pipelines_canal_digital(request):
+    """API para obtener pipelines disponibles para el Canal Digital"""
+    try:
+        from .modelsWorkflow import Pipeline
+        
+        pipelines = Pipeline.objects.all()
+        pipelines_data = []
+        
+        for pipeline in pipelines:
+            pipelines_data.append({
+                'id': pipeline.id,
+                'nombre': pipeline.nombre,
+                'descripcion': pipeline.descripcion or '',
+                'etapas': [
+                    {
+                        'id': etapa.id,
+                        'nombre': etapa.nombre,
+                        'orden': etapa.orden
+                    }
+                    for etapa in pipeline.etapas.all().order_by('orden')
+                ]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipelines': pipelines_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_obtener_etapas_pipeline(request, pipeline_id):
+    """API para obtener etapas de un pipeline específico"""
+    try:
+        from .modelsWorkflow import Pipeline
+        
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        etapas = pipeline.etapas.all().order_by('orden')
+        
+        etapas_data = []
+        for etapa in etapas:
+            etapas_data.append({
+                'id': etapa.id,
+                'nombre': etapa.nombre,
+                'orden': etapa.orden,
+                'sla_horas': etapa.sla_horas if etapa.sla else None
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipeline': {
+                'id': pipeline.id,
+                'nombre': pipeline.nombre
+            },
+            'etapas': etapas_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_guardar_configuracion_canal_digital(request):
+    """API para guardar la configuración del Canal Digital"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .modelsWorkflow import ConfiguracionCanalDigital, Pipeline, Etapa
+        import json
+        
+        data = json.loads(request.body)
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not pipeline_id:
+            return JsonResponse({'success': False, 'error': 'Pipeline requerido'})
+        
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        
+        # Desactivar configuraciones anteriores
+        ConfiguracionCanalDigital.objects.filter(activo=True).update(activo=False)
+        
+        # Crear nueva configuración
+        configuracion = ConfiguracionCanalDigital()
+        configuracion.pipeline_por_defecto = pipeline
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+            configuracion.etapa_por_defecto = etapa
+        else:
+            # Usar primera etapa del pipeline
+            configuracion.etapa_por_defecto = pipeline.etapas.first()
+        
+        configuracion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Configuración guardada: {pipeline.nombre} - {configuracion.etapa_por_defecto.nombre}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_obtener_configuracion_canal_digital(request):
+    """API para obtener la configuración actual del Canal Digital"""
+    try:
+        from .modelsWorkflow import ConfiguracionCanalDigital
+        
+        configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
+        
+        if configuracion:
+            return JsonResponse({
+                'success': True,
+                'configuracion': {
+                    'id': configuracion.id,
+                    'pipeline_id': configuracion.pipeline_por_defecto.id,
+                    'pipeline_nombre': configuracion.pipeline_por_defecto.nombre,
+                    'etapa_id': configuracion.etapa_por_defecto.id,
+                    'etapa_nombre': configuracion.etapa_por_defecto.nombre
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'configuracion': None
+            })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

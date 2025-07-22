@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -413,3 +413,146 @@ class FormularioWebAdmin(admin.ModelAdmin):
                 'dinero_a_solicitar', 'autorizacion_apc', 'acepta_condiciones'
             ])
         return readonly
+
+
+@admin.register(ReportePersonalizado)
+class ReportePersonalizadoAdmin(admin.ModelAdmin):
+    """Administración para los reportes personalizados"""
+    
+    list_display = (
+        'nombre', 
+        'usuario', 
+        'es_favorito', 
+        'es_publico',
+        'veces_ejecutado',
+        'fecha_modificacion'
+    )
+    
+    list_display_links = ('nombre',)
+    
+    search_fields = (
+        'nombre', 
+        'descripcion', 
+        'usuario__username',
+        'usuario__first_name',
+        'usuario__last_name'
+    )
+    
+    list_filter = (
+        'es_favorito',
+        'es_publico',
+        'fecha_creacion',
+        'fecha_modificacion'
+    )
+    
+    readonly_fields = (
+        'fecha_creacion', 
+        'fecha_modificacion',
+        'veces_ejecutado',
+        'ultima_ejecucion'
+    )
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': (
+                'nombre',
+                'descripcion',
+                'usuario',
+            )
+        }),
+        ('Configuración', {
+            'fields': (
+                'filtros_json',
+                'campos_json',
+                'configuracion_json',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Metadatos', {
+            'fields': (
+                'es_favorito',
+                'es_publico',
+                'grupos_compartidos',
+                'veces_ejecutado',
+                'ultima_ejecucion',
+                'fecha_creacion',
+                'fecha_modificacion',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    list_per_page = 25
+    date_hierarchy = 'fecha_creacion'
+    ordering = ('-fecha_modificacion',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('usuario')
+
+
+@admin.register(EjecucionReporte)
+class EjecucionReporteAdmin(admin.ModelAdmin):
+    """Administración para las ejecuciones de reportes"""
+    
+    list_display = (
+        'reporte', 
+        'usuario', 
+        'exitosa',
+        'registros_resultantes',
+        'fecha_ejecucion',
+        'tiempo_ejecucion'
+    )
+    
+    list_display_links = ('reporte',)
+    
+    search_fields = (
+        'reporte__nombre', 
+        'usuario__username',
+        'mensaje_error'
+    )
+    
+    list_filter = (
+        'exitosa',
+        'fecha_ejecucion',
+        'reporte'
+    )
+    
+    readonly_fields = (
+        'fecha_ejecucion',
+        'tiempo_ejecucion',
+        'registros_resultantes',
+        'exitosa',
+        'mensaje_error'
+    )
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': (
+                'reporte',
+                'usuario',
+                'exitosa',
+            )
+        }),
+        ('Resultados', {
+            'fields': (
+                'registros_resultantes',
+                'tiempo_ejecucion',
+                'parametros_json',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Control', {
+            'fields': (
+                'fecha_ejecucion',
+                'mensaje_error',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    list_per_page = 25
+    date_hierarchy = 'fecha_ejecucion'
+    ordering = ('-fecha_ejecucion',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('reporte', 'usuario')

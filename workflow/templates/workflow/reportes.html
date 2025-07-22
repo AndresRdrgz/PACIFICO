@@ -604,8 +604,25 @@
 
     .campos-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .campo-section {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        background: #f8f9fa;
+        margin-bottom: 10px;
+    }
+
+    .campo-section-title {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid #dee2e6;
+        font-size: 0.9rem;
     }
 
     .campo-checkbox {
@@ -875,6 +892,10 @@
                         <i class="fas fa-plus"></i>
                         Crear Reporte Personalizado
                     </button>
+                    <button class="btn-secondary ms-2" onclick="crearReportePrueba()" title="Crear reporte de prueba para verificar exportación">
+                        <i class="fas fa-flask"></i>
+                        Reporte Prueba
+                    </button>
                     <button class="btn-secondary" onclick="exportarTodo()">
                         <i class="fas fa-file-export"></i>
                         Exportar Dashboard
@@ -951,6 +972,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="reporteForm">
+                {% csrf_token %}
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-8">
@@ -967,6 +989,11 @@
                                     <option value="sla">SLA y Tiempos</option>
                                     <option value="productividad">Productividad</option>
                                     <option value="comite">Comité</option>
+                                    <option value="clientes">Clientes y Productos</option>
+                                    <option value="requisitos">Requisitos</option>
+                                    <option value="origen">Origen de Solicitudes</option>
+                                    <option value="prioridades">Prioridades Urgentes</option>
+                                    <option value="compliance">Compliance</option>
                                 </select>
                             </div>
                         </div>
@@ -974,12 +1001,16 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Descripción</label>
-                        <textarea class="form-control" id="reporte-descripcion" name="descripcion" rows="2"></textarea>
+                        <textarea class="form-control" id="reporte-descripcion" name="descripcion" rows="2" placeholder="Describe el propósito y alcance de este reporte..."></textarea>
                     </div>
 
                     <!-- Filtros -->
                     <div class="filter-section">
-                        <div class="filter-title">Filtros</div>
+                        <div class="filter-title">
+                            <i class="fas fa-filter"></i>
+                            Filtros Avanzados
+                            <small class="text-muted">(Opcional - Dejar vacío para incluir todos)</small>
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -999,20 +1030,24 @@
                                 <div class="mb-3">
                                     <label class="form-label">Pipeline</label>
                                     <select class="form-select" id="filtro-pipeline" name="pipeline" multiple>
+                                        <option value="">Seleccionar todos</option>
                                         {% for pipeline in pipelines %}
                                         <option value="{{ pipeline.id }}">{{ pipeline.nombre }}</option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Mantén Ctrl/Cmd para seleccionar múltiples</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Etapa</label>
                                     <select class="form-select" id="filtro-etapa" name="etapa" multiple>
+                                        <option value="">Seleccionar todas</option>
                                         {% for etapa in etapas %}
                                         <option value="{{ etapa.id }}">{{ etapa.pipeline.nombre }} - {{ etapa.nombre }}</option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Mantén Ctrl/Cmd para seleccionar múltiples</small>
                                 </div>
                             </div>
                         </div>
@@ -1021,20 +1056,70 @@
                                 <div class="mb-3">
                                     <label class="form-label">Usuario Asignado</label>
                                     <select class="form-select" id="filtro-usuario" name="usuario" multiple>
+                                        <option value="">Seleccionar todos</option>
                                         {% for usuario in usuarios %}
                                         <option value="{{ usuario.id }}">{{ usuario.get_full_name|default:usuario.username }}</option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Mantén Ctrl/Cmd para seleccionar múltiples</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Estado SLA</label>
                                     <select class="form-select" id="filtro-sla" name="estado_sla">
-                                        <option value="">Todos</option>
+                                        <option value="">Todos los estados</option>
                                         <option value="vigente">Vigente</option>
                                         <option value="vencido">Vencido</option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Prioridad</label>
+                                    <select class="form-select" id="filtro-prioridad" name="prioridad">
+                                        <option value="">Todas las prioridades</option>
+                                        <option value="Alta">Alta</option>
+                                        <option value="Media">Media</option>
+                                        <option value="Baja">Baja</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Producto</label>
+                                    <select class="form-select" id="filtro-producto" name="producto">
+                                        <option value="">Todos los productos</option>
+                                        <option value="Personal">Personal</option>
+                                        <option value="Auto">Auto</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Origen de Solicitud</label>
+                                    <select class="form-select" id="filtro-origen" name="origen">
+                                        <option value="">Todos los orígenes</option>
+                                        <option value="Canal Digital">Canal Digital</option>
+                                        <option value="Presencial">Presencial</option>
+                                        <option value="Telefónico">Telefónico</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Referido">Referido</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Rango de Monto</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="monto-min" name="monto_min" placeholder="Mínimo">
+                                        <span class="input-group-text">-</span>
+                                        <input type="number" class="form-control" id="monto-max" name="monto_max" placeholder="Máximo">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1042,88 +1127,546 @@
 
                     <!-- Campos a incluir -->
                     <div class="filter-section">
-                        <div class="filter-title">Campos a Incluir</div>
+                        <div class="filter-title">
+                            <i class="fas fa-columns"></i>
+                            Campos a Incluir
+                            <small class="text-muted">(Selecciona los campos que quieres ver en el reporte)</small>
+                        </div>
                         <div class="campos-grid">
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-codigo" name="campos" value="codigo" checked>
-                                <label for="campo-codigo">Código</label>
+                            <!-- CAMPOS BÁSICOS -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">📋 Información Básica</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-codigo" name="campos" value="codigo" checked="">
+                                    <label for="campo-codigo">Código</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-pipeline" name="campos" value="pipeline" checked="">
+                                    <label for="campo-pipeline">Pipeline</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-etapa" name="campos" value="etapa_actual" checked="">
+                                    <label for="campo-etapa">Etapa Actual</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-subestado" name="campos" value="subestado_actual">
+                                    <label for="campo-subestado">Subestado Actual</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-prioridad" name="campos" value="prioridad">
+                                    <label for="campo-prioridad">Prioridad</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-origen" name="campos" value="origen">
+                                    <label for="campo-origen">Origen</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-etiquetas" name="campos" value="etiquetas_oficial">
+                                    <label for="campo-etiquetas">Etiquetas Oficial</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-pipeline" name="campos" value="pipeline" checked>
-                                <label for="campo-pipeline">Pipeline</label>
+
+                            <!-- CAMPOS DE CLIENTE -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">👤 Información del Cliente</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-cliente" name="campos" value="cliente_nombre">
+                                    <label for="campo-cliente">Nombre Cliente</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-cedula" name="campos" value="cliente_cedula">
+                                    <label for="campo-cedula">Cédula</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-telefono" name="campos" value="cliente_telefono">
+                                    <label for="campo-telefono">Teléfono</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-email" name="campos" value="cliente_email">
+                                    <label for="campo-email">Email</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-fecha-nacimiento" name="campos" value="cliente_fecha_nacimiento">
+                                    <label for="campo-fecha-nacimiento">Fecha Nacimiento</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-edad" name="campos" value="cliente_edad">
+                                    <label for="campo-edad">Edad</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-sexo" name="campos" value="cliente_sexo">
+                                    <label for="campo-sexo">Sexo</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-jubilado" name="campos" value="cliente_jubilado">
+                                    <label for="campo-jubilado">Jubilado</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-etapa" name="campos" value="etapa_actual" checked>
-                                <label for="campo-etapa">Etapa Actual</label>
+
+                            <!-- CAMPOS DE COTIZACIÓN -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">💰 Información Financiera</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-monto" name="campos" value="monto">
+                                    <label for="campo-monto">Monto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-producto" name="campos" value="producto">
+                                    <label for="campo-producto">Producto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-monto-prestamo" name="campos" value="cotizacion_monto_prestamo">
+                                    <label for="campo-monto-prestamo">Monto Préstamo</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-plazo-pago" name="campos" value="cotizacion_plazo_pago">
+                                    <label for="campo-plazo-pago">Plazo Pago</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tasa-interes" name="campos" value="cotizacion_tasa_interes">
+                                    <label for="campo-tasa-interes">Tasa Interés</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tasa-estimada" name="campos" value="tasa_estimada">
+                                    <label for="campo-tasa-estimada">Tasa Estimada</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tasa-bruta" name="campos" value="tasa_bruta">
+                                    <label for="campo-tasa-bruta">Tasa Bruta</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comision-cierre" name="campos" value="comision_cierre">
+                                    <label for="campo-comision-cierre">Comisión Cierre</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-cliente" name="campos" value="cliente_nombre">
-                                <label for="campo-cliente">Cliente</label>
+
+                            <!-- CAMPOS DE COTIZACIÓN DETALLADA -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">🏢 Información de Cotización</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-oficial" name="campos" value="cotizacion_oficial">
+                                    <label for="campo-oficial">Oficial</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-sucursal" name="campos" value="cotizacion_sucursal">
+                                    <label for="campo-sucursal">Sucursal</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tipo-prestamo" name="campos" value="cotizacion_tipo_prestamo">
+                                    <label for="campo-tipo-prestamo">Tipo Préstamo</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-sector" name="campos" value="cotizacion_sector">
+                                    <label for="campo-sector">Sector</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-patrono" name="campos" value="cotizacion_patrono">
+                                    <label for="campo-patrono">Patrono</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-vendedor" name="campos" value="cotizacion_vendedor">
+                                    <label for="campo-vendedor">Vendedor</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tipo-vendedor" name="campos" value="cotizacion_vendedor_tipo">
+                                    <label for="campo-tipo-vendedor">Tipo Vendedor</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-apc-score" name="campos" value="cotizacion_apc_score">
+                                    <label for="campo-apc-score">APC Score</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-apc-pi" name="campos" value="cotizacion_apc_pi">
+                                    <label for="campo-apc-pi">APC PI</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-cedula" name="campos" value="cliente_cedula">
-                                <label for="campo-cedula">Cédula</label>
+
+                            <!-- CAMPOS DE AUTO -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">🚗 Información del Auto</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-marca" name="campos" value="auto_marca">
+                                    <label for="campo-auto-marca">Marca Auto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-modelo" name="campos" value="auto_modelo">
+                                    <label for="campo-auto-modelo">Modelo Auto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-year" name="campos" value="auto_year">
+                                    <label for="campo-auto-year">Año Auto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-valor" name="campos" value="auto_valor">
+                                    <label for="campo-auto-valor">Valor Auto</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-cashback" name="campos" value="auto_cashback">
+                                    <label for="campo-auto-cashback">Cashback</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-auto-abono" name="campos" value="auto_abono">
+                                    <label for="campo-auto-abono">Abono</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-monto" name="campos" value="monto">
-                                <label for="campo-monto">Monto</label>
+
+                            <!-- CAMPOS LABORALES -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">💼 Información Laboral</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tiempo-servicio" name="campos" value="tiempo_servicio">
+                                    <label for="campo-tiempo-servicio">Tiempo Servicio</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-ingresos" name="campos" value="ingresos">
+                                    <label for="campo-ingresos">Ingresos</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-nombre-empresa" name="campos" value="nombre_empresa">
+                                    <label for="campo-nombre-empresa">Nombre Empresa</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-posicion" name="campos" value="posicion">
+                                    <label for="campo-posicion">Posición</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-salario-base" name="campos" value="salario_base">
+                                    <label for="campo-salario-base">Salario Base</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-salario-neto" name="campos" value="salario_neto">
+                                    <label for="campo-salario-neto">Salario Neto</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-producto" name="campos" value="producto">
-                                <label for="campo-producto">Producto</label>
+
+                            <!-- CAMPOS DE CODEUDOR -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">👥 Información Codeudor</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-aplica-codeudor" name="campos" value="aplica_codeudor">
+                                    <label for="campo-aplica-codeudor">Aplica Codeudor</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-codeudor-nombre" name="campos" value="codeudor_nombre">
+                                    <label for="campo-codeudor-nombre">Codeudor Nombre</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-codeudor-cedula" name="campos" value="codeudor_cedula">
+                                    <label for="campo-codeudor-cedula">Codeudor Cédula</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-codeudor-ingresos" name="campos" value="codeudor_ingresos">
+                                    <label for="campo-codeudor-ingresos">Codeudor Ingresos</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-asignado" name="campos" value="asignada_a">
-                                <label for="campo-asignado">Asignado A</label>
+
+                            <!-- CAMPOS DE SEGURO -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">🛡️ Información de Seguro</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-financia-seguro" name="campos" value="financia_seguro">
+                                    <label for="campo-financia-seguro">Financia Seguro</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-monto-anual-seguro" name="campos" value="monto_anual_seguro">
+                                    <label for="campo-monto-anual-seguro">Monto Anual Seguro</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-monto-mensual-seguro" name="campos" value="monto_mensual_seguro">
+                                    <label for="campo-monto-mensual-seguro">Monto Mensual Seguro</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-fecha-creacion" name="campos" value="fecha_creacion">
-                                <label for="campo-fecha-creacion">Fecha Creación</label>
+
+                            <!-- CAMPOS DE FECHAS -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">📅 Fechas Importantes</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-fecha-creacion" name="campos" value="fecha_creacion">
+                                    <label for="campo-fecha-creacion">Fecha Creación</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-fecha-ultima-actualizacion" name="campos" value="fecha_ultima_actualizacion">
+                                    <label for="campo-fecha-ultima-actualizacion">Última Actualización</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-fecha-inicio-pago" name="campos" value="fecha_inicio_pago">
+                                    <label for="campo-fecha-inicio-pago">Fecha Inicio Pago</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-fecha-vencimiento" name="campos" value="fecha_vencimiento">
+                                    <label for="campo-fecha-vencimiento">Fecha Vencimiento</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-tiempo-etapa" name="campos" value="tiempo_en_etapa">
-                                <label for="campo-tiempo-etapa">Tiempo en Etapa</label>
+
+                            <!-- CAMPOS DE RESULTADOS FINANCIEROS -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">💵 Resultados Financieros</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tabla-total-pagos" name="campos" value="tabla_total_pagos">
+                                    <label for="campo-tabla-total-pagos">Total Pagos</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tabla-total-seguro" name="campos" value="tabla_total_seguro">
+                                    <label for="campo-tabla-total-seguro">Total Seguro</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tabla-total-interes" name="campos" value="tabla_total_interes">
+                                    <label for="campo-tabla-total-interes">Total Interés</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tabla-total-capital" name="campos" value="tabla_total_capital">
+                                    <label for="campo-tabla-total-capital">Total Capital</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-sla-status" name="campos" value="sla_status">
-                                <label for="campo-sla-status">Estado SLA</label>
+
+                            <!-- CAMPOS DE PROCESO -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">⚙️ Información de Proceso</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-creada-por" name="campos" value="creada_por">
+                                    <label for="campo-creada-por">Creado Por</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-asignada-a" name="campos" value="asignada_a">
+                                    <label for="campo-asignada-a">Asignado A</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-propietario" name="campos" value="propietario">
+                                    <label for="campo-propietario">Propietario</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tiempo-en-etapa" name="campos" value="tiempo_en_etapa">
+                                    <label for="campo-tiempo-en-etapa">Tiempo en Etapa</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-sla-status" name="campos" value="sla_status">
+                                    <label for="campo-sla-status">Estado SLA</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-sla-vencido" name="campos" value="sla_vencido">
+                                    <label for="campo-sla-vencido">SLA Vencido</label>
+                                </div>
                             </div>
-                            <div class="campo-checkbox">
-                                <input type="checkbox" id="campo-prioridad" name="campos" value="prioridad">
-                                <label for="campo-prioridad">Prioridad</label>
+
+                            <!-- CAMPOS DE HISTORIAL -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">📊 Historial y Tiempos</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-historial-etapas" name="campos" value="historial_etapas">
+                                    <label for="campo-historial-etapas">Historial Etapas</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-tiempo-total-proceso" name="campos" value="tiempo_total_proceso">
+                                    <label for="campo-tiempo-total-proceso">Tiempo Total Proceso</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-etapas-completadas" name="campos" value="etapas_completadas">
+                                    <label for="campo-etapas-completadas">Etapas Completadas</label>
+                                </div>
+                            </div>
+
+                            <!-- CAMPOS DE REQUISITOS -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">📋 Requisitos</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-requisitos-total" name="campos" value="requisitos_total">
+                                    <label for="campo-requisitos-total">Total Requisitos</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-requisitos-cumplidos" name="campos" value="requisitos_cumplidos">
+                                    <label for="campo-requisitos-cumplidos">Requisitos Cumplidos</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-requisitos-pendientes" name="campos" value="requisitos_pendientes">
+                                    <label for="campo-requisitos-pendientes">Requisitos Pendientes</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-porcentaje-cumplimiento-requisitos" name="campos" value="porcentaje_cumplimiento_requisitos">
+                                    <label for="campo-porcentaje-cumplimiento-requisitos">% Cumplimiento Requisitos</label>
+                                </div>
+                            </div>
+
+                            <!-- CAMPOS DE COMENTARIOS -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">💬 Comentarios</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comentarios-total" name="campos" value="comentarios_total">
+                                    <label for="campo-comentarios-total">Total Comentarios</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comentarios-general" name="campos" value="comentarios_general">
+                                    <label for="campo-comentarios-general">Comentarios Generales</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comentarios-analista" name="campos" value="comentarios_analista">
+                                    <label for="campo-comentarios-analista">Comentarios Analista</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-ultimo-comentario" name="campos" value="ultimo_comentario">
+                                    <label for="campo-ultimo-comentario">Último Comentario</label>
+                                </div>
+                            </div>
+
+                            <!-- CAMPOS DE CALIFICACIONES -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">⭐ Calificaciones Compliance</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-calificaciones-total" name="campos" value="calificaciones_total">
+                                    <label for="campo-calificaciones-total">Total Calificaciones</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-calificaciones-buenas" name="campos" value="calificaciones_buenas">
+                                    <label for="campo-calificaciones-buenas">Calificaciones Buenas</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-calificaciones-malas" name="campos" value="calificaciones_malas">
+                                    <label for="campo-calificaciones-malas">Calificaciones Malas</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-calificaciones-sin-calificar" name="campos" value="calificaciones_sin_calificar">
+                                    <label for="campo-calificaciones-sin-calificar">Sin Calificar</label>
+                                </div>
+                            </div>
+
+                            <!-- CAMPOS DE COMITÉ -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">👥 Comité</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comite-participaciones" name="campos" value="comite_participaciones">
+                                    <label for="campo-comite-participaciones">Participaciones Comité</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comite-escalamientos" name="campos" value="comite_escalamientos">
+                                    <label for="campo-comite-escalamientos">Escalamientos Comité</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-comite-ultima-participacion" name="campos" value="comite_ultima_participacion">
+                                    <label for="campo-comite-ultima-participacion">Última Participación Comité</label>
+                                </div>
+                            </div>
+
+                            <!-- CAMPOS ADICIONALES -->
+                            <div class="campo-section">
+                                <h6 class="campo-section-title">🔧 Información Adicional</h6>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-campos-personalizados" name="campos" value="campos_personalizados">
+                                    <label for="campo-campos-personalizados">Campos Personalizados</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-debida-diligencia-estado" name="campos" value="debida_diligencia_estado">
+                                    <label for="campo-debida-diligencia-estado">Estado Debida Diligencia</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-documentos-cotizacion" name="campos" value="documentos_cotizacion">
+                                    <label for="campo-documentos-cotizacion">Documentos Cotización</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-motivo-consulta" name="campos" value="motivo_consulta">
+                                    <label for="campo-motivo-consulta">Motivo Consulta</label>
+                                </div>
+                                <div class="campo-checkbox">
+                                    <input type="checkbox" id="campo-observaciones" name="campos" value="observaciones">
+                                    <label for="campo-observaciones">Observaciones</label>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Configuración adicional -->
                     <div class="filter-section">
-                        <div class="filter-title">Configuración</div>
+                        <div class="filter-title">
+                            <i class="fas fa-cog"></i>
+                            Configuración Adicional
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="es-publico" name="es_publico">
                                     <label class="form-check-label" for="es-publico">
-                                        Compartir con mi grupo
+                                        <i class="fas fa-users"></i> Compartir con mi grupo
                                     </label>
+                                    <small class="text-muted d-block">Otros usuarios de tu grupo podrán ver este reporte</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="es-favorito" name="es_favorito">
                                     <label class="form-check-label" for="es-favorito">
-                                        Marcar como favorito
+                                        <i class="fas fa-star"></i> Marcar como favorito
                                     </label>
+                                    <small class="text-muted d-block">Aparecerá en la sección de favoritos</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Ordenar por</label>
+                                    <select class="form-select" id="ordenar-por" name="ordenar_por">
+                                        <option value="fecha_creacion">Fecha de Creación</option>
+                                        <option value="fecha_ultima_actualizacion">Última Actualización</option>
+                                        <option value="codigo">Código de Solicitud</option>
+                                        <option value="cliente_nombre">Nombre del Cliente</option>
+                                        <option value="monto_solicitado">Monto Solicitado</option>
+                                        <option value="prioridad">Prioridad</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Dirección del orden</label>
+                                    <select class="form-select" id="orden-direccion" name="orden_direccion">
+                                        <option value="desc">Descendente (más reciente primero)</option>
+                                        <option value="asc">Ascendente (más antiguo primero)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Límite de registros</label>
+                                    <select class="form-select" id="limite-registros" name="limite_registros">
+                                        <option value="">Sin límite</option>
+                                        <option value="100">100 registros</option>
+                                        <option value="500">500 registros</option>
+                                        <option value="1000">1,000 registros</option>
+                                        <option value="5000">5,000 registros</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Formato de fecha</label>
+                                    <select class="form-select" id="formato-fecha" name="formato_fecha">
+                                        <option value="dd/mm/yyyy">DD/MM/YYYY</option>
+                                        <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                                        <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                                        <option value="dd-mm-yyyy">DD-MM-YYYY</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" id="form-spinner"></span>
-                        Guardar Reporte
-                    </button>
+                    <div class="d-flex justify-content-between w-100">
+                        <div>
+                            <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="reportesManager.establecerFechasPorDefecto()">
+                                <i class="fas fa-calendar"></i> Fechas por Defecto
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm me-2" onclick="reportesManager.limpiarFiltros()">
+                                <i class="fas fa-broom"></i> Limpiar Filtros
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">
+                                <span class="spinner-border spinner-border-sm d-none" id="form-spinner"></span>
+                                <i class="fas fa-save"></i> Guardar Reporte
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1156,6 +1699,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ tendencias|default:"[]"|json_script:"tendencias-data" }}
 <script>
 class ReportesManager {
     constructor() {
@@ -1187,14 +1731,49 @@ class ReportesManager {
 
     async cargarReportesPredefinidos() {
         try {
-            const response = await fetch('{% url "workflow:api_reportes_predefinidos" %}?tipo=general');
-            const data = await response.json();
+            console.log('Cargando reportes predefinidos...');
+            // Cargar todos los tipos de reportes predefinidos
+            const tiposReportes = [
+                'dashboard_general',
+                'sla_cumplimiento', 
+                'productividad_usuarios',
+                'tiempos_etapas',
+                'comite_participaciones',
+                'clientes_productos',
+                'requisitos_cumplimiento',
+                'origen_solicitudes',
+                'prioridades_urgentes',
+                'calificaciones_compliance'
+            ];
             
-            if (data.success) {
-                this.renderReportesPredefinidos(data.reportes);
+            let todosReportes = [];
+            
+            for (const tipo of tiposReportes) {
+                try {
+                    console.log(`Cargando reporte tipo: ${tipo}`);
+                    const response = await fetch(`{% url "workflow:api_reportes_predefinidos" %}?tipo=${tipo}`);
+                    const data = await response.json();
+                    
+                    console.log(`Respuesta para ${tipo}:`, data);
+                    
+                    if (data.success && data.reportes.length > 0) {
+                        todosReportes = todosReportes.concat(data.reportes);
+                    }
+                } catch (error) {
+                    console.error(`Error cargando reporte ${tipo}:`, error);
+                }
+            }
+            
+            console.log(`Total reportes cargados: ${todosReportes.length}`);
+            
+            if (todosReportes.length > 0) {
+                this.renderReportesPredefinidos(todosReportes);
+            } else {
+                this.renderReportesPredefinidos([]);
             }
         } catch (error) {
             console.error('Error cargando reportes predefinidos:', error);
+            this.renderReportesPredefinidos([]);
         }
     }
 
@@ -1241,12 +1820,19 @@ class ReportesManager {
     }
 
     inicializarGraficos() {
-        const ctx = document.getElementById('tendenciasChart').getContext('2d');
-        
-        // Datos de tendencias desde el backend
-        const tendenciasData = {{ tendencias|safe }};
-        
-        new Chart(ctx, {
+        const ctx = document.getElementById('tendenciasChart');
+        if (!ctx) {
+            console.warn('Canvas de tendencias no encontrado');
+            return;
+        }
+        const context = ctx.getContext('2d');
+        // Datos de tendencias desde el backend de forma segura
+        const tendenciasData = JSON.parse(document.getElementById('tendencias-data').textContent);
+        if (!Array.isArray(tendenciasData) || tendenciasData.length === 0) {
+            console.warn('No hay datos de tendencias disponibles');
+            return;
+        }
+        new Chart(context, {
             type: 'line',
             data: {
                 labels: tendenciasData.map(item => {
@@ -1308,18 +1894,22 @@ class ReportesManager {
         document.getElementById('reporteModalTitle').textContent = 'Crear Reporte Personalizado';
         document.getElementById('reporteForm').reset();
         
-        // Establecer fecha por defecto (últimos 30 días)
-        const hoy = new Date();
-        const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
+        // Establecer fechas por defecto
+        this.establecerFechasPorDefecto();
         
-        document.getElementById('fecha-inicio').value = hace30Dias.toISOString().split('T')[0];
-        document.getElementById('fecha-fin').value = hoy.toISOString().split('T')[0];
+        // Seleccionar campos básicos por defecto
+        this.seleccionarCamposBasicos();
         
         const modal = new bootstrap.Modal(document.getElementById('reporteModal'));
         modal.show();
     }
 
     async guardarReporte() {
+        // Validar formulario antes de enviar
+        if (!this.validarFormulario()) {
+            return;
+        }
+
         const formData = new FormData(document.getElementById('reporteForm'));
         const spinner = document.getElementById('form-spinner');
         
@@ -1337,12 +1927,20 @@ class ReportesManager {
                 pipeline_ids: Array.from(document.getElementById('filtro-pipeline').selectedOptions).map(opt => opt.value),
                 etapa_ids: Array.from(document.getElementById('filtro-etapa').selectedOptions).map(opt => opt.value),
                 usuario_ids: Array.from(document.getElementById('filtro-usuario').selectedOptions).map(opt => opt.value),
-                estado_sla: formData.get('estado_sla')
+                estado_sla: formData.get('estado_sla'),
+                prioridad: formData.get('prioridad'),
+                origen: formData.get('origen'),
+                monto_min: formData.get('monto_min'),
+                monto_max: formData.get('monto_max')
             };
             
             // Construir configuración
             const configuracion = {
-                tipo: formData.get('tipo')
+                tipo: formData.get('tipo'),
+                ordenar_por: formData.get('ordenar_por'),
+                orden_direccion: formData.get('orden_direccion'),
+                limite_registros: formData.get('limite_registros'),
+                formato_fecha: formData.get('formato_fecha')
             };
             
             const payload = {
@@ -1355,27 +1953,32 @@ class ReportesManager {
                 es_favorito: document.getElementById('es-favorito').checked
             };
             
+            console.log('Enviando payload:', payload);
+            
             const response = await fetch('{% url "workflow:api_crear_reporte" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': this.getCSRFToken()
                 },
                 body: JSON.stringify(payload)
             });
             
+            console.log('Response status:', response.status);
             const data = await response.json();
+            console.log('Response data:', data);
             
             if (data.success) {
                 this.showToast('Reporte creado exitosamente', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('reporteModal')).hide();
-                location.reload(); // Recargar para mostrar el nuevo reporte
+                // Actualizar la lista de reportes sin recargar la página
+                this.actualizarReportesPersonalizados();
             } else {
                 this.showToast(data.message || 'Error al crear reporte', 'error');
             }
         } catch (error) {
             console.error('Error guardando reporte:', error);
-            this.showToast('Error al guardar reporte', 'error');
+            this.showToast(`Error al guardar reporte: ${error.message}`, 'error');
         } finally {
             spinner.classList.add('d-none');
         }
@@ -1407,15 +2010,29 @@ class ReportesManager {
         this.mostrarLoading('Exportando a Excel...');
         
         try {
-            const response = await fetch(`/workflow/api/reportes/${reporteId}/exportar/`, {
+            console.log(`Exportando reporte ID: ${reporteId}`);
+            
+            const url = `{% url "workflow:api_exportar_reporte" reporte_id=0 %}`.replace('0', reporteId);
+            console.log('URL de exportación:', url);
+            
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': this.getCSRFToken()
                 }
             });
             
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
             if (response.ok) {
                 const blob = await response.blob();
+                console.log('Blob size:', blob.size);
+                
+                if (blob.size === 0) {
+                    throw new Error('El archivo generado está vacío');
+                }
+                
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
@@ -1423,10 +2040,16 @@ class ReportesManager {
                 
                 // Obtener nombre del archivo del header
                 const contentDisposition = response.headers.get('Content-Disposition');
-                const filename = contentDisposition 
-                    ? contentDisposition.split('filename=')[1].replace(/"/g, '')
-                    : 'reporte.xlsx';
+                let filename = 'reporte.xlsx';
                 
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                console.log('Filename:', filename);
                 a.download = filename;
                 document.body.appendChild(a);
                 a.click();
@@ -1435,11 +2058,15 @@ class ReportesManager {
                 
                 this.showToast('Reporte exportado exitosamente', 'success');
             } else {
-                this.showToast('Error al exportar reporte', 'error');
+                // Intentar obtener el mensaje de error
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.message || `Error HTTP ${response.status}`;
+                console.error('Error response:', errorData);
+                this.showToast(`Error al exportar reporte: ${errorMessage}`, 'error');
             }
         } catch (error) {
             console.error('Error exportando reporte:', error);
-            this.showToast('Error al exportar reporte', 'error');
+            this.showToast(`Error al exportar reporte: ${error.message}`, 'error');
         } finally {
             this.ocultarLoading();
         }
@@ -1467,6 +2094,40 @@ class ReportesManager {
         }
     }
 
+    exportarReportePredefinido(tipo) {
+        this.mostrarLoading('Exportando reporte predefinido...');
+        fetch(`{% url "workflow:api_reportes_predefinidos" %}?tipo=${tipo}&exportar=1`, {
+            method: 'GET'
+            // No se necesita CSRF para GET
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error('Error al exportar reporte predefinido');
+            }
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `reporte_predefinido_${tipo}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            this.showToast('Reporte predefinido exportado exitosamente', 'success');
+        })
+        .catch(error => {
+            console.error(error);
+            this.showToast('Error al exportar reporte predefinido', 'error');
+        })
+        .finally(() => {
+            this.ocultarLoading();
+        });
+    }
+
     mostrarResultados(datos, configuracion) {
         const container = document.getElementById('resultados-container');
         
@@ -1487,8 +2148,27 @@ class ReportesManager {
             return;
         }
         
+        // Verificar que el primer elemento tenga datos válidos
+        const primerElemento = datos[0];
+        if (!primerElemento || typeof primerElemento !== 'object') {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="empty-state-title">Formato de datos inválido</div>
+                    <div class="empty-state-description">
+                        Los datos recibidos no tienen el formato esperado.
+                    </div>
+                </div>
+            `;
+            const modal = new bootstrap.Modal(document.getElementById('resultadosModal'));
+            modal.show();
+            return;
+        }
+        
         // Crear tabla con los datos
-        const headers = Object.keys(datos[0]);
+        const headers = Object.keys(primerElemento);
         
         let html = `
             <div class="mb-3">
@@ -1582,6 +2262,244 @@ class ReportesManager {
             setTimeout(() => toast.remove(), 300);
         }, 5000);
     }
+
+    // Funciones para selección rápida de campos
+    seleccionarTodosCampos() {
+        document.querySelectorAll('.campo-checkbox input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        this.showToast('Todos los campos seleccionados', 'info');
+    }
+
+    deseleccionarTodosCampos() {
+        document.querySelectorAll('.campo-checkbox input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.showToast('Todos los campos deseleccionados', 'info');
+    }
+
+    seleccionarCamposBasicos() {
+        const camposBasicos = ['codigo', 'pipeline', 'etapa_actual', 'cliente_nombre', 'producto', 'asignada_a'];
+        document.querySelectorAll('.campo-checkbox input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = camposBasicos.includes(checkbox.value);
+        });
+        this.showToast('Campos básicos seleccionados', 'info');
+    }
+
+    // Función para establecer fechas por defecto
+    establecerFechasPorDefecto() {
+        const hoy = new Date();
+        const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
+        
+        document.getElementById('fecha-inicio').value = hace30Dias.toISOString().split('T')[0];
+        document.getElementById('fecha-fin').value = hoy.toISOString().split('T')[0];
+    }
+
+    // Función para limpiar filtros
+    limpiarFiltros() {
+        document.getElementById('fecha-inicio').value = '';
+        document.getElementById('fecha-fin').value = '';
+        document.getElementById('filtro-pipeline').selectedIndex = 0;
+        document.getElementById('filtro-etapa').selectedIndex = 0;
+        document.getElementById('filtro-usuario').selectedIndex = 0;
+        document.getElementById('filtro-sla').selectedIndex = 0;
+        document.getElementById('filtro-prioridad').selectedIndex = 0;
+        document.getElementById('filtro-producto').selectedIndex = 0;
+        document.getElementById('filtro-origen').selectedIndex = 0;
+        document.getElementById('monto-min').value = '';
+        document.getElementById('monto-max').value = '';
+        this.showToast('Filtros limpiados', 'info');
+    }
+
+    // Función para validar formulario
+    validarFormulario() {
+        const nombre = document.getElementById('reporte-nombre').value.trim();
+        if (!nombre) {
+            this.showToast('El nombre del reporte es obligatorio', 'error');
+            return false;
+        }
+
+        const camposSeleccionados = document.querySelectorAll('.campo-checkbox input[type="checkbox"]:checked');
+        if (camposSeleccionados.length === 0) {
+            this.showToast('Debes seleccionar al menos un campo', 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    // Función para obtener el token CSRF de forma segura
+    getCSRFToken() {
+        // Intentar obtener el token de diferentes formas
+        const csrfToken = 
+            document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+            document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+            document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] ||
+            '';
+        
+        if (!csrfToken) {
+            console.warn('No se pudo obtener el token CSRF');
+        }
+        
+        return csrfToken;
+    }
+    
+    // Función para actualizar la lista de reportes personalizados
+    async actualizarReportesPersonalizados() {
+        try {
+            console.log('Actualizando reportes personalizados...');
+            
+            // Hacer una petición AJAX para obtener los reportes actualizados
+            const response = await fetch('{% url "workflow:api_obtener_reportes_usuario" %}', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Actualizar reportes personalizados
+                const contenedorPersonalizados = document.querySelector('#reportes-personalizados');
+                if (contenedorPersonalizados) {
+                    if (data.reportes_usuario.length > 0) {
+                        contenedorPersonalizados.innerHTML = this.generarHTMLReportes(data.reportes_usuario, 'personalizados');
+                    } else {
+                        contenedorPersonalizados.innerHTML = this.generarEmptyState('personalizados');
+                    }
+                }
+                
+                // Actualizar reportes favoritos
+                const contenedorFavoritos = document.querySelector('#reportes-favoritos');
+                if (contenedorFavoritos) {
+                    if (data.reportes_favoritos.length > 0) {
+                        contenedorFavoritos.innerHTML = this.generarHTMLReportes(data.reportes_favoritos, 'favoritos');
+                    } else {
+                        contenedorFavoritos.innerHTML = this.generarEmptyState('favoritos');
+                    }
+                }
+                
+                // Actualizar el contador en el dashboard
+                const contadorReportes = document.querySelector('.quick-stat-value');
+                if (contadorReportes) {
+                    contadorReportes.textContent = data.total_reportes;
+                }
+                
+                console.log('Reportes actualizados correctamente');
+            } else {
+                throw new Error(data.message || 'Error al obtener reportes');
+            }
+        } catch (error) {
+            console.error('Error actualizando reportes:', error);
+            this.showToast('Error al actualizar reportes', 'error');
+            // Si falla, recargar la página como fallback
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+    }
+    
+    // Función para generar HTML de reportes
+    generarHTMLReportes(reportes, tipo) {
+        let html = '';
+        for (const reporte of reportes) {
+            const esFavorito = reporte.es_favorito ? 'favorito' : '';
+            html += `
+                <div class="reporte-card ${esFavorito}" data-reporte-id="${reporte.id}">
+                    <div class="reporte-header">
+                        <div class="reporte-info">
+                            <h4 class="reporte-nombre">${reporte.nombre}</h4>
+                            <p class="reporte-descripcion">${reporte.descripcion}</p>
+                        </div>
+                        <div class="reporte-actions">
+                            <button class="action-btn ejecutar" onclick="ejecutarReporte(${reporte.id})" title="Ejecutar">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="action-btn exportar" onclick="exportarReporte(${reporte.id})" title="Exportar">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            ${tipo === 'personalizados' ? `
+                                <button class="action-btn editar" onclick="editarReporte(${reporte.id})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn eliminar" onclick="eliminarReporte(${reporte.id})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="reporte-meta">
+                        <span><i class="fas fa-clock"></i> ${reporte.fecha_modificacion}</span>
+                        <span><i class="fas fa-play-circle"></i> ${reporte.veces_ejecutado} ejecuciones</span>
+                        ${reporte.es_publico ? '<span class="badge info"><i class="fas fa-share"></i> Público</span>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        return html;
+    }
+    
+    // Función para generar empty state
+    generarEmptyState(tipo) {
+        const iconos = {
+            'personalizados': 'fas fa-chart-bar',
+            'favoritos': 'fas fa-star'
+        };
+        const titulos = {
+            'personalizados': 'No hay reportes personalizados',
+            'favoritos': 'No hay reportes favoritos'
+        };
+        const descripciones = {
+            'personalizados': 'Crea tu primer reporte personalizado para comenzar el análisis de datos.',
+            'favoritos': 'Marca reportes como favoritos para acceso rápido.'
+        };
+        
+        return `
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="${iconos[tipo]}"></i>
+                </div>
+                <div class="empty-state-title">${titulos[tipo]}</div>
+                <div class="empty-state-description">
+                    ${descripciones[tipo]}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Función para crear reporte de prueba
+    async crearReportePrueba() {
+        this.mostrarLoading('Creando reporte de prueba...');
+        
+        try {
+            const response = await fetch('{% url "workflow:api_crear_reporte_prueba" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.getCSRFToken()
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showToast('Reporte de prueba creado exitosamente', 'success');
+                // Actualizar la lista de reportes
+                this.actualizarReportesPersonalizados();
+            } else {
+                this.showToast(data.message || 'Error al crear reporte de prueba', 'error');
+            }
+        } catch (error) {
+            console.error('Error creando reporte de prueba:', error);
+            this.showToast('Error al crear reporte de prueba', 'error');
+        } finally {
+            this.ocultarLoading();
+        }
+    }
 }
 
 // Funciones globales
@@ -1591,6 +2509,10 @@ function cambiarTab(tab) {
 
 function crearReporte() {
     reportesManager.crearReporte();
+}
+
+function crearReportePrueba() {
+    reportesManager.crearReportePrueba();
 }
 
 function ejecutarReporte(id) {
@@ -1605,9 +2527,29 @@ function editarReporte(id) {
     reportesManager.showToast('Función de edición próximamente', 'info');
 }
 
-function eliminarReporte(id) {
+async function eliminarReporte(id) {
     if (confirm('¿Estás seguro de eliminar este reporte?')) {
-        reportesManager.showToast('Función de eliminación próximamente', 'info');
+        try {
+            const response = await fetch(`{% url "workflow:api_eliminar_reporte" 0 %}`.replace('0', id), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': reportesManager.getCSRFToken()
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                reportesManager.showToast(data.message, 'success');
+                // Actualizar la lista de reportes
+                reportesManager.actualizarReportesPersonalizados();
+            } else {
+                reportesManager.showToast(data.message || 'Error al eliminar reporte', 'error');
+            }
+        } catch (error) {
+            console.error('Error eliminando reporte:', error);
+            reportesManager.showToast('Error al eliminar reporte', 'error');
+        }
     }
 }
 
@@ -1620,7 +2562,7 @@ function programarReporte() {
 }
 
 // Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     window.reportesManager = new ReportesManager();
 });
 </script>

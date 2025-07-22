@@ -151,15 +151,15 @@ class Solicitud(models.Model):
             return ""  # Campo en blanco si no hay cédula
     
     # Mantener compatibilidad con propiedades existentes
-    @property
-    def cliente_nombre(self):
-        """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
-        return self.cliente_nombre_completo
+    # @property
+    # def cliente_nombre(self):
+    #     """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+    #     return self.cliente_nombre_completo
     
-    @property  
-    def cliente_cedula(self):
-        """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
-        return self.cliente_cedula_completa
+    # @property  
+    # def cliente_cedula(self):
+    #     """Alias para compatibilidad hacia atrás - NO usar en código nuevo"""
+    #     return self.cliente_cedula_completa
     
     @property
     def monto_formateado(self):
@@ -648,3 +648,59 @@ class EjecucionReporte(models.Model):
     def __str__(self):
         status = "✓" if self.exitosa else "✗"
         return f"{status} {self.reporte.nombre} - {self.fecha_ejecucion.strftime('%d/%m/%Y %H:%M')}"
+
+# --------------------------------------
+# CONFIGURACIÓN DEL CANAL DIGITAL
+# --------------------------------------
+
+class ConfiguracionCanalDigital(models.Model):
+    """
+    Modelo para configurar el comportamiento del Canal Digital
+    """
+    nombre = models.CharField(max_length=100, default="Configuración Canal Digital")
+    pipeline_por_defecto = models.ForeignKey(Pipeline, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
+    etapa_por_defecto = models.ForeignKey(Etapa, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
+    activo = models.BooleanField(default=True, help_text="Si esta configuración está activa")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Configuración Canal Digital"
+        verbose_name_plural = "Configuraciones Canal Digital"
+        ordering = ['-fecha_modificacion']
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.pipeline_por_defecto.nombre}"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Verificar que la etapa pertenece al pipeline
+        if self.etapa_por_defecto and self.pipeline_por_defecto:
+            if self.etapa_por_defecto.pipeline != self.pipeline_por_defecto:
+                raise ValidationError('La etapa debe pertenecer al pipeline seleccionado')
+    
+    @classmethod
+    def get_configuracion_activa(cls):
+        """Obtiene la configuración activa del Canal Digital"""
+        return cls.objects.filter(activo=True).first()
+    
+    @classmethod
+    def get_pipeline_por_defecto(cls):
+        """Obtiene el pipeline por defecto"""
+        config = cls.get_configuracion_activa()
+        if config:
+            return config.pipeline_por_defecto
+        # Fallback al primer pipeline disponible
+        return Pipeline.objects.first()
+    
+    @classmethod
+    def get_etapa_por_defecto(cls):
+        """Obtiene la etapa por defecto"""
+        config = cls.get_configuracion_activa()
+        if config:
+            return config.etapa_por_defecto
+        # Fallback a la primera etapa del pipeline por defecto
+        pipeline = cls.get_pipeline_por_defecto()
+        if pipeline:
+            return pipeline.etapas.first()
+        return None
