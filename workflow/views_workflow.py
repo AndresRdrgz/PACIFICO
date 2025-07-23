@@ -3476,6 +3476,14 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         • Correo Solicitante: {correo_solicitante}
         • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
+        ==========================================
+        DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
+        ==========================================
+        codigo solicitud: <codVariable{solicitud.codigo}cod>
+        tipo de documento: <tipodocVariable{tipo_documento.lower()}tipodoc>
+        numero documento: <nodocVariable{no_cedula}nodoc>
+        cliente: <nombreVariable{cliente_nombre}nombre>
+        
         Información para APC:
         Tipo de documento: {tipo_documento.title()}
         Número de documento: {no_cedula}
