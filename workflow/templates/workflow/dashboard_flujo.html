@@ -1,0 +1,554 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Flujo - Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-project-diagram fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard de Flujo</h1>
+                            <p class="mb-0 text-white-50">Análisis de flujo de trabajo y transiciones</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a>
+                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-inbox me-2"></i>Ver Bandeja
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    CONTENEDOR DE NAVEGACIÓN HORIZONTAL
+    ========================================== -->
+    <div class="dashboard-nav-horizontal">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0 me-3 text-muted">
+                                <i class="fas fa-th-large me-2"></i>Tipo de Tablero:
+                            </h6>
+                        </div>
+                        <div class="dashboard-nav-buttons-horizontal">
+                            <a href="{% url 'workflow:dashboard_operativo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-chart-pie me-1"></i>📊 Operativo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_usuario' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-users me-1"></i>👥 Por Usuario
+                            </a>
+                            <a href="{% url 'workflow:dashboard_cumplimiento' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-shield-alt me-1"></i>✅ Cumplimiento
+                            </a>
+                            <a href="{% url 'workflow:dashboard_flujo' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-project-diagram me-1"></i>🔄 Flujo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_comite' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-gavel me-1"></i>🏛️ Comité
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SECCIÓN DE FILTROS
+    ========================================== -->
+    <div class="search-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtros de Análisis
+                </h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-pacifico btn-sm">
+                        <i class="fas fa-search me-2"></i>Aplicar Filtros
+                    </button>
+                    <a href="{% url 'workflow:dashboard_flujo' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-2"></i>Limpiar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <form method="GET" class="row g-3">
+            <!-- Filtros de fecha -->
+            <div class="col-md-4">
+                <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                       value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                       value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <label for="pipeline_id" class="form-label">Pipeline</label>
+                <select class="form-select form-select-sm" id="pipeline_id" name="pipeline_id">
+                    <option value="">Todos</option>
+                    {% for pipeline in pipelines %}
+                        <option value="{{ pipeline.id }}" {% if filtros_aplicados.pipeline_id == pipeline.id|stringformat:"s" %}selected{% endif %}>
+                            {{ pipeline.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================
+    KPIs DE FLUJO
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Tiempo Promedio por Etapa -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card primary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-clock text-primary fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if flujo_etapas %}
+                                    {{ flujo_etapas.0.horas_promedio|floatformat:1 }}h
+                                {% else %}
+                                    0.0h
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Tiempo Promedio</p>
+                            <small class="text-muted">Por etapa</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Transiciones -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card info">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-exchange-alt text-info fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if transiciones_frecuentes %}
+                                    {{ transiciones_frecuentes.0.total_transiciones }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Transiciones</p>
+                            <small class="text-muted">Más frecuentes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cuellos de Botella -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card warning">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if cuellos_botella %}
+                                    {{ cuellos_botella|length }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Cuellos de Botella</p>
+                            <small class="text-muted">Etapas críticas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solicitudes Vencidas -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card vencido">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if flujo_etapas %}
+                                    {% for etapa in flujo_etapas %}
+                                        {% if forloop.first %}
+                                            {{ etapa.solicitudes_vencidas }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Solicitudes Vencidas</p>
+                            <small class="text-muted">En flujo</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    GRÁFICAS DE FLUJO
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Gráfica de Flujo por Etapa -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Flujo por Etapa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="flujoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfica de Transiciones -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Transiciones Frecuentes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="transicionesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    TABLAS DETALLADAS
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Tabla de Flujo por Etapa -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Flujo por Etapa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if flujo_etapas %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Etapa</th>
+                                        <th>Pipeline</th>
+                                        <th>Total Solicitudes</th>
+                                        <th>Tiempo Promedio</th>
+                                        <th>Vencidas</th>
+                                        <th>% Vencidas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for flujo in flujo_etapas %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ flujo.etapa__nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ flujo.etapa__pipeline__nombre }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ flujo.total_solicitudes }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ flujo.horas_promedio|floatformat:1 }}h</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger">{{ flujo.solicitudes_vencidas }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if flujo.porcentaje_vencidas >= 50 %}bg-danger
+                                                    {% elif flujo.porcentaje_vencidas >= 25 %}bg-warning
+                                                    {% else %}bg-success{% endif %}">
+                                                    {{ flujo.porcentaje_vencidas|floatformat:1 }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de flujo disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla de Transiciones -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>Transiciones Frecuentes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if transiciones_frecuentes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Etapa</th>
+                                        <th>Pipeline</th>
+                                        <th>Total</th>
+                                        <th>Tiempo Promedio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transicion in transiciones_frecuentes %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ transicion.etapa__nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ transicion.solicitud__pipeline__nombre }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ transicion.total_transiciones }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ transicion.horas_promedio|floatformat:1 }}h</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos de transiciones disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    CUELLOS DE BOTELLA
+    ========================================== -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>Cuellos de Botella
+                <span class="badge bg-warning ms-2">Análisis Crítico</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if cuellos_botella %}
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <canvas id="cuellosChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Etapa</th>
+                                        <th>Tiempo Promedio</th>
+                                        <th>SLA</th>
+                                        <th>Diferencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cuello in cuellos_botella %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ cuello.etapa__nombre }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger">{{ cuello.horas_promedio|floatformat:1 }}h</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ cuello.sla_horas_valor|floatformat:1 }}h</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning">
+                                                    +{{ cuello.horas_promedio|add:cuello.sla_horas_valor|floatformat:1 }}h
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-muted text-center">No se detectaron cuellos de botella</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Datos para gráficas -->
+{{ flujo_chart_data|json_script:"flujo-chart-data" }}
+{{ transiciones_chart_data|json_script:"transiciones-chart-data" }}
+{{ cuellos_chart_data|json_script:"cuellos-chart-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de Flujo por Etapa
+    const flujoCtx = document.getElementById('flujoChart');
+    if (flujoCtx) {
+        const chartData = JSON.parse(document.getElementById('flujo-chart-data').textContent);
+        new Chart(flujoCtx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Transiciones
+    const transicionesCtx = document.getElementById('transicionesChart');
+    if (transicionesCtx) {
+        const chartData = JSON.parse(document.getElementById('transiciones-chart-data').textContent);
+        new Chart(transicionesCtx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Cuellos de Botella
+    const cuellosCtx = document.getElementById('cuellosChart');
+    if (cuellosCtx) {
+        const chartData = JSON.parse(document.getElementById('cuellos-chart-data').textContent);
+        new Chart(cuellosCtx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                return `${label}: ${value.toFixed(1)} horas`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-submit del formulario cuando cambien los filtros
+    const filterForm = document.querySelector('form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+});
+</script>
+{% endblock %} 

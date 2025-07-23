@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import api
 from . import views_workflow
+from . import dashboard_views
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
@@ -13,7 +14,7 @@ urlpatterns = [
     path('entrevistas/json/', api.entrevistas_json, name='entrevistas_json'),
     
     # Workflow URLs
-    path('', views_workflow.dashboard_workflow, name='dashboard'),
+    path('', dashboard_views.dashboard_operativo, name='dashboard'),
     path('negocios/', views_workflow.negocios_view, name='negocios'),
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
@@ -27,7 +28,6 @@ urlpatterns = [
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
     path('admin/requisitos/', views_workflow.administrar_requisitos, name='admin_requisitos'),
     path('admin/campos-personalizados/', views_workflow.administrar_campos_personalizados, name='admin_campos_personalizados'),
-    path('reportes/', views_workflow.reportes_workflow, name='reportes'),
     
     # API URLs
     path('api/pipelines/crear/', views_workflow.api_crear_pipeline, name='api_crear_pipeline'),

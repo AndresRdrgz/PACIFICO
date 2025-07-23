@@ -1,0 +1,538 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard por Usuario - Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-users fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard por Usuario</h1>
+                            <p class="mb-0 text-white-50">Análisis detallado de rendimiento y carga de trabajo por usuario</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a>
+                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-inbox me-2"></i>Ver Bandeja
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    CONTENEDOR DE NAVEGACIÓN HORIZONTAL
+    ========================================== -->
+    <div class="dashboard-nav-horizontal">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0 me-3 text-muted">
+                                <i class="fas fa-th-large me-2"></i>Tipo de Tablero:
+                            </h6>
+                        </div>
+                        <div class="dashboard-nav-buttons-horizontal">
+                            <a href="{% url 'workflow:dashboard_operativo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-chart-pie me-1"></i>📊 Operativo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_usuario' %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-users me-1"></i>👥 Por Usuario
+                            </a>
+                            <a href="{% url 'workflow:dashboard_cumplimiento' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-shield-alt me-1"></i>✅ Cumplimiento
+                            </a>
+                            <a href="{% url 'workflow:dashboard_flujo' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-project-diagram me-1"></i>🔄 Flujo
+                            </a>
+                            <a href="{% url 'workflow:dashboard_comite' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-gavel me-1"></i>🏛️ Comité
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SECCIÓN DE FILTROS
+    ========================================== -->
+    <div class="search-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtros de Análisis
+                </h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-pacifico btn-sm">
+                        <i class="fas fa-search me-2"></i>Aplicar Filtros
+                    </button>
+                    <a href="{% url 'workflow:dashboard_usuario' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-2"></i>Limpiar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <form method="GET" class="row g-3">
+            <!-- Filtros de fecha -->
+            <div class="col-md-3">
+                <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                       value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                       value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+            </div>
+            
+            <!-- Filtros de pipeline y usuario -->
+            <div class="col-md-3">
+                <label for="pipeline_id" class="form-label">Pipeline</label>
+                <select class="form-select form-select-sm" id="pipeline_id" name="pipeline_id">
+                    <option value="">Todos</option>
+                    {% for pipeline in pipelines %}
+                        <option value="{{ pipeline.id }}" {% if filtros_aplicados.pipeline_id == pipeline.id|stringformat:"s" %}selected{% endif %}>
+                            {{ pipeline.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="usuario_id" class="form-label">Usuario</label>
+                <select class="form-select form-select-sm" id="usuario_id" name="usuario_id">
+                    <option value="">Todos</option>
+                    {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}" {% if filtros_aplicados.usuario_id == usuario.id|stringformat:"s" %}selected{% endif %}>
+                            {{ usuario.get_full_name|default:usuario.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================
+    KPIs PRINCIPALES POR USUARIO
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Mejor Rendimiento -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card primary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-trophy text-primary fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if rendimiento_usuarios %}
+                                    {{ rendimiento_usuarios.0.formato_tiempo }}
+                                {% else %}
+                                    0h 0m
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Mejor Tiempo</p>
+                            <small class="text-muted">
+                                {% if rendimiento_usuarios %}
+                                    {{ rendimiento_usuarios.0.full_name }}
+                                {% else %}
+                                    Sin datos
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mayor Carga -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card warning">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-briefcase text-warning fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if carga_trabajo %}
+                                    {{ carga_trabajo.0.total_asignadas }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Mayor Carga</p>
+                            <small class="text-muted">
+                                {% if carga_trabajo %}
+                                    {{ carga_trabajo.0.full_name }}
+                                {% else %}
+                                    Sin datos
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mayor Eficiencia -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card vigente">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-chart-line text-success fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">
+                                {% if eficiencia_usuarios %}
+                                    {{ eficiencia_usuarios.0.porcentaje_completadas|floatformat:1 }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h3>
+                            <p class="text-muted mb-0">Mayor Eficiencia</p>
+                            <small class="text-muted">
+                                {% if eficiencia_usuarios %}
+                                    {{ eficiencia_usuarios.0.full_name }}
+                                {% else %}
+                                    Sin datos
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Usuarios -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="metric-card info">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="metric-icon">
+                            <i class="fas fa-users text-info fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h3 class="fw-bold text-dark mb-1">{{ rendimiento_usuarios|length }}</h3>
+                            <p class="text-muted mb-0">Usuarios Activos</p>
+                            <small class="text-muted">Con actividad</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    GRÁFICAS POR USUARIO
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Gráfica de Rendimiento -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Rendimiento por Usuario
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="rendimientoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfica de Carga de Trabajo -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Carga de Trabajo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="cargaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    TABLAS DETALLADAS
+    ========================================== -->
+    <div class="row mb-4">
+        <!-- Tabla de Rendimiento -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-stopwatch me-2"></i>Rendimiento por Usuario
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if rendimiento_usuarios %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Tiempo Promedio</th>
+                                        <th>Total Solicitudes</th>
+                                        <th>Vencidas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usuario in rendimiento_usuarios %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ usuario.full_name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ usuario.formato_tiempo }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ usuario.total_solicitudes }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger">{{ usuario.solicitudes_vencidas }}</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabla de Carga de Trabajo -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-briefcase me-2"></i>Carga de Trabajo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if carga_trabajo %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Total</th>
+                                        <th>Activas</th>
+                                        <th>Urgentes</th>
+                                        <th>% Vencidas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for carga in carga_trabajo %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ carga.full_name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ carga.total_asignadas }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">{{ carga.solicitudes_activas }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning">{{ carga.solicitudes_urgentes }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if carga.porcentaje_vencidas >= 50 %}bg-danger
+                                                    {% elif carga.porcentaje_vencidas >= 25 %}bg-warning
+                                                    {% else %}bg-success{% endif %}">
+                                                    {{ carga.porcentaje_vencidas|floatformat:1 }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No hay datos disponibles</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    TABLA DE EFICIENCIA
+    ========================================== -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>Eficiencia por Usuario
+                <span class="badge bg-info ms-2">Análisis Detallado</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if eficiencia_usuarios %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Total Transiciones</th>
+                                <th>Completadas</th>
+                                <th>% Completadas</th>
+                                <th>Eficiencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for eficiencia in eficiencia_usuarios %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ eficiencia.full_name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ eficiencia.total_transiciones }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ eficiencia.transiciones_completadas }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar 
+                                                    {% if eficiencia.porcentaje_completadas >= 80 %}bg-success
+                                                    {% elif eficiencia.porcentaje_completadas >= 60 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ eficiencia.porcentaje_completadas }}%">
+                                                </div>
+                                            </div>
+                                            <span class="small">{{ eficiencia.porcentaje_completadas|floatformat:1 }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if eficiencia.porcentaje_completadas >= 80 %}bg-success
+                                            {% elif eficiencia.porcentaje_completadas >= 60 %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {% if eficiencia.porcentaje_completadas >= 80 %}Alta
+                                            {% elif eficiencia.porcentaje_completadas >= 60 %}Media
+                                            {% else %}Baja{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center">No hay datos de eficiencia disponibles</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Datos para gráficas -->
+{{ rendimiento_chart_data|json_script:"rendimiento-chart-data" }}
+{{ carga_chart_data|json_script:"carga-chart-data" }}
+{{ eficiencia_chart_data|json_script:"eficiencia-chart-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de Rendimiento
+    const rendimientoCtx = document.getElementById('rendimientoChart');
+    if (rendimientoCtx) {
+        const chartData = JSON.parse(document.getElementById('rendimiento-chart-data').textContent);
+        new Chart(rendimientoCtx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfica de Carga de Trabajo
+    const cargaCtx = document.getElementById('cargaChart');
+    if (cargaCtx) {
+        const chartData = JSON.parse(document.getElementById('carga-chart-data').textContent);
+        new Chart(cargaCtx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Auto-submit del formulario cuando cambien los filtros
+    const filterForm = document.querySelector('form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+});
+</script>
+{% endblock %} 

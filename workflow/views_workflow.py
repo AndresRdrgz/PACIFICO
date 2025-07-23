@@ -69,7 +69,7 @@ def superuser_permission_required(permission):
 
 @login_required
 def dashboard_workflow(request):
-    """Dashboard principal del sistema de workflow"""
+    """Dashboard principal del sistema de workflow (vista original)"""
     
     # Obtener solicitudes del usuario
     solicitudes_asignadas = Solicitud.objects.filter(
@@ -461,10 +461,10 @@ def negocios_view(request):
             valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
             get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
 
-            # Cliente, cédula, producto y monto usando las nuevas propiedades del modelo
-            cliente = solicitud.cliente_nombre
-            cedula = solicitud.cliente_cedula
-            producto = solicitud.producto_descripcion
+            # Cliente, cédula, producto y monto usando los campos directos del modelo
+            cliente = solicitud.cliente_nombre or solicitud.cliente_nombre_completo
+            cedula = solicitud.cliente_cedula or solicitud.cliente_cedula_completa
+            producto = solicitud.producto_solicitado or solicitud.producto_descripcion
             monto_formateado = solicitud.monto_formateado
 
             # Fechas
@@ -545,8 +545,8 @@ def negocios_view(request):
                 'cedula': cedula,
                 'producto': producto,
                 'monto': monto_formateado,
-                'propietario': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
-                'propietario_user': solicitud.creada_por,  # Pasar el objeto usuario completo
+                'propietario': (solicitud.propietario.get_full_name() or solicitud.propietario.username) if solicitud.propietario else (solicitud.creada_por.get_full_name() or solicitud.creada_por.username),
+                'propietario_user': solicitud.propietario or solicitud.creada_por,  # Pasar el objeto usuario completo
                 'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
                 'asignado_a_user': solicitud.asignada_a,  # Pasar el objeto usuario completo
                 'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
@@ -565,6 +565,7 @@ def negocios_view(request):
                 'etapa_color': etapa_color,
                 'prioridad': solicitud.prioridad or '',
                 'etiquetas_oficial': solicitud.etiquetas_oficial or '',
+                'origen': solicitud.origen or '',  # Campo para identificar el origen (Canal Digital, etc.)
             })
 
         # Para vista kanban, crear datos enriquecidos por etapa
@@ -749,10 +750,6 @@ def nueva_solicitud(request):
         if pipeline_id:
             pipeline = get_object_or_404(Pipeline, id=pipeline_id)
             
-            # Generar código único
-            import uuid
-            codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
-            
             # Obtener primera etapa del pipeline
             primera_etapa = pipeline.etapas.order_by('orden').first()
             
@@ -775,9 +772,8 @@ def nueva_solicitud(request):
             apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
             apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
             
-            # Crear solicitud
+            # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
-                codigo=codigo,
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
@@ -852,10 +848,10 @@ def nueva_solicitud(request):
                     'success': True,
                     'solicitud_id': solicitud.id,
                     'codigo': solicitud.codigo,
-                    'message': f'Solicitud {codigo} creada exitosamente.'
+                    'message': f'Solicitud {solicitud.codigo} creada exitosamente.'
                 })
             
-            messages.success(request, f'Solicitud {codigo} creada exitosamente.')
+            messages.success(request, f'Solicitud {solicitud.codigo} creada exitosamente.')
             return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
     
     # Obtener clientes y cotizaciones para el formulario
@@ -1257,21 +1253,36 @@ def reportes_workflow(request):
         total=Count('solicitud')
     ).values('nombre', 'total')
     
-    # Solicitudes vencidas
-    solicitudes_vencidas = Solicitud.objects.filter(
-        etapa_actual__isnull=False
-    ).extra(
-        where=['fecha_ultima_actualizacion < NOW() - INTERVAL etapa_actual_sla']
-    ).count()
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    from datetime import timedelta
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
     
-    # Tiempo promedio por etapa
-    tiempos_promedio = HistorialSolicitud.objects.filter(
+    # Tiempo promedio por etapa - Calculamos usando Python para compatibilidad con SQLite
+    tiempos_promedio = []
+    historiales = HistorialSolicitud.objects.filter(
         fecha_fin__isnull=False
-    ).extra(
-        select={'tiempo': 'EXTRACT(EPOCH FROM (fecha_fin - fecha_inicio))/3600'}
-    ).values('etapa__nombre').annotate(
-        tiempo_promedio=Avg('tiempo')
-    )
+    ).select_related('etapa')
+    
+    etapas_tiempos = {}
+    for historial in historiales:
+        etapa_nombre = historial.etapa.nombre
+        if etapa_nombre not in etapas_tiempos:
+            etapas_tiempos[etapa_nombre] = []
+        
+        tiempo_horas = (historial.fecha_fin - historial.fecha_inicio).total_seconds() / 3600
+        etapas_tiempos[etapa_nombre].append(tiempo_horas)
+    
+    for etapa_nombre, tiempos in etapas_tiempos.items():
+        tiempo_promedio = sum(tiempos) / len(tiempos) if tiempos else 0
+        tiempos_promedio.append({
+            'etapa__nombre': etapa_nombre,
+            'tiempo_promedio': tiempo_promedio
+        })
     
     context = {
         'total_solicitudes': total_solicitudes,
@@ -1283,6 +1294,416 @@ def reportes_workflow(request):
     }
     
     return render(request, 'workflow/reportes.html', context)
+
+
+# ==========================================
+# VISTAS DE CANALES ALTERNOS
+# ==========================================
+
+@login_required
+def canal_digital(request):
+    """Vista principal del Canal Digital"""
+    
+    # Importar el modelo aquí para evitar problemas de importación circular
+    from .models import FormularioWeb
+    from .modelsWorkflow import Pipeline, ConfiguracionCanalDigital
+    from django.core.paginator import Paginator
+    
+    # Estadísticas específicas del canal digital
+    solicitudes_canal_digital = FormularioWeb.objects.count()
+    solicitudes_procesadas = FormularioWeb.objects.filter(procesado=True).count()
+    solicitudes_pendientes = FormularioWeb.objects.filter(procesado=False).count()
+    
+    # Obtener todas las solicitudes para la tabla (ordenadas por fecha más reciente)
+    formularios_queryset = FormularioWeb.objects.order_by('-fecha_creacion')
+    
+    # Paginación
+    paginator = Paginator(formularios_queryset, 25)  # 25 formularios por página
+    page_number = request.GET.get('page')
+    formularios_page = paginator.get_page(page_number)
+    
+    # Preparar datos para la tabla
+    formularios_tabla = []
+    for formulario in formularios_page:
+        formularios_tabla.append({
+            'id': formulario.id,
+            'nombre_completo': formulario.get_nombre_completo(),
+            'cedula': formulario.cedulaCliente,
+            'celular': formulario.celular,
+            'correo': formulario.correo_electronico,
+            'producto_interesado': formulario.producto_interesado or 'No especificado',
+            'monto_solicitar': f"${formulario.dinero_a_solicitar:,.2f}" if formulario.dinero_a_solicitar else 'N/A',
+            'fecha_creacion': formulario.fecha_creacion,
+            'procesado': formulario.procesado,
+            'ip_address': formulario.ip_address,
+        })
+    
+    # Obtener configuración del Canal Digital
+    configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
+    pipeline_por_defecto = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+    etapa_por_defecto = ConfiguracionCanalDigital.get_etapa_por_defecto()
+    
+    # Obtener todos los pipelines disponibles
+    pipelines_disponibles = Pipeline.objects.all()
+    
+    # KPIs del canal digital
+    context = {
+        'solicitudes_canal_digital': solicitudes_canal_digital,
+        'solicitudes_procesadas': solicitudes_procesadas,
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'formularios_tabla': formularios_tabla,
+        'formularios_page': formularios_page,
+        'titulo': 'Canal Digital',
+        'subtitulo': 'Gestión de solicitudes del canal digital',
+        'configuracion': configuracion,
+        'pipeline_por_defecto': pipeline_por_defecto,
+        'etapa_por_defecto': etapa_por_defecto,
+        'pipelines_disponibles': pipelines_disponibles,
+    }
+    
+    return render(request, 'workflow/canal_digital.html', context)
+
+
+@csrf_exempt
+@login_required
+def convertir_formulario_a_solicitud(request):
+    """Convierte un FormularioWeb en una Solicitud del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_id = data.get('formulario_id')
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not formulario_id:
+            return JsonResponse({'success': False, 'error': 'ID de formulario requerido'})
+        
+        # Obtener el formulario
+        formulario = get_object_or_404(FormularioWeb, id=formulario_id)
+        
+        if formulario.procesado:
+            return JsonResponse({'success': False, 'error': 'Este formulario ya ha sido procesado'})
+        
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
+        
+        # Buscar o crear cliente basado en la cédula
+        cliente = None
+        if formulario.cedulaCliente:
+            try:
+                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+            except:
+                pass
+        
+        # Crear la solicitud
+        import uuid
+        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        
+        solicitud = Solicitud()
+        solicitud.codigo = codigo
+        solicitud.pipeline = pipeline
+        solicitud.etapa_actual = etapa
+        # Asignar datos del formulario directamente a los campos del modelo
+        solicitud.cliente_nombre = formulario.get_nombre_completo()
+        solicitud.cliente_cedula = formulario.cedulaCliente
+        solicitud.cliente_telefono = formulario.celular
+        solicitud.cliente_email = formulario.correo_electronico
+        solicitud.producto_solicitado = formulario.producto_interesado
+        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+        solicitud.propietario = None
+        solicitud.creada_por = request.user
+        solicitud.cliente = cliente
+        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+        solicitud.observaciones = f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+        solicitud.save()
+        
+        # Crear historial inicial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=etapa,
+            usuario_responsable=request.user
+        )
+        
+        # Marcar formulario como procesado
+        formulario.procesado = True
+        formulario.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'mensaje': f'Solicitud {solicitud.codigo} creada exitosamente en {pipeline.nombre} - {etapa.nombre}',
+            'solicitud_id': solicitud.id,
+            'solicitud_codigo': solicitud.codigo,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def procesar_formularios_masivo(request):
+    """Convierte múltiples FormularioWeb en Solicitudes del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_ids = data.get('formulario_ids', [])
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not formulario_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron formularios'})
+        
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
+        
+        formularios = FormularioWeb.objects.filter(id__in=formulario_ids, procesado=False)
+        solicitudes_creadas = []
+        errores = []
+        
+        for formulario in formularios:
+            try:
+                # Buscar cliente
+                cliente = None
+                if formulario.cedulaCliente:
+                    try:
+                        cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                    except:
+                        pass
+                
+                # Crear la solicitud
+                solicitud = Solicitud.objects.create(
+                    pipeline=pipeline,
+                    etapa_actual=etapa,
+                    cliente_nombre=formulario.get_nombre_completo(),
+                    cliente_cedula=formulario.cedulaCliente,
+                    cliente_telefono=formulario.celular,
+                    cliente_email=formulario.correo_electronico,
+                    producto_solicitado=formulario.producto_interesado,
+                    monto_solicitado=formulario.dinero_a_solicitar or 0,
+                    # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                    propietario=None,
+                    cliente=cliente,
+                    origen='Canal Digital',
+                    observaciones=f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+                )
+                
+                # Crear historial inicial
+                HistorialSolicitud.objects.create(
+                    solicitud=solicitud,
+                    etapa_anterior=None,
+                    etapa_nueva=etapa,
+                    usuario=request.user,
+                    observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})",
+                    es_automatico=True
+                )
+                
+                # Marcar formulario como procesado
+                formulario.procesado = True
+                formulario.save()
+                
+                solicitudes_creadas.append({
+                    'formulario_id': formulario.id,
+                    'solicitud_codigo': solicitud.codigo,
+                    'solicitud_id': solicitud.id
+                })
+                
+            except Exception as e:
+                errores.append({
+                    'formulario_id': formulario.id,
+                    'nombre': formulario.get_nombre_completo(),
+                    'error': str(e)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes_creadas': len(solicitudes_creadas),
+            'errores': len(errores),
+            'detalle_solicitudes': solicitudes_creadas,
+            'detalle_errores': errores,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def formulario_web(request):
+    """Vista para el formulario web del canal digital - Crea solicitud automáticamente"""
+    
+    if request.method == 'POST':
+        from .forms import FormularioWebForm
+        form = FormularioWebForm(request.POST)
+        
+        if form.is_valid():
+            # Guardar el formulario
+            formulario = form.save(commit=False)
+            
+            # Agregar información adicional
+            if request.META.get('HTTP_X_FORWARDED_FOR'):
+                formulario.ip_address = request.META.get('HTTP_X_FORWARDED_FOR').split(',')[0]
+            else:
+                formulario.ip_address = request.META.get('REMOTE_ADDR')
+            
+            formulario.user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]  # Limitar tamaño
+            formulario.save()
+            
+            # CREAR SOLICITUD AUTOMÁTICAMENTE
+            try:
+                from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+                from pacifico.models import Cliente
+                from django.contrib.auth.models import User
+                
+                # Usar configuración del Canal Digital
+                pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+                etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+                
+                if not pipeline:
+                    # Fallback al primer pipeline disponible
+                    pipeline = Pipeline.objects.first()
+                
+                if pipeline:
+                    # Si no hay etapa configurada o no pertenece al pipeline, usar la primera
+                    if not etapa or etapa.pipeline != pipeline:
+                        etapa = pipeline.etapas.first()
+                    
+                    if etapa:
+                        # Buscar o crear cliente basado en la cédula
+                        cliente = None
+                        if formulario.cedulaCliente:
+                            try:
+                                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                            except:
+                                pass
+                        
+                        # Obtener usuario del sistema para crear la solicitud (primer superuser disponible)
+                        usuario_sistema = User.objects.filter(is_superuser=True).first()
+                        if not usuario_sistema:
+                            usuario_sistema = User.objects.first()  # Fallback
+                        
+                        # Crear la solicitud automáticamente
+                        import uuid
+                        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+                        
+                        solicitud = Solicitud()
+                        solicitud.codigo = codigo
+                        solicitud.pipeline = pipeline
+                        solicitud.etapa_actual = etapa
+                        # Asignar datos del formulario directamente a los campos del modelo
+                        solicitud.cliente_nombre = formulario.get_nombre_completo()
+                        solicitud.cliente_cedula = formulario.cedulaCliente
+                        solicitud.cliente_telefono = formulario.celular
+                        solicitud.cliente_email = formulario.correo_electronico
+                        
+                        # Convertir el producto antes de guardarlo
+                        producto_original = formulario.producto_interesado
+                        if producto_original == 'Préstamos personal':
+                            solicitud.producto_solicitado = 'Personal'
+                        elif producto_original == 'Préstamo de auto':
+                            solicitud.producto_solicitado = 'Auto'
+                        else:
+                            solicitud.producto_solicitado = producto_original
+                            
+                        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+                        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                        solicitud.propietario = None
+                        solicitud.creada_por = usuario_sistema
+                        solicitud.cliente = cliente
+                        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+                        solicitud.observaciones = f"Solicitud creada automáticamente desde Canal Digital - IP: {formulario.ip_address}"
+                        solicitud.save()
+                        
+                        # Crear historial inicial
+                        HistorialSolicitud.objects.create(
+                            solicitud=solicitud,
+                            etapa=etapa,
+                            usuario_responsable=usuario_sistema
+                        )
+                        
+                        # Marcar formulario como procesado
+                        formulario.procesado = True
+                        formulario.save()
+                        
+                        print(f"✅ Solicitud {solicitud.codigo} creada automáticamente desde Canal Digital")
+                        
+            except Exception as e:
+                # Si hay error creando la solicitud, continuar pero logear el error
+                print(f"❌ Error creando solicitud automática: {str(e)}")
+                # El formulario se guarda de todas formas
+            
+            # Redirigir a página de éxito
+            return redirect('https://fpacifico.com/prestamos/')
+        else:
+            # Si hay errores, mostrar el formulario con errores
+            context = {
+                'form': form,
+                'error_message': True,
+            }
+            return render(request, 'workflow/formulario_web.html', context)
+    else:
+        # GET request - mostrar formulario vacío
+        from .forms import FormularioWebForm
+        form = FormularioWebForm()
+        
+        context = {
+            'form': form,
+            'error_message': False,
+        }
+        return render(request, 'workflow/formulario_web.html', context)
 
 
 # ==========================================
@@ -1989,12 +2410,13 @@ def api_estadisticas(request):
         total=Count('solicitud')
     ).values('nombre', 'total')
     
-    # Solicitudes vencidas
-    solicitudes_vencidas = Solicitud.objects.filter(
-        etapa_actual__isnull=False
-    ).extra(
-        where=['fecha_ultima_actualizacion < NOW() - INTERVAL etapa_actual_sla']
-    ).count()
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
     
     return JsonResponse({
         'total_solicitudes': total_solicitudes,
@@ -3007,6 +3429,13 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
         # Crear el asunto específico para APC
         subject = f"workflowAPC - {cliente_nombre} - {no_cedula}"
         
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Use SITE_URL from settings directly instead of Sites framework
+        base_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8002')
+        print(f"🔍 DEBUG: Base URL: {base_url}")
+        
         # Mensaje de texto plano
         text_content = f"""
         Solicitud de Descarga APC con Makito
@@ -3027,6 +3456,55 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
         Información para APC:
         Tipo de documento: {tipo_documento.title()}
         Número de documento: {no_cedula}
+        
+        ==========================================
+        INSTRUCCIONES PARA MAKITO RPA
+        ==========================================
+        
+        Para actualizar el estado de esta solicitud, utiliza las siguientes APIs:
+        
+        1. MARCAR COMO "EN PROGRESO":
+           URL: {base_url}/workflow/api/makito/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "in_progress",
+               "observaciones": "Iniciando procesamiento del APC"
+           }}
+        
+        2. MARCAR COMO "COMPLETADO" Y SUBIR ARCHIVO:
+           URL: {base_url}/workflow/api/makito/upload-apc/{solicitud.codigo}/
+           Método: POST
+           Content-Type: multipart/form-data
+           Form Data:
+           - apc_file: [archivo PDF del APC]
+           - observaciones: "APC generado exitosamente"
+        
+        3. MARCAR COMO "ERROR" (si es necesario):
+           URL: {base_url}/workflow/api/makito/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "error",
+               "observaciones": "Descripción del error encontrado"
+           }}
+        
+        ==========================================
+        FLUJO RECOMENDADO:
+        ==========================================
+        1. Al iniciar el procesamiento → Usar API #1 con status "in_progress"
+        2. Al completar exitosamente → Usar API #2 para subir el archivo
+        3. En caso de error → Usar API #3 con status "error"
+        
+        ==========================================
+        NOTAS IMPORTANTES:
+        ==========================================
+        • El archivo debe ser un PDF válido
+        • Tamaño máximo del archivo: 10MB
+        • El sistema automáticamente marcará la solicitud como completada
+        • Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -4488,9 +4966,10 @@ def api_solicitud_brief(request, solicitud_id):
 
         # Cotización info
         cotizacion_info = {}
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if cotizacion:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.debug(f"Cotizacion found: {cotizacion}")
             logger.debug(f"Cotizacion edad: {cotizacion.edad} (type: {type(cotizacion.edad)})")
             logger.debug(f"Cotizacion sexo: {cotizacion.sexo} (type: {type(cotizacion.sexo)})")
@@ -4505,6 +4984,9 @@ def api_solicitud_brief(request, solicitud_id):
                 'edad': cotizacion.edad if cotizacion.edad is not None else None,
                 'sexo': cotizacion.sexo if cotizacion.sexo else None,
                 'cartera': cotizacion.cartera if cotizacion.cartera else None,
+                'tipoPrestamo': cotizacion.tipoPrestamo if cotizacion.tipoPrestamo else None,
+                'marca': cotizacion.marca if cotizacion.marca else None,
+                'modelo': cotizacion.modelo if cotizacion.modelo else None,
             }
             
             logger.debug(f"Final cotizacion_info: {cotizacion_info}")
@@ -7185,6 +7667,287 @@ def api_makito_update_status(request, solicitud_codigo):
         }, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_makito_upload_apc(request, solicitud_codigo):
+    """
+    API para que Makito RPA suba el archivo APC y marque como completado
+    URL: /workflow/api/makito/upload-apc/{codigo}/
+    
+    Form data esperado:
+    - apc_file: archivo PDF
+    - observaciones: (opcional) descripción del proceso
+    """
+    try:
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        from django.db import transaction
+        import uuid
+        
+        # Buscar la solicitud por código
+        try:
+            solicitud = Solicitud.objects.get(codigo=solicitud_codigo, descargar_apc_makito=True)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada o no tiene APC habilitado'
+            }, status=404)
+        
+        # Verificar que hay un archivo
+        if 'apc_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó archivo APC'
+            }, status=400)
+        
+        apc_file = request.FILES['apc_file']
+        
+        # Validar que es un PDF
+        if not apc_file.name.lower().endswith('.pdf'):
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo debe ser un PDF'
+            }, status=400)
+        
+        # Validar tamaño del archivo (máx 10MB)
+        if apc_file.size > 10 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo es demasiado grande (máx 10MB)'
+            }, status=400)
+        
+        # Generar nombre único para el archivo
+        file_extension = '.pdf'
+        unique_filename = f"apc_{solicitud.codigo}_{uuid.uuid4().hex[:8]}{file_extension}"
+        
+        # Actualizar la solicitud
+        with transaction.atomic():
+            # Guardar el archivo directamente en el campo FileField
+            solicitud.apc_archivo.save(unique_filename, apc_file)
+            
+            # Actualizar campos de estado
+            solicitud.apc_status = 'completed'
+            solicitud.apc_fecha_completado = timezone.now()
+            solicitud.apc_observaciones = request.POST.get('observaciones', 'APC generado exitosamente por Makito RPA')
+            solicitud.save()
+            
+            # Crear historial
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=solicitud.etapa_actual,
+                usuario_responsable=None,  # Sistema automático
+                fecha_inicio=timezone.now()
+            )
+        
+        # Notificar al propietario de la solicitud
+        try:
+            print(f"🔔 Enviando correo de APC completado para solicitud {solicitud.codigo}...")
+            enviar_correo_apc_completado(solicitud)
+            print(f"✅ Correo de APC completado enviado exitosamente")
+        except Exception as e:
+            print(f"❌ Error enviando correo APC completado: {e}")
+            import traceback
+            print(f"❌ Traceback completo: {traceback.format_exc()}")
+            # No fallar la operación si el correo falla
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'APC subido y marcado como completado exitosamente',
+            'data': {
+                'codigo': solicitud.codigo,
+                'apc_status': solicitud.apc_status,
+                'apc_observaciones': solicitud.apc_observaciones,
+                'apc_fecha_completado': solicitud.apc_fecha_completado.isoformat(),
+                'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+def enviar_correo_apc_completado(solicitud):
+    """
+    Función para enviar correo automático cuando el APC es completado por Makito.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre solicitud {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # If we have access to request in the context, use it for better URL building
+        # For now, use the settings fallback
+        
+        # URL para ver la solicitud
+        solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
+        
+        # URL para descargar el archivo APC (si está disponible)
+        archivo_url = None
+        if solicitud.apc_archivo:
+            try:
+                archivo_url = f"{base_url}{solicitud.apc_archivo.url}"
+            except:
+                archivo_url = "Archivo disponible en el sistema"
+        
+        # Crear el asunto
+        subject = f'✅ APC Completado - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano
+        text_content = f"""
+APC Completado Exitosamente
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+El proceso de APC para la solicitud {solicitud.codigo} ha sido completado exitosamente por Makito RPA.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha de completado: {solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M')}
+• Tipo de documento: {solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else 'No especificado'}
+• Número de documento: {solicitud.apc_no_cedula or 'No especificado'}
+
+ARCHIVO APC:
+{f'• Archivo disponible: {archivo_url}' if archivo_url else '• El archivo está disponible en el sistema'}
+
+OBSERVACIONES:
+{solicitud.apc_observaciones or 'Sin observaciones adicionales'}
+
+Para ver todos los detalles de la solicitud:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo APC completado enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo APC completado enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo APC completado: {str(e)}")
+            raise  # Re-raise para que se maneje en el nivel superior
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo APC completado para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+
+
+@login_required
+def test_apc_upload_email(request):
+    """
+    Vista para probar el envío de correo de APC completado
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con APC habilitado para testing
+        solicitud = Solicitud.objects.filter(descargar_apc_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con APC habilitado para testing'
+            })
+        
+        # Simular que se completó el APC
+        from django.utils import timezone
+        solicitud.apc_status = 'completed'
+        solicitud.apc_fecha_completado = timezone.now()
+        solicitud.apc_observaciones = 'APC de prueba completado - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo APC completado para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            enviar_correo_apc_completado(solicitud)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo APC completado enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
 @login_required
 @require_http_methods(["GET"])
 def api_apc_list(request):
@@ -7246,6 +8009,8 @@ def api_apc_list(request):
                 'apc_fecha_inicio': solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else '',
                 'apc_fecha_completado': solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_completado else '',
                 'apc_observaciones': solicitud.apc_observaciones or '',
+                'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None,
+                'apc_archivo_disponible': bool(solicitud.apc_archivo),
                 'url_detail': f'/workflow/solicitud/{solicitud.id}/'
             })
         
@@ -7260,3 +8025,206 @@ def api_apc_list(request):
             'success': False,
             'error': f'Error al obtener lista APC: {str(e)}'
         }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_apc_detail(request, solicitud_codigo):
+    """
+    API para obtener detalles completos de una solicitud APC específica
+    """
+    try:
+        # Buscar la solicitud por código
+        solicitud = Solicitud.objects.filter(
+            codigo=solicitud_codigo,
+            descargar_apc_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual'
+        ).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada'
+            }, status=404)
+        
+        # Construir respuesta detallada
+        data = {
+            'codigo': solicitud.codigo,
+            'cliente_nombre': solicitud.cliente_nombre,
+            'apc_tipo_documento': solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else '',
+            'apc_no_cedula': solicitud.apc_no_cedula,
+            'apc_status': solicitud.apc_status,
+            'apc_status_display': solicitud.get_apc_status_display(),
+            'pipeline': solicitud.pipeline.nombre,
+            'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+            'creada_por_email': solicitud.creada_por.email,
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+            'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.isoformat() if solicitud.apc_fecha_solicitud else None,
+            'apc_fecha_inicio': solicitud.apc_fecha_inicio.isoformat() if solicitud.apc_fecha_inicio else None,
+            'apc_fecha_completado': solicitud.apc_fecha_completado.isoformat() if solicitud.apc_fecha_completado else None,
+            'apc_observaciones': solicitud.apc_observaciones or '',
+            'apc_archivo_url': solicitud.apc_archivo.url if solicitud.apc_archivo else None,
+            'apc_archivo_disponible': bool(solicitud.apc_archivo),
+            'apc_archivo_nombre': solicitud.apc_archivo.name.split('/')[-1] if solicitud.apc_archivo else None,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'solicitud': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener detalles APC: {str(e)}'
+        }, status=500)
+# ==========================================
+# APIs PARA CANAL DIGITAL
+# ==========================================
+
+@login_required
+def api_obtener_pipelines_canal_digital(request):
+    """API para obtener pipelines disponibles para el Canal Digital"""
+    try:
+        from .modelsWorkflow import Pipeline
+        
+        pipelines = Pipeline.objects.all()
+        pipelines_data = []
+        
+        for pipeline in pipelines:
+            pipelines_data.append({
+                'id': pipeline.id,
+                'nombre': pipeline.nombre,
+                'descripcion': pipeline.descripcion or '',
+                'etapas': [
+                    {
+                        'id': etapa.id,
+                        'nombre': etapa.nombre,
+                        'orden': etapa.orden
+                    }
+                    for etapa in pipeline.etapas.all().order_by('orden')
+                ]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipelines': pipelines_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_obtener_etapas_pipeline(request, pipeline_id):
+    """API para obtener etapas de un pipeline específico"""
+    try:
+        from .modelsWorkflow import Pipeline
+        
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        etapas = pipeline.etapas.all().order_by('orden')
+        
+        etapas_data = []
+        for etapa in etapas:
+            etapas_data.append({
+                'id': etapa.id,
+                'nombre': etapa.nombre,
+                'orden': etapa.orden,
+                'sla_horas': etapa.sla_horas if etapa.sla else None
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipeline': {
+                'id': pipeline.id,
+                'nombre': pipeline.nombre
+            },
+            'etapas': etapas_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_guardar_configuracion_canal_digital(request):
+    """API para guardar la configuración del Canal Digital"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .modelsWorkflow import ConfiguracionCanalDigital, Pipeline, Etapa
+        import json
+        
+        data = json.loads(request.body)
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not pipeline_id:
+            return JsonResponse({'success': False, 'error': 'Pipeline requerido'})
+        
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        
+        # Desactivar configuraciones anteriores
+        ConfiguracionCanalDigital.objects.filter(activo=True).update(activo=False)
+        
+        # Crear nueva configuración
+        configuracion = ConfiguracionCanalDigital()
+        configuracion.pipeline_por_defecto = pipeline
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+            configuracion.etapa_por_defecto = etapa
+        else:
+            # Usar primera etapa del pipeline
+            configuracion.etapa_por_defecto = pipeline.etapas.first()
+        
+        configuracion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Configuración guardada: {pipeline.nombre} - {configuracion.etapa_por_defecto.nombre}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def api_obtener_configuracion_canal_digital(request):
+    """API para obtener la configuración actual del Canal Digital"""
+    try:
+        from .modelsWorkflow import ConfiguracionCanalDigital
+        
+        configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
+        
+        if configuracion:
+            return JsonResponse({
+                'success': True,
+                'configuracion': {
+                    'id': configuracion.id,
+                    'pipeline_id': configuracion.pipeline_por_defecto.id,
+                    'pipeline_nombre': configuracion.pipeline_por_defecto.nombre,
+                    'etapa_id': configuracion.etapa_por_defecto.id,
+                    'etapa_nombre': configuracion.etapa_por_defecto.nombre
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'configuracion': None
+            })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

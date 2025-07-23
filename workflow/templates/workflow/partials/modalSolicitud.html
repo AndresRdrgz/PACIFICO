@@ -1156,12 +1156,6 @@
 
 
 window.mostrarModalSolicitud = function(solicitudId) {
-    // Test if jQuery is available first
-    if (typeof $ === 'undefined') {
-        console.error('jQuery is not available');
-        return;
-    }
-    
     // Test if Bootstrap is available
     if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
         console.error('Bootstrap is not available');
@@ -1183,27 +1177,29 @@ window.mostrarModalSolicitud = function(solicitudId) {
     window.currentSolicitudId = solicitudId;
     
     // Set the solicitudId on the Ver Detalle button
-    $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
-    
-    console.log('Set button data-solicitud-id to:', $('#modalBtnVerDetalle').attr('data-solicitud-id'));
+    const btnVerDetalle = document.getElementById('modalBtnVerDetalle');
+    if (btnVerDetalle) {
+        btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
+        console.log('Set button data-solicitud-id to:', btnVerDetalle.getAttribute('data-solicitud-id'));
+    }
     
     // Show loading state
     showLoadingState();
     
     // Show modal first - try multiple ways to access Bootstrap
     try {
-        var modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
+        const modal = new bootstrap.Modal(document.getElementById('modalSolicitud'));
         modal.show();
     } catch (error) {
         console.error('Error creating Bootstrap modal:', error);
         // Fallback: try to show modal manually
-        var modalElement = document.getElementById('modalSolicitud');
+        const modalElement = document.getElementById('modalSolicitud');
         if (modalElement) {
             modalElement.classList.add('show');
             modalElement.style.display = 'block';
             modalElement.setAttribute('aria-hidden', 'false');
             // Add backdrop
-            var backdrop = document.createElement('div');
+            const backdrop = document.createElement('div');
             backdrop.className = 'modal-backdrop fade show';
             document.body.appendChild(backdrop);
         }
@@ -1214,20 +1210,30 @@ window.mostrarModalSolicitud = function(solicitudId) {
     console.log('API URL:', apiUrl);
     
     // Fetch API with comprehensive error handling
-    $.ajax({
-        url: apiUrl,
+    fetch(apiUrl, {
         method: 'GET',
-        timeout: 10000, // 10 second timeout
-        beforeSend: function(xhr) {
-            console.log('Sending request to:', apiUrl);
-        }
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'same-origin'
     })
-    .done(function(data, textStatus, xhr) {
-        console.log('API Success:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            data: data
+    .then(response => {
+        console.log('API Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('API Success:', { data: data });
         
         // Validate response data
         if (!data || typeof data !== 'object') {
@@ -1238,30 +1244,24 @@ window.mostrarModalSolicitud = function(solicitudId) {
         
         populateModalData(data);
     })
-    .fail(function(xhr, textStatus, error) {
+    .catch(error => {
         console.error('API Error:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            responseText: xhr.responseText,
-            textStatus: textStatus,
-            error: error,
-            readyState: xhr.readyState
+            error: error.message,
+            apiUrl: apiUrl
         });
         
         let errorMessage = 'Error desconocido';
         
-        if (xhr.status === 0) {
+        if (error.message.includes('Failed to fetch')) {
             errorMessage = 'No se pudo conectar al servidor';
-        } else if (xhr.status === 404) {
+        } else if (error.message.includes('404')) {
             errorMessage = `Solicitud ${solicitudId} no encontrada`;
-        } else if (xhr.status === 500) {
+        } else if (error.message.includes('500')) {
             errorMessage = 'Error interno del servidor';
-        } else if (xhr.status === 503) {
+        } else if (error.message.includes('503')) {
             errorMessage = 'Servicio no disponible temporalmente';
-        } else if (textStatus === 'timeout') {
-            errorMessage = 'Tiempo de espera agotado';
         } else {
-            errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
+            errorMessage = error.message;
         }
         
         // Show error but also populate with mock data for testing
@@ -1270,93 +1270,115 @@ window.mostrarModalSolicitud = function(solicitudId) {
         
         // Show a warning message
         setTimeout(() => {
-            $('#modalSolicitudWorkflowProgress').prepend(`
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
+            if (workflowProgress) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-warning alert-dismissible fade show';
+                alertDiv.setAttribute('role', 'alert');
+                alertDiv.innerHTML = `
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Modo de prueba:</strong> ${errorMessage}
                     <br><small>URL: ${apiUrl}</small>
                     <br><small>Para probar la API directamente, ejecute <code>testApiDirectly(${solicitudId})</code> en la consola</small>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `);
+                `;
+                workflowProgress.prepend(alertDiv);
+            }
         }, 500);
-    })
-    .always(function() {
-        console.log('API request completed');
     });
+    
+    // Function to get CSRF token
+    function getCsrfToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        return csrfToken ? csrfToken.value : '';
+    }
 };
 
 function showLoadingState() {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for showLoadingState');
-        return;
-    }
-    
     // Clear modal content
-    $('#modalSolicitudCodigo').html('<div class="loading-placeholder" style="width: 120px;"></div>');
-    $('#modalSolicitudEstadoBadge').html('<div class="loading-placeholder" style="width: 80px;"></div>');
-    $('#modalSolicitudTipo').html('<div class="loading-placeholder" style="width: 200px;"></div>');
+    const modalSolicitudCodigo = document.getElementById('modalSolicitudCodigo');
+    const modalSolicitudEstadoBadge = document.getElementById('modalSolicitudEstadoBadge');
+    const modalSolicitudTipo = document.getElementById('modalSolicitudTipo');
+    
+    if (modalSolicitudCodigo) {
+        modalSolicitudCodigo.innerHTML = '<div class="loading-placeholder" style="width: 120px;"></div>';
+    }
+    if (modalSolicitudEstadoBadge) {
+        modalSolicitudEstadoBadge.innerHTML = '<div class="loading-placeholder" style="width: 80px;"></div>';
+    }
+    if (modalSolicitudTipo) {
+        modalSolicitudTipo.innerHTML = '<div class="loading-placeholder" style="width: 200px;"></div>';
+    }
     
     // Reset info fields
     const infoFields = ['FechaInicio', 'Vencimiento', 'EtapaActual', 'Area', 'Cliente', 'Cedula', 'Canal'];
     infoFields.forEach(field => {
-        $(`#modalSolicitud${field}`).html('<div class="loading-placeholder" style="width: 100px;"></div>');
+        const element = document.getElementById(`modalSolicitud${field}`);
+        if (element) {
+            element.innerHTML = '<div class="loading-placeholder" style="width: 100px;"></div>';
+        }
     });
     
     // Reset cotización fields
     const cotizacionFields = ['MontoFinanciado', 'Plazo', 'TasaInteres', 'MontoLetra'];
     cotizacionFields.forEach(field => {
-        $(`#modalSolicitud${field}`).html('<div class="loading-placeholder" style="width: 100px;"></div>');
+        const element = document.getElementById(`modalSolicitud${field}`);
+        if (element) {
+            element.innerHTML = '<div class="loading-placeholder" style="width: 100px;"></div>';
+        }
     });
     
     // Disable action buttons
-    $('.action-btn-header').prop('disabled', true);
+    const actionButtons = document.querySelectorAll('.action-btn-header');
+    actionButtons.forEach(btn => {
+        btn.disabled = true;
+    });
     
     // Show loading in workflow
-    $('#modalSolicitudWorkflowProgress').html(`
-        <div class="d-flex justify-content-center align-items-center" style="height: 100px;">
-            <div class="spinner-border text-success" role="status">
-                <span class="visually-hidden">Cargando...</span>
+    const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
+    if (workflowProgress) {
+        workflowProgress.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center" style="height: 100px;">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
             </div>
-        </div>
-    `);
+        `;
+    }
     
     // Add loading animation to modern cards
-    $('.summary-card-modern, .client-card-modern, .cotizacion-card-modern').each(function(index) {
-        $(this).html(`
+    const modernCards = document.querySelectorAll('.summary-card-modern, .client-card-modern, .cotizacion-card-modern');
+    modernCards.forEach((card, index) => {
+        card.innerHTML = `
             <div class="d-flex justify-content-center align-items-center" style="height: 120px;">
                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
             </div>
-        `);
+        `;
     });
 }
 
 function showErrorState(errorMessage = 'Error al cargar la información') {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for showErrorState');
-        return;
+    const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
+    if (workflowProgress) {
+        workflowProgress.innerHTML = `
+            <div class="text-center text-danger py-4">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <div class="fw-bold mb-2">${errorMessage}</div>
+                <div class="text-muted">Por favor, intente nuevamente o contacte al administrador</div>
+            </div>
+        `;
     }
     
-    $('#modalSolicitudWorkflowProgress').html(`
-        <div class="text-center text-danger py-4">
-            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-            <div class="fw-bold mb-2">${errorMessage}</div>
-            <div class="text-muted">Por favor, intente nuevamente o contacte al administrador</div>
-        </div>
-    `);
-    
     // Enable action buttons but show they're unavailable
-    $('.action-btn-header').prop('disabled', false);
+    const actionButtons = document.querySelectorAll('.action-btn-header');
+    actionButtons.forEach(btn => {
+        btn.disabled = false;
+    });
 }
 
 function populateModalData(data) {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for populateModalData');
-        return;
-    }
-    
     try {
         console.log('Populating modal with data:', data);
         
@@ -1370,17 +1392,25 @@ function populateModalData(data) {
         console.log('Current solicitudId:', solicitudId);
         
         // Set the solicitudId on the Ver Detalle button
-        $('#modalBtnVerDetalle').attr('data-solicitud-id', solicitudId);
+        const btnVerDetalle = document.getElementById('modalBtnVerDetalle');
+        if (btnVerDetalle) {
+            btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
+        }
+        
+        // Populate the cards with actual content
+        populateSummaryCard(data);
+        populateClientCard(data);
+        populateCotizacionCard(data);
         
         // General info with fallbacks
         const general = data.general || {};
-        $('#modalSolicitudCodigo').text(general.codigo || 'N/A');
-        $('#modalSolicitudEstadoBadge').text(general.estado || 'N/A');
-        $('#modalSolicitudTipo').text(general.tipo || 'N/A');
-        $('#modalSolicitudFechaInicio').text(general.fecha_inicio || 'N/A');
-        $('#modalSolicitudVencimiento').text(general.vencimiento || 'N/A');
-        $('#modalSolicitudEtapaActual').text(general.etapa_actual || 'N/A');
-        $('#modalSolicitudArea').text(general.area || 'N/A');
+        setElementText('modalSolicitudCodigo', general.codigo || 'N/A');
+        setElementText('modalSolicitudEstadoBadge', general.estado || 'N/A');
+        setElementText('modalSolicitudTipo', general.tipo || 'N/A');
+        setElementText('modalSolicitudFechaInicio', general.fecha_inicio || 'N/A');
+        setElementText('modalSolicitudVencimiento', general.vencimiento || 'N/A');
+        setElementText('modalSolicitudEtapaActual', general.etapa_actual || 'N/A');
+        setElementText('modalSolicitudArea', general.area || 'N/A');
         
         // Client info with fallbacks
         const cliente = data.cliente || {};
@@ -1390,8 +1420,8 @@ function populateModalData(data) {
         console.log('🔍 DEBUG - Cliente data:', cliente);
         console.log('🔍 DEBUG - Cotizacion data:', cotizacion);
         
-        $('#modalSolicitudCliente').text(cliente.nombre || 'N/A');
-        $('#modalSolicitudCedula').text(cliente.cedula || 'N/A');
+        setElementText('modalSolicitudCliente', cliente.nombre || 'N/A');
+        setElementText('modalSolicitudCedula', cliente.cedula || 'N/A');
         
         // Edad y Sexo from cotizacion (API fields)
         let edadSexo = 'N/A';
@@ -1410,7 +1440,7 @@ function populateModalData(data) {
             edadSexo = sexo;
         }
         
-        $('#modalSolicitudEdadSexo').text(edadSexo);
+        setElementText('modalSolicitudEdadSexo', edadSexo);
         console.log('🔍 DEBUG - EdadSexo final:', edadSexo);
         
         // Cartera from cotizacion (API field)
@@ -1418,62 +1448,62 @@ function populateModalData(data) {
         console.log('🔍 DEBUG - Cartera:', cartera, 'type:', typeof cartera);
         
         const carteraText = (cartera !== null && cartera !== undefined && cartera !== '-') ? cartera : 'N/A';
-        $('#modalSolicitudCartera').text(carteraText);
+        setElementText('modalSolicitudCartera', carteraText);
         console.log('🔍 DEBUG - Cartera final:', carteraText);
 
         // Cotización info with fallbacks
-        $('#modalSolicitudMontoFinanciado').text(
-            cotizacion.auxMonto2 !== undefined && cotizacion.auxMonto2 !== null ? `$${cotizacion.auxMonto2.toLocaleString()}` :
-            'N/A'
+        setElementText('modalSolicitudMontoFinanciado',
+            cotizacion.auxMonto2 !== undefined && cotizacion.auxMonto2 !== null ? `$${cotizacion.auxMonto2.toLocaleString()}` : 'N/A'
         );
-        $('#modalSolicitudPlazo').text(
+        setElementText('modalSolicitudPlazo',
             cotizacion.plazo !== undefined ? `${cotizacion.plazo} meses` : 'N/A'
         );
-        $('#modalSolicitudTasaInteres').text(
+        setElementText('modalSolicitudTasaInteres',
             cotizacion.tasa_interes !== undefined ? `${cotizacion.tasa_interes}%` :
             cotizacion.tasa !== undefined ? `${cotizacion.tasa}%` : 'N/A'
         );
-        $('#modalSolicitudMontoLetra').text(
+        setElementText('modalSolicitudMontoLetra',
             cotizacion.monto_letra !== undefined ? `$${cotizacion.monto_letra.toLocaleString()}` :
             cotizacion.cuota !== undefined ? `$${cotizacion.cuota.toLocaleString()}` : 'N/A'
         );
         
         // Action buttons with fallbacks
         const acciones = data.acciones || {};
-        $('#modalBtnProcesarTarea').prop('disabled', !(acciones.puede_procesar || false));
-        $('#modalBtnDevolver').prop('disabled', !(acciones.puede_devolver || false));
-        $('#modalBtnAnular').prop('disabled', !(acciones.puede_anular || false));
-        $('#modalBtnComentarios').prop('disabled', !(acciones.puede_comentar || false));
+        setButtonDisabled('modalBtnProcesarTarea', !(acciones.puede_procesar || false));
+        setButtonDisabled('modalBtnDevolver', !(acciones.puede_devolver || false));
+        setButtonDisabled('modalBtnAnular', !(acciones.puede_anular || false));
+        setButtonDisabled('modalBtnComentarios', !(acciones.puede_comentar || false));
         
         // Workflow roadmap with fallbacks
         const workflow = data.workflow || [];
         if (workflow.length > 0) {
             renderWorkflowRoadmap(workflow);
         } else {
-            $('#modalSolicitudWorkflowProgress').html('<div class="text-center text-muted py-4">No hay información de workflow disponible</div>');
+            const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
+            if (workflowProgress) {
+                workflowProgress.innerHTML = '<div class="text-center text-muted py-4">No hay información de workflow disponible</div>';
+            }
         }
-        
-
         
         // Add smooth animations for the new layout
         setTimeout(() => {
-            $('.summary-card-modern, .client-card-modern, .cotizacion-card-modern').each(function(index) {
-                $(this).css({
-                    'opacity': '0',
-                    'transform': 'translateY(20px)'
-                }).delay(index * 100).animate({
-                    'opacity': '1',
-                    'transform': 'translateY(0)'
-                }, 300);
+            const modernCards = document.querySelectorAll('.summary-card-modern, .client-card-modern, .cotizacion-card-modern');
+            modernCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
             });
             
-            $('.modal-main-content').css({
-                'opacity': '0',
-                'transform': 'translateY(20px)'
-            }).delay(300).animate({
-                'opacity': '1',
-                'transform': 'translateY(0)'
-            }, 300);
+            const mainContent = document.querySelector('.modal-main-content');
+            if (mainContent) {
+                setTimeout(() => {
+                    mainContent.style.transition = 'all 0.3s ease';
+                    mainContent.style.opacity = '1';
+                    mainContent.style.transform = 'translateY(0)';
+                }, 300);
+            }
         }, 100);
         
         console.log('Modal populated successfully');
@@ -1484,12 +1514,272 @@ function populateModalData(data) {
     }
 }
 
-function renderWorkflowRoadmap(etapas) {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for renderWorkflowRoadmap');
-        return;
-    }
+// Function to populate summary card
+function populateSummaryCard(data) {
+    const summaryCard = document.querySelector('.summary-card-modern');
+    if (!summaryCard) return;
     
+    const general = data.general || {};
+    const solicitud = data.solicitud || {};
+    
+    const summaryHtml = `
+        <div class="summary-header">
+            <div class="summary-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="summary-title-section">
+                <h3 class="summary-title">Resumen</h3>
+                <p class="summary-subtitle">Información general</p>
+            </div>
+        </div>
+        <div class="summary-content">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-hashtag"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Código</span>
+                        <span class="summary-item-value">${general.codigo || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Fecha Creación</span>
+                        <span class="summary-item-value">${general.fecha_inicio || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Propietario</span>
+                        <span class="summary-item-value">${general.propietario || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Pipeline</span>
+                        <span class="summary-item-value">${general.tipo || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-flag"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Etapa</span>
+                        <span class="summary-item-value">${general.etapa_actual || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="summary-item-content">
+                        <span class="summary-item-label">Estado</span>
+                        <span class="summary-item-value">${general.estado_actual || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    summaryCard.innerHTML = summaryHtml;
+}
+
+// Function to populate client card
+function populateClientCard(data) {
+    const clientCard = document.querySelector('.client-card-modern');
+    if (!clientCard) return;
+    
+    const cliente = data.cliente || {};
+    
+    const clientHtml = `
+        <div class="client-header">
+            <div class="client-icon">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="client-title-section">
+                <h3 class="client-title">Cliente</h3>
+                <p class="client-subtitle">Información del cliente</p>
+            </div>
+        </div>
+        <div class="client-content">
+            <div class="client-grid">
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Nombre</span>
+                        <span class="client-item-value">${cliente.nombre || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Cédula</span>
+                        <span class="client-item-value">${cliente.cedula || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Teléfono</span>
+                        <span class="client-item-value">${cliente.telefono || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Email</span>
+                        <span class="client-item-value">${cliente.email || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Ocupación</span>
+                        <span class="client-item-value">${cliente.ocupacion || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="client-item">
+                    <div class="client-item-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="client-item-content">
+                        <span class="client-item-label">Ingresos</span>
+                        <span class="client-item-value">${cliente.ingresos_formateados || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    clientCard.innerHTML = clientHtml;
+}
+
+// Function to populate cotización card
+function populateCotizacionCard(data) {
+    const cotizacionCard = document.querySelector('.cotizacion-card-modern');
+    if (!cotizacionCard) return;
+    
+    const cotizacion = data.cotizacion || {};
+    
+    // Determine if it's a car loan
+    const isCarLoan = cotizacion.tipoPrestamo === 'auto';
+    
+    // Get vehicle data for car loans
+    const vehicleData = isCarLoan && cotizacion.marca && cotizacion.modelo 
+        ? `${cotizacion.marca} ${cotizacion.modelo}` 
+        : 'N/A';
+    
+    const cotizacionHtml = `
+        <div class="cotizacion-header">
+            <div class="cotizacion-icon">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <div class="cotizacion-title-section">
+                <h3 class="cotizacion-title">Cotización</h3>
+                <p class="cotizacion-subtitle">Detalles financieros</p>
+            </div>
+        </div>
+        <div class="cotizacion-content">
+            <div class="cotizacion-grid">
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-${isCarLoan ? 'car' : 'user'}"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Producto</span>
+                        <span class="cotizacion-item-value">${cotizacion.tipoPrestamo === 'auto' ? 'Préstamo de Auto' : cotizacion.tipoPrestamo === 'personal' ? 'Préstamo Personal' : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Monto</span>
+                        <span class="cotizacion-item-value">${cotizacion.auxMonto2 ? `$${cotizacion.auxMonto2.toLocaleString()}` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Plazo</span>
+                        <span class="cotizacion-item-value">${cotizacion.plazo ? `${cotizacion.plazo} meses` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Tasa</span>
+                        <span class="cotizacion-item-value">${cotizacion.tasa ? `${cotizacion.tasa}%` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">Letra</span>
+                        <span class="cotizacion-item-value">${cotizacion.cuota ? `$${cotizacion.cuota.toLocaleString()}` : 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="cotizacion-item">
+                    <div class="cotizacion-item-icon">
+                        <i class="fas fa-${isCarLoan ? 'car-side' : 'chart-line'}"></i>
+                    </div>
+                    <div class="cotizacion-item-content">
+                        <span class="cotizacion-item-label">${isCarLoan ? 'Datos Vehículo' : 'Prima'}</span>
+                        <span class="cotizacion-item-value">${isCarLoan ? vehicleData : (cotizacion.prima_formateada || 'N/A')}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    cotizacionCard.innerHTML = cotizacionHtml;
+}
+
+// Helper function to set element text safely
+function setElementText(elementId, text) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = text;
+    }
+}
+
+// Helper function to set button disabled state safely
+function setButtonDisabled(elementId, disabled) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.disabled = disabled;
+    }
+}
+
+function renderWorkflowRoadmap(etapas) {
     let roadmapHtml = '<div class="workflow-roadmap">';
     
     etapas.forEach(function(etapa, idx) {
@@ -1516,7 +1806,11 @@ function renderWorkflowRoadmap(etapas) {
     });
     
     roadmapHtml += '</div>';
-    $('#modalSolicitudWorkflowProgress').html(roadmapHtml);
+    
+    const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
+    if (workflowProgress) {
+        workflowProgress.innerHTML = roadmapHtml;
+    }
 }
 
 
@@ -1594,94 +1888,57 @@ function getMockData(solicitudId) {
 
 // Add debug functionality
 window.testModalSolicitud = function() {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for testModalSolicitud');
-        return;
-    }
-    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
-        console.error('Bootstrap not available for testModalSolicitud');
-        return;
-    }
     console.log('Testing modal with mock data...');
     mostrarModalSolicitud('test-123');
 };
 
 // Add test function for checking button data attribute
 window.testButtonData = function() {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for testButtonData');
-        return;
-    }
-    
-    const button = $('#modalBtnVerDetalle');
-    console.log('Button exists:', button.length > 0);
-    console.log('Button data-solicitud-id:', button.attr('data-solicitud-id'));
+    const button = document.getElementById('modalBtnVerDetalle');
+    console.log('Button exists:', button !== null);
+    console.log('Button data-solicitud-id:', button ? button.getAttribute('data-solicitud-id') : 'Button not found');
     console.log('Global currentSolicitudId:', window.currentSolicitudId);
-    console.log('Button HTML:', button[0] ? button[0].outerHTML : 'Button not found');
+    console.log('Button HTML:', button ? button.outerHTML : 'Button not found');
     
     // Try to trigger click programmatically
-    if (button.length > 0) {
+    if (button) {
         console.log('Triggering click programmatically...');
-        button.trigger('click');
+        button.click();
     }
 };
 
 // Add a helper function to test API directly
 window.testApiDirectly = function(solicitudId = 1) {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for testApiDirectly');
-        return;
-    }
     console.log('Testing API directly for solicitud:', solicitudId);
     
-    $.ajax({
-        url: `/workflow/api/solicitud_brief/${solicitudId}/`,
+    fetch(`/workflow/api/solicitud_brief/${solicitudId}/`, {
         method: 'GET',
-        timeout: 5000
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        }
     })
-    .done(function(data, textStatus, xhr) {
+    .then(response => {
+        console.log('Response headers:', response.headers);
+        return response.json();
+    })
+    .then(data => {
         console.log('Direct API test success:', data);
-        console.log('Response headers:', xhr.getAllResponseHeaders());
     })
-    .fail(function(xhr, textStatus, error) {
-        console.error('Direct API test failed:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            responseText: xhr.responseText,
-            error: error
-        });
+    .catch(error => {
+        console.error('Direct API test failed:', error);
     });
 };
 
-// Auto-test on page load - Wait for jQuery and Bootstrap to be available
+// Auto-test on page load - Wait for DOM to be ready
 function initializeModalWhenReady() {
-    if (typeof $ === 'undefined') {
-        console.log('jQuery not ready yet, waiting...');
-        setTimeout(initializeModalWhenReady, 100);
-        return;
-    }
-    
-    // Check for Bootstrap - try multiple ways it might be available
-    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
-        console.log('Bootstrap not ready yet, waiting...');
-        setTimeout(initializeModalWhenReady, 100);
+    if (document.readyState === 'loading') {
+        console.log('DOM not ready yet, waiting...');
+        document.addEventListener('DOMContentLoaded', initializeModalWhenReady);
         return;
     }
     
     console.log('Modal script loaded successfully');
-    
-    // Test if required dependencies are available
-    if (typeof $ === 'undefined') {
-        console.error('jQuery is not available');
-    } else {
-        console.log('jQuery version:', $.fn.jquery);
-    }
-    
-    if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
-        console.error('Bootstrap is not available');
-    } else {
-        console.log('Bootstrap is available');
-    }
     
     // Initialize modal layout functionality
     initializeModalLayout();
@@ -1697,72 +1954,81 @@ initializeModalWhenReady();
 // Initialize modal layout functionality
 function initializeModalLayout() {
     // Handle window resize for responsive layout
-    $(window).on('resize', function() {
-        adjustModalLayout();
-    });
+    window.addEventListener('resize', adjustModalLayout);
     
     // Add click handlers for action buttons
-    $('#modalBtnProcesarTarea').on('click', function() {
-        console.log('Procesar tarea clicked');
-        // Add your processing logic here
-    });
+    const btnProcesar = document.getElementById('modalBtnProcesarTarea');
+    if (btnProcesar) {
+        btnProcesar.addEventListener('click', function() {
+            console.log('Procesar tarea clicked');
+            // Add your processing logic here
+        });
+    }
     
-    $('#modalBtnDevolver').on('click', function() {
-        console.log('Devolver clicked');
-        // Add your return logic here
-    });
+    const btnDevolver = document.getElementById('modalBtnDevolver');
+    if (btnDevolver) {
+        btnDevolver.addEventListener('click', function() {
+            console.log('Devolver clicked');
+            // Add your return logic here
+        });
+    }
     
-    $('#modalBtnAnular').on('click', function() {
-        console.log('Anular clicked');
-        // Add your cancel logic here
-    });
+    const btnAnular = document.getElementById('modalBtnAnular');
+    if (btnAnular) {
+        btnAnular.addEventListener('click', function() {
+            console.log('Anular clicked');
+            // Add your cancel logic here
+        });
+    }
     
-    $('#modalBtnComentarios').on('click', function() {
-        console.log('Comentarios clicked');
-        // Add your comments logic here
-    });
+    const btnComentarios = document.getElementById('modalBtnComentarios');
+    if (btnComentarios) {
+        btnComentarios.addEventListener('click', function() {
+            console.log('Comentarios clicked');
+            // Add your comments logic here
+        });
+    }
 
-    // Add click handler for 'Ver Detalle' button
-    $(document).off('click', '#modalBtnVerDetalle').on('click', '#modalBtnVerDetalle', function() {
-        let solicitudId = $(this).attr('data-solicitud-id');
-        let globalSolicitudId = window.currentSolicitudId;
-        
-        console.log('Ver Detalle clicked');
-        console.log('Button data-solicitud-id:', solicitudId);
-        console.log('Global currentSolicitudId:', globalSolicitudId);
-        console.log('Button element:', this);
-        console.log('All data attributes:', $(this).data());
-        
-        // Try to get solicitudId from multiple sources
-        const finalSolicitudId = solicitudId || globalSolicitudId;
-        
-        if (finalSolicitudId && finalSolicitudId !== 'null' && finalSolicitudId !== 'undefined' && finalSolicitudId !== '') {
-            console.log('Navigating to:', `/workflow/solicitud/${finalSolicitudId}/`);
-            window.location.href = `/workflow/solicitud/${finalSolicitudId}/`;
-        } else {
-            console.error('No valid solicitud ID found:', {
-                buttonAttribute: solicitudId,
-                globalVariable: globalSolicitudId,
-                buttonElement: this
-            });
-            alert('No se pudo determinar el ID de la solicitud.');
+    // Add click handler for 'Ver Detalle' button using event delegation
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id === 'modalBtnVerDetalle') {
+            let solicitudId = event.target.getAttribute('data-solicitud-id');
+            let globalSolicitudId = window.currentSolicitudId;
+            
+            console.log('Ver Detalle clicked');
+            console.log('Button data-solicitud-id:', solicitudId);
+            console.log('Global currentSolicitudId:', globalSolicitudId);
+            console.log('Button element:', event.target);
+            
+            // Try to get solicitudId from multiple sources
+            const finalSolicitudId = solicitudId || globalSolicitudId;
+            
+            if (finalSolicitudId && finalSolicitudId !== 'null' && finalSolicitudId !== 'undefined' && finalSolicitudId !== '') {
+                console.log('Navigating to:', `/workflow/solicitud/${finalSolicitudId}/`);
+                window.location.href = `/workflow/solicitud/${finalSolicitudId}/`;
+            } else {
+                console.error('No valid solicitud ID found:', {
+                    buttonAttribute: solicitudId,
+                    globalVariable: globalSolicitudId,
+                    buttonElement: event.target
+                });
+                alert('No se pudo determinar el ID de la solicitud.');
+            }
         }
     });
 }
 
 // Adjust modal layout based on screen size
 function adjustModalLayout() {
-    if (typeof $ === 'undefined') {
-        console.error('jQuery not available for adjustModalLayout');
-        return;
-    }
-    
     const isMobile = window.innerWidth <= 768;
+    const modalLayout = document.querySelector('.modal-layout');
     
-    if (isMobile) {
-        $('.modal-layout').addClass('mobile-layout');
-    } else {
-        $('.modal-layout').removeClass('mobile-layout');
+    if (modalLayout) {
+        if (isMobile) {
+            modalLayout.classList.add('mobile-layout');
+        } else {
+            modalLayout.classList.remove('mobile-layout');
+        }
     }
 }
 </script>

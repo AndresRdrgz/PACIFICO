@@ -6,6 +6,15 @@ from . import views
 from . import api
 from . import views_comite
 from . import apicomite
+from . import dashboard_views
+
+# Import reportes views with error handling
+try:
+    from . import views_reportes
+except ImportError as e:
+    print(f"Error importing views_reportes: {e}")
+    views_reportes = None
+
 import os
 
 app_name = 'workflow'
@@ -17,6 +26,11 @@ urlpatterns = [
 # Vistas principales
 urlpatterns += [
     path('', views_workflow.dashboard_workflow, name='dashboard'),
+    path('dashboard-operativo/', dashboard_views.dashboard_operativo, name='dashboard_operativo'),
+    path('dashboard-usuario/', dashboard_views.dashboard_usuario, name='dashboard_usuario'),
+    path('dashboard-cumplimiento/', dashboard_views.dashboard_cumplimiento, name='dashboard_cumplimiento'),
+    path('dashboard-flujo/', dashboard_views.dashboard_flujo, name='dashboard_flujo'),
+    path('dashboard-comite/', dashboard_views.dashboard_comite, name='dashboard_comite'),
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),
@@ -74,8 +88,20 @@ urlpatterns += [
     path('admin/campos-personalizados/', views_workflow.administrar_campos_personalizados, name='admin_campos_personalizados'),
     path('admin/usuarios/', views_workflow.administrar_usuarios, name='admin_usuarios'),
     
-    # Vistas de reportes
-    path('reportes/', views_workflow.reportes_workflow, name='reportes'),
+    # Vistas de reportes (comentada para usar la nueva vista)
+    # path('reportes/', views_workflow.reportes_workflow, name='reportes'),
+    
+    # Canales Alternos
+    path('canal-digital/', views_workflow.canal_digital, name='canal_digital'),
+    path('formulario-web/', views_workflow.formulario_web, name='formulario_web'),
+    path('api/convertir-formulario/', views_workflow.convertir_formulario_a_solicitud, name='convertir_formulario_a_solicitud'),
+    path('api/procesar-formularios-masivo/', views_workflow.procesar_formularios_masivo, name='procesar_formularios_masivo'),
+    
+    # APIs para Canal Digital
+    path('api/canal-digital/pipelines/', views_workflow.api_obtener_pipelines_canal_digital, name='api_obtener_pipelines_canal_digital'),
+    path('api/canal-digital/pipelines/<int:pipeline_id>/etapas/', views_workflow.api_obtener_etapas_pipeline, name='api_obtener_etapas_pipeline'),
+    path('api/canal-digital/configuracion/', views_workflow.api_obtener_configuracion_canal_digital, name='api_obtener_configuracion_canal_digital'),
+    path('api/canal-digital/configuracion/guardar/', views_workflow.api_guardar_configuracion_canal_digital, name='api_guardar_configuracion_canal_digital'),
     
     # APIs
     path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
@@ -177,7 +203,28 @@ urlpatterns += [
     # APC Makito Tracking URLs
     path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
     path('api/apc/list/', views_workflow.api_apc_list, name='api_apc_list'),
+    path('api/apc/detail/<str:solicitud_codigo>/', views_workflow.api_apc_detail, name='api_apc_detail'),
     path('api/makito/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_update_status, name='api_makito_update_status'),
+    path('api/makito/upload-apc/<str:solicitud_codigo>/', views_workflow.api_makito_upload_apc, name='api_makito_upload_apc'),
+    
+    # Testing URLs (remove in production)
+    path('test/apc-upload-email/', views_workflow.test_apc_upload_email, name='test_apc_upload_email'),
 ]
+
+# Add reportes URLs only if views_reportes imported successfully
+if views_reportes is not None:
+    urlpatterns += [
+        # Reportes URLs
+        path('reportes/', views_reportes.reportes_dashboard, name='reportes'),
+        
+        # Reportes API URLs
+        path('reportes/api/crear/', views_reportes.api_crear_reporte, name='api_crear_reporte'),
+        path('reportes/api/crear-prueba/', views_reportes.api_crear_reporte_prueba, name='api_crear_reporte_prueba'),
+        path('reportes/api/obtener-usuario/', views_reportes.api_obtener_reportes_usuario, name='api_obtener_reportes_usuario'),
+        path('reportes/api/<int:reporte_id>/ejecutar/', views_reportes.api_ejecutar_reporte, name='api_ejecutar_reporte'),
+        path('reportes/api/<int:reporte_id>/exportar/', views_reportes.api_exportar_reporte, name='api_exportar_reporte'),
+        path('reportes/api/<int:reporte_id>/eliminar/', views_reportes.api_eliminar_reporte, name='api_eliminar_reporte'),
+        path('reportes/api/reportes-predefinidos/', views_reportes.api_reportes_predefinidos, name='api_reportes_predefinidos'),
+    ]
 
 

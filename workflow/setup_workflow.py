@@ -441,18 +441,13 @@ def crear_solicitudes_ejemplo():
     
     # Obtener datos necesarios
     pipeline_personal = Pipeline.objects.get(nombre='Préstamo Personal')
-    tipo_personal = TipoSolicitud.objects.get(nombre='Préstamo Personal')
     etapa_recepcion = Etapa.objects.get(pipeline=pipeline_personal, nombre='Recepción')
     usuario_tramite = User.objects.get(username='tramite_user')
     
     # Crear 5 solicitudes de ejemplo
     for i in range(1, 6):
-        codigo = f"PP-PER-{i:04d}"
-        
-        if not Solicitud.objects.filter(codigo=codigo).exists():
+        if not Solicitud.objects.filter(pipeline=pipeline_personal, creada_por=usuario_tramite).exists():
             solicitud = Solicitud.objects.create(
-                codigo=codigo,
-                tipo_solicitud=tipo_personal,
                 pipeline=pipeline_personal,
                 etapa_actual=etapa_recepcion,
                 creada_por=usuario_tramite,
@@ -467,9 +462,8 @@ def crear_solicitudes_ejemplo():
             )
             
             # Crear requisitos
-            requisitos_pipeline = RequisitoPipelineTipo.objects.filter(
-                pipeline=pipeline_personal,
-                tipo_solicitud=tipo_personal
+            requisitos_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=pipeline_personal
             )
             
             for req_pipeline in requisitos_pipeline:
@@ -479,7 +473,7 @@ def crear_solicitudes_ejemplo():
                     cumplido=i % 3 == 0  # Algunos requisitos cumplidos
                 )
             
-            print(f"  ✅ Creada solicitud: {codigo}")
+            print(f"  ✅ Creada solicitud: {solicitud.codigo}")
 
 def main():
     """Función principal"""
@@ -491,9 +485,6 @@ def main():
         print()
         
         crear_usuarios_ejemplo()
-        print()
-        
-        crear_tipos_solicitud()
         print()
         
         crear_pipelines_ejemplo()
@@ -522,7 +513,6 @@ def main():
         print(f"  • Usuarios: {User.objects.count()}")
         print(f"  • Pipelines: {Pipeline.objects.count()}")
         print(f"  • Etapas: {Etapa.objects.count()}")
-        print(f"  • Tipos de Solicitud: {TipoSolicitud.objects.count()}")
         print(f"  • Requisitos: {Requisito.objects.count()}")
         print(f"  • Solicitudes: {Solicitud.objects.count()}")
         print()

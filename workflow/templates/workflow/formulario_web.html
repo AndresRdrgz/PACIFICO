@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Préstamo - Pacífico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        .logo-container {
+            background: linear-gradient(135deg, #22a650 0%, #1e8e3e 100%);
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #22a650 0%, #1e8e3e 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 166, 80, 0.3);
+        }
+        .field-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 1px #ef4444 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen logo-container">
+    <div class="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+        <div class="flex w-full flex-col items-center gap-6">
+            <!-- Logo -->
+            <div class="flex items-center gap-4 text-white">
+                <i class="fas fa-building text-4xl"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">Pacífico Préstamos</h1>
+                    <p class="text-sm opacity-90">Solicitud Digital</p>
+                </div>
+            </div>
+            
+            <!-- Form Container -->
+            <div class="form-container rounded-lg border shadow-2xl w-full max-w-5xl">
+                <div class="flex flex-col space-y-1 p-6 text-center border-b">
+                    <h3 class="font-semibold tracking-tight text-2xl text-gray-800">
+                        <i class="fas fa-hand-holding-usd text-green-600 mr-2"></i>
+                        ¡Solicita tu Préstamo!
+                    </h3>
+                    <p class="text-sm text-gray-600">Completa el formulario y te contactaremos pronto</p>
+                </div>
+                
+                <div class="p-6">
+                    {% if error_message %}
+                    <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <strong class="font-bold">Por favor revisa los errores:</strong>
+                        </div>
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}
+                                <p class="mt-1 text-sm">{{ error }}</p>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" action="" id="formularioWeb">
+                        {% csrf_token %}
+                        <div class="grid gap-6">
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <!-- Nombres -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.nombre.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-user mr-2 text-green-600"></i>
+                                        Nombres <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.nombre }}
+                                    {% if form.nombre.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.nombre.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Apellidos -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.apellido.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-user mr-2 text-green-600"></i>
+                                        Apellidos <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.apellido }}
+                                    {% if form.apellido.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.apellido.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Cédula -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.cedulaCliente.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-id-card mr-2 text-green-600"></i>
+                                        Cédula <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.cedulaCliente }}
+                                    {% if form.cedulaCliente.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.cedulaCliente.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Celular -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.celular.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-phone mr-2 text-green-600"></i>
+                                        Celular <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.celular }}
+                                    {% if form.celular.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.celular.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Correo Electrónico -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.correo_electronico.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-envelope mr-2 text-green-600"></i>
+                                        Correo Electrónico <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.correo_electronico }}
+                                    <span id="emailError" class="text-red-500 text-xs hidden">Error: formato de correo electrónico incorrecto. Ejemplo: nombre@gmail.com</span>
+                                    {% if form.correo_electronico.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.correo_electronico.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Fecha de Nacimiento -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.fecha_nacimiento.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-calendar mr-2 text-green-600"></i>
+                                        Fecha de Nacimiento <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.fecha_nacimiento }}
+                                    {% if form.fecha_nacimiento.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.fecha_nacimiento.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Sexo -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.sexo.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-venus-mars mr-2 text-green-600"></i>
+                                        Sexo <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.sexo }}
+                                    {% if form.sexo.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.sexo.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Sector -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.sector.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-briefcase mr-2 text-green-600"></i>
+                                        Sector <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.sector }}
+                                    {% if form.sector.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.sector.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Salario -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.salario.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-dollar-sign mr-2 text-green-600"></i>
+                                        Salario <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.salario }}
+                                    {% if form.salario.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.salario.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Producto Interesado -->
+                                <div class="space-y-2">
+                                    <label for="{{ form.producto_interesado.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-shopping-cart mr-2 text-green-600"></i>
+                                        Producto Interesado <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.producto_interesado }}
+                                    {% if form.producto_interesado.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.producto_interesado.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Dinero a Solicitar -->
+                                <div class="space-y-2" id="dinero_a_solicitar_wrapper">
+                                    <label for="{{ form.dinero_a_solicitar.id_for_label }}" class="text-sm font-medium text-gray-700 flex items-center">
+                                        <i class="fas fa-money-bill-wave mr-2 text-green-600"></i>
+                                        Dinero a Solicitar <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.dinero_a_solicitar }}
+                                    {% if form.dinero_a_solicitar.errors %}
+                                        <div class="text-red-500 text-xs mt-1">
+                                            {% for error in form.dinero_a_solicitar.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Autorizaciones -->
+                            <div class="space-y-4 border-t pt-6">
+                                <h4 class="font-medium text-gray-800 flex items-center">
+                                    <i class="fas fa-shield-alt mr-2 text-green-600"></i>
+                                    Autorizaciones Requeridas
+                                </h4>
+                                
+                                <div class="space-y-3">
+                                    <!-- Autorización APC -->
+                                    <div class="flex items-start space-x-3">
+                                        {{ form.autorizacion_apc }}
+                                        <label for="{{ form.autorizacion_apc.id_for_label }}" class="text-sm text-gray-700 leading-relaxed">
+                                            {{ form.autorizacion_apc.label }} <span class="text-red-500">*</span>
+                                        </label>
+                                    </div>
+                                    {% if form.autorizacion_apc.errors %}
+                                        <div class="text-red-500 text-xs">
+                                            {% for error in form.autorizacion_apc.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Acepta Condiciones -->
+                                    <div class="flex items-start space-x-3">
+                                        {{ form.acepta_condiciones }}
+                                        <label for="{{ form.acepta_condiciones.id_for_label }}" class="text-sm text-gray-700 leading-relaxed">
+                                            {{ form.acepta_condiciones.label }} <span class="text-red-500">*</span>
+                                        </label>
+                                    </div>
+                                    {% if form.acepta_condiciones.errors %}
+                                        <div class="text-red-500 text-xs">
+                                            {% for error in form.acepta_condiciones.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Botón de envío -->
+                            <div class="mt-8">
+                                <button type="submit" id="submitBtn" class="btn-primary w-full text-white py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-medium text-lg">
+                                    <i class="fas fa-paper-plane mr-2"></i>
+                                    Enviar Solicitud
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-white text-sm opacity-75">
+                <p>&copy; {{ "now"|date:"Y" }} Pacífico Préstamos. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('formularioWeb');
+            const submitBtn = document.getElementById('submitBtn');
+            const emailInput = document.getElementById('{{ form.correo_electronico.id_for_label }}');
+            const emailError = document.getElementById('emailError');
+            const productoSelect = document.getElementById('{{ form.producto_interesado.id_for_label }}');
+            const dineroWrapper = document.getElementById('dinero_a_solicitar_wrapper');
+
+            // Loading state en el formulario
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <svg class="animate-spin h-5 w-5 text-white inline-block mr-2" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg> Enviando...`;
+            });
+
+            // Validación de email en tiempo real
+            if (emailInput) {
+                emailInput.addEventListener('blur', function () {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                    if (emailInput.value === '') {
+                        emailError.classList.add('hidden');
+                        emailInput.classList.remove('field-error');
+                    } else if (!emailRegex.test(emailInput.value)) {
+                        emailError.classList.remove('hidden');
+                        emailInput.classList.add('field-error');
+                    } else {
+                        emailError.classList.add('hidden');
+                        emailInput.classList.remove('field-error');
+                    }
+                });
+            }
+
+            // Mostrar/ocultar campo dinero según el producto
+            function toggleDineroField() {
+                if (productoSelect && dineroWrapper) {
+                    if (productoSelect.value === 'Préstamos personal') {
+                        dineroWrapper.style.display = 'block';
+                        dineroWrapper.style.opacity = '1';
+                    } else {
+                        dineroWrapper.style.display = 'none';
+                        dineroWrapper.style.opacity = '0';
+                    }
+                }
+            }
+
+            if (productoSelect) {
+                productoSelect.addEventListener('change', toggleDineroField);
+                toggleDineroField(); // Ejecutar al cargar
+            }
+
+            // Animación de entrada para los campos
+            const formFields = document.querySelectorAll('.space-y-2');
+            formFields.forEach((field, index) => {
+                field.style.opacity = '0';
+                field.style.transform = 'translateY(20px)';
+                field.style.transition = 'all 0.3s ease';
+                
+                setTimeout(() => {
+                    field.style.opacity = '1';
+                    field.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+        });
+    </script>
+</body>
+</html>

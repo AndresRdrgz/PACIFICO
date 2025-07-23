@@ -414,10 +414,490 @@
 
     .table-responsive {
         border-radius: var(--border-radius-sm);
+        overflow-x: auto;
+        overflow-y: hidden;
+        box-shadow: var(--shadow-sm);
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary-color) var(--border-color);
+    }
+
+    /* Custom scrollbar styling for webkit browsers */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: var(--border-color);
+        border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 4px;
+        transition: background 0.2s ease;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-hover);
+    }
+
+    /* Ensure table maintains minimum width for scrolling */
+    .apc-table {
+        min-width: 1200px; /* Minimum width to ensure all columns are visible */
+        width: 100%;
+        table-layout: fixed; /* Better column width control */
+    }
+
+    /* Column width optimization for better responsive behavior */
+    .apc-table th:nth-child(1), .apc-table td:nth-child(1) { /* Código */
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .apc-table th:nth-child(2), .apc-table td:nth-child(2) { /* Cliente */
+        width: 150px;
+        min-width: 150px;
+    }
+    
+    .apc-table th:nth-child(3), .apc-table td:nth-child(3) { /* Documento */
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .apc-table th:nth-child(4), .apc-table td:nth-child(4) { /* Estado */
+        width: 140px;
+        min-width: 140px;
+    }
+    
+    .apc-table th:nth-child(5), .apc-table td:nth-child(5) { /* Pipeline */
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .apc-table th:nth-child(6), .apc-table td:nth-child(6) { /* Solicitado por */
+        width: 180px;
+        min-width: 180px;
+    }
+    
+    .apc-table th:nth-child(7), .apc-table td:nth-child(7) { /* Fecha Solicitud */
+        width: 140px;
+        min-width: 140px;
+    }
+    
+    .apc-table th:nth-child(8), .apc-table td:nth-child(8) { /* Fecha Inicio */
+        width: 140px;
+        min-width: 140px;
+    }
+    
+    .apc-table th:nth-child(9), .apc-table td:nth-child(9) { /* Fecha Completado */
+        width: 140px;
+        min-width: 140px;
+    }
+    
+    .apc-table th:nth-child(10), .apc-table td:nth-child(10) { /* Archivo APC */
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .apc-table th:nth-child(11), .apc-table td:nth-child(11) { /* Observaciones */
+        width: 200px;
+        min-width: 200px;
+    }
+    
+    .apc-table th:nth-child(12), .apc-table td:nth-child(12) { /* Acciones */
+        width: 100px;
+        min-width: 100px;
+    }
+
+    /* Add visual indicators for horizontal scroll */
+    .table-scroll-indicator {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        background: rgba(45, 90, 45, 0.9);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        z-index: 20;
+        opacity: 0;
+        transition: all 0.3s ease;
+        pointer-events: auto;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(4px);
+    }
+
+    .table-scroll-indicator:hover {
+        background: rgba(45, 90, 45, 1);
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .table-scroll-indicator:active {
+        transform: translateY(-50%) scale(0.95);
+    }
+
+    .table-scroll-indicator.left {
+        left: 8px;
+    }
+
+    .table-scroll-indicator.right {
+        right: 8px;
+    }
+
+    .table-scroll-indicator.visible {
+        opacity: 1;
+    }
+
+    /* Add scroll hint for users */
+    .scroll-hint {
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--card-background);
+        color: var(--text-secondary);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .scroll-hint.visible {
+        opacity: 1;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-container {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        max-width: 800px;
+        width: 100%;
+        max-height: 90vh;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        animation: slideUp 0.3s ease;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px;
+        border-bottom: 1px solid var(--border-color);
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    }
+
+    .modal-title {
+        margin: 0;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.25rem;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+    }
+
+    .modal-close:hover {
+        background: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+    }
+
+    .modal-section {
+        margin-bottom: 32px;
+    }
+
+    .modal-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .section-subtitle {
+        margin: 0 0 16px 0;
+        color: var(--text-primary);
+        font-size: 1.125rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-subtitle i {
+        color: var(--primary-color);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .info-item label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .info-item span {
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    /* Timeline Styles */
+    .timeline {
+        position: relative;
+        padding-left: 32px;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 16px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-color);
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
         box-shadow: var(--shadow-sm);
     }
 
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        border: 3px solid var(--card-background);
+        box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .timeline-date {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+
+    .timeline-description {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+    }
+
+    /* File Actions */
+    .file-actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .btn-preview,
+    .btn-download {
+        background: var(--card-background);
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        padding: 12px 20px;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-preview:hover,
+    .btn-download:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-download {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: var(--primary-hover);
+    }
+
+    /* PDF Preview */
+    .pdf-preview {
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .pdf-preview iframe {
+        border: none;
+        background: white;
+    }
+
+    /* Observaciones */
+    .observaciones-content {
+        background: #f8f9fa;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        padding: 16px;
+        color: var(--text-primary);
+        line-height: 1.6;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { 
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive Modal */
+    @media (max-width: 768px) {
+        .modal-overlay {
+            padding: 10px;
+        }
+
+        .modal-container {
+            max-height: 95vh;
+        }
+
+        .modal-header {
+            padding: 16px;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .file-actions {
+            flex-direction: column;
+        }
+
+        .timeline {
+            padding-left: 24px;
+        }
+
+        .timeline-item::before {
+            left: -16px;
+        }
+    }
+
+    /* Enhanced responsive design */
     @media (max-width: 768px) {
         .apc-tracking-container {
             padding: 16px;
@@ -440,6 +920,24 @@
         .apc-table td {
             padding: 12px 8px;
             font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        /* Ensure table container shows scroll indicators on mobile */
+        .apc-table-container {
+            position: relative;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .apc-table th,
+        .apc-table td {
+            padding: 8px 6px;
+            font-size: 0.75rem;
+        }
+
+        .apc-table {
+            min-width: 1000px; /* Slightly smaller minimum width for very small screens */
         }
     }
 </style>
@@ -528,7 +1026,15 @@
             <span>Cargando datos...</span>
         </div>
         
-        <div id="tableContainer" class="table-responsive">
+        <div id="tableContainer" class="table-responsive" style="position: relative;">
+            <!-- Scroll indicators -->
+            <div class="table-scroll-indicator left" id="scrollLeftIndicator">
+                <i class="fas fa-chevron-left"></i>
+            </div>
+            <div class="table-scroll-indicator right" id="scrollRightIndicator">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+            
             <table class="apc-table">
                 <thead>
                     <tr>
@@ -541,6 +1047,7 @@
                         <th>Fecha Solicitud</th>
                         <th>Fecha Inicio</th>
                         <th>Fecha Completado</th>
+                        <th>Archivo APC</th>
                         <th>Observaciones</th>
                         <th>Acciones</th>
                     </tr>
@@ -549,11 +1056,110 @@
                     <!-- Data will be loaded here -->
                 </tbody>
             </table>
+            
+            <!-- Scroll hint -->
+            <div class="scroll-hint" id="scrollHint">
+                <i class="fas fa-arrows-alt-h"></i> Desliza para ver más columnas
+            </div>
         </div>
         
         <div id="noDataMessage" class="no-data" style="display: none;">
             <i class="fas fa-inbox"></i>
             <p>No se encontraron solicitudes APC con los filtros aplicados</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles de APC -->
+<div id="apcDetailModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="fas fa-file-alt"></i> Detalles APC
+            </h3>
+            <button class="modal-close" onclick="closeApcModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div id="modalLoading" class="modal-loading">
+                <div class="spinner"></div>
+                <span>Cargando detalles...</span>
+            </div>
+            
+            <div id="modalContent" style="display: none;">
+                <!-- Información básica -->
+                <div class="modal-section">
+                    <h4 class="section-subtitle">
+                        <i class="fas fa-info-circle"></i> Información General
+                    </h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Código:</label>
+                            <span id="modalCodigo"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Cliente:</label>
+                            <span id="modalCliente"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Documento:</label>
+                            <span id="modalDocumento"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Pipeline:</label>
+                            <span id="modalPipeline"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Solicitado por:</label>
+                            <span id="modalSolicitadoPor"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Estado:</label>
+                            <span id="modalEstado"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline de eventos -->
+                <div class="modal-section">
+                    <h4 class="section-subtitle">
+                        <i class="fas fa-history"></i> Timeline de Eventos
+                    </h4>
+                    <div class="timeline" id="modalTimeline">
+                        <!-- Timeline items will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Archivo APC -->
+                <div class="modal-section" id="modalArchivoSection" style="display: none;">
+                    <h4 class="section-subtitle">
+                        <i class="fas fa-file-pdf"></i> Archivo APC
+                    </h4>
+                    <div class="file-actions">
+                        <button class="btn-preview" onclick="previewApcFile()">
+                            <i class="fas fa-eye"></i> Vista Previa
+                        </button>
+                        <button class="btn-download" onclick="downloadApcFile()">
+                            <i class="fas fa-download"></i> Descargar
+                        </button>
+                    </div>
+                    <div id="pdfPreview" class="pdf-preview" style="display: none;">
+                        <iframe id="pdfViewer" src="" width="100%" height="500px"></iframe>
+                    </div>
+                </div>
+                
+                <!-- Observaciones -->
+                <div class="modal-section" id="modalObservacionesSection" style="display: none;">
+                    <h4 class="section-subtitle">
+                        <i class="fas fa-comment"></i> Observaciones
+                    </h4>
+                    <div class="observaciones-content" id="modalObservaciones">
+                        <!-- Observaciones will be loaded here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -682,14 +1288,21 @@ function renderTable(solicitudes) {
             <td>${solicitud.apc_fecha_inicio || '-'}</td>
             <td>${solicitud.apc_fecha_completado || '-'}</td>
             <td>
+                ${solicitud.apc_archivo_disponible ? 
+                    `<a href="${solicitud.apc_archivo_url}" class="btn-action" target="_blank" title="Descargar APC">
+                        <i class="fas fa-download"></i> Descargar
+                    </a>` 
+                    : '<span class="text-muted">No disponible</span>'}
+            </td>
+            <td>
                 ${solicitud.apc_observaciones ? 
                     `<span title="${solicitud.apc_observaciones}">${solicitud.apc_observaciones.substring(0, 50)}${solicitud.apc_observaciones.length > 50 ? '...' : ''}</span>` 
                     : '-'}
             </td>
             <td>
-                <a href="${solicitud.url_detail}" class="btn-action" title="Ver detalles">
+                <button class="btn-action" onclick="openApcModal('${solicitud.codigo}')" title="Ver detalles">
                     <i class="fas fa-eye"></i> Ver
-                </a>
+                </button>
             </td>
         `;
         
@@ -785,5 +1398,349 @@ function showError(message) {
 setInterval(() => {
     refreshData();
 }, 30000);
+
+// Horizontal scroll functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const tableContainer = document.getElementById('tableContainer');
+    const scrollLeftIndicator = document.getElementById('scrollLeftIndicator');
+    const scrollRightIndicator = document.getElementById('scrollRightIndicator');
+    const scrollHint = document.getElementById('scrollHint');
+    
+    if (tableContainer && scrollLeftIndicator && scrollRightIndicator) {
+        let scrollHintTimeout;
+        
+        // Function to update scroll indicators
+        function updateScrollIndicators() {
+            const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
+            
+            // Show/hide left indicator
+            if (scrollLeft > 0) {
+                scrollLeftIndicator.classList.add('visible');
+            } else {
+                scrollLeftIndicator.classList.remove('visible');
+            }
+            
+            // Show/hide right indicator
+            if (scrollLeft < scrollWidth - clientWidth - 1) {
+                scrollRightIndicator.classList.add('visible');
+            } else {
+                scrollRightIndicator.classList.remove('visible');
+            }
+            
+            // Show scroll hint if table is scrollable and user hasn't scrolled yet
+            if (scrollWidth > clientWidth && scrollLeft === 0 && scrollHint) {
+                clearTimeout(scrollHintTimeout);
+                scrollHintTimeout = setTimeout(() => {
+                    scrollHint.classList.add('visible');
+                    setTimeout(() => {
+                        scrollHint.classList.remove('visible');
+                    }, 3000);
+                }, 1000);
+            }
+        }
+        
+        // Add scroll event listener
+        tableContainer.addEventListener('scroll', function() {
+            updateScrollIndicators();
+            
+            // Hide scroll hint when user starts scrolling
+            if (scrollHint) {
+                scrollHint.classList.remove('visible');
+            }
+        });
+        
+        // Add click handlers for scroll indicators
+        scrollLeftIndicator.addEventListener('click', function() {
+            tableContainer.scrollBy({
+                left: -300,
+                behavior: 'smooth'
+            });
+        });
+        
+        scrollRightIndicator.addEventListener('click', function() {
+            tableContainer.scrollBy({
+                left: 300,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Add keyboard navigation support
+        tableContainer.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                tableContainer.scrollBy({
+                    left: -100,
+                    behavior: 'smooth'
+                });
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                tableContainer.scrollBy({
+                    left: 100,
+                    behavior: 'smooth'
+                });
+            }
+        });
+        
+        // Make table container focusable for keyboard navigation
+        tableContainer.setAttribute('tabindex', '0');
+        
+        // Initial check for scroll indicators
+        updateScrollIndicators();
+        
+        // Update indicators when window resizes
+        window.addEventListener('resize', updateScrollIndicators);
+        
+        // Update indicators when data is loaded
+        const originalRenderTable = window.renderTable;
+        window.renderTable = function(solicitudes) {
+            if (originalRenderTable) {
+                originalRenderTable(solicitudes);
+            }
+            // Update scroll indicators after table is rendered
+            setTimeout(updateScrollIndicators, 100);
+        };
+    }
+});
+
+// Modal functionality
+let currentModalData = null;
+
+// Function to open APC modal
+async function openApcModal(codigo) {
+    const modal = document.getElementById('apcDetailModal');
+    const modalLoading = document.getElementById('modalLoading');
+    const modalContent = document.getElementById('modalContent');
+    
+    // Show modal and loading
+    modal.style.display = 'flex';
+    modalLoading.style.display = 'flex';
+    modalContent.style.display = 'none';
+    
+    try {
+        // Find the solicitud data from current data
+        const solicitud = currentData.find(s => s.codigo === codigo);
+        if (!solicitud) {
+            throw new Error('Solicitud no encontrada');
+        }
+        
+        // Load detailed data from API
+        const response = await fetch(`/workflow/api/apc/detail/${codigo}/`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentModalData = data.solicitud;
+            populateModal(data.solicitud);
+        } else {
+            throw new Error(data.error || 'Error al cargar los detalles');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error al cargar los detalles: ' + error.message);
+        closeApcModal();
+    }
+}
+
+// Function to populate modal with data
+function populateModal(solicitud) {
+    const modalLoading = document.getElementById('modalLoading');
+    const modalContent = document.getElementById('modalContent');
+    
+    // Hide loading, show content
+    modalLoading.style.display = 'none';
+    modalContent.style.display = 'block';
+    
+    // Populate basic information
+    document.getElementById('modalCodigo').textContent = solicitud.codigo;
+    document.getElementById('modalCliente').textContent = solicitud.cliente_nombre || 'Sin cliente';
+    document.getElementById('modalDocumento').textContent = `${solicitud.apc_tipo_documento} - ${solicitud.apc_no_cedula}`;
+    document.getElementById('modalPipeline').textContent = solicitud.pipeline;
+    document.getElementById('modalSolicitadoPor').textContent = `${solicitud.creada_por} (${solicitud.creada_por_email})`;
+    
+    // Populate status with badge
+    const statusElement = document.getElementById('modalEstado');
+    statusElement.innerHTML = `
+        <span class="status-badge status-${solicitud.apc_status}">
+            ${getStatusIcon(solicitud.apc_status)} ${solicitud.apc_status_display}
+        </span>
+    `;
+    
+    // Populate timeline
+    populateTimeline(solicitud);
+    
+    // Show/hide file section
+    const archivoSection = document.getElementById('modalArchivoSection');
+    if (solicitud.apc_archivo_disponible) {
+        archivoSection.style.display = 'block';
+    } else {
+        archivoSection.style.display = 'none';
+    }
+    
+    // Show/hide observaciones section
+    const observacionesSection = document.getElementById('modalObservacionesSection');
+    if (solicitud.apc_observaciones) {
+        observacionesSection.style.display = 'block';
+        document.getElementById('modalObservaciones').textContent = solicitud.apc_observaciones;
+    } else {
+        observacionesSection.style.display = 'none';
+    }
+}
+
+// Function to populate timeline
+function populateTimeline(solicitud) {
+    const timeline = document.getElementById('modalTimeline');
+    const events = [];
+    
+    // Add creation event
+    if (solicitud.fecha_creacion) {
+        events.push({
+            title: 'Solicitud Creada',
+            date: solicitud.fecha_creacion,
+            description: `Solicitud creada por ${solicitud.creada_por}`,
+            icon: 'fas fa-plus-circle'
+        });
+    }
+    
+    // Add APC request event
+    if (solicitud.apc_fecha_solicitud) {
+        events.push({
+            title: 'APC Solicitado',
+            date: solicitud.apc_fecha_solicitud,
+            description: 'Solicitud de APC enviada a Makito RPA',
+            icon: 'fas fa-paper-plane'
+        });
+    }
+    
+    // Add processing start event
+    if (solicitud.apc_fecha_inicio) {
+        events.push({
+            title: 'Procesamiento Iniciado',
+            date: solicitud.apc_fecha_inicio,
+            description: 'Makito RPA inició el procesamiento del APC',
+            icon: 'fas fa-cog'
+        });
+    }
+    
+    // Add completion event
+    if (solicitud.apc_fecha_completado) {
+        events.push({
+            title: 'APC Completado',
+            date: solicitud.apc_fecha_completado,
+            description: 'Proceso de APC completado exitosamente',
+            icon: 'fas fa-check-circle'
+        });
+    }
+    
+    // Sort events by date
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Render timeline
+    timeline.innerHTML = events.map(event => `
+        <div class="timeline-item">
+            <div class="timeline-header">
+                <h5 class="timeline-title">
+                    <i class="${event.icon}"></i> ${event.title}
+                </h5>
+                <span class="timeline-date">${formatDate(event.date)}</span>
+            </div>
+            <p class="timeline-description">${event.description}</p>
+        </div>
+    `).join('');
+    
+    if (events.length === 0) {
+        timeline.innerHTML = `
+            <div class="timeline-item">
+                <div class="timeline-header">
+                    <h5 class="timeline-title">
+                        <i class="fas fa-info-circle"></i> Sin eventos registrados
+                    </h5>
+                </div>
+                <p class="timeline-description">No hay eventos registrados para esta solicitud.</p>
+            </div>
+        `;
+    }
+}
+
+// Function to format date
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Function to close modal
+function closeApcModal() {
+    const modal = document.getElementById('apcDetailModal');
+    modal.style.display = 'none';
+    currentModalData = null;
+    
+    // Hide PDF preview
+    const pdfPreview = document.getElementById('pdfPreview');
+    pdfPreview.style.display = 'none';
+}
+
+// Function to preview APC file
+function previewApcFile() {
+    if (!currentModalData || !currentModalData.apc_archivo_disponible) {
+        showError('Archivo APC no disponible');
+        return;
+    }
+    
+    const pdfPreview = document.getElementById('pdfPreview');
+    const pdfViewer = document.getElementById('pdfViewer');
+    
+    pdfViewer.src = currentModalData.apc_archivo_url;
+    pdfPreview.style.display = 'block';
+    
+    // Scroll to PDF preview
+    pdfPreview.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Function to download APC file
+function downloadApcFile() {
+    if (!currentModalData || !currentModalData.apc_archivo_disponible) {
+        showError('Archivo APC no disponible');
+        return;
+    }
+    
+    // Create a temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = currentModalData.apc_archivo_url;
+    link.download = `APC_${currentModalData.codigo}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('apcDetailModal');
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeApcModal();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            closeApcModal();
+        }
+    });
+});
 </script>
 {% endblock %}
