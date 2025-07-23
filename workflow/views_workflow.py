@@ -3439,8 +3439,12 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
     Función para enviar correo automático cuando se solicita descargar APC con Makito.
     """
     try:
-        # Destinatario específico para APC
-        destinatarios = ["arodriguez@fpacifico.com"]
+        # Destinatarios específicos para APC
+        destinatarios = [
+            "makito@fpacifico.com",
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
         
         # Obtener nombre del cliente usando las propiedades del modelo
         cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
