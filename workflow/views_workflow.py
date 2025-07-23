@@ -42,6 +42,25 @@ from django.forms.models import model_to_dict
 from functools import wraps
 
 # ==========================================
+# UTILITY FUNCTIONS
+# ==========================================
+
+def get_site_url(request=None):
+    """
+    Dynamically detect the site URL based on the request object.
+    Falls back to settings.SITE_URL if request is not available.
+    """
+    if request:
+        # Build URL from request
+        scheme = 'https' if request.is_secure() else 'http'
+        host = request.get_host()
+        return f"{scheme}://{host}"
+    else:
+        # Fallback to settings with environment-aware default
+        default_url = 'https://cotfid.fpacifico.com' if not getattr(settings, 'DEBUG', True) else 'http://localhost:8000'
+        return getattr(settings, 'SITE_URL', default_url)
+
+# ==========================================
 # DECORADORES PERSONALIZADOS
 # ==========================================
 
@@ -840,7 +859,7 @@ def nueva_solicitud(request):
             
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
-                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento)
+                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2897,7 +2916,7 @@ def notify_solicitud_change(solicitud, change_type, user=None):
     except Exception as e:
         print(f"Error notificando cambio: {e}")
 
-def enviar_correo_bandeja_grupal(solicitud, etapa):
+def enviar_correo_bandeja_grupal(solicitud, etapa, request=None):
     """
     Función para enviar correo automático cuando una solicitud entra a una etapa de bandeja grupal.
     Basada en la implementación de correos de la app tómbola.
@@ -2909,9 +2928,9 @@ def enviar_correo_bandeja_grupal(solicitud, etapa):
             "arodriguez@fpacifico.com"
         ]
         
-        # Construir la URL de la bandeja
-        # Formato: /workflow/bandejas/?etapa_id=3
-        bandeja_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/bandejas/?etapa_id={etapa.id}"
+        # Construir la URL de la bandeja usando la función dinámica
+        base_url = get_site_url(request)
+        bandeja_url = f"{base_url}/workflow/bandejas/?etapa_id={etapa.id}"
         
         # Obtener nombre del cliente
         cliente_nombre = ""
@@ -3001,7 +3020,7 @@ def enviar_correo_bandeja_grupal(solicitud, etapa):
         print(f"❌ Error al enviar correo para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
+def enviar_correo_solicitud_asignada(solicitud, usuario_asignado, request=None):
     """
     Función para enviar correo automático cuando una solicitud es asignada a un usuario.
     Notifica al creador de la solicitud que su solicitud ha sido tomada.
@@ -3025,8 +3044,9 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
             print(f"⚠️ Error obteniendo nombre del cliente: {e}")
             cliente_nombre = "Error al obtener cliente"
         
-        # Construir la URL de la solicitud
-        solicitud_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/solicitud/{solicitud.id}/"
+        # Construir la URL de la solicitud usando la función dinámica
+        base_url = get_site_url(request)
+        solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
         
         # Contexto para el template
         context = {
@@ -3103,7 +3123,7 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado):
         print(f"❌ Error al enviar correo de asignación para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etapa, comentarios_analista, bullet_points, analisis_general, usuario_que_cambio):
+def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etapa, comentarios_analista, bullet_points, analisis_general, usuario_que_cambio, request=None):
     """
     Función para enviar correo automático al propietario de la solicitud cuando cambia de etapa.
     Incluye análisis general, comentarios del analista y bullet points estructurados.
@@ -3127,8 +3147,9 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
             print(f"⚠️ Error obteniendo nombre del cliente: {e}")
             cliente_nombre = "Error al obtener cliente"
         
-        # Construir la URL de la solicitud
-        solicitud_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/solicitud/{solicitud.id}/"
+        # Construir la URL de la solicitud usando la función dinámica
+        base_url = get_site_url(request)
+        solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
         
         # Preparar análisis general para el correo
         analisis_html = ""
@@ -3297,7 +3318,7 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         print(f"❌ Error al enviar correo de cambio de etapa para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_comite_credito(solicitud, etapa):
+def enviar_correo_comite_credito(solicitud, etapa, request=None):
     """
     Función para enviar correo automático cuando una solicitud entra a la etapa del Comité de Crédito.
     """
@@ -3308,8 +3329,9 @@ def enviar_correo_comite_credito(solicitud, etapa):
             "arodriguez@fpacifico.com"
         ]
         
-        # Construir la URL específica de la bandeja del comité
-        bandeja_url = f"{getattr(settings, 'SITE_URL', 'https://pacifico.com')}/workflow/comite/"
+        # Construir la URL específica de la bandeja del comité usando la función dinámica
+        base_url = get_site_url(request)
+        bandeja_url = f"{base_url}/workflow/comite/"
         
         # Obtener nombre del cliente usando las propiedades del modelo
         cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
@@ -3412,7 +3434,7 @@ def enviar_correo_comite_credito(solicitud, etapa):
         print(f"❌ Error al enviar correo del comité para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
+def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None):
     """
     Función para enviar correo automático cuando se solicita descargar APC con Makito.
     """
@@ -3430,10 +3452,7 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento):
         subject = f"workflowAPC - {cliente_nombre} - {no_cedula}"
         
         # Obtener la URL base dinámicamente
-        from django.conf import settings
-        
-        # Use SITE_URL from settings directly instead of Sites framework
-        base_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8002')
+        base_url = get_site_url(request)
         print(f"🔍 DEBUG: Base URL: {base_url}")
         
         # Mensaje de texto plano
@@ -3699,11 +3718,11 @@ def api_cambiar_etapa(request, solicitud_id):
         # Enviar correo específico del comité si la nueva etapa es "Comité de Crédito"
         if nueva_etapa.nombre.lower() == "comité de crédito":
             print(f"📧 ACTIVANDO envío de correo del comité para solicitud {solicitud.codigo}")
-            enviar_correo_comite_credito(solicitud, nueva_etapa)
+            enviar_correo_comite_credito(solicitud, nueva_etapa, request)
         elif nueva_etapa.es_bandeja_grupal:
             # Solo enviar correo de bandeja grupal para etapas que NO sean el comité
             print(f"📧 ACTIVANDO envío de correo de bandeja grupal para solicitud {solicitud.codigo} en etapa {nueva_etapa.nombre}")
-            enviar_correo_bandeja_grupal(solicitud, nueva_etapa)
+            enviar_correo_bandeja_grupal(solicitud, nueva_etapa, request)
         else:
             print(f"ℹ️ No se envía correo - la etapa {nueva_etapa.nombre} no es bandeja grupal")
         
@@ -3765,7 +3784,8 @@ def api_cambiar_etapa(request, solicitud_id):
                 comentarios_analista, 
                 bullet_points,
                 analisis_general,
-                request.user
+                request.user,
+                request
             )
         except Exception as e:
             print(f"⚠️ Error al enviar correo al propietario: {e}")
@@ -4273,7 +4293,7 @@ def api_tomar_solicitud(request, solicitud_id):
         
         # 📧 NUEVO: Enviar correo de notificación al creador de la solicitud
         print(f"📧 ACTIVANDO envío de correo de asignación para solicitud {solicitud.codigo}")
-        enviar_correo_solicitud_asignada(solicitud, request.user)
+        enviar_correo_solicitud_asignada(solicitud, request.user, request)
         
         return JsonResponse({
             'success': True,
@@ -4595,7 +4615,7 @@ def test_envio_correo_bandeja(request):
                 etapa = solicitud.etapa_actual
                 
                 if etapa and etapa.es_bandeja_grupal:
-                    enviar_correo_bandeja_grupal(solicitud, etapa)
+                    enviar_correo_bandeja_grupal(solicitud, etapa, request)
                     return JsonResponse({
                         'success': True,
                         'message': f'Correo enviado para solicitud {solicitud.codigo}'
@@ -4637,7 +4657,7 @@ def test_envio_correo_asignacion(request):
                 solicitud = Solicitud.objects.get(id=solicitud_id)
                 
                 if solicitud.asignada_a:
-                    enviar_correo_solicitud_asignada(solicitud, solicitud.asignada_a)
+                    enviar_correo_solicitud_asignada(solicitud, solicitud.asignada_a, request)
                     return JsonResponse({
                         'success': True,
                         'message': f'Correo de asignación enviado para solicitud {solicitud.codigo}'
@@ -4716,7 +4736,8 @@ def test_envio_correo_cambio_etapa(request):
             comentarios_analista, 
             bullet_points,
             analisis_general,
-            request.user
+            request.user,
+            request
         )
         
         return JsonResponse({

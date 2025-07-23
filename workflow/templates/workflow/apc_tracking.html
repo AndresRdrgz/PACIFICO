@@ -246,6 +246,30 @@
     .filter-group input:hover {
         border-color: var(--primary-color);
     }
+
+    /* Quick Search Styles */
+    .search-container input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+    }
+
+    .search-container input:hover {
+        border-color: var(--primary-color);
+    }
+
+    #clearSearch:hover {
+        background: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    /* Search Results Highlighting */
+    .search-highlight {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
     
     .no-data {
         text-align: center;
@@ -927,6 +951,17 @@
         .apc-table-container {
             position: relative;
         }
+
+        /* Search bar responsive */
+        .search-container {
+            min-width: 100% !important;
+            margin-top: 10px;
+        }
+
+        .apc-table-container > div:first-child {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
     }
 
     @media (max-width: 480px) {
@@ -980,6 +1015,10 @@
             <div class="stat-number" id="completedCount">-</div>
             <div class="stat-label">Completados</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-number" id="avgTimeCount">-</div>
+            <div class="stat-label">Tiempo Promedio de Descarga</div>
+        </div>
     </div>
     
     <!-- Filtros -->
@@ -1017,9 +1056,29 @@
     
     <!-- Tabla de solicitudes -->
     <div class="apc-table-container">
-        <h4 class="section-title">
-            <i class="fas fa-list"></i> Solicitudes APC
-        </h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+            <h4 class="section-title" style="margin: 0;">
+                <i class="fas fa-list"></i> Solicitudes APC
+            </h4>
+            <div class="search-container" style="position: relative; min-width: 300px;">
+                <input 
+                    type="text" 
+                    id="quickSearch" 
+                    placeholder="Buscar por código, cliente, documento, pipeline..."
+                    style="width: 100%; padding: 12px 16px 12px 45px; border: 2px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.875rem; transition: all 0.2s ease; background: var(--card-background); color: var(--text-primary);"
+                    oninput="handleQuickSearch()"
+                >
+                <i class="fas fa-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+                <button 
+                    id="clearSearch" 
+                    onclick="handleClearSearch()"
+                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease; display: none;"
+                    title="Limpiar búsqueda"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
         
         <div id="loadingIndicator" class="loading" style="display: none;">
             <div class="spinner"></div>
@@ -1202,8 +1261,16 @@ async function loadApcData() {
         
         if (data.success) {
             currentData = data.solicitudes;
-            updateStats(data.solicitudes);
-            renderTable(data.solicitudes);
+            allData = data.solicitudes; // Store all data for client-side filtering
+            
+            // Apply quick search if active
+            const searchTerm = document.getElementById('quickSearch').value.toLowerCase().trim();
+            if (searchTerm) {
+                filterAndRenderData(searchTerm);
+            } else {
+                updateStats(data.solicitudes);
+                renderTable(data.solicitudes);
+            }
         } else {
             console.error('Error al cargar datos:', data.error);
             showError('Error al cargar los datos: ' + data.error);
@@ -1239,14 +1306,108 @@ function updateStats(solicitudes) {
     const inProgress = solicitudes.filter(s => s.apc_status === 'in_progress').length;
     const completed = solicitudes.filter(s => s.apc_status === 'completed').length;
     
+    // Calcular tiempo promedio de descarga SOLO para solicitudes completadas
+    const completedSolicitudes = solicitudes.filter(s => {
+        const isCompleted = s.apc_status === 'completed';
+        const hasSolicitudDate = s.apc_fecha_solicitud && s.apc_fecha_solicitud !== '-' && s.apc_fecha_solicitud !== null;
+        const hasCompletedDate = s.apc_fecha_completado && s.apc_fecha_completado !== '-' && s.apc_fecha_completado !== null;
+        
+        // Log for debugging
+        if (!isCompleted) {
+            console.log(`Excluding solicitud ${s.codigo}: status is ${s.apc_status}, not completed`);
+        }
+        
+        return isCompleted && hasSolicitudDate && hasCompletedDate;
+    });
+    
+    let avgTime = '-';
+    console.log(`Total solicitudes: ${solicitudes.length}`);
+    console.log(`Completed solicitudes with valid dates: ${completedSolicitudes.length}`);
+    
+    if (completedSolicitudes.length > 0) {
+        console.log('Processing completed solicitudes for average time calculation:');
+        completedSolicitudes.forEach(s => {
+            console.log(`- ${s.codigo}: ${s.apc_status} | ${s.apc_fecha_solicitud} -> ${s.apc_fecha_completado}`);
+        });
+        
+        let validCalculations = 0;
+        const totalMinutes = completedSolicitudes.reduce((sum, s) => {
+            try {
+                // Parse dates - handle different formats
+                const inicio = new Date(s.apc_fecha_solicitud);
+                const fin = new Date(s.apc_fecha_completado);
+                
+                // Validate dates
+                if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+                    console.warn('Invalid dates for solicitud:', s.codigo, s.apc_fecha_solicitud, s.apc_fecha_completado);
+                    return sum;
+                }
+                
+                // Check if end date is after start date
+                if (fin <= inicio) {
+                    console.warn('End date before start date for solicitud:', s.codigo);
+                    return sum;
+                }
+                
+                const diffMinutes = (fin - inicio) / (1000 * 60); // Diferencia en minutos
+                
+                // Validate the calculation result
+                if (isNaN(diffMinutes) || diffMinutes < 0) {
+                    console.warn('Invalid time difference for solicitud:', s.codigo, diffMinutes);
+                    return sum;
+                }
+                
+                validCalculations++;
+                console.log(`Solicitud ${s.codigo}: ${diffMinutes} minutes`);
+                return sum + diffMinutes;
+            } catch (error) {
+                console.error('Error calculating time for solicitud:', s.codigo, error);
+                return sum;
+            }
+        }, 0);
+        
+        if (validCalculations > 0) {
+            const avgMinutes = totalMinutes / validCalculations;
+            console.log('Average minutes:', avgMinutes, 'from', validCalculations, 'valid calculations');
+            
+            // Validate final average
+            if (!isNaN(avgMinutes) && avgMinutes > 0) {
+                // Formatear el tiempo promedio
+                if (avgMinutes < 60) {
+                    avgTime = `${Math.round(avgMinutes)}m`;
+                } else if (avgMinutes < 1440) { // Menos de 24 horas
+                    const hours = Math.floor(avgMinutes / 60);
+                    const minutes = Math.round(avgMinutes % 60);
+                    avgTime = `${hours}h ${minutes > 0 ? ' ' + minutes + 'm' : ''}`;
+                } else { // Más de 24 horas
+                    const days = Math.floor(avgMinutes / 1440);
+                    const hours = Math.floor((avgMinutes % 1440) / 60);
+                    avgTime = `${days}d ${hours > 0 ? ' ' + hours + 'h' : ''}`;
+                }
+            } else {
+                console.warn('Invalid average minutes:', avgMinutes);
+                avgTime = 'N/A';
+            }
+        } else {
+            console.warn('No valid calculations available - no completed solicitudes with valid dates');
+            avgTime = 'N/A';
+        }
+    } else {
+        console.log('No completed solicitudes found for average time calculation');
+        avgTime = '-';
+    }
+    
+    console.log('Final avgTime:', avgTime);
+    
     document.getElementById('totalCount').textContent = total;
     document.getElementById('pendingCount').textContent = pending;
     document.getElementById('inProgressCount').textContent = inProgress;
     document.getElementById('completedCount').textContent = completed;
+    document.getElementById('avgTimeCount').textContent = avgTime;
 }
 
 // Función para renderizar la tabla
-function renderTable(solicitudes) {
+function renderTable(solicitudes, searchTerm = '') {
     const tbody = document.getElementById('apcTableBody');
     const tableContainer = document.getElementById('tableContainer');
     const noDataMessage = document.getElementById('noDataMessage');
@@ -1254,6 +1415,18 @@ function renderTable(solicitudes) {
     if (solicitudes.length === 0) {
         tableContainer.style.display = 'none';
         noDataMessage.style.display = 'block';
+        
+        // Update no data message based on search
+        const noDataIcon = noDataMessage.querySelector('i');
+        const noDataText = noDataMessage.querySelector('p');
+        
+        if (searchTerm) {
+            noDataIcon.className = 'fas fa-search';
+            noDataText.textContent = `No se encontraron solicitudes que coincidan con "${searchTerm}"`;
+        } else {
+            noDataIcon.className = 'fas fa-inbox';
+            noDataText.textContent = 'No se encontraron solicitudes APC con los filtros aplicados';
+        }
         return;
     }
     
@@ -1265,24 +1438,36 @@ function renderTable(solicitudes) {
     solicitudes.forEach(solicitud => {
         const row = document.createElement('tr');
         
+        // Apply highlighting if search term exists
+        const highlightedCodigo = highlightSearchTerm(solicitud.codigo, searchTerm);
+        const highlightedCliente = highlightSearchTerm(solicitud.cliente_nombre || 'Sin cliente', searchTerm);
+        const highlightedTipoDoc = highlightSearchTerm(solicitud.apc_tipo_documento, searchTerm);
+        const highlightedCedula = highlightSearchTerm(solicitud.apc_no_cedula, searchTerm);
+        const highlightedPipeline = highlightSearchTerm(solicitud.pipeline, searchTerm);
+        const highlightedCreadaPor = highlightSearchTerm(solicitud.creada_por, searchTerm);
+        const highlightedEmail = highlightSearchTerm(solicitud.creada_por_email, searchTerm);
+        const highlightedStatus = highlightSearchTerm(solicitud.apc_status_display, searchTerm);
+        const highlightedObservaciones = solicitud.apc_observaciones ? 
+            highlightSearchTerm(solicitud.apc_observaciones.substring(0, 50) + (solicitud.apc_observaciones.length > 50 ? '...' : ''), searchTerm) : '-';
+        
         row.innerHTML = `
             <td>
-                <strong>${solicitud.codigo}</strong>
+                <strong>${highlightedCodigo}</strong>
             </td>
-            <td>${solicitud.cliente_nombre || 'Sin cliente'}</td>
+            <td>${highlightedCliente}</td>
             <td>
-                ${solicitud.apc_tipo_documento} <br>
-                <small class="text-muted">${solicitud.apc_no_cedula}</small>
+                ${highlightedTipoDoc} <br>
+                <small class="text-muted">${highlightedCedula}</small>
             </td>
             <td>
                 <span class="status-badge status-${solicitud.apc_status}">
-                    ${getStatusIcon(solicitud.apc_status)} ${solicitud.apc_status_display}
+                    ${getStatusIcon(solicitud.apc_status)} ${highlightedStatus}
                 </span>
             </td>
-            <td>${solicitud.pipeline}</td>
+            <td>${highlightedPipeline}</td>
             <td>
-                ${solicitud.creada_por}<br>
-                <small class="text-muted">${solicitud.creada_por_email}</small>
+                ${highlightedCreadaPor}<br>
+                <small class="text-muted">${highlightedEmail}</small>
             </td>
             <td>${solicitud.apc_fecha_solicitud || '-'}</td>
             <td>${solicitud.apc_fecha_inicio || '-'}</td>
@@ -1296,7 +1481,7 @@ function renderTable(solicitudes) {
             </td>
             <td>
                 ${solicitud.apc_observaciones ? 
-                    `<span title="${solicitud.apc_observaciones}">${solicitud.apc_observaciones.substring(0, 50)}${solicitud.apc_observaciones.length > 50 ? '...' : ''}</span>` 
+                    `<span title="${solicitud.apc_observaciones}">${highlightedObservaciones}</span>` 
                     : '-'}
             </td>
             <td>
@@ -1331,8 +1516,76 @@ function clearFilters() {
     document.getElementById('statusFilter').value = '';
     document.getElementById('fechaDesde').value = '';
     document.getElementById('fechaHasta').value = '';
+    // Clear search as well
+    document.getElementById('quickSearch').value = '';
+    document.getElementById('clearSearch').style.display = 'none';
     loadApcData();
 }
+
+// Quick Search Functionality
+let searchTimeout;
+let allData = []; // Store all data for client-side filtering
+
+const handleQuickSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const searchTerm = document.getElementById('quickSearch').value.toLowerCase().trim();
+        const clearButton = document.getElementById('clearSearch');
+        
+        // Show/hide clear button
+        if (searchTerm) {
+            clearButton.style.display = 'block';
+        } else {
+            clearButton.style.display = 'none';
+        }
+        
+        // Filter data client-side for instant results
+        filterAndRenderData(searchTerm);
+    }, 300); // Debounce for 300ms
+};
+
+const handleClearSearch = () => {
+    document.getElementById('quickSearch').value = '';
+    document.getElementById('clearSearch').style.display = 'none';
+    filterAndRenderData('');
+};
+
+const filterAndRenderData = (searchTerm) => {
+    let filteredData = allData;
+    
+    if (searchTerm) {
+        filteredData = allData.filter(solicitud => {
+            const searchFields = [
+                solicitud.codigo || '',
+                solicitud.cliente_nombre || '',
+                solicitud.apc_tipo_documento || '',
+                solicitud.apc_no_cedula || '',
+                solicitud.pipeline || '',
+                solicitud.creada_por || '',
+                solicitud.creada_por_email || '',
+                solicitud.apc_status_display || '',
+                solicitud.apc_observaciones || ''
+            ];
+            
+            return searchFields.some(field => 
+                field.toLowerCase().includes(searchTerm)
+            );
+        });
+    }
+    
+    // Update stats with filtered data
+    updateStats(filteredData);
+    
+    // Render filtered table with highlighting
+    renderTable(filteredData, searchTerm);
+};
+
+const highlightSearchTerm = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+};
 
 // Función para refrescar datos
 function refreshData() {

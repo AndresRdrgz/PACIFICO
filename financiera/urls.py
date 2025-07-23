@@ -2,10 +2,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
 from pacifico.ViewsLogin import (
     LoginView, LogoutView, custom_password_reset_view, CustomPasswordResetDoneView,
     CustomPasswordResetConfirmView, CustomPasswordResetCompleteView, login_view
 )
+
+# Import test views for error page testing (only in DEBUG mode)
+if settings.DEBUG:
+    from financiera.test_views import test_error_pages
 
 urlpatterns = [
     # Custom authentication URLs with custom templates
@@ -26,7 +31,24 @@ urlpatterns = [
     path('proyectos/', include('proyectos.urls', namespace='proyectos')),  # Include the proyectos app's URLs
 ]
 
-# Serve static files during development
+# Add test URL for error pages (only in DEBUG mode)
 if settings.DEBUG:
+    urlpatterns += [
+        path('test-errors/', test_error_pages, name='test_error_pages'),
+    ]
+
+# Serve static and media files
+# In development, Django serves these automatically
+# In production, we need to explicitly configure media file serving
+if settings.DEBUG:
+    # Development: serve both static and media files
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Production: only serve media files (static files should be served by web server)
+    # Static files in production should be served by nginx/apache, not Django
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error handlers
+handler404 = 'financiera.views.custom_404_view'
+handler500 = 'financiera.views.custom_500_view'

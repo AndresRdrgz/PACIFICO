@@ -11,13 +11,13 @@ STATIC_URL = '/static/'
 # SECURITY WARNING: don't run with debug turned on in production!
 
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
      DATABASES = {
-        'default': dj_database_url.config(
-            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -84,8 +84,23 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # and renames the files with unique names for each version to support long-term caching
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Media files configuration (user uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Ensure media directory exists
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
+# Media file security settings for production
+if not DEBUG:
+    # In production, consider additional security for media files
+    # Maximum file size for uploads (50MB)
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    
+    # File upload permissions
+    FILE_UPLOAD_PERMISSIONS = 0o644
+    FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
@@ -244,7 +259,9 @@ ROOT_URLCONF = "financiera.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            os.path.join(BASE_DIR, 'templates'),  # Custom error templates
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -303,7 +320,25 @@ EMAIL_HOST_USER = 'makito@fpacifico.com'  # Cuenta de autenticación que funcion
 EMAIL_HOST_PASSWORD = 'aFihr73B'
 EMAIL_DEBUG = True
 DEFAULT_FROM_EMAIL = 'workflow@fpacifico.com'  # Remitente oficial de la aplicación
-SITE_URL = 'http://localhost:8000'  # Cambiar por tu dominio en producción
+
+# Dynamic SITE_URL based on environment
+if DEBUG:
+    SITE_URL = 'http://localhost:8000'  # Development
+else:
+    # Production URLs - customize based on your deployment
+    SITE_URL = 'https://cotfid.fpacifico.com'  # Production domain
+
+# Custom error page settings
+# In production (DEBUG=False), Django will use custom error templates
+ADMINS = [
+    ('Admin', 'admin@fpacifico.com'),
+]
+
+# Email settings for error notifications in production
+if not DEBUG:
+    MANAGERS = ADMINS
+    # Server email for error notifications
+    SERVER_EMAIL = 'noreply@fpacifico.com'
 
 # SSL Context para manejar certificados autofirmados
 import ssl

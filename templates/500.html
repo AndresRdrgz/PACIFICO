@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 500 - Sistema Temporalmente No Disponible</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        
+        .error-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .error-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #ffa500, #32cd32, #1e90ff);
+        }
+        
+        .error-icon {
+            font-size: 4rem;
+            color: #ff6b6b;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .error-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        
+        .error-message {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        
+        .instructions {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+            border-left: 4px solid #007bff;
+        }
+        
+        .instructions h3 {
+            color: #007bff;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .instructions h3::before {
+            content: "💡";
+            margin-right: 0.5rem;
+        }
+        
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .instructions li {
+            padding: 0.5rem 0;
+            position: relative;
+            padding-left: 2rem;
+        }
+        
+        .instructions li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 2rem 0;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .error-details {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        .error-toggle {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .error-toggle:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .error-toggle::after {
+            content: "▼";
+            float: right;
+            transition: transform 0.3s ease;
+        }
+        
+        .error-toggle.expanded::after {
+            transform: rotate(180deg);
+        }
+        
+        .error-content {
+            display: none;
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0 0 8px 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        
+        .error-content.show {
+            display: block;
+        }
+        
+        .contact-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            color: #856404;
+        }
+        
+        .contact-info strong {
+            color: #533f03;
+        }
+        
+        .timestamp {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .error-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .error-title {
+                font-size: 1.5rem;
+            }
+            
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        
+        <h1 class="error-title">Sistema Temporalmente No Disponible</h1>
+        
+        <p class="error-message">
+            Lo sentimos, el sistema está experimentando dificultades técnicas en este momento. 
+            Nuestro equipo ha sido notificado y está trabajando para resolver el problema.
+        </p>
+        
+        <div class="instructions">
+            <h3>¿Qué puedes hacer mientras tanto?</h3>
+            <ul>
+                <li>Espera unos minutos e intenta nuevamente</li>
+                <li>Actualiza la página (Ctrl + F5 en Windows)</li>
+                <li>Verifica tu conexión a internet</li>
+                <li>Si el problema persiste, contacta al administrador del sistema</li>
+            </ul>
+        </div>
+        
+        <div class="actions">
+            <a href="javascript:window.location.reload();" class="btn btn-primary">
+                🔄 Intentar Nuevamente
+            </a>
+            <a href="javascript:history.back();" class="btn btn-secondary">
+                ⬅️ Regresar
+            </a>
+        </div>
+        
+        <div class="error-details">
+            <div class="error-toggle" onclick="toggleErrorDetails()">
+                Ver error (Uso interno)
+            </div>
+            <div class="error-content" id="errorContent">
+                <strong>Error 500 - Internal Server Error</strong>
+
+Detalles técnicos:
+{% if exception %}
+Excepción: {{ exception }}
+{% endif %}
+
+{% if request %}
+URL solicitada: {{ request.build_absolute_uri }}
+Método HTTP: {{ request.method }}
+Usuario: {% if request.user.is_authenticated %}{{ request.user.username }} ({{ request.user.get_full_name }}){% else %}Anónimo{% endif %}
+IP: {{ request.META.REMOTE_ADDR|default:"No disponible" }}
+User-Agent: {{ request.META.HTTP_USER_AGENT|default:"No disponible" }}
+{% endif %}
+
+Tiempo: {{ timestamp|date:"d/m/Y H:i:s" }}
+
+{% if exception_type %}
+Tipo de excepción: {{ exception_type }}
+{% endif %}
+
+{% if exception_value %}
+Valor de excepción: {{ exception_value }}
+{% endif %}
+
+{% if traceback %}
+Traceback completo:
+{{ traceback }}
+{% endif %}
+
+ID del error: {% now "Y-m-d-H-i-s" %}-{{ request.session.session_key|default:"unknown" }}
+
+Para el administrador del sistema:
+- Revisa los logs del servidor en logs/
+- Verifica la configuración de la base de datos
+- Comprueba los permisos de archivos
+- Revisa debug.log para más detalles
+- Contacta al equipo de desarrollo si el error persiste
+
+Información del servidor:
+- Python: {{ request.META.SERVER_SOFTWARE|default:"No disponible" }}
+- Django: Versión activa
+- Debug mode: {{ request.resolver_match.kwargs.DEBUG|default:"No disponible" }}
+            </div>
+        </div>
+        
+        <div class="contact-info">
+            <strong>¿Necesitas ayuda urgente?</strong><br>
+            Contacta al administrador del sistema:<br>
+            📧 Email: soporte@fpacifico.com<br>
+            📞 Teléfono: +507 XXX-XXXX<br>
+            💬 Ext: XXXX
+        </div>
+        
+        <div class="timestamp">
+            Generado el {% now "d/m/Y H:i:s" %}
+        </div>
+    </div>
+    
+    <script>
+        function toggleErrorDetails() {
+            const toggle = document.querySelector('.error-toggle');
+            const content = document.getElementById('errorContent');
+            
+            toggle.classList.toggle('expanded');
+            content.classList.toggle('show');
+        }
+        
+        // Auto-refresh after 30 seconds (optional)
+        setTimeout(function() {
+            const autoRefresh = confirm('¿Quieres intentar recargar la página automáticamente?');
+            if (autoRefresh) {
+                window.location.reload();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
