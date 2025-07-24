@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APC En Proceso - Financiera Pacífico</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="30" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="30" cy="80" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="70" cy="70" r="1" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            opacity: 0.6;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .tagline {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            margin: 30px auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .main-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            opacity: 0.95;
+            font-weight: 400;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 24px;
+            color: #374151;
+        }
+        
+        .info-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+        
+        .info-card h3 {
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #111827;
+            text-align: right;
+            font-size: 14px;
+        }
+        
+        .status-section {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: center;
+        }
+        
+        .status-section h3 {
+            color: #1e40af;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .status-section p {
+            color: #1e3a8a;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        
+        .step {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .step.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .step.completed {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin: 0 auto 8px;
+            font-size: 14px;
+        }
+        
+        .step.active .step-number {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .step.completed .step-number {
+            background: #10b981;
+            color: white;
+        }
+        
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .step.active .step-title {
+            color: #1e40af;
+        }
+        
+        .step.completed .step-title {
+            color: #059669;
+        }
+        
+        .step-description {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin: 32px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+        
+        .observations {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        
+        .observations h4 {
+            color: #92400e;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .observations p {
+            color: #78350f;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .footer {
+            background: #f9fafb;
+            padding: 32px 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
+        .footer-text {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+        
+        .footer-disclaimer {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header, .content, .footer {
+                padding: 24px 20px;
+            }
+            
+            .main-title {
+                font-size: 28px;
+            }
+            
+            .subtitle {
+                font-size: 16px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .process-steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn {
+                display: block;
+                margin: 0 auto;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .info-card {
+                background: #1f2937;
+                border-color: #374151;
+            }
+            
+            .info-card h3 {
+                color: #f9fafb;
+            }
+            
+            .info-label {
+                color: #d1d5db;
+            }
+            
+            .info-value {
+                color: #f3f4f6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo">🏦 Financiera Pacífico</div>
+                <div class="tagline">Sistema de Workflow Automatizado</div>
+                
+                <div class="status-icon">
+                    🔄
+                </div>
+                
+                <h1 class="main-title">APC En Proceso</h1>
+                <p class="subtitle">Extracción iniciada por Makito RPA</p>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <div class="greeting">
+                <strong>Estimado {{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }},</strong>
+            </div>
+            
+            <p>El proceso de <strong>descarga de referencias e historial de crédito (APC)</strong> para la solicitud <strong>{{ solicitud.codigo }}</strong> ha sido iniciado por nuestro sistema automatizado Makito RPA y se encuentra actualmente en proceso de extracción.</p>
+            
+            <!-- Información de la solicitud -->
+            <div class="info-card">
+                <h3>📋 Detalles de la Solicitud</h3>
+                <div class="info-grid">
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">Código de Solicitud</span>
+                            <span class="info-value">{{ solicitud.codigo }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Cliente</span>
+                            <span class="info-value">{{ cliente_nombre }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Pipeline</span>
+                            <span class="info-value">{{ solicitud.pipeline.nombre }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">Tipo de Documento</span>
+                            <span class="info-value">{{ solicitud.get_apc_tipo_documento_display|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Número de Documento</span>
+                            <span class="info-value">{{ solicitud.apc_no_cedula|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Fecha de Inicio</span>
+                            <span class="info-value">
+                                {% if solicitud.apc_fecha_inicio %}
+                                    {{ solicitud.apc_fecha_inicio|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    En proceso
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estado del proceso -->
+            <div class="status-section">
+                <h3>⚡ Estado Actual del Proceso</h3>
+                <p><strong>El proceso de extracción de APC está en curso</strong></p>
+                <p>Nuestro sistema automatizado está trabajando en la obtención de los documentos requeridos.</p>
+            </div>
+            
+            <!-- Pasos del proceso -->
+            <div class="info-card">
+                <h3>🔄 Progreso del Proceso APC</h3>
+                <div class="process-steps">
+                    <div class="step completed">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Solicitud Recibida</div>
+                        <div class="step-description">Datos validados</div>
+                    </div>
+                    <div class="step active">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Extracción en Curso</div>
+                        <div class="step-description">Makito RPA procesando</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Finalización</div>
+                        <div class="step-description">Archivo disponible</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observaciones si existen -->
+            {% if solicitud.apc_observaciones %}
+            <div class="observations">
+                <h4>📝 Observaciones del Proceso</h4>
+                <p>{{ solicitud.apc_observaciones }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Información adicional -->
+            <div class="info-card">
+                <h3>ℹ️ Información Importante</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #374151;">
+                    <li style="margin-bottom: 8px;">El proceso de extracción puede tomar algunos minutos</li>
+                    <li style="margin-bottom: 8px;">Recibirás una notificación adicional cuando el proceso se complete</li>
+                    <li style="margin-bottom: 8px;">El archivo APC estará disponible para descarga una vez finalizado</li>
+                    <li>Puedes hacer seguimiento del progreso en tiempo real desde el sistema</li>
+                </ul>
+            </div>
+            
+            <!-- Botón de acción -->
+            <div class="action-buttons">
+                <a href="{{ solicitud_url }}" class="btn">
+                    Ver Detalles de la Solicitud
+                </a>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-logo">🏦 Financiera Pacífico</div>
+            <div class="footer-text">Sistema de Workflow Automatizado</div>
+            <div class="footer-text">Notificación automática del proceso APC</div>
+            
+            <div class="footer-disclaimer">
+                Este es un correo automático generado por el sistema. Por favor, no responder a esta dirección.<br>
+                Para soporte técnico, contactar al administrador del sistema.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

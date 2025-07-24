@@ -435,6 +435,19 @@
         box-shadow: var(--shadow-sm);
         text-decoration: none;
     }
+    
+    .btn-action.warning {
+        background: #f39c12;
+        color: white;
+        border: 1px solid #e67e22;
+    }
+    
+    .btn-action.warning:hover {
+        background: #e67e22;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
+    }
 
     .table-responsive {
         border-radius: var(--border-radius-sm);
@@ -1181,6 +1194,18 @@
                     </div>
                 </div>
                 
+                <!-- Acciones de Administrador (Solo Superusuarios) -->
+                <div class="modal-section" id="modalAdminActions" style="display: none;">
+                    <h4 class="section-subtitle">
+                        <i class="fas fa-cog"></i> Acciones de Administrador
+                    </h4>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="btn-action warning" id="reenviarSolicitudBtn" onclick="reenviarSolicitudApc()" title="Reenviar la solicitud de APC a Makito RPA">
+                            <i class="fas fa-paper-plane"></i> Reenviar Solicitud a Makito
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Timeline de eventos -->
                 <div class="modal-section">
                     <h4 class="section-subtitle">
@@ -1227,6 +1252,7 @@
 {% block extra_js %}
 <script>
 let currentData = [];
+const isUserSuperuser = {{ user.is_superuser|yesno:"true,false" }};
 
 // Función para cargar datos iniciales
 document.addEventListener('DOMContentLoaded', function() {
@@ -1844,6 +1870,24 @@ function populateModal(solicitud) {
     } else {
         observacionesSection.style.display = 'none';
     }
+    
+    // Show/hide admin actions section (only for superusers)
+    const adminActionsSection = document.getElementById('modalAdminActions');
+    if (isUserSuperuser) {
+        adminActionsSection.style.display = 'block';
+        
+        // Update button state based on APC status
+        const reenviarBtn = document.getElementById('reenviarSolicitudBtn');
+        if (solicitud.apc_status === 'completed') {
+            reenviarBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Reenviar Solicitud a Makito';
+            reenviarBtn.title = 'Reenviar la solicitud de APC a Makito RPA';
+        } else {
+            reenviarBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Reenviar Solicitud a Makito';
+            reenviarBtn.title = 'Reenviar la solicitud de APC a Makito RPA';
+        }
+    } else {
+        adminActionsSection.style.display = 'none';
+    }
 }
 
 // Function to populate timeline
@@ -1977,6 +2021,136 @@ function downloadApcFile() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// Function to resend APC request to Makito
+async function reenviarSolicitudApc() {
+    if (!currentModalData) {
+        showError('No hay datos de solicitud disponibles');
+        return;
+    }
+    
+    // Confirm action
+    if (!confirm(`¿Estás seguro de que quieres reenviar la solicitud de APC para ${currentModalData.codigo} a Makito RPA?\n\nEsto enviará nuevamente el correo con las instrucciones y datos de extracción.`)) {
+        return;
+    }
+    
+    const reenviarBtn = document.getElementById('reenviarSolicitudBtn');
+    const originalHtml = reenviarBtn.innerHTML;
+    
+    try {
+        // Disable button and show loading
+        reenviarBtn.disabled = true;
+        reenviarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reenviando...';
+        
+        // Send request to resend APC email
+        const response = await fetch(`/workflow/api/apc/reenviar/${currentModalData.codigo}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message
+            showSuccess('✅ Solicitud reenviada exitosamente a Makito RPA');
+            
+            // Refresh modal data to show updated timeline
+            setTimeout(() => {
+                openApcModal(currentModalData.codigo);
+            }, 1000);
+            
+            // Refresh main data
+            setTimeout(() => {
+                refreshData();
+            }, 2000);
+            
+        } else {
+            throw new Error(data.error || 'Error al reenviar la solicitud');
+        }
+        
+    } catch (error) {
+        console.error('Error al reenviar solicitud APC:', error);
+        showError('❌ Error al reenviar la solicitud: ' + error.message);
+    } finally {
+        // Re-enable button
+        reenviarBtn.disabled = false;
+        reenviarBtn.innerHTML = originalHtml;
+    }
+}
+
+// Helper function to get CSRF token
+function getCsrfToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        return csrfToken.value;
+    }
+    
+    // Alternative method to get CSRF token from cookies
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return decodeURIComponent(value);
+        }
+    }
+    
+    return '';
+}
+
+// Helper function to show success messages
+function showSuccess(message) {
+    // Create a temporary success message element
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        z-index: 10000;
+        font-weight: 500;
+        max-width: 400px;
+        word-wrap: break-word;
+        animation: slideIn 0.3s ease-out;
+    `;
+    successDiv.textContent = message;
+    
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(successDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        successDiv.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, 300);
+    }, 5000);
 }
 
 // Close modal when clicking outside

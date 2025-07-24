@@ -4,6 +4,7 @@ from django.conf import settings
 from . import views_workflow
 from . import views
 from . import api
+from . import api_apc
 from . import views_comite
 from . import apicomite
 from . import dashboard_views
@@ -204,11 +205,13 @@ urlpatterns += [
     path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
     path('api/apc/list/', views_workflow.api_apc_list, name='api_apc_list'),
     path('api/apc/detail/<str:solicitud_codigo>/', views_workflow.api_apc_detail, name='api_apc_detail'),
+    path('api/apc/reenviar/<str:codigo>/', api_apc.api_reenviar_apc_makito, name='api_reenviar_apc_makito'),
     path('api/makito/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_update_status, name='api_makito_update_status'),
     path('api/makito/upload-apc/<str:solicitud_codigo>/', views_workflow.api_makito_upload_apc, name='api_makito_upload_apc'),
     
     # Testing URLs (remove in production)
     path('test/apc-upload-email/', views_workflow.test_apc_upload_email, name='test_apc_upload_email'),
+    path('test/apc-iniciado-email/', views_workflow.test_apc_iniciado_email, name='test_apc_iniciado_email'),
 ]
 
 # Add reportes URLs only if views_reportes imported successfully

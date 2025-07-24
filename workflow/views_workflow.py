@@ -7680,6 +7680,18 @@ def api_makito_update_status(request, solicitud_codigo):
         
         solicitud.save(update_fields=fields_to_update)
         
+        # Enviar notificación por correo según el estado
+        try:
+            if nuevo_status == 'in_progress' and 'apc_fecha_inicio' in fields_to_update:
+                # Solo enviar si es la primera vez que se marca como in_progress
+                enviar_correo_apc_iniciado(solicitud)
+            elif nuevo_status == 'completed' and 'apc_fecha_completado' in fields_to_update:
+                # Solo enviar si es la primera vez que se marca como completed
+                enviar_correo_apc_completado(solicitud)
+        except Exception as e:
+            # Log the error but don't fail the API call
+            print(f"⚠️ Error al enviar notificación por correo para solicitud {solicitud_codigo}: {str(e)}")
+        
         return JsonResponse({
             'success': True,
             'message': f'Status APC actualizado a {nuevo_status} para solicitud {solicitud_codigo}',
@@ -7831,9 +7843,6 @@ def enviar_correo_apc_completado(solicitud):
         # Try to get base URL from settings, fallback to request if available
         base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
         
-        # If we have access to request in the context, use it for better URL building
-        # For now, use the settings fallback
-        
         # URL para ver la solicitud
         solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
         
@@ -7845,10 +7854,21 @@ def enviar_correo_apc_completado(solicitud):
             except:
                 archivo_url = "Archivo disponible en el sistema"
         
+        # Contexto para el template HTML
+        context = {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+            'archivo_url': archivo_url,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/apc_completado_notification.html', context)
+        
         # Crear el asunto
         subject = f'✅ APC Completado - Solicitud {solicitud.codigo} - {cliente_nombre}'
         
-        # Mensaje de texto plano
+        # Mensaje de texto plano como respaldo
         text_content = f"""
 APC Completado Exitosamente
 
@@ -7888,6 +7908,9 @@ Este es un correo automático, por favor no responder a esta dirección.
             to=destinatarios,
         )
         
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
         # Enviar el correo con manejo de SSL personalizado
         try:
             email.send()
@@ -7915,6 +7938,127 @@ Este es un correo automático, por favor no responder a esta dirección.
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo APC completado para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+
+
+def enviar_correo_apc_iniciado(solicitud):
+    """
+    Función para enviar correo automático cuando el APC es iniciado (in_progress) por Makito.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre solicitud {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # URL para ver la solicitud
+        solicitud_url = f"{base_url}/workflow/solicitud/{solicitud.id}/"
+        
+        # Contexto para el template HTML
+        context = {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+        }
+        
+        # Cargar el template HTML
+        html_content = render_to_string('workflow/emails/apc_iniciado_notification.html', context)
+        
+        # Crear el asunto
+        subject = f'🔄 APC En Proceso - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano como respaldo
+        text_content = f"""
+APC En Proceso de Extracción
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+El proceso de APC para la solicitud {solicitud.codigo} ha sido iniciado por Makito RPA y se encuentra actualmente en proceso de extracción.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha de inicio del proceso: {solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else 'En proceso'}
+• Tipo de documento: {solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else 'No especificado'}
+• Número de documento: {solicitud.apc_no_cedula or 'No especificado'}
+
+ESTADO ACTUAL:
+• El proceso de extracción de APC está en curso
+• Recibirás una notificación adicional cuando el proceso se complete
+• El archivo APC estará disponible una vez finalizado el proceso
+
+OBSERVACIONES:
+{solicitud.apc_observaciones or 'Sin observaciones adicionales'}
+
+Para ver todos los detalles de la solicitud:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Agregar el contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo APC iniciado enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo APC iniciado enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo APC iniciado: {str(e)}")
+            raise  # Re-raise para que se maneje en el nivel superior
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo APC iniciado para solicitud {solicitud.codigo}: {str(e)}")
         import traceback
         print(f"❌ Traceback: {traceback.format_exc()}")
 
@@ -7961,6 +8105,69 @@ def test_apc_upload_email(request):
                     'usuario_destinatario': solicitud.creada_por.username,
                     'email_destinatario': solicitud.creada_por.email,
                     'cliente_nombre': solicitud.cliente_nombre
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
+@login_required
+def test_apc_iniciado_email(request):
+    """
+    Vista para probar el envío de correo de APC iniciado (in_progress)
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con APC habilitado para testing
+        solicitud = Solicitud.objects.filter(descargar_apc_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con APC habilitado para testing'
+            })
+        
+        # Simular que se inició el proceso APC
+        from django.utils import timezone
+        solicitud.apc_status = 'in_progress'
+        solicitud.apc_fecha_inicio = timezone.now()
+        solicitud.apc_observaciones = 'Proceso APC iniciado - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo APC iniciado para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            enviar_correo_apc_iniciado(solicitud)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo APC iniciado enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre,
+                    'status_simulado': 'in_progress'
                 }
             })
             
