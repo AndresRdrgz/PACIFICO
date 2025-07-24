@@ -7,6 +7,7 @@ from pacifico.ViewsLogin import (
     LoginView, LogoutView, custom_password_reset_view, CustomPasswordResetDoneView,
     CustomPasswordResetConfirmView, CustomPasswordResetCompleteView, login_view
 )
+from financiera.views import SecureMediaView
 
 # Import test views for error page testing (only in DEBUG mode)
 if settings.DEBUG:
@@ -38,16 +39,22 @@ if settings.DEBUG:
     ]
 
 # Serve static and media files
-# In development, Django serves these automatically
-# In production, we need to explicitly configure media file serving
+# Always serve media files (both debug and production)
+# Static files in production should be served by nginx/apache, not Django
 if settings.DEBUG:
-    # Development: serve both static and media files
+    # Development: serve static files through Django
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Always serve media files through Django (both debug and production)
+# You can choose between the standard static serving or the secure view
+if settings.DEBUG:
+    # Use standard static serving in development
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 else:
-    # Production: only serve media files (static files should be served by web server)
-    # Static files in production should be served by nginx/apache, not Django
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Use secure media view in production
+    urlpatterns += [
+        path('media/<path:path>', SecureMediaView.as_view(), name='secure_media'),
+    ]
 
 # Custom error handlers
 handler404 = 'financiera.views.custom_404_view'

@@ -93,5 +93,5 @@ urlpatterns = [
     path('api/actualizar_progreso/', actualizar_progreso, name='actualizar_progreso'),
 ]
 
-#if settings.DEBUG:
+# Always serve media files (both debug and production)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

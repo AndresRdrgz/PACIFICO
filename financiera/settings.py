@@ -11,13 +11,13 @@ STATIC_URL = '/static/'
 # SECURITY WARNING: don't run with debug turned on in production!
 
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
    DATABASES = {
-        'default': dj_database_url.config(
-            default='postgresql://postgres:FP.h05t1l3@localhost:5432/pacifico',
-            conn_max_age=600
-        )
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -91,6 +91,17 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Ensure media directory exists
 os.makedirs(MEDIA_ROOT, exist_ok=True)
 
+# Additional media settings for better handling
+MEDIA_FILES_MAX_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_MEDIA_EXTENSIONS = [
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg',  # Images
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',  # Documents
+    'txt', 'csv', 'json', 'xml',  # Text files
+    'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm',  # Videos
+    'mp3', 'wav', 'ogg', 'aac',  # Audio
+    'zip', 'rar', '7z', 'tar', 'gz',  # Archives
+]
+
 # Media file security settings for production
 if not DEBUG:
     # In production, consider additional security for media files
@@ -99,8 +110,12 @@ if not DEBUG:
     DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
     
     # File upload permissions
-    #FILE_UPLOAD_PERMISSIONS = 0o644
-    #FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+    FILE_UPLOAD_PERMISSIONS = 0o644
+    FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+else:
+    # Development settings - more permissive
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB for development
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB for development
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
