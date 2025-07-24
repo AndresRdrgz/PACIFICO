@@ -11,7 +11,7 @@ STATIC_URL = '/static/'
 # SECURITY WARNING: don't run with debug turned on in production!
 
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
    DATABASES = {
         'default': {
@@ -99,8 +99,8 @@ if not DEBUG:
     DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
     
     # File upload permissions
-    FILE_UPLOAD_PERMISSIONS = 0o644
-    FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+    #FILE_UPLOAD_PERMISSIONS = 0o644
+    #FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
