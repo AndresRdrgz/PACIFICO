@@ -407,8 +407,8 @@ class OpcionDesplegable(models.Model):
         return self.nombre
 
 
-class CalificacionDocumento(models.Model):
-    """Calificaciones de documentos por parte de analistas"""
+class CalificacionDocumentoBackoffice(models.Model):
+    """Calificaciones de documentos por parte de analistas - Backoffice"""
     ESTADO_CHOICES = [
         ('bueno', 'Bueno'),
         ('malo', 'Malo'),
@@ -417,7 +417,7 @@ class CalificacionDocumento(models.Model):
     requisito_solicitud = models.ForeignKey(
         'RequisitoSolicitud', 
         on_delete=models.CASCADE, 
-        related_name='calificaciones',
+        related_name='calificaciones_backoffice',
         verbose_name="Requisito de Solicitud"
     )
     calificado_por = models.ForeignKey(
@@ -441,9 +441,9 @@ class CalificacionDocumento(models.Model):
     fecha_modificacion = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'workflow_calificacion_documento'
-        verbose_name = 'Calificación de Documento'
-        verbose_name_plural = 'Calificaciones de Documentos'
+        db_table = 'workflow_calificacion_documento_backoffice'
+        verbose_name = 'Calificación de Documento - Backoffice'
+        verbose_name_plural = 'Calificaciones de Documentos - Backoffice'
         ordering = ['-fecha_calificacion']
         # Un usuario solo puede tener una calificación activa por requisito
         unique_together = ['requisito_solicitud', 'calificado_por']
@@ -452,12 +452,12 @@ class CalificacionDocumento(models.Model):
         return f"{self.requisito_solicitud.requisito.nombre} - {self.get_estado_display()} por {self.calificado_por.username}"
 
 
-class ComentarioDocumento(models.Model):
-    """Comentarios sobre documentos"""
+class ComentarioDocumentoBackoffice(models.Model):
+    """Comentarios sobre documentos - Backoffice"""
     requisito_solicitud = models.ForeignKey(
         'RequisitoSolicitud', 
         on_delete=models.CASCADE, 
-        related_name='comentarios',
+        related_name='comentarios_backoffice',
         verbose_name="Requisito de Solicitud"
     )
     comentario_por = models.ForeignKey(
@@ -471,9 +471,9 @@ class ComentarioDocumento(models.Model):
     activo = models.BooleanField(default=True, verbose_name="Activo")
     
     class Meta:
-        db_table = 'workflow_comentario_documento'
-        verbose_name = 'Comentario de Documento'
-        verbose_name_plural = 'Comentarios de Documentos'
+        db_table = 'workflow_comentario_documento_backoffice'
+        verbose_name = 'Comentario de Documento - Backoffice'
+        verbose_name_plural = 'Comentarios de Documentos - Backoffice'
         ordering = ['-fecha_comentario']
     
     def __str__(self):

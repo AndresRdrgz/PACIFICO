@@ -4,7 +4,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from .modelsWorkflow import RequisitoSolicitud
-from .models import CalificacionDocumento, ComentarioDocumento, OpcionDesplegable
+from .models import CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, OpcionDesplegable
 import json
 
 @login_required
@@ -24,7 +24,7 @@ def calificar_documento(request):
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
         
         # Obtener o crear calificación (un usuario solo puede tener una calificación por documento)
-        calificacion, created = CalificacionDocumento.objects.update_or_create(
+        calificacion, created = CalificacionDocumentoBackoffice.objects.update_or_create(
             requisito_solicitud=requisito_solicitud,
             calificado_por=request.user,
             defaults={
@@ -70,7 +70,7 @@ def comentar_documento(request):
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
         
         # Crear comentario
-        comentario = ComentarioDocumento.objects.create(
+        comentario = ComentarioDocumentoBackoffice.objects.create(
             requisito_solicitud=requisito_solicitud,
             comentario_por=request.user,
             comentario=comentario_texto
@@ -104,7 +104,7 @@ def editar_comentario(request):
         if not comentario_id or not nuevo_comentario:
             return JsonResponse({'error': 'Datos inválidos'}, status=400)
         
-        comentario = get_object_or_404(ComentarioDocumento, id=comentario_id)
+        comentario = get_object_or_404(ComentarioDocumentoBackoffice, id=comentario_id)
         
         # Solo el autor puede editar su comentario
         if comentario.comentario_por != request.user:
@@ -134,20 +134,40 @@ def obtener_comentarios_documento(request, requisito_solicitud_id):
     try:
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
         
-        comentarios = ComentarioDocumento.objects.filter(
+        comentarios = ComentarioDocumentoBackoffice.objects.filter(
             requisito_solicitud=requisito_solicitud,
             activo=True
         ).select_related('comentario_por').order_by('-fecha_comentario')
         
         comentarios_data = []
         for comentario in comentarios:
+            # Obtener información del subestado donde se encuentra este requisito
+            subestado_nombre = 'Sin subestado'
+            try:
+                # Obtener la solicitud y su etapa actual
+                solicitud = requisito_solicitud.solicitud
+                if solicitud.etapa_actual:
+                    # Buscar el subestado actual de la solicitud
+                    if solicitud.subestado_actual:
+                        subestado_nombre = solicitud.subestado_actual.nombre
+                    else:
+                        # Si no hay subestado actual, intentar obtener el primer subestado de la etapa
+                        primer_subestado = solicitud.etapa_actual.subestados.first()
+                        if primer_subestado:
+                            subestado_nombre = primer_subestado.nombre
+            except Exception as e:
+                print(f"Error obteniendo subestado: {e}")
+                subestado_nombre = 'Sin subestado'
+            
             comentarios_data.append({
                 'id': comentario.id,
                 'comentario': comentario.comentario,
                 'usuario': comentario.comentario_por.username,
                 'usuario_nombre': f"{comentario.comentario_por.first_name} {comentario.comentario_por.last_name}".strip() or comentario.comentario_por.username,
                 'fecha': comentario.fecha_comentario.strftime('%d/%m/%Y %H:%M'),
-                'puede_editar': comentario.comentario_por == request.user
+                'puede_editar': comentario.comentario_por == request.user,
+                'subestado': subestado_nombre,
+                'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa'
             })
         
         return JsonResponse({
@@ -166,7 +186,7 @@ def obtener_calificaciones_documento(request, requisito_solicitud_id):
     try:
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
         
-        calificaciones = CalificacionDocumento.objects.filter(
+        calificaciones = CalificacionDocumentoBackoffice.objects.filter(
             requisito_solicitud=requisito_solicitud
         ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
         

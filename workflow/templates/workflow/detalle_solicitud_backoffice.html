@@ -5,15 +5,12 @@
 {% block title %}Back Office - Detalle de Solicitud - Sistema de Workflow{% endblock %}
 
 {% block extra_css %}
-<link
-  rel="stylesheet"
-  type="text/css"
-  href="{% static 'workflow/css/detalleSolicitud.css' %}"
-/>
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
 {% include "workflow/partials/backoffice_styles.html" %}
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid mt-4">
   <div class="row">
     <div class="col-12">
@@ -49,64 +46,48 @@
           <div class="client-info-grid">
             <div class="info-item">
               <div class="info-label">Cliente</div>
-              <div
-                class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}"
-              >
+              <div class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}">
                 {{ solicitud.cliente_nombre_completo|default:"Sin especificar" }}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Cédula</div>
-              <div
-                class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}"
-              >
+              <div class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}">
                 {{ solicitud.cliente_cedula_completa|default:"Sin especificar" }}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Producto</div>
-              <div
-                class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}"
-              >
+              <div class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}">
                 {{ solicitud.producto_solicitado|default:"Sin especificar" }}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Monto Solicitado</div>
-              <div
-                class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}"
-              >
-                {% if solicitud.monto_solicitado %}B/. {{ solicitud.monto_solicitado|floatformat:2 }}{% else %}No especificado{% endif %}
+              <div class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}">
+                {% if solicitud.monto_solicitado %}B/. {{ solicitud.monto_solicitado|floatformat:2 }}{% else %}No
+                especificado{% endif %}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Teléfono</div>
-              <div
-                class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}"
-              >
+              <div class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}">
                 {{ solicitud.cliente_telefono|default:"Sin especificar" }}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Email</div>
-              <div
-                class="info-value {% if not solicitud.cliente_email %}empty{% endif %}"
-              >
+              <div class="info-value {% if not solicitud.cliente_email %}empty{% endif %}">
                 {{ solicitud.cliente_email|default:"Sin especificar" }}
               </div>
             </div>
             <div class="info-item">
               <div class="info-label">Estado Actual</div>
-              <div class="info-value">{{ solicitud.estado_actual }}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Asignado a</div>
-              <div
-                class="info-value {% if not solicitud.asignada_a %}empty{% endif %}"
-              >
-                {% if solicitud.asignada_a %}{{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}{% else %}Sin asignar{% endif %}
+              <div class="info-value {% if not solicitud.estado_actual %}empty{% endif %}">
+                {{ solicitud.estado_actual|default:"Sin especificar" }}
               </div>
             </div>
+            <!-- Campo Asignado a temporalmente removido -->
           </div>
         </div>
       </div>
@@ -121,9 +102,7 @@
               </div>
               <div class="ms-3">
                 <h5 class="mb-0 process-title">Procesos de Back Office</h5>
-                <small class="process-subtitle"
-                  >Gestión completa del flujo de trabajo</small
-                >
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
               </div>
             </div>
             <div class="process-badge">
@@ -138,23 +117,13 @@
         <div class="card-body p-0">
           <!-- Pestañas de Navegación Mejoradas -->
           <div class="nav-tabs-container">
-            <ul
-              class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row"
-              id="backoffice-tabs"
-              role="tablist"
-            >
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
               <li class="nav-item" role="presentation">
-                <button
-                  class="nav-link tab-modern {% if forloop.first %}active{% endif %}"
-                  id="tab-{{ subestado.id }}"
-                  data-bs-toggle="tab"
-                  data-bs-target="#content-{{ subestado.id }}"
-                  type="button"
-                  role="tab"
+                <button class="nav-link tab-modern {% if forloop.first %}active{% endif %}" id="tab-{{ subestado.id }}"
+                  data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
                   aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-                >
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
                   <div class="tab-content-wrapper">
                     <div class="tab-number">{{ forloop.counter }}</div>
                     <div class="tab-text">
@@ -186,19 +155,16 @@
           <!-- Contenido de las Pestañas -->
           <div class="tab-content" id="backoffice-content">
             {% for subestado in solicitud.etapa_actual.subestados.all %}
-            <div
-              class="tab-pane fade {% if forloop.first %}show active{% endif %}"
-              id="content-{{ subestado.id }}"
-              role="tabpanel"
-              aria-labelledby="tab-{{ subestado.id }}"
-            >
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ subestado.id }}"
+              role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
               <div class="subestado-content-modern">
                 <div class="process-step-header">
                   <div class="step-indicator">
                     <span class="step-number">{{ forloop.counter }}</span>
-                    <span class="step-total"
-                      >/ {{ solicitud.etapa_actual.subestados.count }}</span
-                    >
+                    <span class="step-total">/ {{ solicitud.etapa_actual.subestados.count }}</span>
+                  </div>
+                  <div class="subestado-icon">
+                    <i class="fas fa-folder-open"></i>
                   </div>
                   <div class="step-status">
                     <span class="badge bg-primary">
@@ -207,248 +173,166 @@
                   </div>
                 </div>
 
-                <div class="subestado-icon">
-                  <i class="fas fa-folder-open"></i>
-                </div>
-                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
-                <p class="subestado-description">
-                  Gestión de documentos y archivos requeridos para completar esta etapa del proceso crediticio.
-                </p>
+
 
                 <!-- Archivos Requeridos Dinámicos -->
                 {% if archivos_por_subestado and subestado.id in archivos_por_subestado %}
-                  {% with archivos=archivos_por_subestado|get_item:subestado.id %}
-                    {% if archivos|length > 0 %}
-                      <div class="alert alert-info mb-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Archivos Requeridos para esta Etapa</strong><br />
-                        Se requieren {{ archivos|length }} archivo(s) para poder continuar a la siguiente etapa.
-                      </div>
+                {% with archivos=archivos_por_subestado|get_item:subestado.id %}
+                {% if archivos|length > 0 %}
 
-                      <div class="process-details">
-                        {% for archivo_info in archivos %}
-                          <div class="detail-card archivo-card-mejorada" data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}">
-                            <!-- Header del archivo -->
-                            <div class="archivo-header">
-                              <div class="archivo-info-basica">
-                                <div class="detail-icon archivo-icon">
-                                  {% if archivo_info.esta_cumplido %}
-                                    <i class="fas fa-check-circle text-success"></i>
-                                  {% else %}
-                                    <i class="fas fa-file-upload text-warning"></i>
-                                  {% endif %}
-                                </div>
-                                <div class="detail-content">
-                                  <h6>{{ archivo_info.requisito.nombre }}</h6>
-                                  <p class="mb-1">{{ archivo_info.requisito.descripcion|default:"Sin descripción disponible" }}</p>
-                                  
-                                  {% if archivo_info.esta_cumplido and archivo_info.archivo_actual %}
-                                    <div class="archivo-info mt-2">
-                                      <span class="badge bg-success me-2">
-                                        <i class="fas fa-check me-1"></i>Completo
-                                      </span>
-                                      <small class="text-muted">
-                                        Archivo: {{ archivo_info.archivo_actual.archivo.name|slice:"10:" }}
-                                      </small>
-                                    </div>
-                                  {% else %}
-                                    <div class="archivo-info mt-2">
-                                      <span class="badge bg-warning me-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>Pendiente
-                                      </span>
-                                      {% if archivo_info.obligatorio %}
-                                        <small class="text-danger">Obligatorio</small>
-                                      {% else %}
-                                        <small class="text-muted">Opcional</small>
-                                      {% endif %}
-                                    </div>
-                                  {% endif %}
-                                  
-                                  {% if archivo_info.mensaje_personalizado %}
-                                    <div class="mensaje-personalizado mt-2">
-                                      <small class="text-info">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        {{ archivo_info.mensaje_personalizado }}
-                                      </small>
-                                    </div>
-                                  {% endif %}
-                                </div>
-                              </div>
-                              
-                              <!-- Estado de calificación -->
-                              {% if archivo_info.ultima_calificacion %}
-                                <div class="calificacion-estado">
-                                  <span class="badge {% if archivo_info.ultima_calificacion.estado == 'bueno' %}bg-success{% else %}bg-danger{% endif %}">
-                                    <i class="fas {% if archivo_info.ultima_calificacion.estado == 'bueno' %}fa-thumbs-up{% else %}fa-thumbs-down{% endif %} me-1"></i>
-                                    {{ archivo_info.ultima_calificacion.estado|upper }}
-                                  </span>
-                                  <small class="text-muted d-block mt-1">
-                                    por {{ archivo_info.ultima_calificacion.calificado_por.username }}
-                                  </small>
-                                </div>
-                              {% endif %}
-                            </div>
+                <div class="process-details">
+                  {% for archivo_info in archivos %}
+                  <div class="detail-card archivo-card-mejorada-backoffice"
+                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
+                    <!-- Header del archivo -->
+                    <div class="archivo-header-backoffice">
+                      <!-- IZQUIERDA: Información del documento -->
+                      <div class="archivo-info-basica-backoffice">
+                        <div class="detail-icon archivo-icon-backoffice">
+                          {% if archivo_info.esta_cumplido %}
+                          <i class="fas fa-check-circle text-success"></i>
+                          {% else %}
+                          <i class="fas fa-file-upload text-warning"></i>
+                          {% endif %}
+                        </div>
+                        <div class="detail-content-backoffice">
+                          <h6>{{ archivo_info.requisito.nombre }}</h6>
+                          <p class="mb-1">{{ archivo_info.requisito.descripcion|default:"Sin descripción disponible" }}
+                          </p>
 
-                            <!-- Acciones del archivo REORGANIZADAS EN UNA FILA -->
-                            {% if archivo_info.archivo_actual %}
-                              <div class="archivo-acciones-container">
-                                <!-- IZQUIERDA: Sección Ver/Descargar -->
-                                <div class="seccion-ver-descargar">
-                                  <div class="btn-group">
-                                    {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
-                                      <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank" rel="noopener noreferrer"
-                                         class="btn btn-outline-primary" title="Ver archivo en nueva pestaña">
-                                        <i class="fas fa-eye"></i> Ver
-                                      </a>
-                                      <a href="{{ archivo_info.archivo_actual.archivo.url }}" download 
-                                         class="btn btn-outline-success" title="Descargar archivo">
-                                        <i class="fas fa-download"></i> Descargar
-                                      </a>
-                                    {% else %}
-                                      <button class="btn btn-outline-secondary" disabled title="Sin archivo disponible">
-                                        <i class="fas fa-eye"></i> Ver
-                                      </button>
-                                      <button class="btn btn-outline-secondary" disabled title="Sin archivo disponible">
-                                        <i class="fas fa-download"></i> Descargar
-                                      </button>
-                                    {% endif %}
-                                  </div>
-                                </div>
-                                
-                                <!-- DERECHA: Sección de Acciones (Calificación + Opciones) -->
-                                <div class="seccion-acciones-derecha">
-                                  <!-- Botones de Calificación -->
-                                  <div class="botones-calificacion">
-                                    <!-- Bueno -->
-                                    <button type="button" class="btn calificar-btn" 
-                                            data-estado="bueno" data-requisito="{{ archivo_info.archivo_actual.id }}"
-                                            title="Marcar como bueno">
-                                      <i class="fas fa-thumbs-up"></i>
-                                      <span>Bueno</span>
-                                    </button>
-                                    
-                                    <!-- Malo -->
-                                    <button type="button" class="btn calificar-btn" 
-                                            data-estado="malo" data-requisito="{{ archivo_info.archivo_actual.id }}"
-                                            title="Marcar como malo">
-                                      <i class="fas fa-thumbs-down"></i>
-                                      <span>Malo</span>
-                                    </button>
-                                    
-                                    <!-- Comentarios -->
-                                    <button type="button" class="btn comentario-btn" 
-                                            data-requisito="{{ archivo_info.archivo_actual.id }}"
-                                            title="Ver/Agregar comentarios">
-                                      <i class="fas fa-comment"></i>
-                                      <span>Comentar</span>
-                                      {% if archivo_info.comentarios and archivo_info.comentarios|length > 0 %}
-                                        <span class="badge">{{ archivo_info.comentarios|length }}</span>
-                                      {% endif %}
-                                    </button>
-                                  </div>
-                                  
-                                  <!-- Opciones -->
-                                  <div class="seccion-opciones">
-                                    <div class="dropdown">
-                                      <button class="btn opciones-dropdown-btn dropdown-toggle" 
-                                              type="button" data-bs-toggle="dropdown" 
-                                              data-requisito="{{ archivo_info.archivo_actual.id }}"
-                                              title="Opciones adicionales">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                        <span>Opciones</span>
-                                      </button>
-                                      <ul class="dropdown-menu dropdown-menu-end">
-                                      {% for opcion in opciones_desplegable %}
-                                        <li>
-                                          <a class="dropdown-item opcion-item" href="#" 
-                                             data-opcion-id="{{ opcion.id }}" 
-                                             data-requisito="{{ archivo_info.archivo_actual.id }}">
-                                            <i class="fas fa-exclamation-circle me-2 text-warning"></i>
-                                            {{ opcion.nombre }}
-                                          </a>
-                                        </li>
-                                      {% empty %}
-                                        <li><span class="dropdown-item-text text-muted">Sin opciones configuradas</span></li>
-                                      {% endfor %}
-                                      </ul>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                          {% if archivo_info.esta_cumplido and archivo_info.archivo_actual %}
+                          <div class="archivo-info-backoffice mt-2">
+                            <span class="badge bg-success me-2">
+                              <i class="fas fa-check me-1"></i>Completo
+                            </span>
+                            <small class="text-muted">
+                              Archivo: {{ archivo_info.archivo_actual.archivo.name|slice:"10:" }}
+                            </small>
+                          </div>
+                          {% else %}
+                          <div class="archivo-info-backoffice mt-2">
+                            <span class="badge bg-warning me-2">
+                              <i class="fas fa-exclamation-triangle me-1"></i>Pendiente
+                            </span>
+                            {% if archivo_info.obligatorio %}
+                            <small class="text-danger">Obligatorio</small>
                             {% else %}
-                              <div class="archivo-acciones-container">
-                                <!-- IZQUIERDA: Sección Ver/Descargar (Sin archivo) -->
-                                <div class="seccion-ver-descargar">
-                                  <div class="btn-group">
-                                    <button class="btn btn-outline-secondary" disabled title="Sin archivo disponible">
-                                      <i class="fas fa-eye"></i> Ver
-                                    </button>
-                                    <button class="btn btn-outline-secondary" disabled title="Sin archivo disponible">
-                                      <i class="fas fa-download"></i> Descargar
-                                    </button>
-                                  </div>
-                                </div>
-                                
-                                <!-- DERECHA: Sección de Acciones (Sin archivo) -->
-                                <div class="seccion-acciones-derecha">
-                                  <!-- Mensaje de estado -->
-                                  <div class="botones-calificacion">
-                                    <div class="alert alert-warning mb-0 text-center py-2">
-                                      <small><i class="fas fa-upload me-1"></i>Sin archivo subido</small>
-                                    </div>
-                                  </div>
-                                  
-                                  <!-- Opciones deshabilitadas -->
-                                  <div class="seccion-opciones">
-                                    <button class="btn opciones-dropdown-btn" disabled title="Opciones no disponibles sin archivo">
-                                      <i class="fas fa-ellipsis-v"></i>
-                                      <span>Opciones</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+                            <small class="text-muted">Opcional</small>
                             {% endif %}
                           </div>
-                        {% endfor %}
-                      </div>
+                          {% endif %}
 
-                      <!-- Resumen de archivos -->
-                      {% with stats=archivos_stats|get_item:subestado.id %}
-                        {% if stats %}
-                          <div class="alert {% if stats.completos == stats.total %}alert-success{% else %}alert-warning{% endif %}">
-                            <div class="d-flex align-items-center">
-                              {% if stats.completos == stats.total %}
-                                <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
-                                <div>
-                                  <strong>Documentación Completa</strong><br />
-                                  <small>Todos los archivos requeridos han sido proporcionados.</small>
-                                </div>
-                              {% else %}
-                                <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.5rem;"></i>
-                                <div>
-                                  <strong>Documentación Pendiente</strong><br />
-                                  <small>Se han completado {{ stats.completos }} de {{ stats.total }} archivos requeridos.</small>
-                                </div>
-                              {% endif %}
-                            </div>
+                          {% if archivo_info.mensaje_personalizado %}
+                          <div class="mensaje-personalizado mt-2">
+                            <small class="text-info">
+                              <i class="fas fa-info-circle me-1"></i>
+                              {{ archivo_info.mensaje_personalizado }}
+                            </small>
                           </div>
-                        {% endif %}
-                      {% endwith %}
-
-                    {% else %}
-                      <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Sin Archivos Específicos</strong><br />
-                        No hay archivos específicos requeridos para esta etapa.
+                          {% endif %}
+                        </div>
                       </div>
-                    {% endif %}
-                  {% endwith %}
-                {% else %}
-                  <div class="alert alert-secondary">
-                    <i class="fas fa-file-alt me-2"></i>
-                    <strong>Configuración Pendiente</strong><br />
-                    Los requisitos para esta etapa aún no han sido configurados.
+
+                      <!-- CENTRO: Botones Ver/Descargar -->
+                      {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
+                      <div class="seccion-ver-descargar-backoffice">
+                        <div class="btn-group">
+                          <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
+                            rel="noopener noreferrer" class="btn btn-outline-primary"
+                            title="Ver archivo en nueva pestaña">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                          <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
+                            class="btn btn-outline-success" title="Descargar archivo">
+                            <i class="fas fa-download"></i> Descargar
+                          </a>
+                        </div>
+                      </div>
+                      {% endif %}
+
+                      <!-- DERECHA: Botones de calificación -->
+                      <div class="seccion-acciones-derecha-backoffice">
+                        <!-- Botones de Calificación -->
+                        <div class="botones-calificacion-backoffice">
+                          <!-- Bueno -->
+                          <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Marcar como bueno">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>Bueno</span>
+                          </button>
+                          <!-- Malo -->
+                          <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Marcar como malo">
+                            <i class="fas fa-thumbs-down"></i>
+                            <span>Malo</span>
+                          </button>
+                          <!-- Comentarios -->
+                          <button type="button" class="btn comentario-btn-backoffice"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Ver/Agregar comentarios">
+                            <i class="fas fa-comment"></i>
+                            <span>Comentar</span>
+                            <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                          </button>
+                        </div>
+                        <!-- Opciones -->
+                        <div class="seccion-opciones">
+                          <button class="btn opciones-dropdown-btn-backoffice" type="button"
+                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
+                            title="Opciones adicionales">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <span>Opciones</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+
+
                   </div>
+                  {% endfor %}
+                </div>
+
+                <!-- Resumen de archivos -->
+                {% with stats=archivos_stats|get_item:subestado.id %}
+                {% if stats %}
+                <div
+                  class="alert {% if stats.completos == stats.total %}alert-success{% else %}alert-warning{% endif %}">
+                  <div class="d-flex align-items-center">
+                    {% if stats.completos == stats.total %}
+                    <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Documentación Completa</strong><br />
+                      <small>Todos los archivos requeridos han sido proporcionados.</small>
+                    </div>
+                    {% else %}
+                    <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Documentación Pendiente</strong><br />
+                      <small>Se han completado {{ stats.completos }} de {{ stats.total }} archivos requeridos.</small>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  <strong>Sin Archivos Específicos</strong><br />
+                  No hay archivos específicos requeridos para esta etapa.
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% else %}
+                <div class="alert alert-secondary">
+                  <i class="fas fa-file-alt me-2"></i>
+                  <strong>Configuración Pendiente</strong><br />
+                  Los requisitos para esta etapa aún no han sido configurados.
+                </div>
                 {% endif %}
 
                 <div class="action-buttons">
@@ -497,21 +381,15 @@
             <div class="progress-info mb-3">
               <div class="d-flex justify-content-between">
                 <span class="fw-bold">Progreso Actual</span>
-                <span class="text-muted"
-                  >1 de {{ solicitud.etapa_actual.subestados.count }}
-                  procesos</span
-                >
+                <span class="text-muted">1 de {{ solicitud.etapa_actual.subestados.count }}
+                  procesos</span>
               </div>
             </div>
             <div class="progress progress-custom mb-3">
-              <div
-                class="progress-bar bg-success"
-                role="progressbar"
+              <div class="progress-bar bg-success" role="progressbar"
                 style="width: {% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}%"
-                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              ></div>
+                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
+                aria-valuemax="100"></div>
             </div>
             <div class="progress-steps">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
@@ -613,57 +491,57 @@
 </div>
 
 <script>
-// Funciones JavaScript para el backoffice
-function refreshFiles(subestadoId) {
+  // Funciones JavaScript para el backoffice
+  function refreshFiles(subestadoId) {
     console.log('Actualizando archivos para subestado:', subestadoId);
-    
+
     // Mostrar spinner de carga
     const button = event.target;
     const originalText = button.innerHTML;
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
     button.disabled = true;
-    
+
     // Simular actualización (en implementación real sería una llamada AJAX)
     setTimeout(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-        
-        // Mostrar notificación de éxito
-        showToast('Estado de archivos actualizado correctamente', 'success');
-        
-        // Recargar la página para mostrar datos actualizados
-        location.reload();
-    }, 2000);
-}
+      button.innerHTML = originalText;
+      button.disabled = false;
 
-function generateReport(subestadoId) {
+      // Mostrar notificación de éxito
+      showToast('Estado de archivos actualizado correctamente', 'success');
+
+      // Recargar la página para mostrar datos actualizados
+      location.reload();
+    }, 2000);
+  }
+
+  function generateReport(subestadoId) {
     console.log('Generando reporte para subestado:', subestadoId);
-    
+
     // Mostrar spinner de carga
     const button = event.target;
     const originalText = button.innerHTML;
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando...';
     button.disabled = true;
-    
+
     // Simular generación de reporte
     setTimeout(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-        
-        showToast('Reporte generado y descargado', 'success');
-    }, 3000);
-}
+      button.innerHTML = originalText;
+      button.disabled = false;
 
-function showToast(message, type = 'info') {
+      showToast('Reporte generado y descargado', 'success');
+    }, 3000);
+  }
+
+  function showToast(message, type = 'info') {
     // Crear toast notification
     const toastContainer = document.getElementById('toast-container') || createToastContainer();
-    
+
     const toast = document.createElement('div');
     toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'primary'} border-0`;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
     toast.setAttribute('aria-atomic', 'true');
-    
+
     toast.innerHTML = `
         <div class="d-flex">
             <div class="toast-body">
@@ -673,166 +551,189 @@ function showToast(message, type = 'info') {
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     `;
-    
+
     toastContainer.appendChild(toast);
-    
+
     // Mostrar toast
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
-    
+
     // Remover toast después de que se oculte
     toast.addEventListener('hidden.bs.toast', () => {
-        toast.remove();
+      toast.remove();
     });
-}
+  }
 
-function createToastContainer() {
+  function createToastContainer() {
     const container = document.createElement('div');
     container.id = 'toast-container';
     container.className = 'toast-container position-fixed top-0 end-0 p-3';
     container.style.zIndex = '9999';
     document.body.appendChild(container);
     return container;
-}
+  }
 
-// Inicialización cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+  // Inicialización cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', function () {
     console.log('🔧 Backoffice con visualización de archivos inicializado');
-    
+
     // Agregar tooltips a los botones de archivo
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+      return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    
+
     // Agregar hover effects a las cards de archivo
     const archivoCards = document.querySelectorAll('.archivo-card');
     archivoCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 8px 25px rgba(74, 124, 89, 0.15)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.05)';
-        });
+      card.addEventListener('mouseenter', function () {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 8px 25px rgba(74, 124, 89, 0.15)';
+      });
+
+      card.addEventListener('mouseleave', function () {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.05)';
+      });
     });
-});
+  });
 
-// =======================================================
-// FUNCIONALIDAD DE CALIFICACIÓN DE DOCUMENTOS
-// =======================================================
+  // =======================================================
+  // FUNCIONALIDAD DE CALIFICACIÓN DE DOCUMENTOS
+  // =======================================================
 
-// Variables globales
-let currentRequisitoId = null;
+  // Variables globales
+  let currentRequisitoId = null;
 
-// Función para calificar documento
-function calificarDocumento(requisitoId, estado, opcionId = null) {
+  // Función para calificar documento
+  function calificarDocumento(requisitoId, estado, opcionId = null) {
     const data = {
-        requisito_solicitud_id: requisitoId,
-        estado: estado,
-        opcion_desplegable_id: opcionId
+      requisito_solicitud_id: requisitoId,
+      estado: estado,
+      opcion_desplegable_id: opcionId
     };
 
     fetch('/workflow/api/documento/calificar/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(data)
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify(data)
     })
-    .then(response => response.json())
-    .then(data => {
+      .then(response => response.json())
+      .then(data => {
         if (data.success) {
-            // Actualizar interfaz
-            actualizarEstadoCalificacion(requisitoId, estado, data.data);
-            mostrarMensaje('Calificación guardada exitosamente', 'success');
+          // Actualizar interfaz
+          actualizarEstadoCalificacion(requisitoId, estado, data.data || {});
+          mostrarMensaje('Calificación guardada exitosamente', 'success');
         } else {
-            mostrarMensaje('Error al guardar calificación: ' + data.error, 'error');
+          mostrarMensaje('Error al guardar calificación: ' + data.error, 'error');
         }
-    })
-    .catch(error => {
+      })
+      .catch(error => {
         console.error('Error:', error);
         mostrarMensaje('Error de conexión', 'error');
-    });
-}
+      });
+  }
 
-// Función para agregar comentario
-function agregarComentario(requisitoId, comentario) {
+  // Función para agregar comentario
+  function agregarComentario(requisitoId, comentario) {
     const data = {
-        requisito_solicitud_id: requisitoId,
-        comentario: comentario
+      requisito_solicitud_id: requisitoId,
+      comentario: comentario
     };
 
     fetch('/workflow/api/documento/comentar/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(data)
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify(data)
     })
-    .then(response => response.json())
-    .then(data => {
+      .then(response => response.json())
+      .then(data => {
         if (data.success) {
-            // Actualizar modal de comentarios
-            actualizarModalComentarios(requisitoId);
-            mostrarMensaje('Comentario agregado exitosamente', 'success');
+          // Actualizar modal de comentarios
+          actualizarModalComentarios(requisitoId);
+          mostrarMensaje('Comentario agregado exitosamente', 'success');
         } else {
-            mostrarMensaje('Error al agregar comentario: ' + data.error, 'error');
+          mostrarMensaje('Error al agregar comentario: ' + data.error, 'error');
         }
-    })
-    .catch(error => {
+      })
+      .catch(error => {
         console.error('Error:', error);
         mostrarMensaje('Error de conexión', 'error');
-    });
-}
+      });
+  }
 
-// Función para obtener comentarios
-function obtenerComentarios(requisitoId) {
+  // Función para obtener comentarios
+  function obtenerComentarios(requisitoId) {
     return fetch(`/workflow/api/documento/${requisitoId}/comentarios/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                return data.data;
-            } else {
-                throw new Error(data.error);
-            }
-        });
-}
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          return data.data;
+        } else {
+          throw new Error(data.error);
+        }
+      });
+  }
 
-// Función para actualizar estado de calificación en la interfaz
-function actualizarEstadoCalificacion(requisitoId, estado, data) {
+  // Función para actualizar estado de calificación en la interfaz
+  function actualizarEstadoCalificacion(requisitoId, estado, data) {
+    if (!requisitoId) {
+      console.warn('requisitoId es null o undefined');
+      return;
+    }
+
     const card = document.querySelector(`[data-requisito-id="${requisitoId}"]`);
-    if (!card) return;
+    if (!card) {
+      console.warn(`No se encontró la tarjeta para el requisito ${requisitoId}`);
+      return;
+    }
+
+    console.log(`Actualizando estado de calificación: requisito=${requisitoId}, estado=${estado}`);
 
     // Actualizar botones de calificación
-    const botones = card.querySelectorAll('.calificar-btn');
+    const botones = card.querySelectorAll('.calificar-btn-backoffice');
+    console.log(`Encontrados ${botones.length} botones de calificación`);
+
     botones.forEach(btn => {
-        btn.classList.remove('activo');
-        if (btn.dataset.estado === estado) {
-            btn.classList.add('activo');
-            // Animación de feedback
-            btn.classList.add(estado === 'bueno' ? 'feedback-success' : 'feedback-danger');
-            setTimeout(() => {
-                btn.classList.remove('feedback-success', 'feedback-danger');
-            }, 600);
-        }
+      const btnEstado = btn.dataset.estado;
+      console.log(`Botón: estado=${btnEstado}, debe ser activo: ${btnEstado === estado}`);
+
+      // Remover clase activo de todos los botones
+      btn.classList.remove('activo');
+
+      // Agregar clase activo solo al botón correspondiente
+      if (btnEstado === estado) {
+        btn.classList.add('activo');
+        console.log(`Botón ${btnEstado} marcado como activo`);
+
+        // Animación de feedback
+        btn.classList.add(estado === 'bueno' ? 'feedback-success' : 'feedback-danger');
+        setTimeout(() => {
+          btn.classList.remove('feedback-success', 'feedback-danger');
+        }, 600);
+      }
     });
 
     // Actualizar estado de calificación en el header
     let estadoDiv = card.querySelector('.calificacion-estado');
     if (!estadoDiv) {
-        estadoDiv = document.createElement('div');
-        estadoDiv.className = 'calificacion-estado';
-        card.querySelector('.archivo-header').appendChild(estadoDiv);
+      estadoDiv = document.createElement('div');
+      estadoDiv.className = 'calificacion-estado';
+      const headerElement = card.querySelector('.archivo-header-backoffice');
+      if (headerElement) {
+        headerElement.appendChild(estadoDiv);
+      }
     }
 
     const badgeClass = estado === 'bueno' ? 'bg-success' : 'bg-danger';
     const iconClass = estado === 'bueno' ? 'fa-thumbs-up' : 'fa-thumbs-down';
-    
+
     estadoDiv.innerHTML = `
         <span class="badge ${badgeClass}">
             <i class="fas ${iconClass} me-1"></i>
@@ -842,81 +743,175 @@ function actualizarEstadoCalificacion(requisitoId, estado, data) {
             por ${data.usuario}
         </small>
     `;
-}
+  }
 
-// Función para actualizar modal de comentarios
-function actualizarModalComentarios(requisitoId) {
+  // Función para actualizar modal de comentarios
+  function actualizarModalComentarios(requisitoId) {
     obtenerComentarios(requisitoId)
-        .then(comentarios => {
-            const comentariosContainer = document.getElementById('comentarios-container');
-            if (!comentariosContainer) return;
+      .then(comentarios => {
+        const comentariosContainer = document.getElementById('comentarios-container');
+        if (!comentariosContainer) return;
 
-            comentariosContainer.innerHTML = '';
-            
-            if (comentarios.length === 0) {
-                comentariosContainer.innerHTML = `
+        comentariosContainer.innerHTML = '';
+
+        if (comentarios.length === 0) {
+          comentariosContainer.innerHTML = `
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-comment-slash fa-2x mb-2"></i>
                         <p>No hay comentarios aún</p>
                     </div>
                 `;
-                return;
-            }
+          return;
+        }
 
-            comentarios.forEach(comentario => {
-                const comentarioDiv = document.createElement('div');
-                comentarioDiv.className = 'comentario-item';
-                comentarioDiv.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="comentario-autor">${comentario.usuario_nombre}</div>
-                        <div class="comentario-fecha">${comentario.fecha}</div>
-                    </div>
-                    <div class="comentario-texto">${comentario.comentario}</div>
-                    ${comentario.puede_editar ? `
-                        <div class="comentario-acciones">
-                            <button class="btn btn-sm btn-outline-primary btn-editar-comentario" 
-                                    onclick="editarComentario(${comentario.id}, '${comentario.comentario}')">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
+        comentarios.forEach(comentario => {
+          const comentarioDiv = document.createElement('div');
+          comentarioDiv.className = 'comentario-item';
+
+          // Obtener información adicional del contexto
+          const solicitudCodigo = '{{ solicitud.codigo|default:"Sin código" }}';
+
+          // Usar la información que viene del backend
+          const currentEtapa = comentario.etapa || 'Sin etapa';
+          const currentSubestado = comentario.subestado || 'Sin subestado';
+
+          // Calcular tiempo transcurrido
+          const fechaComentario = new Date(comentario.fecha);
+          const ahora = new Date();
+          const diffMs = ahora - fechaComentario;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+
+          let tiempoTranscurrido = '';
+          if (diffDays > 0) {
+            tiempoTranscurrido = `hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+          } else if (diffHours > 0) {
+            tiempoTranscurrido = `hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+          } else if (diffMins > 0) {
+            tiempoTranscurrido = `hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
+          } else {
+            tiempoTranscurrido = 'hace unos segundos';
+          }
+
+          comentarioDiv.innerHTML = `
+                    <div class="comentario-header">
+                        <div class="comentario-info-principal">
+                            <div class="comentario-autor-info">
+                                <div class="comentario-avatar">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <div class="comentario-details">
+                                    <div class="comentario-autor">${comentario.usuario_nombre}</div>
+                                    <div class="comentario-meta">
+                                        <span class="comentario-etapa">
+                                            <i class="fas fa-layer-group me-1"></i>
+                                            ${currentEtapa}
+                                        </span>
+                                        <span class="comentario-subestado">
+                                            <i class="fas fa-tag me-1"></i>
+                                            ${currentSubestado}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="comentario-tiempo">
+                                <div class="comentario-fecha">${comentario.fecha}</div>
+                                <div class="comentario-tiempo-transcurrido">${tiempoTranscurrido}</div>
+                            </div>
                         </div>
-                    ` : ''}
+                        ${comentario.puede_editar ? `
+                            <div class="comentario-acciones">
+                                <button class="btn btn-sm btn-outline-primary btn-editar-comentario" 
+                                        onclick="editarComentario(${comentario.id}, '${comentario.comentario}')"
+                                        title="Editar comentario">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="comentario-content">
+                        <div class="comentario-texto">${comentario.comentario}</div>
+                        <div class="comentario-footer">
+                            <div class="comentario-solicitud">
+                                <i class="fas fa-file-alt me-1"></i>
+                                Solicitud: ${solicitudCodigo}
+                            </div>
+                            <div class="comentario-id">
+                                <i class="fas fa-hashtag me-1"></i>
+                                Comentario #${comentario.id}
+                            </div>
+                        </div>
+                    </div>
                 `;
-                comentariosContainer.appendChild(comentarioDiv);
-            });
-
-            // Actualizar contador de comentarios en el botón
-            const comentarioBtn = document.querySelector(`[data-requisito="${requisitoId}"].comentario-btn`);
-            if (comentarioBtn) {
-                const badge = comentarioBtn.querySelector('.badge');
-                if (badge) {
-                    badge.textContent = comentarios.length;
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error al obtener comentarios:', error);
+          comentariosContainer.appendChild(comentarioDiv);
         });
-}
 
-// Función para mostrar modal de comentarios
-function mostrarModalComentarios(requisitoId) {
+        // Actualizar contador de comentarios en el botón
+        const comentarioBtn = document.querySelector(`[data-requisito="${requisitoId}"].comentario-btn-backoffice`);
+        if (comentarioBtn) {
+          const badge = comentarioBtn.querySelector('.badge');
+          if (badge) {
+            badge.textContent = comentarios.length;
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error al obtener comentarios:', error);
+      });
+  }
+
+  // Función para mostrar modal de comentarios
+  function mostrarModalComentarios(requisitoId) {
     currentRequisitoId = requisitoId;
-    
+
     // Actualizar contenido del modal
     actualizarModalComentarios(requisitoId);
-    
+
     // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('modalComentarios'));
     modal.show();
-}
+  }
 
-// Función para obtener CSRF token
-function getCsrfToken() {
+  // Función para cargar estados iniciales de calificaciones
+  function cargarEstadosInicialesCalificaciones() {
+    console.log('Cargando estados iniciales de calificaciones...');
+
+    // Obtener todos los requisitos que tienen calificaciones
+    const requisitos = document.querySelectorAll('[data-requisito-id]');
+
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      if (requisitoId) {
+        // Obtener calificaciones para este requisito
+        fetch(`/workflow/api/documento/${requisitoId}/calificaciones/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+              // Tomar la calificación más reciente
+              const ultimaCalificacion = data.data[0];
+              console.log(`Calificación encontrada para requisito ${requisitoId}:`, ultimaCalificacion);
+
+              // Actualizar el estado visual
+              actualizarEstadoCalificacion(requisitoId, ultimaCalificacion.estado, {
+                usuario: ultimaCalificacion.usuario_nombre || 'Usuario'
+              });
+            }
+          })
+          .catch(error => {
+            console.error(`Error al cargar calificaciones para requisito ${requisitoId}:`, error);
+          });
+      }
+    });
+  }
+
+  // Función para obtener CSRF token
+  function getCsrfToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]').value;
-}
+  }
 
-// Función para mostrar mensajes
-function mostrarMensaje(mensaje, tipo) {
+  // Función para mostrar mensajes
+  function mostrarMensaje(mensaje, tipo) {
     // Crear elemento de alerta
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
@@ -928,71 +923,157 @@ function mostrarMensaje(mensaje, tipo) {
         ${mensaje}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     document.body.appendChild(alertDiv);
-    
+
     // Auto-remover después de 3 segundos
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
     }, 3000);
-}
+  }
 
-// Event listeners cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+  // Event listeners cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', function () {
+    // Cargar estados iniciales de calificaciones
+    cargarEstadosInicialesCalificaciones();
+
     // Botones de calificación
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.calificar-btn')) {
-            const btn = e.target.closest('.calificar-btn');
-            const requisitoId = btn.dataset.requisito;
-            const estado = btn.dataset.estado;
-            
-            if (requisitoId && estado) {
-                calificarDocumento(requisitoId, estado);
-            }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.calificar-btn-backoffice')) {
+        const btn = e.target.closest('.calificar-btn-backoffice');
+        const requisitoId = btn.dataset.requisito;
+        const estado = btn.dataset.estado;
+
+        if (requisitoId && estado) {
+          calificarDocumento(requisitoId, estado);
         }
-        
-        // Botón de comentarios
-        if (e.target.closest('.comentario-btn')) {
-            const btn = e.target.closest('.comentario-btn');
-            const requisitoId = btn.dataset.requisito;
-            
-            if (requisitoId) {
-                mostrarModalComentarios(requisitoId);
-            }
+      }
+
+      // Botón de comentarios
+      if (e.target.closest('.comentario-btn-backoffice')) {
+        const btn = e.target.closest('.comentario-btn-backoffice');
+        const requisitoId = btn.dataset.requisito;
+
+        if (requisitoId) {
+          mostrarModalComentarios(requisitoId);
         }
-        
-        // Opciones del desplegable
-        if (e.target.closest('.opcion-item')) {
-            e.preventDefault();
-            const item = e.target.closest('.opcion-item');
-            const opcionId = item.dataset.opcionId;
-            const requisitoId = item.dataset.requisito;
-            
-            if (opcionId && requisitoId) {
-                // Calificar como malo con la opción seleccionada
-                calificarDocumento(requisitoId, 'malo', opcionId);
-            }
-        }
+      }
+
+
     });
-    
+
     // Formulario de nuevo comentario
     const formComentario = document.getElementById('form-nuevo-comentario');
     if (formComentario) {
-        formComentario.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const textarea = this.querySelector('textarea[name="comentario"]');
-            const comentario = textarea.value.trim();
-            
-            if (comentario && currentRequisitoId) {
-                agregarComentario(currentRequisitoId, comentario);
-                textarea.value = '';
-            }
-        });
+      formComentario.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const textarea = this.querySelector('textarea[name="comentario"]');
+        const comentario = textarea.value.trim();
+
+        if (comentario && currentRequisitoId) {
+          agregarComentario(currentRequisitoId, comentario);
+          textarea.value = '';
+        }
+      });
     }
-});
+  });
+
+  // =======================================================
+  // FUNCIONALIDAD DEL MODAL DE OPCIONES
+  // =======================================================
+
+  // Variable global para almacenar el requisito actual
+  let currentRequisitoForOpciones = null;
+
+  // Función para mostrar el modal de opciones
+  function mostrarModalOpciones(requisitoId, documentoNombre) {
+    currentRequisitoForOpciones = requisitoId;
+
+    // Actualizar el nombre del documento en el modal
+    document.getElementById('opciones-documento-nombre').textContent = documentoNombre;
+
+    // Cargar las opciones disponibles
+    cargarOpcionesDisponibles();
+
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('modalOpciones'));
+    modal.show();
+  }
+
+  // Función para cargar las opciones disponibles
+  function cargarOpcionesDisponibles() {
+    const opcionesContainer = document.getElementById('opciones-container');
+
+    // Opciones predefinidas (puedes obtenerlas del backend si es necesario)
+    const opciones = [
+      { id: 1, nombre: 'Documento ilegible o borroso' },
+      { id: 2, nombre: 'Documento incompleto o faltante' },
+      { id: 3, nombre: 'Documento vencido o desactualizado' },
+      { id: 4, nombre: 'Documento no corresponde al solicitado' },
+      { id: 5, nombre: 'Documento con información incorrecta' },
+      { id: 6, nombre: 'Documento de baja calidad' },
+      { id: 7, nombre: 'Otro problema' }
+    ];
+
+    opcionesContainer.innerHTML = '';
+
+    opciones.forEach(opcion => {
+      const opcionDiv = document.createElement('div');
+      opcionDiv.className = 'opcion-item-modal mb-2 p-3 border rounded cursor-pointer';
+      opcionDiv.style.cursor = 'pointer';
+      opcionDiv.style.transition = 'all 0.2s ease';
+      opcionDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="fas fa-exclamation-circle text-warning me-3"></i>
+          <div class="flex-grow-1">
+            <strong>${opcion.nombre}</strong>
+          </div>
+          <i class="fas fa-chevron-right text-muted"></i>
+        </div>
+      `;
+
+      // Agregar efectos hover
+      opcionDiv.addEventListener('mouseenter', function () {
+        this.style.backgroundColor = '#f8f9fa';
+        this.style.borderColor = '#4a7c59';
+      });
+
+      opcionDiv.addEventListener('mouseleave', function () {
+        this.style.backgroundColor = '';
+        this.style.borderColor = '';
+      });
+
+      // Agregar evento click
+      opcionDiv.addEventListener('click', function () {
+        seleccionarOpcion(opcion.id, opcion.nombre);
+      });
+
+      opcionesContainer.appendChild(opcionDiv);
+    });
+  }
+
+  // Función para seleccionar una opción
+  function seleccionarOpcion(opcionId, opcionNombre) {
+    if (!currentRequisitoForOpciones) {
+      console.error('No hay requisito seleccionado');
+      return;
+    }
+
+    // Calificar como malo con la opción seleccionada
+    calificarDocumento(currentRequisitoForOpciones, 'malo', opcionId);
+
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalOpciones'));
+    if (modal) {
+      modal.hide();
+    }
+
+    // Mostrar mensaje de confirmación
+    mostrarMensaje(`Documento calificado como malo: ${opcionNombre}`, 'success');
+  }
 
 </script>
 
@@ -1007,18 +1088,19 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body modal-comentarios">
+        <!-- Contenedor de comentarios con scroll -->
         <div id="comentarios-container">
           <!-- Los comentarios se cargan dinámicamente aquí -->
         </div>
-        
-        <!-- Formulario para nuevo comentario -->
-        <div class="mt-4">
+
+        <!-- Formulario para nuevo comentario (fijo en la parte inferior) -->
+        <div class="form-nuevo-comentario-section">
           <h6 class="mb-3">Agregar Comentario</h6>
           <form id="form-nuevo-comentario">
             {% csrf_token %}
             <div class="mb-3">
-              <textarea class="form-control" name="comentario" rows="3" 
-                        placeholder="Escribe tu comentario aquí..." required></textarea>
+              <textarea class="form-control" name="comentario" rows="3" placeholder="Escribe tu comentario aquí..."
+                required></textarea>
             </div>
             <div class="text-end">
               <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
@@ -1028,6 +1110,34 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Opciones -->
+<div class="modal fade" id="modalOpciones" tabindex="-1" aria-labelledby="modalOpcionesLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalOpcionesLabel">
+          <i class="fas fa-cog me-2"></i>Opciones de Calificación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong>Documento:</strong> <span id="opciones-documento-nombre"></span>
+        </div>
+        <div class="mb-3">
+          <p class="text-muted">Selecciona una opción para calificar este documento como "malo":</p>
+        </div>
+        <div id="opciones-container">
+          <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
       </div>
     </div>
   </div>

@@ -1019,21 +1019,21 @@ def detalle_solicitud(request, solicitud_id):
             req_id = req_sol.requisito_id  # Usar el foreign key directamente
             if req_id in requisitos_necesarios:
                 # Obtener calificaciones y comentarios
-                from .models import CalificacionDocumento, ComentarioDocumento, OpcionDesplegable
+                from .models import CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, OpcionDesplegable
                 
-                calificaciones = CalificacionDocumento.objects.filter(
+                calificaciones = CalificacionDocumentoBackoffice.objects.filter(
                     requisito_solicitud=req_sol
                 ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
                 
-                comentarios = ComentarioDocumento.objects.filter(
+                comentarios = ComentarioDocumentoBackoffice.objects.filter(
                     requisito_solicitud=req_sol,
                     activo=True
                 ).select_related('comentario_por').order_by('-fecha_comentario')
                 
                 requisitos_necesarios[req_id]['archivo_actual'] = req_sol
                 requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
-                requisitos_necesarios[req_id]['calificaciones'] = list(calificaciones)
-                requisitos_necesarios[req_id]['comentarios'] = list(comentarios)
+                requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
+                requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
                 requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
         
         # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)

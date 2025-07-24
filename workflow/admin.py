@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumento, ComentarioDocumento
+from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
 from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte
 from .forms import SolicitudAdminForm
 
@@ -584,21 +584,21 @@ class OpcionDesplegableAdmin(admin.ModelAdmin):
 
 
 class ComentarioDocumentoInline(admin.TabularInline):
-    model = ComentarioDocumento
+    model = ComentarioDocumentoBackoffice
     extra = 0
     readonly_fields = ('fecha_comentario', 'fecha_modificacion')
     fields = ('comentario_por', 'comentario', 'activo', 'fecha_comentario')
 
 
 class CalificacionDocumentoInline(admin.TabularInline):
-    model = CalificacionDocumento
+    model = CalificacionDocumentoBackoffice
     extra = 0
     readonly_fields = ('fecha_calificacion', 'fecha_modificacion')
     fields = ('calificado_por', 'estado', 'opcion_desplegable', 'fecha_calificacion')
 
 
-@admin.register(CalificacionDocumento)
-class CalificacionDocumentoAdmin(admin.ModelAdmin):
+@admin.register(CalificacionDocumentoBackoffice)
+class CalificacionDocumentoBackofficeAdmin(admin.ModelAdmin):
     list_display = (
         'requisito_solicitud', 'calificado_por', 'estado', 
         'opcion_desplegable', 'fecha_calificacion'
@@ -623,8 +623,8 @@ class CalificacionDocumentoAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(ComentarioDocumento)
-class ComentarioDocumentoAdmin(admin.ModelAdmin):
+@admin.register(ComentarioDocumentoBackoffice)
+class ComentarioDocumentoBackofficeAdmin(admin.ModelAdmin):
     list_display = (
         'requisito_solicitud', 'comentario_por', 'comentario_preview', 
         'activo', 'fecha_comentario'
