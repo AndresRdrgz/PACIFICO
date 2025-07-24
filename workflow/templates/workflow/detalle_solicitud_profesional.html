@@ -1,0 +1,2485 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}{{ solicitud.codigo }} - Centro de Decisión - Financiera Pacífico{% endblock %}
+
+{% block extra_css %}
+<!-- ESTILOS CENTRO DE DECISIÓN CRM PROFESIONAL -->
+<style>
+:root {
+    --pacifico-primary: #009c3c;
+    --pacifico-primary-light: #00b945;
+    --pacifico-primary-dark: #007d30;
+    --pacifico-secondary: #0891b2;
+    --pacifico-accent: #0c63e4;
+    
+    /* Grises modernos */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Estados */
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+    
+    /* Sombras profesionales */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Bordes */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+}
+
+/* RESET Y BASE */
+body.detalle-view {
+    background: var(--gray-50);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--gray-900);
+    overflow-x: hidden;
+}
+
+/* ENCABEZADO SUPERIOR */
+.header-command-center {
+    background: linear-gradient(135deg, var(--pacifico-primary) 0%, var(--pacifico-primary-dark) 100%);
+    border-bottom: 3px solid var(--pacifico-primary-dark);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+}
+
+.solicitud-header {
+    padding: 1.5rem 0;
+}
+
+.solicitud-code {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0;
+}
+
+.solicitud-subtitle {
+    opacity: 0.9;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.status-indicators {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sla-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(8px);
+}
+
+.sla-progress {
+    width: 100px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.sla-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.sla-progress-fill.success { background: var(--success); }
+.sla-progress-fill.warning { background: var(--warning); }
+.sla-progress-fill.danger { background: var(--error); }
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* LAYOUT PRINCIPAL */
+.command-center-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* TARJETAS MODULARES */
+.decision-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.decision-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.card-header-modern {
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: between;
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+/* INFORMACIÓN DEL CLIENTE */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.info-block {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.info-block:hover {
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.info-block-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.info-value {
+    font-weight: 700;
+    color: var(--gray-900);
+    text-align: right;
+}
+
+.info-value.primary {
+    color: var(--pacifico-primary);
+    font-size: 1.125rem;
+}
+
+.info-value.success {
+    color: var(--success);
+}
+
+.info-value.warning {
+    color: var(--warning);
+}
+
+.info-value.error {
+    color: var(--error);
+}
+
+/* ANÁLISIS CREDITICIO */
+.score-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--pacifico-primary), var(--pacifico-secondary));
+    color: white;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.score-number {
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+}
+
+/* PIPELINE VISUAL */
+.pipeline-container {
+    margin-bottom: 2rem;
+}
+
+.pipeline-stages {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+
+.pipeline-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 140px;
+    position: relative;
+}
+
+.stage-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+    border: 3px solid;
+    transition: all 0.3s ease;
+}
+
+.stage-circle.completed {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+}
+
+.stage-circle.current {
+    background: var(--pacifico-primary);
+    border-color: var(--pacifico-primary);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.stage-circle.pending {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-500);
+}
+
+.stage-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--gray-700);
+    line-height: 1.2;
+}
+
+.stage-meta {
+    font-size: 0.625rem;
+    color: var(--gray-500);
+    text-align: center;
+    margin-top: 0.25rem;
+}
+
+.pipeline-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--gray-200);
+    margin: 0 0.5rem;
+    position: relative;
+    top: -25px;
+}
+
+.pipeline-connector.completed {
+    background: var(--success);
+}
+
+/* CENTRO DE DECISIÓN (STICKY) */
+.decision-panel {
+    position: sticky;
+    top: 120px;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+}
+
+.decision-actions {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.btn-decision {
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-decision:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-decision:active {
+    transform: translateY(0);
+}
+
+.btn-decision.primary {
+    background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+    color: white;
+}
+
+.btn-decision.secondary {
+    background: linear-gradient(135deg, var(--pacifico-secondary) 0%, #0e7490 100%);
+    color: white;
+}
+
+.btn-decision.warning {
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+    color: white;
+}
+
+.btn-decision.danger {
+    background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-decision:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* COMENTARIOS Y ARCHIVOS */
+.comment-input {
+    background: var(--gray-50);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: var(--pacifico-primary);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(0, 156, 60, 0.1);
+}
+
+.file-upload {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--gray-50);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.file-upload:hover {
+    border-color: var(--pacifico-primary);
+    background: var(--gray-100);
+}
+
+.file-upload.dragover {
+    border-color: var(--pacifico-primary);
+    background: rgba(0, 156, 60, 0.05);
+}
+
+/* DOCUMENTOS */
+.document-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.document-item {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.document-item:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--gray-300);
+}
+
+.document-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.document-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.document-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.document-status.approved {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.document-status.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.document-status.rejected {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.document-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.btn-doc {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-doc.approve {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+}
+
+.btn-doc.reject {
+    background: transparent;
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.btn-doc.view {
+    background: transparent;
+    border-color: var(--gray-300);
+    color: var(--gray-600);
+}
+
+.btn-doc:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* HISTORIAL TIMELINE */
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-200);
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+    margin-left: 1rem;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -2.25rem;
+    top: 0.25rem;
+    width: 2rem;
+    height: 2rem;
+    background: white;
+    border: 3px solid var(--pacifico-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--pacifico-primary);
+    font-weight: 700;
+}
+
+.timeline-content {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow-xs);
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.timeline-meta {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+/* ANIMACIONES */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-in {
+    animation: slideInUp 0.4s ease-out;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+    .command-center-layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .decision-panel {
+        position: static;
+        max-height: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .command-center-layout {
+        padding: 1rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .pipeline-stages {
+        gap: 0.5rem;
+    }
+    
+    .pipeline-stage {
+        min-width: 100px;
+    }
+    
+    .stage-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 0.75rem;
+    }
+    
+    .solicitud-header {
+        padding: 1rem 0;
+    }
+    
+    .solicitud-code {
+        font-size: 1.5rem;
+    }
+    
+    .status-indicators {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+}
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: white;
+}
+
+.btn-comite {
+    background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+    color: white;
+}
+
+.pipeline-etapa {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.pipeline-etapa.completada {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.pipeline-etapa.actual {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    box-shadow: var(--shadow-sm);
+}
+
+.pipeline-etapa.pendiente {
+    background-color: var(--pacifico-gray-100);
+    border: 1px solid var(--pacifico-gray-300);
+}
+
+.etapa-numero {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.etapa-numero.completada {
+    background-color: var(--pacifico-green);
+    color: white;
+}
+
+.etapa-numero.actual {
+    background-color: #2196f3;
+    color: white;
+}
+
+.etapa-numero.pendiente {
+    background-color: var(--pacifico-gray-300);
+    color: var(--pacifico-gray-600);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    padding-bottom: 1.5rem;
+    border-left: 2px solid var(--pacifico-gray-300);
+}
+
+.timeline-item:last-child {
+    border-left: none;
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -8px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--pacifico-green);
+}
+
+.documento-item {
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.documento-item:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.documento-aprobado {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.documento-pendiente {
+    border-color: #ffc107;
+    background-color: #fffbf0;
+}
+
+.documento-rechazado {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.badge-estado {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.comentario-box {
+    background: white;
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.sticky-header {
+    position: sticky;
+    top: 70px;
+    z-index: 1020;
+    background: white;
+    border-bottom: 1px solid var(--pacifico-gray-200);
+    padding: 1rem 0;
+}
+
+.scroll-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid var(--pacifico-gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.valor-destacado {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--pacifico-green);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-profesional {
+        padding: 1rem 0;
+    }
+    
+    .btn-accion {
+        min-width: auto;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .pipeline-etapa {
+        padding: 0.75rem;
+    }
+    
+    .etapa-numero {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="detalle-view">
+
+<!-- ENCABEZADO SUPERIOR STICKY -->
+<header class="header-command-center">
+    <div class="container-fluid">
+        <div class="solicitud-header">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-4">
+                    <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn-back">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Bandeja
+                    </a>
+                    <div>
+                        <h1 class="solicitud-code">{{ solicitud.codigo }}</h1>
+                        <p class="solicitud-subtitle">
+                            {{ solicitud.cliente_nombre|default:"Cliente no asignado" }} • 
+                            {{ solicitud.cliente_cedula|default:"Sin cédula" }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="status-indicators">
+                    <div class="status-badge">
+                        <i class="fas fa-layer-group"></i>
+                        {{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}
+                    </div>
+                    
+                    {% if sla_info.estado != 'sin_sla' %}
+                    <div class="sla-indicator">
+                        <div class="sla-info">
+                            <div class="small opacity-75">SLA Restante</div>
+                            <div class="fw-bold">{{ sla_info.tiempo_restante }}</div>
+                        </div>
+                        <div class="sla-progress">
+                            <div class="sla-progress-fill {{ sla_info.estado }}" 
+                                 style="width: {{ sla_info.porcentaje_usado }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- LAYOUT PRINCIPAL -->
+<main class="command-center-layout">
+    
+    <!-- COLUMNA PRINCIPAL (IZQUIERDA) -->
+    <div class="main-content">
+        
+        <!-- 1. INFORMACIÓN GENERAL DEL CLIENTE Y PRÉSTAMO -->
+        <section class="decision-card animate-in">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-user-tie"></i>
+                    Información General
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                <div class="info-grid">
+                    
+                    <!-- DATOS DEL CLIENTE -->
+                    <div class="info-block">
+                        <div class="info-block-title">
+                            <i class="fas fa-user"></i>
+                            Datos del Cliente
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Nombre Completo</span>
+                            <span class="info-value primary">{{ solicitud.cliente_nombre|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Cédula</span>
+                            <span class="info-value">{{ solicitud.cliente_cedula|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Ocupación</span>
+                            <span class="info-value">{{ datos_cotizacion.ocupacion|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Ingreso Mensual</span>
+                            <span class="info-value success">
+                                {% if datos_cotizacion.ingreso %}
+                                    ${{ datos_cotizacion.ingreso|floatformat:0 }}
+                                {% else %}
+                                    No especificado
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tiempo Laboral</span>
+                            <span class="info-value">{{ datos_cotizacion.tiempo_laboral|default:"No especificado" }}</span>
+                        </div>
+                    </div>
+
+                    <!-- ANÁLISIS CREDITICIO -->
+                    <div class="info-block">
+                        <div class="info-block-title">
+                            <i class="fas fa-chart-line"></i>
+                            Análisis Crediticio
+                        </div>
+                        <div class="score-display mb-3">
+                            <div>
+                                <div class="score-number">{{ datos_cotizacion.score|default:"N/A" }}</div>
+                                <div class="score-label">Score Crediticio</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">TC Manejo</span>
+                            <span class="info-value warning">{{ datos_cotizacion.tc_manejo|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">ROP Activo</span>
+                            <span class="info-value">{{ datos_cotizacion.rop_activo|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Cumplimiento</span>
+                            <span class="info-value success">{{ datos_cotizacion.nivel_cumplimiento|default:"Por evaluar" }}</span>
+                        </div>
+                    </div>
+
+                    <!-- DATOS DEL PRÉSTAMO -->
+                    <div class="info-block">
+                        <div class="info-block-title">
+                            <i class="fas fa-money-bill-wave"></i>
+                            Datos del Préstamo
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Monto Solicitado</span>
+                            <span class="info-value primary">{{ solicitud.monto_formateado }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Prima</span>
+                            <span class="info-value">
+                                {% if datos_cotizacion.prima %}
+                                    ${{ datos_cotizacion.prima|floatformat:0 }}
+                                {% else %}
+                                    No especificado
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Cuota Mensual</span>
+                            <span class="info-value">
+                                {% if datos_cotizacion.cuota_mensual %}
+                                    ${{ datos_cotizacion.cuota_mensual|floatformat:0 }}
+                                {% else %}
+                                    Por calcular
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Plazo</span>
+                            <span class="info-value">{{ datos_cotizacion.plazo|default:"No especificado" }} meses</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tasa de Interés</span>
+                            <span class="info-value">{{ datos_cotizacion.tasa_interes|default:"Por definir" }}%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tipo de Producto</span>
+                            <span class="info-value">{{ solicitud.producto_descripcion|default:"Préstamo Personal" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. RUTA DEL PROCESO (PIPELINE) -->
+        <section class="decision-card animate-in">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-route"></i>
+                    Ruta del Flujo de Trabajo
+                    <span class="badge bg-primary ms-2">{{ pipeline_progreso.porcentaje|floatformat:0 }}% completado</span>
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                <div class="pipeline-container">
+                    <div class="pipeline-stages">
+                        {% for etapa_pipeline in pipeline_etapas %}
+                        <div class="pipeline-stage">
+                            <div class="stage-circle {{ etapa_pipeline.estado_css }}">
+                                {% if etapa_pipeline.estado == 'completed' %}
+                                    <i class="fas fa-check"></i>
+                                {% elif etapa_pipeline.estado == 'current' %}
+                                    {{ forloop.counter }}
+                                {% else %}
+                                    {{ forloop.counter }}
+                                {% endif %}
+                            </div>
+                            <div class="stage-title">{{ etapa_pipeline.nombre }}</div>
+                            <div class="stage-meta">
+                                {% if etapa_pipeline.fecha_inicio %}
+                                    {{ etapa_pipeline.fecha_inicio|date:"d/m H:i" }}
+                                {% endif %}
+                                {% if etapa_pipeline.usuario %}
+                                    <br>{{ etapa_pipeline.usuario.get_full_name|default:etapa_pipeline.usuario.username }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if not forloop.last %}
+                            <div class="pipeline-connector {% if etapa_pipeline.estado == 'completed' %}completed{% endif %}"></div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. DOCUMENTOS ADJUNTOS -->
+        <section class="decision-card animate-in">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-folder-open"></i>
+                    Documentos Adjuntos
+                    <span class="badge bg-info ms-2">{{ documentos.count }} archivos</span>
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                {% if documentos %}
+                    <div class="document-list">
+                        {% for documento in documentos %}
+                        <div class="document-item">
+                            <div class="document-header">
+                                <h6 class="document-title">{{ documento.requisito.nombre }}</h6>
+                                <span class="document-status {{ documento.estado_css }}">
+                                    {% if documento.cumplido %}
+                                        Aprobado
+                                    {% else %}
+                                        Pendiente
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="small text-muted mb-2">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                Subido: {{ documento.fecha_subida|date:"d/m/Y H:i" }}
+                                {% if documento.archivo %}
+                                    • {{ documento.archivo.size|filesizeformat }}
+                                {% endif %}
+                            </div>
+                            {% if documento.observaciones %}
+                                <div class="small text-muted mb-2">
+                                    <i class="fas fa-comment me-1"></i>
+                                    {{ documento.observaciones }}
+                                </div>
+                            {% endif %}
+                            <div class="document-actions">
+                                {% if documento.archivo %}
+                                    <button class="btn-doc view" onclick="window.open('{{ documento.archivo.url }}', '_blank')">
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </button>
+                                    <a href="{{ documento.archivo.url }}" download class="btn-doc view">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                {% endif %}
+                                {% if permisos.puede_revisar_documentos %}
+                                    {% if not documento.cumplido %}
+                                        <button class="btn-doc approve" onclick="aprobarDocumento({{ documento.id }})">
+                                            <i class="fas fa-check me-1"></i>Aprobar
+                                        </button>
+                                        <button class="btn-doc reject" onclick="rechazarDocumento({{ documento.id }})">
+                                            <i class="fas fa-times me-1"></i>Rechazar
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No hay documentos adjuntos</h6>
+                        <p class="text-muted small">Los documentos aparecerán aquí cuando sean subidos por la oficial</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- 4. HISTORIAL DE ACTIVIDADES -->
+        <section class="decision-card animate-in">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-history"></i>
+                    Historial de Actividades
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                <div class="timeline">
+                    {% for actividad in historial_actividades %}
+                    <div class="timeline-item">
+                        <div class="timeline-icon">
+                            <i class="fas fa-{{ actividad.icono }}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <h6 class="timeline-title">{{ actividad.titulo }}</h6>
+                                <span class="timeline-time">{{ actividad.fecha|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <p class="timeline-meta">{{ actividad.descripcion }}</p>
+                            {% if actividad.usuario %}
+                                <div class="small text-muted">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ actividad.usuario.get_full_name|default:actividad.usuario.username }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No hay actividades registradas</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. SOLICITUDES ANTERIORES DEL CLIENTE -->
+        {% if solicitudes_anteriores %}
+        <section class="decision-card animate-in">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-user-clock"></i>
+                    Solicitudes Anteriores del Cliente
+                    <span class="badge bg-warning ms-2">{{ solicitudes_anteriores.count }} anteriores</span>
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                <div class="document-list">
+                    {% for solicitud_anterior in solicitudes_anteriores %}
+                    <div class="document-item">
+                        <div class="document-header">
+                            <h6 class="document-title">{{ solicitud_anterior.codigo }}</h6>
+                            <span class="document-status {{ solicitud_anterior.estado_final_css }}">
+                                {{ solicitud_anterior.estado_final }}
+                            </span>
+                        </div>
+                        <div class="small text-muted mb-2">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ solicitud_anterior.fecha_creacion|date:"d/m/Y" }}
+                            • Monto: ${{ solicitud_anterior.monto|floatformat:0 }}
+                            {% if solicitud_anterior.oficial %}
+                                • Oficial: {{ solicitud_anterior.oficial.get_full_name }}
+                            {% endif %}
+                        </div>
+                        <div class="document-actions">
+                            <a href="{% url 'workflow:detalle_solicitud_profesional' solicitud_anterior.id %}" 
+                               class="btn-doc view">
+                                <i class="fas fa-external-link-alt me-1"></i>Ver Detalle
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <!-- COLUMNA LATERAL (DERECHA) - CENTRO DE DECISIÓN STICKY -->
+    <aside class="decision-panel">
+        
+        <!-- CENTRO DE DECISIÓN -->
+        <div class="decision-card">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-gavel"></i>
+                    Centro de Decisión
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                {% if permisos.puede_decidir %}
+                    <form id="decisionForm" method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- COMENTARIO OBLIGATORIO -->
+                        <div class="mb-4">
+                            <label for="comentarioDecision" class="form-label fw-bold">
+                                Comentario de Decisión <span class="text-danger">*</span>
+                            </label>
+                            <textarea 
+                                class="comment-input w-100" 
+                                id="comentarioDecision" 
+                                name="comentario" 
+                                placeholder="Ingresa tu análisis detallado de la solicitud, incluyendo la justificación de tu decisión..."
+                                required
+                            ></textarea>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este comentario será visible para toda la cadena de aprobación
+                            </small>
+                        </div>
+
+                        <!-- ADJUNTAR ARCHIVO -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Adjuntar Archivo (Opcional)
+                            </label>
+                            <div class="file-upload" onclick="document.getElementById('archivoDecision').click()">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                <div class="fw-bold">Haz clic para subir archivo</div>
+                                <small class="text-muted">PDF, DOC, DOCX, JPG, PNG (Max: 10MB)</small>
+                                <input 
+                                    type="file" 
+                                    id="archivoDecision" 
+                                    name="archivo"
+                                    accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
+                                    style="display: none;"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- BOTONES DE ACCIÓN -->
+                        <div class="decision-actions">
+                            {% if transiciones_disponibles %}
+                                {% for transicion in transiciones_disponibles %}
+                                    <button type="button" 
+                                            class="btn-decision {{ transicion.tipo_css }}"
+                                            onclick="procesarDecision('{{ transicion.accion }}', '{{ transicion.etapa_destino.id }}')">
+                                        <i class="fas fa-{{ transicion.icono }}"></i>
+                                        {{ transicion.nombre }}
+                                    </button>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <i class="fas fa-lock fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small">No hay acciones disponibles en esta etapa</p>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- ENVIAR SOLO COMENTARIO -->
+                            <button type="button" 
+                                    class="btn-decision secondary"
+                                    onclick="enviarComentario()">
+                                <i class="fas fa-comment"></i>
+                                Enviar Comentario
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-eye fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Modo Solo Lectura</h6>
+                        <p class="text-muted small">No tienes permisos para tomar decisiones en esta etapa</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- COMENTARIOS DEL FLUJO -->
+        <div class="decision-card mt-3">
+            <header class="card-header-modern">
+                <h2 class="card-title">
+                    <i class="fas fa-comments"></i>
+                    Comentarios del Flujo
+                </h2>
+            </header>
+            <div class="card-body-modern">
+                <div id="comentariosContainer" style="max-height: 400px; overflow-y: auto;">
+                    {% for comentario in comentarios %}
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <h6 class="timeline-title">{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</h6>
+                                <span class="timeline-time">{{ comentario.fecha_creacion|date:"d/m H:i" }}</span>
+                            </div>
+                            <p class="timeline-meta">{{ comentario.comentario }}</p>
+                            {% if comentario.es_editado %}
+                                <small class="text-muted">
+                                    <i class="fas fa-edit me-1"></i>Editado
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small">No hay comentarios en el flujo</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </aside>
+</main>
+
+</body>
+{% endblock %}
+
+{% block extra_js %}
+            <div class="col-lg-8 col-xl-9">
+                <!-- A) Información de la Solicitud -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Información de la Solicitud
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <!-- Datos del Cliente y Préstamo -->
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Cliente</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Cliente</label>
+                                            <div class="valor-destacado">{{ datos_cotizacion.cliente_nombre|default:"Sin cliente" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Cédula</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.cliente_cedula|default:"Sin cédula" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Ocupación</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.ocupacion|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Ingreso</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.ingreso %}
+                                                    ${{ datos_cotizacion.ingreso|floatformat:0 }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Tiempo Laboral</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.tiempo_laboral|default:"N/A" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos del Préstamo -->
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Préstamo</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Monto Solicitado</label>
+                                            <div class="valor-destacado">
+                                                {% if datos_cotizacion.monto_prestamo %}
+                                                    ${{ datos_cotizacion.monto_prestamo|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Prima</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.prima %}
+                                                    ${{ datos_cotizacion.prima|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Cuota Mensual</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.cuota_mensual %}
+                                                    ${{ datos_cotizacion.cuota_mensual|floatformat:0 }}
+                                                {% else %}
+                                                    $0
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Tasa de Interés</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.tasa_interes %}
+                                                    {{ datos_cotizacion.tasa_interes }}%
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Plazo</label>
+                                            <div class="fw-semibold">
+                                                {% if datos_cotizacion.plazo_anos %}
+                                                    {{ datos_cotizacion.plazo_anos }} años
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Datos de Análisis -->
+                            {% if datos_cotizacion.tipo_prestamo == 'auto' %}
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Datos del Vehículo</h6>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="text-muted small">Vehículo</label>
+                                            <div class="fw-semibold">
+                                                {{ datos_cotizacion.vehiculo_marca|default:"N/A" }} 
+                                                {{ datos_cotizacion.vehiculo_modelo|default:"" }}
+                                                {{ datos_cotizacion.vehiculo_ano|default:"" }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="text-muted small">Precio del Vehículo</label>
+                                            <div class="valor-destacado">
+                                                {% if datos_cotizacion.vehiculo_precio %}
+                                                    ${{ datos_cotizacion.vehiculo_precio|floatformat:0 }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-3">Análisis Crediticio</h6>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <label class="text-muted small">Score</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.score|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">TC Manejo</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.tc_manejo|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">ROP Manejo</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.rop_manejo|default:"N/A" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="text-muted small">Nivel Cumplimiento</label>
+                                            <div class="fw-semibold">{{ datos_cotizacion.nivel_cumplimiento|default:"N/A" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- C) Ruta del Flujo del Proceso -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-route me-2"></i>
+                            Ruta del Proceso
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="pipeline-flow">
+                            {% for etapa_info in etapas_pipeline %}
+                            <div class="pipeline-etapa {{ etapa_info.estado }}">
+                                <div class="etapa-numero {{ etapa_info.estado }}">
+                                    {% if etapa_info.estado == 'completada' %}
+                                        <i class="fas fa-check"></i>
+                                    {% elif etapa_info.estado == 'actual' %}
+                                        {{ etapa_info.etapa.orden }}
+                                    {% else %}
+                                        {{ etapa_info.etapa.orden }}
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">{{ etapa_info.etapa.nombre }}</h6>
+                                            {% if etapa_info.estado == 'actual' %}
+                                                <span class="badge bg-primary">Etapa Actual</span>
+                                            {% elif etapa_info.estado == 'completada' %}
+                                                <span class="badge bg-success">Completada</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Pendiente</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end">
+                                            {% if etapa_info.fecha_inicio %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ etapa_info.fecha_inicio|date:"d/m/Y H:i" }}
+                                                </small>
+                                            {% endif %}
+                                            {% if etapa_info.responsable %}
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    {{ etapa_info.responsable.get_full_name|default:etapa_info.responsable.username }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if etapa_info.etapa.sla %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            SLA: {{ etapa_info.etapa.sla }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- D) Historial de Actividades -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Historial de Actividades
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="scroll-container">
+                            {% if historial_completo %}
+                                {% for entrada in historial_completo %}
+                                <div class="timeline-item">
+                                    <div class="timeline-icon"></div>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0">{{ entrada.etapa.nombre }}</h6>
+                                        <small class="text-muted">{{ entrada.fecha_inicio|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    {% if entrada.subestado %}
+                                        <p class="text-muted mb-1 small">{{ entrada.subestado.nombre }}</p>
+                                    {% endif %}
+                                    {% if entrada.usuario_responsable %}
+                                        <p class="text-muted mb-1 small">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ entrada.usuario_responsable.get_full_name|default:entrada.usuario_responsable.username }}
+                                        </p>
+                                    {% endif %}
+                                    {% if entrada.fecha_fin %}
+                                        <small class="text-success">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Duración: {{ entrada.fecha_inicio|timesince:entrada.fecha_fin }}
+                                        </small>
+                                    {% else %}
+                                        <small class="text-primary">
+                                            <i class="fas fa-play-circle me-1"></i>
+                                            En progreso desde {{ entrada.fecha_inicio|timesince }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No hay historial disponible</h6>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E) Detalle Completo: Comentarios y Documentos -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Comentarios del Proceso
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="scroll-container" id="comentariosContainer">
+                            {% if comentarios %}
+                                {% for comentario in comentarios %}
+                                <div class="comentario-item mb-3 p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                                <i class="fas fa-user text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">{{ comentario.usuario.get_full_name|default:comentario.usuario.username }}</h6>
+                                                <small class="text-muted">{{ comentario.usuario.groups.first.name|default:"Usuario" }}</small>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    <p class="mb-0">{{ comentario.comentario }}</p>
+                                    {% if comentario.es_editado %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Editado
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No hay comentarios aún</h6>
+                                    <p class="text-muted small">Los comentarios aparecerán aquí conforme se agreguen</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E.2) Documentos -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-folder-open me-2"></i>
+                                Documentos
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-success">{{ documentos_aprobados }} Aprobados</span>
+                                <span class="badge bg-warning">{{ documentos_pendientes }} Pendientes</span>
+                                <span class="badge bg-danger">{{ documentos_rechazados }} Rechazados</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if documentos %}
+                            {% for documento in documentos %}
+                            <div class="documento-item documento-{{ documento.estado_revision }}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="fw-bold mb-1">{{ documento.requisito.nombre }}</h6>
+                                        {% if documento.numero_revision > 1 %}
+                                            <span class="badge badge-estado bg-info">
+                                                {{ documento.numero_revision }}ª Revisión
+                                            </span>
+                                        {% endif %}
+                                        <span class="badge badge-estado bg-{{ documento.estado_revision|yesno:'success,warning,danger' }}">
+                                            {% if documento.estado_revision == 'aprobado' %}
+                                                <i class="fas fa-check me-1"></i>Aprobado
+                                            {% elif documento.estado_revision == 'rechazado' %}
+                                                <i class="fas fa-times me-1"></i>Rechazado
+                                            {% else %}
+                                                <i class="fas fa-clock me-1"></i>Pendiente
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        {% if puede_decidir %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="aprobarDocumento({{ documento.id }})">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="rechazarDocumento({{ documento.id }})">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if documento.archivo %}
+                                        <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ documento.archivo.url }}" download class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if documento.archivo %}
+                                    <p class="mb-1 small text-muted">
+                                        <i class="fas fa-file me-1"></i>
+                                        {{ documento.nombre_archivo }}
+                                    </p>
+                                {% endif %}
+                                {% if documento.observaciones %}
+                                    <p class="mb-0 small">
+                                        <strong>Observaciones:</strong> {{ documento.observaciones }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">No hay documentos configurados</h6>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- F) Solicitudes Anteriores del Cliente -->
+                <div class="card-profesional mb-4 fade-in">
+                    <div class="card-header-profesional">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-clock me-2"></i>
+                            Solicitudes Anteriores
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if solicitudes_anteriores %}
+                            <div class="mb-3">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Se encontraron <strong>{{ total_solicitudes_anteriores }}</strong> solicitud{{ total_solicitudes_anteriores|pluralize:"es" }} anterior{{ total_solicitudes_anteriores|pluralize:"es" }} para este cliente
+                                </div>
+                            </div>
+                            
+                            <div class="scroll-container">
+                                {% for solicitud_anterior in solicitudes_anteriores %}
+                                <div class="border rounded p-3 mb-3 hover-shadow">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">
+                                                <a href="{% url 'workflow:detalle_solicitud_profesional' solicitud_anterior.solicitud.id %}" 
+                                                   class="text-decoration-none">
+                                                    {{ solicitud_anterior.solicitud.codigo }}
+                                                </a>
+                                            </h6>
+                                            <span class="badge bg-{{ solicitud_anterior.estado_final|default:'secondary' }}">
+                                                {{ solicitud_anterior.estado_final }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">{{ solicitud_anterior.fecha_creacion|date:"d/m/Y" }}</small>
+                                    </div>
+                                    
+                                    <div class="row text-center mt-2">
+                                        {% if solicitud_anterior.cotizacion.montoPrestamo %}
+                                        <div class="col-6">
+                                            <div class="fw-semibold text-primary">${{ solicitud_anterior.cotizacion.montoPrestamo|floatformat:0 }}</div>
+                                            <small class="text-muted">Monto</small>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-6">
+                                            <div class="fw-semibold">{{ solicitud_anterior.oficial_responsable.get_full_name|default:solicitud_anterior.oficial_responsable.username }}</div>
+                                            <small class="text-muted">Oficial</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center mt-2">
+                                        <a href="{% url 'workflow:detalle_solicitud_profesional' solicitud_anterior.solicitud.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            Ver Detalle
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-user-check fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">Cliente Nuevo</h6>
+                                <p class="text-muted small">Este cliente no tiene solicitudes anteriores en el sistema</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Comentarios y Decisión -->
+            <div class="col-lg-4 col-xl-3">
+                <!-- B) Sección de Comentarios y Decisión -->
+                {% include 'workflow/partials/decision_panel.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals y JavaScript serán agregados en los siguientes pasos -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ================================
+// CENTRO DE DECISIÓN CRM - JAVASCRIPT PROFESIONAL
+// ================================
+
+// Variables globales
+const APP_CONFIG = {
+    solicitudId: {{ solicitud.id }},
+    csrfToken: document.querySelector('[name=csrfmiddlewaretoken]')?.value,
+    endpoints: {
+        aprobarDoc: `{% url 'workflow:api_aprobar_documento' solicitud.id 0 %}`,
+        rechazarDoc: `{% url 'workflow:api_rechazar_documento' solicitud.id 0 %}`,
+        comentarios: `{% url 'workflow:api_obtener_comentarios' solicitud.id %}`,
+        transicion: `{% url 'workflow:transicion_solicitud_profesional' solicitud.id %}`
+    }
+};
+
+// ================================
+// SISTEMA DE NOTIFICACIONES MODERNO
+// ================================
+class NotificationSystem {
+    static show(message, type = 'info', duration = 5000) {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 320px;
+            max-width: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-left: 4px solid ${this.getColor(type)};
+            padding: 1rem 1.5rem;
+            transform: translateX(400px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        `;
+        
+        const icon = this.getIcon(type);
+        notification.innerHTML = `
+            <div class="d-flex align-items-start gap-3">
+                <div class="text-${type}" style="color: ${this.getColor(type)};">
+                    <i class="fas fa-${icon} fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold text-gray-900" style="color: #1f2937;">${this.getTitle(type)}</div>
+                    <div class="text-gray-600 small" style="color: #6b7280;">${message}</div>
+                </div>
+                <button class="btn-close" onclick="this.parentElement.parentElement.remove()" style="border: none; background: none; font-size: 1.25rem; color: #9ca3af; cursor: pointer;">&times;</button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Animación de entrada
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Auto-remover
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+        
+        return notification;
+    }
+    
+    static getColor(type) {
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#3b82f6'
+        };
+        return colors[type] || colors.info;
+    }
+    
+    static getIcon(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-triangle',
+            warning: 'exclamation-triangle',
+            info: 'info-circle'
+        };
+        return icons[type] || icons.info;
+    }
+    
+    static getTitle(type) {
+        const titles = {
+            success: 'Éxito',
+            error: 'Error',
+            warning: 'Advertencia',
+            info: 'Información'
+        };
+        return titles[type] || titles.info;
+    }
+}
+
+// ================================
+// SISTEMA DE CARGA GLOBAL
+// ================================
+class LoadingSystem {
+    static show(message = 'Procesando...') {
+        if (document.getElementById('globalLoader')) return;
+        
+        const loader = document.createElement('div');
+        loader.id = 'globalLoader';
+        loader.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        loader.innerHTML = `
+            <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: center; min-width: 200px;">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                <div class="fw-bold text-gray-900" style="color: #1f2937;">${message}</div>
+            </div>
+        `;
+        
+        document.body.appendChild(loader);
+    }
+    
+    static hide() {
+        const loader = document.getElementById('globalLoader');
+        if (loader) loader.remove();
+    }
+}
+
+// ================================
+// GESTIÓN DE DOCUMENTOS
+// ================================
+function aprobarDocumento(documentoId) {
+    Swal.fire({
+        title: '¿Aprobar documento?',
+        text: 'Esta acción marcará el documento como aprobado',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, aprobar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            LoadingSystem.show('Aprobando documento...');
+            
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', APP_CONFIG.csrfToken);
+            
+            fetch(APP_CONFIG.endpoints.aprobarDoc.replace('0', documentoId), {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                LoadingSystem.hide();
+                if (data.success) {
+                    NotificationSystem.show(data.mensaje || 'Documento aprobado exitosamente', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Error desconocido');
+                }
+            })
+            .catch(error => {
+                LoadingSystem.hide();
+                console.error('Error:', error);
+                NotificationSystem.show(`Error al aprobar documento: ${error.message}`, 'error');
+            });
+        }
+    });
+}
+
+function rechazarDocumento(documentoId) {
+    Swal.fire({
+        title: 'Rechazar documento',
+        input: 'textarea',
+        inputLabel: 'Motivo del rechazo',
+        inputPlaceholder: 'Explica por qué el documento no cumple con los requisitos...',
+        inputAttributes: {
+            'aria-label': 'Motivo del rechazo'
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Rechazar',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Debes proporcionar un motivo para el rechazo';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            LoadingSystem.show('Rechazando documento...');
+            
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', APP_CONFIG.csrfToken);
+            formData.append('motivo', result.value.trim());
+            
+            fetch(APP_CONFIG.endpoints.rechazarDoc.replace('0', documentoId), {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                LoadingSystem.hide();
+                if (data.success) {
+                    NotificationSystem.show(data.mensaje || 'Documento rechazado', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    throw new Error(data.error || 'Error desconocido');
+                }
+            })
+            .catch(error => {
+                LoadingSystem.hide();
+                console.error('Error:', error);
+                NotificationSystem.show(`Error al rechazar documento: ${error.message}`, 'error');
+            });
+        }
+    });
+}
+
+// ================================
+// CENTRO DE DECISIÓN
+// ================================
+function procesarDecision(accion, etapaDestinoId) {
+    const comentario = document.getElementById('comentarioDecision').value.trim();
+    
+    if (!comentario) {
+        NotificationSystem.show('Debes agregar un comentario antes de tomar una decisión', 'warning');
+        document.getElementById('comentarioDecision').focus();
+        return;
+    }
+    
+    const acciones = {
+        'aprobar': { title: '¿Aprobar solicitud?', text: 'La solicitud será aprobada y pasará a la siguiente etapa', icon: 'success' },
+        'rechazar': { title: '¿Rechazar solicitud?', text: 'La solicitud será rechazada y se notificará a la oficial', icon: 'error' },
+        'devolver': { title: '¿Devolver solicitud?', text: 'La solicitud será devuelta a la etapa anterior para correcciones', icon: 'warning' },
+        'comite': { title: '¿Elevar a comité?', text: 'La solicitud será enviada al comité para decisión final', icon: 'info' }
+    };
+    
+    const config = acciones[accion] || acciones['aprobar'];
+    
+    Swal.fire({
+        title: config.title,
+        text: config.text,
+        icon: config.icon,
+        showCancelButton: true,
+        confirmButtonColor: config.icon === 'success' ? '#10b981' : config.icon === 'error' ? '#ef4444' : '#f59e0b',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            enviarDecision(accion, etapaDestinoId, comentario);
+        }
+    });
+}
+
+function enviarDecision(accion, etapaDestinoId, comentario) {
+    LoadingSystem.show(`Procesando ${accion}...`);
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', APP_CONFIG.csrfToken);
+    formData.append('accion', accion);
+    formData.append('etapa_destino', etapaDestinoId);
+    formData.append('comentario', comentario);
+    
+    const archivo = document.getElementById('archivoDecision').files[0];
+    if (archivo) {
+        formData.append('archivo', archivo);
+    }
+    
+    fetch(APP_CONFIG.endpoints.transicion, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        LoadingSystem.hide();
+        if (data.success) {
+            Swal.fire({
+                title: '¡Decisión procesada!',
+                text: data.mensaje || 'La decisión se ha registrado exitosamente',
+                icon: 'success',
+                confirmButtonColor: '#10b981'
+            }).then(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    location.reload();
+                }
+            });
+        } else {
+            throw new Error(data.error || 'Error al procesar la decisión');
+        }
+    })
+    .catch(error => {
+        LoadingSystem.hide();
+        console.error('Error:', error);
+        NotificationSystem.show(`Error: ${error.message}`, 'error');
+    });
+}
+
+function enviarComentario() {
+    const comentario = document.getElementById('comentarioDecision').value.trim();
+    
+    if (!comentario) {
+        NotificationSystem.show('Debes escribir un comentario', 'warning');
+        document.getElementById('comentarioDecision').focus();
+        return;
+    }
+    
+    LoadingSystem.show('Enviando comentario...');
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', APP_CONFIG.csrfToken);
+    formData.append('accion', 'comentario');
+    formData.append('comentario', comentario);
+    
+    const archivo = document.getElementById('archivoDecision').files[0];
+    if (archivo) {
+        formData.append('archivo', archivo);
+    }
+    
+    fetch(APP_CONFIG.endpoints.transicion, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        LoadingSystem.hide();
+        if (data.success) {
+            NotificationSystem.show('Comentario enviado exitosamente', 'success');
+            document.getElementById('comentarioDecision').value = '';
+            document.getElementById('archivoDecision').value = '';
+            cargarComentarios();
+        } else {
+            throw new Error(data.error || 'Error al enviar comentario');
+        }
+    })
+    .catch(error => {
+        LoadingSystem.hide();
+        console.error('Error:', error);
+        NotificationSystem.show(`Error: ${error.message}`, 'error');
+    });
+}
+
+// ================================
+// GESTIÓN DE COMENTARIOS
+// ================================
+function cargarComentarios() {
+    fetch(APP_CONFIG.endpoints.comentarios)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                actualizarComentarios(data.comentarios);
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando comentarios:', error);
+        });
+}
+
+function actualizarComentarios(comentarios) {
+    const container = document.getElementById('comentariosContainer');
+    if (!container) return;
+    
+    if (comentarios.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-comments fa-2x text-muted mb-2"></i>
+                <p class="text-muted small">No hay comentarios en el flujo</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = comentarios.map(comentario => `
+        <div class="timeline-item">
+            <div class="timeline-content">
+                <div class="timeline-header">
+                    <h6 class="timeline-title">${comentario.usuario.nombre_completo || comentario.usuario.username}</h6>
+                    <span class="timeline-time">${new Date(comentario.fecha_creacion).toLocaleDateString('es-ES')} ${new Date(comentario.fecha_creacion).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</span>
+                </div>
+                <p class="timeline-meta">${comentario.comentario}</p>
+                ${comentario.es_editado ? '<small class="text-muted"><i class="fas fa-edit me-1"></i>Editado</small>' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// ================================
+// GESTIÓN DE ARCHIVOS
+// ================================
+function setupFileUpload() {
+    const fileUpload = document.querySelector('.file-upload');
+    const fileInput = document.getElementById('archivoDecision');
+    
+    if (!fileUpload || !fileInput) return;
+    
+    // Drag & Drop
+    fileUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUpload.classList.add('dragover');
+    });
+    
+    fileUpload.addEventListener('dragleave', () => {
+        fileUpload.classList.remove('dragover');
+    });
+    
+    fileUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUpload.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            mostrarArchivoSeleccionado(files[0]);
+        }
+    });
+    
+    // Cambio de archivo
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            mostrarArchivoSeleccionado(e.target.files[0]);
+        }
+    });
+}
+
+function mostrarArchivoSeleccionado(file) {
+    const fileUpload = document.querySelector('.file-upload');
+    if (!fileUpload) return;
+    
+    fileUpload.innerHTML = `
+        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+        <div class="fw-bold">${file.name}</div>
+        <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+        <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="limpiarArchivo()">
+                <i class="fas fa-times me-1"></i>Quitar
+            </button>
+        </div>
+    `;
+}
+
+function limpiarArchivo() {
+    const fileInput = document.getElementById('archivoDecision');
+    const fileUpload = document.querySelector('.file-upload');
+    
+    if (fileInput) fileInput.value = '';
+    if (fileUpload) {
+        fileUpload.innerHTML = `
+            <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+            <div class="fw-bold">Haz clic para subir archivo</div>
+            <small class="text-muted">PDF, DOC, DOCX, JPG, PNG (Max: 10MB)</small>
+        `;
+    }
+}
+
+// ================================
+// EFECTOS VISUALES Y ANIMACIONES
+// ================================
+function setupAnimations() {
+    // Animaciones de entrada
+    const animateElements = document.querySelectorAll('.animate-in');
+    animateElements.forEach((element, index) => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            element.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, index * 150);
+    });
+    
+    // Efectos hover para documentos
+    const documentItems = document.querySelectorAll('.document-item');
+    documentItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+    
+    // Efectos para botones de decisión
+    const decisionButtons = document.querySelectorAll('.btn-decision');
+    decisionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.02)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+}
+
+// ================================
+// INICIALIZACIÓN DEL SISTEMA
+// ================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Centro de Decisión CRM Inicializado');
+    console.log('📋 Solicitud ID:', APP_CONFIG.solicitudId);
+    
+    // Configurar sistemas
+    setupAnimations();
+    setupFileUpload();
+    
+    // Cargar comentarios iniciales
+    cargarComentarios();
+    
+    // Auto-resize para textarea
+    const textarea = document.getElementById('comentarioDecision');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.max(120, this.scrollHeight) + 'px';
+        });
+    }
+    
+    // Validación de formulario en tiempo real
+    const form = document.getElementById('decisionForm');
+    if (form) {
+        form.addEventListener('input', function() {
+            const comentario = document.getElementById('comentarioDecision').value.trim();
+            const buttons = document.querySelectorAll('.btn-decision');
+            
+            buttons.forEach(button => {
+                if (comentario.length > 10) {
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                } else {
+                    button.disabled = true;
+                    button.style.opacity = '0.5';
+                }
+            });
+        });
+    }
+    
+    // Autoguardado de comentario (localStorage)
+    if (textarea) {
+        const autoSaveKey = `comentario_solicitud_${APP_CONFIG.solicitudId}`;
+        
+        // Cargar comentario guardado
+        const savedComment = localStorage.getItem(autoSaveKey);
+        if (savedComment) {
+            textarea.value = savedComment;
+            textarea.dispatchEvent(new Event('input'));
+        }
+        
+        // Guardar automáticamente
+        textarea.addEventListener('input', function() {
+            localStorage.setItem(autoSaveKey, this.value);
+        });
+        
+        // Limpiar al enviar
+        form?.addEventListener('submit', function() {
+            localStorage.removeItem(autoSaveKey);
+        });
+    }
+    
+    console.log('✅ Centro de Decisión listo para operar');
+});
+
+// ================================
+// MANEJO DE ERRORES GLOBAL
+// ================================
+window.addEventListener('error', function(e) {
+    console.error('Error de aplicación:', e.error);
+    NotificationSystem.show('Ha ocurrido un error inesperado', 'error');
+});
+
+// Incluir SweetAlert2 para mejor UX
+if (!window.Swal) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+    document.head.appendChild(script);
+}
+</script>
+{% endblock %}
+ 

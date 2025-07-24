@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso
+from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumento, ComentarioDocumento
 from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte
 from .forms import SolicitudAdminForm
 
@@ -568,3 +568,108 @@ class EjecucionReporteAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('reporte', 'usuario')
+
+
+# =============================================================================
+# ADMINISTRACIÓN DE CALIFICACIÓN DE DOCUMENTOS
+# =============================================================================
+
+@admin.register(OpcionDesplegable)
+class OpcionDesplegableAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'descripcion', 'orden', 'activo', 'fecha_creacion')
+    list_filter = ('activo', 'fecha_creacion')
+    search_fields = ('nombre', 'descripcion')
+    ordering = ('orden', 'nombre')
+    list_editable = ('orden', 'activo')
+
+
+class ComentarioDocumentoInline(admin.TabularInline):
+    model = ComentarioDocumento
+    extra = 0
+    readonly_fields = ('fecha_comentario', 'fecha_modificacion')
+    fields = ('comentario_por', 'comentario', 'activo', 'fecha_comentario')
+
+
+class CalificacionDocumentoInline(admin.TabularInline):
+    model = CalificacionDocumento
+    extra = 0
+    readonly_fields = ('fecha_calificacion', 'fecha_modificacion')
+    fields = ('calificado_por', 'estado', 'opcion_desplegable', 'fecha_calificacion')
+
+
+@admin.register(CalificacionDocumento)
+class CalificacionDocumentoAdmin(admin.ModelAdmin):
+    list_display = (
+        'requisito_solicitud', 'calificado_por', 'estado', 
+        'opcion_desplegable', 'fecha_calificacion'
+    )
+    list_filter = ('estado', 'fecha_calificacion', 'opcion_desplegable')
+    search_fields = (
+        'requisito_solicitud__requisito__nombre', 
+        'calificado_por__username',
+        'requisito_solicitud__solicitud__id'
+    )
+    readonly_fields = ('fecha_calificacion', 'fecha_modificacion')
+    ordering = ('-fecha_calificacion',)
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('requisito_solicitud', 'calificado_por', 'estado', 'opcion_desplegable')
+        }),
+        ('Fechas', {
+            'fields': ('fecha_calificacion', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ComentarioDocumento)
+class ComentarioDocumentoAdmin(admin.ModelAdmin):
+    list_display = (
+        'requisito_solicitud', 'comentario_por', 'comentario_preview', 
+        'activo', 'fecha_comentario'
+    )
+    list_filter = ('activo', 'fecha_comentario')
+    search_fields = (
+        'requisito_solicitud__requisito__nombre', 
+        'comentario_por__username',
+        'comentario',
+        'requisito_solicitud__solicitud__id'
+    )
+    readonly_fields = ('fecha_comentario', 'fecha_modificacion')
+    ordering = ('-fecha_comentario',)
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('requisito_solicitud', 'comentario_por', 'comentario', 'activo')
+        }),
+        ('Fechas', {
+            'fields': ('fecha_comentario', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def comentario_preview(self, obj):
+        return obj.comentario[:50] + '...' if len(obj.comentario) > 50 else obj.comentario
+    comentario_preview.short_description = 'Comentario'
+
+
+# Agregar inlines a RequisitoSolicitudAdmin si existe
+try:
+    # Intentar encontrar el admin existente de RequisitoSolicitud
+    from django.contrib.admin.sites import site
+    if RequisitoSolicitud in site._registry:
+        # Si ya existe, agregar nuestros inlines
+        existing_admin = site._registry[RequisitoSolicitud]
+        if hasattr(existing_admin, 'inlines'):
+            existing_admin.inlines = list(existing_admin.inlines) + [CalificacionDocumentoInline, ComentarioDocumentoInline]
+        else:
+            existing_admin.inlines = [CalificacionDocumentoInline, ComentarioDocumentoInline]
+except Exception:
+    # Si no existe o hay algún problema, crear uno nuevo
+    @admin.register(RequisitoSolicitud)
+    class RequisitoSolicitudAdmin(admin.ModelAdmin):
+        list_display = ('solicitud', 'requisito', 'cumplido', 'fecha_subida')
+        list_filter = ('cumplido', 'fecha_subida')
+        search_fields = ('solicitud__id', 'requisito__nombre')
+        inlines = [CalificacionDocumentoInline, ComentarioDocumentoInline]

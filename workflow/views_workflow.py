@@ -964,6 +964,101 @@ def detalle_solicitud(request, solicitud_id):
     campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
     valores_campos = solicitud.valores_personalizados.all()
     
+    # Para vista backoffice: obtener archivos requeridos por subestado
+    archivos_por_subestado = {}
+    if (solicitud.etapa_actual and 
+        solicitud.etapa_actual.nombre == "Back Office" and 
+        solicitud.etapa_actual.es_bandeja_grupal):
+        
+        # Obtener transiciones de salida desde la etapa actual
+        transiciones_salida = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
+        requisitos_necesarios = {}
+        
+        # Procesar requisitos de transiciones de salida
+        for transicion in transiciones_salida:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_necesarios:
+                    requisitos_necesarios[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'archivo_actual': None,
+                        'esta_cumplido': False,
+                        'tipo_transicion': 'salida'
+                    }
+        
+        # Procesar requisitos de transiciones de entrada
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_necesarios:
+                    requisitos_necesarios[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'archivo_actual': None,
+                        'esta_cumplido': False,
+                        'tipo_transicion': 'entrada'
+                    }
+        
+        # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud).select_related('requisito')
+        for req_sol in requisitos_solicitud:
+            req_id = req_sol.requisito_id  # Usar el foreign key directamente
+            if req_id in requisitos_necesarios:
+                # Obtener calificaciones y comentarios
+                from .models import CalificacionDocumento, ComentarioDocumento, OpcionDesplegable
+                
+                calificaciones = CalificacionDocumento.objects.filter(
+                    requisito_solicitud=req_sol
+                ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
+                
+                comentarios = ComentarioDocumento.objects.filter(
+                    requisito_solicitud=req_sol,
+                    activo=True
+                ).select_related('comentario_por').order_by('-fecha_comentario')
+                
+                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                requisitos_necesarios[req_id]['calificaciones'] = list(calificaciones)
+                requisitos_necesarios[req_id]['comentarios'] = list(comentarios)
+                requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
+        
+        # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
+        for subestado in solicitud.etapa_actual.subestados.all():
+            archivos_por_subestado[subestado.id] = list(requisitos_necesarios.values())
+    
+    # Calcular estadísticas de archivos para el template
+    archivos_stats = {}
+    if archivos_por_subestado:
+        for subestado_id, archivos in archivos_por_subestado.items():
+            total_archivos = len(archivos)
+            archivos_completos = len([archivo for archivo in archivos if archivo['esta_cumplido']])
+            archivos_stats[subestado_id] = {
+                'total': total_archivos,
+                'completos': archivos_completos,
+                'pendientes': total_archivos - archivos_completos,
+                'porcentaje': round((archivos_completos / total_archivos * 100) if total_archivos > 0 else 0, 1)
+            }
+    
+    # Obtener opciones de desplegable para calificación
+    opciones_desplegable = []
+    if archivos_por_subestado:  # Solo si estamos en Back Office
+        from .models import OpcionDesplegable
+        opciones_desplegable = OpcionDesplegable.objects.filter(activo=True).order_by('orden')
+    
     context = {
         'solicitud': solicitud,
         'transiciones_disponibles': transiciones_disponibles,
@@ -971,6 +1066,9 @@ def detalle_solicitud(request, solicitud_id):
         'requisitos': requisitos,
         'campos_personalizados': campos_personalizados,
         'valores_campos': valores_campos,
+        'archivos_por_subestado': archivos_por_subestado,
+        'archivos_stats': archivos_stats,
+        'opciones_desplegable': opciones_desplegable,
     }
     
     # Verificar si estamos en la etapa "Back Office" con bandeja grupal
