@@ -5178,9 +5178,9 @@ def api_solicitud_detalle(request, solicitud_id):
                     'puede_realizar': puede_realizar and len(requisitos_faltantes) == 0,
                     'requisitos_faltantes': [
                         {
-                            'id': req.id,
-                            'nombre': req.nombre,
-                            'descripcion': req.descripcion
+                            'id': req['id'],
+                            'nombre': req['nombre'],
+                            'descripcion': req['descripcion']
                         } for req in requisitos_faltantes
                     ]
                 })
@@ -5204,8 +5204,7 @@ def api_solicitud_detalle(request, solicitud_id):
                     'username': h.usuario_responsable.username
                 } if h.usuario_responsable else None,
                 'fecha_inicio': h.fecha_inicio.isoformat() if h.fecha_inicio else None,
-                'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None,
-                'comentarios': h.comentarios
+                'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None
             })
 
         # Requisitos de la solicitud
@@ -5216,13 +5215,11 @@ def api_solicitud_detalle(request, solicitud_id):
                 'requisito': {
                     'id': req.requisito.id,
                     'nombre': req.requisito.nombre,
-                    'descripcion': req.requisito.descripcion,
-                    'es_obligatorio': req.requisito.es_obligatorio
+                    'descripcion': req.requisito.descripcion
                 },
                 'cumplido': req.cumplido,
                 'archivo': req.archivo.url if req.archivo else None,
-                'observaciones': req.observaciones,
-                'fecha_cumplimiento': req.fecha_cumplimiento.isoformat() if req.fecha_cumplimiento else None
+                'observaciones': req.observaciones
             })
 
         # Campos personalizados
@@ -5249,7 +5246,7 @@ def api_solicitud_detalle(request, solicitud_id):
                 'id': campo.id,
                 'nombre': campo.nombre,
                 'tipo': campo.tipo,
-                'obligatorio': campo.obligatorio,
+                'requerido': campo.requerido,
                 'valor': valor_actual
             })
 

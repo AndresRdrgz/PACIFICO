@@ -1,1 +1,1 @@
-# Este archivo hace que Python reconozca este directorio como un módulo 
+# Management package 

@@ -24,25 +24,69 @@
                 </div>
             </div>
             <div class="modal-body-modern" id="modalSolicitudBody">
-                <!-- Main Content Area -->
-                <div class="modal-main-content">
-                    <!-- Workflow Progress Section -->
-                    <div class="workflow-section">
-                        <div class="section-title">
-                            <i class="fas fa-route me-2"></i>
-                            Ruta del Flujo de Trabajo
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs modal-tabs" id="modalSolicitudTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="informacion-tab" data-bs-toggle="tab" data-bs-target="#informacion" 
+                                type="button" role="tab" aria-controls="informacion" aria-selected="true">
+                            <i class="fas fa-info-circle me-2"></i>Información
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" 
+                                type="button" role="tab" aria-controls="documentos" aria-selected="false">
+                            <i class="fas fa-file-alt me-2"></i>Documentos
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content modal-tab-content" id="modalSolicitudTabContent">
+                    <!-- Información Tab -->
+                    <div class="tab-pane fade show active" id="informacion" role="tabpanel" aria-labelledby="informacion-tab">
+                        <!-- Main Content Area -->
+                        <div class="modal-main-content">
+                            <!-- Workflow Progress Section -->
+                            <div class="workflow-section">
+                                <div class="section-title">
+                                    <i class="fas fa-route me-2"></i>
+                                    Ruta del Flujo de Trabajo
+                                </div>
+                                <div class="workflow-container" id="modalSolicitudWorkflowProgress">
+                                    <!-- Workflow progress will be rendered here -->
+                                </div>
+                            </div>
                         </div>
-                        <div class="workflow-container" id="modalSolicitudWorkflowProgress">
-                            <!-- Workflow progress will be rendered here -->
+
+                        <!-- Info Cards Section -->
+                        <div class="info-cards-section">
+                            <!-- Unified Summary Card -->
+                            <div class="summary-card-modern" id="modalSolicitudSummaryCard" style="transition: 0.3s; opacity: 1; transform: translateY(0px);">
+                                <!-- Content will be populated by JS -->
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Info Cards Section -->
-                <div class="info-cards-section">
-                    <!-- Unified Summary Card -->
-                    <div class="summary-card-modern" id="modalSolicitudSummaryCard" style="transition: 0.3s; opacity: 1; transform: translateY(0px);">
-                        <!-- Content will be populated by JS -->
+                    <!-- Documentos Tab -->
+                    <div class="tab-pane fade" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
+                        <div class="documentos-section">
+                            <div class="section-title">
+                                <i class="fas fa-folder-open me-2"></i>
+                                Requisitos y Documentos
+                            </div>
+                            <div class="documentos-container" id="modalSolicitudDocumentos">
+                                <!-- Documentos content will be rendered here -->
+                                <div class="loading-placeholder" style="display: none;">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando documentos...</span>
+                                    </div>
+                                </div>
+                                <div class="empty-state" style="display: none;">
+                                    <i class="fas fa-file-alt mb-3"></i>
+                                    <p>No hay documentos disponibles</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -50,6 +94,13 @@
     </div>
 </div>
 <style>
+/* === CSS VARIABLES === */
+:root {
+    --verde-pacifico: #009c3c;
+    --verde-pacifico-hover: #007e31;
+    --verde-pacifico-light: #22a650;
+}
+
 /* === MODERN MODAL STYLES === */
 .modern-modal {
     border: none;
@@ -213,10 +264,186 @@
 }
 
 .modal-body-modern {
-    padding: 2rem;
+    padding: 0;
     background: #f8f9fa;
     max-height: calc(95vh - 120px);
     overflow-y: auto;
+}
+
+/* === TAB STYLES === */
+.modal-tabs {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    margin: 0;
+    padding: 0 2rem;
+}
+
+.modal-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.modal-tabs .nav-link:hover {
+    border-color: transparent;
+    color: var(--verde-pacifico);
+    background: transparent;
+}
+
+.modal-tabs .nav-link.active {
+    color: var(--verde-pacifico);
+    background: transparent;
+    border-color: transparent;
+    font-weight: 600;
+}
+
+.modal-tabs .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--verde-pacifico);
+    border-radius: 3px 3px 0 0;
+}
+
+.modal-tab-content {
+    background: #f8f9fa;
+}
+
+.modal-tab-content .tab-pane {
+    padding: 2rem;
+}
+
+/* === DOCUMENTOS SECTION === */
+.documentos-section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--verde-pacifico);
+}
+
+.documentos-container {
+    min-height: 200px;
+}
+
+.documento-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid #e0e0e0;
+}
+
+.documento-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.documento-item.cumplido {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
+}
+
+.documento-item.pendiente {
+    border-left-color: #ffc107;
+    background: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);
+}
+
+.documento-item.no-cumplido {
+    border-left-color: #dc3545;
+    background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+}
+
+.documento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.documento-nombre {
+    font-weight: 600;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.documento-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.documento-status.cumplido {
+    background: #d4edda;
+    color: #155724;
+}
+
+.documento-status.pendiente {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.documento-status.no-cumplido {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.documento-observaciones {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+.documento-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-documento {
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-documento.btn-download {
+    background: var(--verde-pacifico);
+    color: white;
+    border: none;
+}
+
+.btn-documento.btn-download:hover {
+    background: #007e31;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.documento-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .documento-grid {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
 }
 
 /* === WORKFLOW SECTION === */
@@ -1327,6 +1554,10 @@ function populateModalData(data) {
             }
         }
         
+        // Populate documentos tab
+        const documentos = data.documentos || [];
+        populateDocumentosTab(documentos);
+        
         // Add smooth animations for the new layout
         setTimeout(() => {
             const modernCards = document.querySelectorAll('.summary-card-modern, .client-card-modern, .cotizacion-card-modern');
@@ -1493,6 +1724,87 @@ function renderWorkflowRoadmap(etapas) {
     }
 }
 
+// Function to populate documentos tab
+function populateDocumentosTab(documentos) {
+    const documentosContainer = document.getElementById('modalSolicitudDocumentos');
+    const loadingPlaceholder = documentosContainer.querySelector('.loading-placeholder');
+    const emptyState = documentosContainer.querySelector('.empty-state');
+    
+    if (!documentosContainer) {
+        console.error('Documentos container not found');
+        return;
+    }
+    
+    // Hide loading and empty states initially
+    if (loadingPlaceholder) loadingPlaceholder.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    
+    // Clear existing content except placeholders
+    const existingItems = documentosContainer.querySelectorAll('.documento-item');
+    existingItems.forEach(item => item.remove());
+    
+    if (!documentos || documentos.length === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+    }
+    
+    const documentosGrid = document.createElement('div');
+    documentosGrid.className = 'documento-grid';
+    
+    documentos.forEach(documento => {
+        const documentoItem = document.createElement('div');
+        
+        // Determine status class and text
+        let statusClass = 'pendiente';
+        let statusText = 'Pendiente';
+        
+        if (documento.cumplido === true) {
+            statusClass = 'cumplido';
+            statusText = 'Cumplido';
+        } else if (documento.cumplido === false) {
+            statusClass = 'no-cumplido';
+            statusText = 'No Cumplido';
+        }
+        
+        documentoItem.className = `documento-item ${statusClass}`;
+        
+        let actionsHtml = '';
+        if (documento.url && documento.url.trim() !== '') {
+            actionsHtml = `
+                <div class="documento-actions">
+                    <a href="${documento.url}" target="_blank" class="btn-documento btn-download">
+                        <i class="fas fa-download me-1"></i>Descargar
+                    </a>
+                </div>
+            `;
+        }
+        
+        let observacionesHtml = '';
+        if (documento.observaciones && documento.observaciones.trim() !== '') {
+            observacionesHtml = `
+                <div class="documento-observaciones">
+                    <strong>Observaciones:</strong> ${documento.observaciones}
+                </div>
+            `;
+        }
+        
+        documentoItem.innerHTML = `
+            <div class="documento-header">
+                <div class="documento-nombre">${documento.nombre || 'Documento sin nombre'}</div>
+                <span class="documento-status ${statusClass}">${statusText}</span>
+            </div>
+            ${observacionesHtml}
+            ${actionsHtml}
+        `;
+        
+        documentosGrid.appendChild(documentoItem);
+    });
+    
+    documentosContainer.appendChild(documentosGrid);
+    
+    console.log(`Populated ${documentos.length} documentos in the tab`);
+}
+
 
 
 
@@ -1561,6 +1873,32 @@ function getMockData(solicitudId) {
                 completada: false,
                 actual: false,
                 sla: '1 día'
+            }
+        ],
+        documentos: [
+            {
+                nombre: 'Cédula de Identidad',
+                url: '/media/documentos/cedula_123.pdf',
+                cumplido: true,
+                observaciones: 'Documento verificado y aprobado'
+            },
+            {
+                nombre: 'Comprobante de Ingresos',
+                url: '/media/documentos/ingresos_123.pdf',
+                cumplido: true,
+                observaciones: ''
+            },
+            {
+                nombre: 'Referencias Comerciales',
+                url: '',
+                cumplido: false,
+                observaciones: 'Pendiente por presentar documento actualizado'
+            },
+            {
+                nombre: 'Carta de Trabajo',
+                url: '/media/documentos/carta_trabajo_123.pdf',
+                cumplido: null,
+                observaciones: 'En revisión por el área de recursos humanos'
             }
         ]
     };

@@ -5,412 +5,1044 @@
 {% block title %}Detalle de Solicitud - Sistema de Workflow{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'workflow/css/detalleSolicitud.css' %}">
+<link rel="stylesheet" href="{% static 'workflow/css/pacifico_custom.css' %}">
 <style>
-  .info-group {
-    margin-bottom: 1rem;
-  }
-  .info-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
-    display: block;
-  }
-  .info-value {
-    font-size: 1rem;
-    color: #212529;
-    font-weight: 500;
-  }
-  .timeline {
-    position: relative;
-    padding-left: 2rem;
-  }
-  .timeline-item {
-    position: relative;
-    margin-bottom: 2rem;
-  }
-  .timeline-marker {
-    position: absolute;
-    left: -2rem;
-    top: 0;
-    width: 2rem;
-    height: 2rem;
-    background: #e9ecef;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .timeline-item.completed .timeline-marker {
-    background: #28a745;
-    color: white;
-  }
-  .timeline-item.active .timeline-marker {
-    background: #007bff;
-    color: white;
-  }
-  .timeline-content {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border-left: 3px solid #dee2e6;
-  }
-  .timeline-item.completed .timeline-content {
-    border-left-color: #28a745;
-  }
-  .timeline-item.active .timeline-content {
-    border-left-color: #007bff;
-  }
-  .timeline-title {
-    margin-bottom: 0.5rem;
-    color: #495057;
-  }
-  .timeline-description {
-    margin-bottom: 0.5rem;
-    color: #6c757d;
-  }
-  .timeline-time {
-    font-size: 0.875rem;
-  }
-  .timeline-comments {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    background: #fff;
-    border-radius: 0.25rem;
-    font-style: italic;
-  }
-  .comentario-item {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 0.5rem;
-    border-left: 3px solid #007bff;
-  }
-  .comentario-content {
-    color: #495057;
-    line-height: 1.5;
-  }
-  .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    display: none;
-  }
-  .loading-content {
-    text-align: center;
-  }
-  .loading-spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 0.3rem solid #f3f4f6;
-    border-top: 0.3rem solid #007bff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-  }
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  .fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
-  }
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
+    /* === DETALLE SOLICITUD STYLES - MATCHING MODAL SOLICITUD === */
+    
+    /* Main Container */
+    .detalle-solicitud-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+
+    /* Header Section - Matching Modal Header */
+    .detalle-header {
+        background: linear-gradient(135deg, #009c3c 0%, #00b84a 50%, #22a650 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
     }
-  }
+
+    .detalle-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        pointer-events: none;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .solicitud-header {
+        flex: 1;
+    }
+
+    .solicitud-code-badge {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .code-text {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+
+    .status-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .solicitud-type {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .action-btn-header {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn-header:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Status Badge Variations */
+    .status-pending {
+        background: rgba(255, 193, 7, 0.2) !important;
+        color: #fff3cd;
+        border-color: rgba(255, 193, 7, 0.3);
+    }
+    
+    .status-in_progress {
+        background: rgba(33, 150, 243, 0.2) !important;
+        color: #e3f2fd;
+        border-color: rgba(33, 150, 243, 0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    .status-completed {
+        background: rgba(76, 175, 80, 0.2) !important;
+        color: #e8f5e8;
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+    
+    .status-error {
+        background: rgba(244, 67, 54, 0.2) !important;
+        color: #ffebee;
+        border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+
+    /* Enhanced Tab Styles */
+    .nav-tabs {
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0;
+        background: white;
+        border-radius: 12px 12px 0 0;
+        padding: 1rem 1rem 0 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .tab-button {
+        white-space: nowrap;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s ease;
+        position: relative;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+    }
+
+    .tab-button:hover {
+        background-color: #f8fafc;
+        color: #009c3c;
+    }
+
+    .tab-button.active {
+        background: white;
+        color: #009c3c;
+        border-bottom: 3px solid #009c3c;
+        margin-bottom: -2px;
+        box-shadow: 0 -2px 4px rgba(0, 156, 60, 0.1);
+    }
+
+    /* Tab Content Styles */
+    .tab-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Modern Card Styles - Matching Modal Cards */
+    .card-custom {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-custom::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #009c3c 0%, #22a650 100%);
+    }
+
+    .card-custom:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Form Enhancements */
+    .form-input, textarea, select {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+        padding: 0.75rem;
+    }
+
+    .form-input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #009c3c;
+        box-shadow: 0 0 0 3px rgba(0, 156, 60, 0.1);
+    }
+
+    /* Button Enhancements */
+    .btn-primary {
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 156, 60, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px -3px rgba(0, 156, 60, 0.4);
+    }
+
+    /* Info Grid Styles - Matching Modal Summary Cards */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+
+    .info-item:hover {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: #009c3c;
+        transform: translateY(-1px);
+    }
+
+    .info-item-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(0, 156, 60, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #009c3c;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+    }
+
+    .info-item-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .info-item-label {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
+    }
+
+    .info-item-value {
+        display: block;
+        font-size: 0.875rem;
+        color: #1e293b;
+        font-weight: 600;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .section-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .detalle-header {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .solicitud-code-badge {
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .code-text {
+            font-size: 1.5rem;
+        }
+
+        .nav-tabs {
+            gap: 0.25rem;
+            padding: 0.5rem;
+        }
+
+        .tab-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .card-custom {
+            padding: 1rem;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+
+    /* Requisitos Styles */
+    .requisitos-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .requisito-item {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .requisito-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #009c3c 0%, #22a650 100%);
+    }
+
+    .requisito-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: #009c3c;
+    }
+
+    .requisito-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .requisito-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .requisito-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .requisito-status.pending {
+        background: rgba(255, 193, 7, 0.1);
+        color: #d97706;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .requisito-status.completed {
+        background: rgba(34, 197, 94, 0.1);
+        color: #059669;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .requisito-description {
+        color: #64748b;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    .requisito-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .requisito-upload-btn {
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .requisito-upload-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+    }
+
+    .requisito-upload-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .requisito-view-btn {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+    }
+
+    .requisito-view-btn:hover {
+        background: rgba(59, 130, 246, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .requisito-observations {
+        background: rgba(0, 156, 60, 0.05);
+        border: 1px solid rgba(0, 156, 60, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .requisito-observations-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #009c3c;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+
+    .requisito-observations-text {
+        font-size: 0.875rem;
+        color: #374151;
+        line-height: 1.5;
+    }
+
+    .requisitos-summary {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .requisitos-summary-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .requisitos-summary-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.125rem;
+    }
+
+    .requisitos-summary-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .requisitos-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 16px;
+    }
+
+    .requisito-stat {
+        text-align: center;
+        padding: 12px;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .requisito-stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #009c3c;
+        margin-bottom: 4px;
+    }
+
+    .requisito-stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+
+    .requisito-stat.pending .requisito-stat-number {
+        color: #d97706;
+    }
+
+    .requisito-stat.completed .requisito-stat-number {
+        color: #059669;
+    }
+
+    @media (max-width: 480px) {
+        .card-custom {
+            margin: 0 -0.5rem;
+            border-radius: 8px;
+        }
+
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .requisito-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .requisito-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .requisito-upload-btn,
+        .requisito-view-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .requisitos-summary-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-  <!-- Pass solicitud ID to JavaScript via data attribute -->
-  <script>
-    document.body.setAttribute('data-solicitud-id', '{{ solicitud.id }}');
-    window.solicitudId = {{ solicitud.id }};
-  </script>
-  
-  <!-- CSRF Token for AJAX requests -->
-  {% csrf_token %}
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <a href="{% url 'workflow:dashboard' %}" class="btn btn-outline-pacifico mb-2">
-        <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
-      </a>
-      <h1 class="h2 mb-1 text-dark fw-bold">
-        <i class="fas fa-file-alt me-2 text-success"></i>
-        <span id="solicitudCodigo">COT-XXXX-XXX</span>
-      </h1>
-      <p class="text-muted mb-0" id="solicitudCliente">Nombre Cliente - CI: 00000000</p>
-    </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-outline-pacifico" id="btnAsignar">
-        <i class="fas fa-user-plus me-2"></i>Asignar
-      </button>
-      <button class="btn btn-outline-secondary" id="btnDevolver">
-        <i class="fas fa-undo me-2"></i>Devolver
-      </button>
-      <button class="btn btn-outline-danger" id="btnAnular">
-        <i class="fas fa-times me-2"></i>Anular
-      </button>
-      <button class="btn btn-pacifico" id="btnCambiarEstado">
-        <i class="fas fa-exchange-alt me-2"></i>Cambiar Estado
-      </button>
+<div class="detalle-solicitud-container">
+<div class="max-w-7xl mx-auto px-2 py-6">
+  <!-- Solicitud Header - Matching Modal Style -->
+  <div class="detalle-header mb-6">
+    <div class="header-content">
+      <div class="solicitud-header">
+        <div class="solicitud-code-badge">
+          <span class="code-text" id="solicitudCodigo">{{ solicitud.codigo|default:'COT-XXXX-XXX' }}</span>
+          <span class="status-badge status-{{ solicitud.apc_status|default:'pending' }}">
+            {{ solicitud.get_apc_status_display|default:'Pendiente' }}
+          </span>
+        </div>
+        <div class="solicitud-type" id="solicitudCliente">{{ solicitud.cliente_nombre_completo|default:'Nombre Cliente' }} - CI: {{ solicitud.cliente_cedula_completa|default:'00000000' }}</div>
+      </div>
+      <div class="header-actions">
+        <a href="{% url 'workflow:dashboard' %}" class="action-btn-header" title="Volver al Dashboard">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <div class="flex flex-wrap gap-2 items-center">
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold" id="solicitudEtapa">{{ solicitud.etapa_actual.nombre|default:'-' }}</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold" id="solicitudMonto">{{ solicitud.monto_formateado }}</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold" id="solicitudProducto">{{ solicitud.producto_descripcion }}</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold" id="solicitudSLA">SLA: {{ solicitud.etapa_actual.sla_horas|default:'-' }}</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Info Cards -->
-  <div class="row mb-4">
-    <div class="col-md-8">
-      <!-- Main Info Card -->
-      <div class="card card-custom mb-4">
-        <div class="card-header-custom">
-          <h5 class="mb-0">
-            <i class="fas fa-info-circle me-2"></i>
-            Información General
-          </h5>
+  <!-- Tabbed Interface -->
+  <div class="w-full" id="tabContainer">
+    <nav class="nav-tabs flex space-x-2 border-b border-gray-200 mb-6" aria-label="Tabs" role="tablist">
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none active" data-tab="cliente" aria-controls="tab-cliente" aria-selected="true" tabindex="0" role="tab">Datos Cliente</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="cotizacion" aria-controls="tab-cotizacion" aria-selected="false" tabindex="0" role="tab">Cotización</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="documentos" aria-controls="tab-documentos" aria-selected="false" tabindex="0" role="tab">Documentos</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="consulta" aria-controls="tab-consulta" aria-selected="false" tabindex="0" role="tab">Resultado Consulta</button>
+    </nav>
+
+    <!-- Datos Cliente -->
+    <section id="tab-cliente" class="tab-content active focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-cliente">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-user"></i>
+          </div>
+          <h2 class="section-title">Información del Cliente</h2>
         </div>
-        <div class="card-body">
-          <div class="row g-4">
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Etapa</span>
-                <span class="badge-pacifico" id="solicitudEtapa">-</span>
-              </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user"></i>
             </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Monto Solicitado</span>
-                <span class="text-success fw-bold fs-5" id="solicitudMonto">$0.00</span>
-              </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Nombre</span>
+              <span class="info-item-value">{{ solicitud.cliente_nombre_completo }}</span>
             </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Producto</span>
-                <span class="badge bg-light text-dark" id="solicitudProducto">-</span>
-              </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-id-card"></i>
             </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Progreso</span>
-                <div class="progress progress-custom mb-1">
-                  <div class="progress-bar progress-bar-custom" id="solicitudProgreso" style="width: 0%"></div>
-                </div>
-                <small class="text-muted" id="solicitudProgresoText">0%</small>
+            <div class="info-item-content">
+              <span class="info-item-label">Cédula</span>
+              <span class="info-item-value">{{ solicitud.cliente_cedula_completa }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-phone"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Teléfono</span>
+              <span class="info-item-value">{{ solicitud.cliente_telefono|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Email</span>
+              <span class="info-item-value">{{ solicitud.cliente_email|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Origen</span>
+              <span class="info-item-value">{{ solicitud.origen|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Propietario</span>
+              <span class="info-item-value">{{ solicitud.propietario.get_full_name|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Asignado a</span>
+              <span class="info-item-value">{{ solicitud.asignada_a.get_full_name|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-calendar"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Fecha Inicio</span>
+              <span class="info-item-value">{{ solicitud.fecha_creacion|date:'d/m/Y H:i' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-flag"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Prioridad</span>
+              <span class="info-item-value">{{ solicitud.prioridad|default:'-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cotización -->
+    <section id="tab-cotizacion" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-cotizacion">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-calculator"></i>
+          </div>
+          <h2 class="section-title">Cotización</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-tag"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Producto</span>
+              <span class="info-item-value">{{ solicitud.producto_descripcion }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Monto Solicitado</span>
+              <span class="info-item-value">{{ solicitud.monto_formateado }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Motivo Consulta</span>
+              <span class="info-item-value">{{ solicitud.motivo_consulta|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Como se enteró</span>
+              <span class="info-item-value">{{ solicitud.como_se_entero|default:'-' }}</span>
+            </div>
+          </div>
+          {% if solicitud.cotizacion %}
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Plazo</span>
+              <span class="info-item-value">{{ solicitud.cotizacion.plazo|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Tasa</span>
+              <span class="info-item-value">{{ solicitud.cotizacion.tasa|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Cuota</span>
+              <span class="info-item-value">{{ solicitud.cotizacion.cuota|default:'-' }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-comment"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Observaciones</span>
+              <span class="info-item-value">{{ solicitud.cotizacion.observaciones|default:'-' }}</span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Documentos -->
+    <section id="tab-documentos" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-documentos">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <h2 class="section-title">Requisitos y Documentos</h2>
+        </div>
+        <div id="documentosContent">
+          <!-- Loading State -->
+          <div class="flex justify-center items-center py-12" id="documentosLoading">
+            <div class="text-center">
+              <div class="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-r from-green-400 to-green-600 rounded-full">
+                <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
               </div>
+              <p class="text-gray-600 font-medium">Cargando requisitos...</p>
+              <p class="text-gray-400 text-sm mt-1">Verificando documentos pendientes</p>
             </div>
           </div>
           
-          <hr class="my-4">
-          
-          <div class="row g-4">
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Propietario</span>
-                <span class="fw-semibold" id="solicitudPropietario">-</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Asignado a</span>
-                <span class="fw-semibold" id="solicitudAsignado">-</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">Fecha Inicio</span>
-                <span class="fw-semibold" id="solicitudFechaInicio">-</span>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="d-flex flex-column">
-                <span class="text-muted small fw-semibold mb-1">SLA Restante</span>
-                <span class="text-warning fw-semibold" id="solicitudSLA">-</span>
-              </div>
-            </div>
-          </div>
+          <!-- Content will be loaded here by JavaScript -->
         </div>
       </div>
+    </section>
 
-      <!-- Tabs Section -->
-      <div class="card card-custom">
-        <div class="card-header-custom">
-          <ul class="nav nav-tabs nav-tabs-custom" id="solicitudTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="tab-personal" data-bs-toggle="tab" data-bs-target="#tabDatosPersonales" type="button" role="tab">
-                <i class="fas fa-user me-2"></i>Datos Personales
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-resultado" data-bs-toggle="tab" data-bs-target="#tabResultadoConsulta" type="button" role="tab">
-                <i class="fas fa-clipboard-check me-2"></i>Resultado Consulta
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-referencias" data-bs-toggle="tab" data-bs-target="#tabReferencias" type="button" role="tab">
-                <i class="fas fa-address-book me-2"></i>Referencias
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-documentos" data-bs-toggle="tab" data-bs-target="#tabDocumentos" type="button" role="tab">
-                <i class="fas fa-file-alt me-2"></i>Documentos
-              </button>
-            </li>
-          </ul>
+    <!-- Resultado Consulta -->
+    <section id="tab-consulta" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-consulta">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="card-custom">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-comment"></i>
+            </div>
+            <h2 class="section-title">Comentarios del Analista</h2>
+          </div>
+          <div id="comentariosAnalistaContent">
+            <div class="flex justify-center items-center py-8" id="comentariosAnalistaLoading">
+              <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <span class="text-gray-500">Cargando comentarios del analista...</span>
+            </div>
+          </div>
         </div>
-        <div class="card-body p-0">
-          <div class="tab-content" id="solicitudTabContent">
-            <div class="tab-pane fade show active p-4" id="tabDatosPersonales" role="tabpanel">
-              <div class="text-center py-4" id="datosPersonalesContent">
-                <div class="spinner-custom mx-auto mb-3"></div>
-                <p class="text-muted">Cargando datos personales...</p>
-              </div>
+        <div class="card-custom">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-shield-alt"></i>
             </div>
-            <div class="tab-pane fade p-4" id="tabResultadoConsulta" role="tabpanel">
-              <div class="row">
-                <!-- Comentarios de Analista -->
-                <div class="col-md-6">
-                  <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-primary text-white">
-                      <h6 class="mb-0">
-                        <i class="fas fa-user-md me-2"></i>Comentarios del Analista
-                      </h6>
-                    </div>
-                    <div class="card-body">
-                      <div id="comentariosAnalistaContent">
-                        <div class="text-center py-4">
-                          <div class="spinner-custom mx-auto mb-3"></div>
-                          <p class="text-muted">Cargando comentarios del analista...</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Resultado de Comité -->
-                <div class="col-md-6">
-                  <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-success text-white">
-                      <h6 class="mb-0">
-                        <i class="fas fa-users me-2"></i>Resultado del Comité
-                      </h6>
-                    </div>
-                    <div class="card-body">
-                      <div id="resultadoComiteContent">
-                        <div class="text-center py-4">
-                          <div class="spinner-custom mx-auto mb-3"></div>
-                          <p class="text-muted">Cargando resultado del comité...</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="tab-pane fade p-4" id="tabReferencias" role="tabpanel">
-              <div class="text-center py-4" id="referenciasContent">
-                <div class="spinner-custom mx-auto mb-3"></div>
-                <p class="text-muted">Cargando referencias...</p>
-              </div>
-            </div>
-            <div class="tab-pane fade p-4" id="tabDocumentos" role="tabpanel">
-              <div class="text-center py-4" id="documentosContent">
-                <div class="spinner-custom mx-auto mb-3"></div>
-                <p class="text-muted">Cargando documentos...</p>
-              </div>
+            <h2 class="section-title">Compliance / APC</h2>
+          </div>
+          <div id="resultadoConsultaContent">
+            <div class="flex justify-center items-center py-8" id="resultadoConsultaLoading">
+              <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <span class="text-gray-500">Cargando resultado de consulta...</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      
+      <!-- Comité de Crédito Section -->
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h2 class="section-title">Comité de Crédito</h2>
+        </div>
+        <div id="resultadoComiteContent">
+          <div class="flex justify-center items-center py-8" id="resultadoComiteLoading">
+            <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            <span class="text-gray-500">Cargando resultado del comité...</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <!-- Sidebar -->
-    <div class="col-md-4">
-      <!-- Historial de Actividades -->
-      <div class="card card-custom mb-4">
-        <div class="card-header-custom">
-          <h5 class="mb-0">
-            <i class="fas fa-history me-2"></i>
-            Historial de Actividades
-          </h5>
-        </div>
-        <div class="card-body p-0">
-          <div class="timeline p-4" id="solicitudHistorial">
-            <div class="text-center py-4">
-              <div class="spinner-custom mx-auto mb-3"></div>
-              <p class="text-muted">Cargando historial...</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Comentarios -->
-      <div class="card card-custom">
-        <div class="card-header-custom">
-          <h5 class="mb-0">
-            <i class="fas fa-comments me-2"></i>
-            Comentarios
-          </h5>
-        </div>
-        <div class="card-body p-0">
-          <div class="p-4" id="solicitudComentarios">
-            <div class="text-center py-4">
-              <div class="spinner-custom mx-auto mb-3"></div>
-              <p class="text-muted">Cargando comentarios...</p>
-            </div>
-          </div>
-          <div class="card-footer bg-light border-top">
-            <form id="comentarioForm">
-              <div class="mb-3">
-                <textarea class="form-control form-control-custom" id="comentarioInput" rows="3" placeholder="Escribe un comentario..."></textarea>
-              </div>
-              <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-pacifico">
-                  <i class="fas fa-paper-plane me-2"></i>Enviar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+
+
+
+
   </div>
 </div>
-
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-content">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Cargando solicitud...</div>
-    <div class="loading-subtext">Por favor espere</div>
-  </div>
 </div>
 
 <!-- Toast Container -->
-<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
-
-{% include 'workflow/partials/solicitud_negocios_styles.html' %}
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
 <script>
-  // Pasar el ID de la solicitud al JavaScript
-  window.solicitudId = {{ solicitud.id }};
+  window.solicitudId = "{{ solicitud.id }}";
 </script>
 <script src="{% static 'workflow/js/detalleSolicitud.js' %}"></script>
+<script>
+// Initialize DetalleSolicitud and Tab Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing DetalleSolicitud and Tab Functionality...');
+    
+    // Initialize DetalleSolicitud and make it globally accessible
+    window.detalleSolicitud = new DetalleSolicitud(window.solicitudId);
+    
+    // Tab Functionality
+    const tabContainer = document.getElementById('tabContainer');
+    const tabButtons = tabContainer.querySelectorAll('.tab-button');
+    const tabContents = tabContainer.querySelectorAll('.tab-content');
+
+    console.log(`📋 Found ${tabButtons.length} tab buttons and ${tabContents.length} tab contents`);
+
+    // Function to switch tabs
+    const switchTab = (targetTab) => {
+        console.log(`🔄 Switching to tab: ${targetTab}`);
+        
+        // Remove active class from all buttons and contents
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+            button.setAttribute('aria-selected', 'false');
+        });
+        
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Add active class to target button and content
+        const targetButton = tabContainer.querySelector(`[data-tab="${targetTab}"]`);
+        const targetContent = document.getElementById(`tab-${targetTab}`);
+        
+        if (targetButton && targetContent) {
+            targetButton.classList.add('active');
+            targetButton.setAttribute('aria-selected', 'true');
+            targetContent.classList.add('active');
+            
+            // Focus the active tab for accessibility
+            targetButton.focus();
+            console.log(`✅ Successfully switched to tab: ${targetTab}`);
+        } else {
+            console.error(`❌ Could not find target button or content for tab: ${targetTab}`);
+        }
+    };
+
+    // Add click event listeners to tab buttons
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            console.log(`🖱️ Tab button clicked: ${targetTab}`);
+            switchTab(targetTab);
+        });
+
+        // Add keyboard navigation
+        button.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const targetTab = this.getAttribute('data-tab');
+                console.log(`⌨️ Tab button activated via keyboard: ${targetTab}`);
+                switchTab(targetTab);
+            }
+        });
+    });
+
+    // Initialize with first tab active
+    const firstTab = tabButtons[0].getAttribute('data-tab');
+    console.log(`🎯 Initializing with first tab: ${firstTab}`);
+    switchTab(firstTab);
+    
+    console.log('✅ DetalleSolicitud and Tab Functionality initialized successfully');
+});
+</script>
 {% endblock %}
 

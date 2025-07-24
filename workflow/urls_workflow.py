@@ -106,6 +106,7 @@ urlpatterns += [
     
     # APIs
     path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
+    path('api/solicitudes/<int:solicitud_id>/detalle/', views_workflow.api_solicitud_detalle, name='api_solicitud_detalle'),
     path('api/estadisticas/', views_workflow.api_estadisticas, name='api_estadisticas'),
     
     # Páginas especiales

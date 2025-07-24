@@ -1,0 +1,2245 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de Solicitud - Sistema de Workflow</title>
+    
+    <!-- Basic favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/workflow/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/workflow/icons/icon-16x16.png">
+    <link rel="shortcut icon" href="/static/workflow/icons/favicon.ico">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    
+<link rel="stylesheet" href="/static/workflow/css/pacifico_custom.css">
+<style>
+    /* === DETALLE SOLICITUD STYLES - MATCHING MODAL SOLICITUD === */
+    
+    /* Main Container */
+    .detalle-solicitud-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* Header Section - Matching Modal Header */
+    .detalle-header {
+        background: linear-gradient(135deg, #009c3c 0%, #00b84a 50%, #22a650 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .detalle-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        pointer-events: none;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .solicitud-header {
+        flex: 1;
+    }
+
+    .solicitud-code-badge {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .code-text {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+
+    .status-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .solicitud-type {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .action-btn-header {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn-header:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Status Badge Variations */
+    .status-pending {
+        background: rgba(255, 193, 7, 0.2) !important;
+        color: #fff3cd;
+        border-color: rgba(255, 193, 7, 0.3);
+    }
+    
+    .status-in_progress {
+        background: rgba(33, 150, 243, 0.2) !important;
+        color: #e3f2fd;
+        border-color: rgba(33, 150, 243, 0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    .status-completed {
+        background: rgba(76, 175, 80, 0.2) !important;
+        color: #e8f5e8;
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+    
+    .status-error {
+        background: rgba(244, 67, 54, 0.2) !important;
+        color: #ffebee;
+        border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+
+    /* Enhanced Tab Styles */
+    .nav-tabs {
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0;
+        background: white;
+        border-radius: 12px 12px 0 0;
+        padding: 1rem 1rem 0 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .tab-button {
+        white-space: nowrap;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.3s ease;
+        position: relative;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+    }
+
+    .tab-button:hover {
+        background-color: #f8fafc;
+        color: #009c3c;
+    }
+
+    .tab-button.active {
+        background: white;
+        color: #009c3c;
+        border-bottom: 3px solid #009c3c;
+        margin-bottom: -2px;
+        box-shadow: 0 -2px 4px rgba(0, 156, 60, 0.1);
+    }
+
+    /* Tab Content Styles */
+    .tab-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Modern Card Styles - Matching Modal Cards */
+    .card-custom {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-custom::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #009c3c 0%, #22a650 100%);
+    }
+
+    .card-custom:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Form Enhancements */
+    .form-input, textarea, select {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+        padding: 0.75rem;
+    }
+
+    .form-input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #009c3c;
+        box-shadow: 0 0 0 3px rgba(0, 156, 60, 0.1);
+    }
+
+    /* Button Enhancements */
+    .btn-primary {
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 156, 60, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px -3px rgba(0, 156, 60, 0.4);
+    }
+
+    /* Info Grid Styles - Matching Modal Summary Cards */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+
+    .info-item:hover {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: #009c3c;
+        transform: translateY(-1px);
+    }
+
+    .info-item-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(0, 156, 60, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #009c3c;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+    }
+
+    .info-item-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .info-item-label {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
+    }
+
+    .info-item-value {
+        display: block;
+        font-size: 0.875rem;
+        color: #1e293b;
+        font-weight: 600;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .section-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .detalle-header {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .solicitud-code-badge {
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .code-text {
+            font-size: 1.5rem;
+        }
+
+        .nav-tabs {
+            gap: 0.25rem;
+            padding: 0.5rem;
+        }
+
+        .tab-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .card-custom {
+            padding: 1rem;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+
+    /* Requisitos Styles */
+    .requisitos-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .requisito-item {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .requisito-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #009c3c 0%, #22a650 100%);
+    }
+
+    .requisito-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: #009c3c;
+    }
+
+    .requisito-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .requisito-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .requisito-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .requisito-status.pending {
+        background: rgba(255, 193, 7, 0.1);
+        color: #d97706;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .requisito-status.completed {
+        background: rgba(34, 197, 94, 0.1);
+        color: #059669;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .requisito-description {
+        color: #64748b;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    .requisito-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .requisito-upload-btn {
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .requisito-upload-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+    }
+
+    .requisito-upload-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .requisito-view-btn {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+    }
+
+    .requisito-view-btn:hover {
+        background: rgba(59, 130, 246, 0.2);
+        transform: translateY(-1px);
+    }
+
+    .requisito-observations {
+        background: rgba(0, 156, 60, 0.05);
+        border: 1px solid rgba(0, 156, 60, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .requisito-observations-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #009c3c;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+
+    .requisito-observations-text {
+        font-size: 0.875rem;
+        color: #374151;
+        line-height: 1.5;
+    }
+
+    .requisitos-summary {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .requisitos-summary-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .requisitos-summary-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #009c3c 0%, #22a650 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.125rem;
+    }
+
+    .requisitos-summary-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .requisitos-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 16px;
+    }
+
+    .requisito-stat {
+        text-align: center;
+        padding: 12px;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .requisito-stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #009c3c;
+        margin-bottom: 4px;
+    }
+
+    .requisito-stat-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+
+    .requisito-stat.pending .requisito-stat-number {
+        color: #d97706;
+    }
+
+    .requisito-stat.completed .requisito-stat-number {
+        color: #059669;
+    }
+
+    @media (max-width: 480px) {
+        .card-custom {
+            margin: 0 -0.5rem;
+            border-radius: 8px;
+        }
+
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .requisito-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .requisito-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .requisito-upload-btn,
+        .requisito-view-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .requisitos-summary-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+
+    
+    <style>
+        :root {
+            --verde-pacifico: #009c3c;
+            --verde-hover: #007529;
+            --verde-oscuro: #00692b;
+            --verde-claro: #22a650;
+            --verde-muy-oscuro: #004d33;
+            --gris-texto: #4a4a4a;
+            --gris-fondo: #f9f9f9;
+            --gris-borde: #ddd;
+            --blanco: #ffffff;
+            --gris-claro: #f8f9fa;
+            --gris-medio: #6c757d;
+            --rojo: #dc3545;
+            --amarillo: #ffc107;
+            --azul: #0d6efd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--gris-fondo);
+            color: var(--gris-texto);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Sidebar principal */
+        .sidebar {
+            background: linear-gradient(180deg, #232323 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            width: 192px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Logo Section */
+        .sidebar-logo {
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* User Profile Section */
+        .user-profile {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #333;
+            background: rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .user-profile-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: white;
+            margin-bottom: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            color: #ccc;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.7rem;
+            color: #22a650;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #22a650;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Navigation Items */
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            color: #999;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 1rem 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            color: #ccc;
+            padding: 0.6rem 1rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.85rem;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--verde-pacifico);
+            text-decoration: none;
+        }
+
+        .nav-link.active {
+            color: white;
+            background-color: rgba(0, 156, 60, 0.2);
+            border-left-color: var(--verde-pacifico);
+        }
+
+        .nav-link i {
+            width: 18px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 192px;
+            min-height: 100vh;
+            background-color: var(--gris-fondo);
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Mobile Navbar */
+        .mobile-navbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: white;
+            padding: 0.75rem 1rem;
+            z-index: 999;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-navbar-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .mobile-navbar-brand {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .mobile-navbar-brand a {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+        }
+
+        .mobile-navbar-brand img {
+            height: 32px;
+            width: auto;
+        }
+
+        .mobile-navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .mobile-navbar-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .mobile-navbar-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .mobile-user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .mobile-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+            overflow: hidden;
+            color: white;
+        }
+
+        .mobile-user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding-top: 70px; /* Space for mobile navbar */
+            }
+            
+            .mobile-navbar {
+                display: block;
+            }
+            
+            .sidebar-toggle {
+                display: none;
+            }
+            
+            /* Ensure mobile navbar is always visible on mobile */
+            .mobile-navbar {
+                display: flex !important;
+            }
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: var(--verde-pacifico);
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+        }
+
+        /* Cards */
+        .card-custom {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            background: var(--blanco);
+        }
+
+        .card-custom:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            border-radius: 16px 16px 0 0 !important;
+            border: none;
+            padding: 1.25rem;
+        }
+
+        /* Botones */
+        .btn-pacifico {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            border: none;
+            color: var(--blanco);
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 24px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+        }
+
+        .btn-pacifico:hover {
+            background: linear-gradient(135deg, var(--verde-hover) 0%, var(--verde-pacifico) 100%);
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 156, 60, 0.4);
+        }
+
+        .btn-outline-pacifico {
+            border: 2px solid var(--verde-pacifico);
+            color: var(--verde-pacifico);
+            background: transparent;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 24px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-pacifico:hover {
+            background: var(--verde-pacifico);
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 156, 60, 0.3);
+        }
+
+        /* Badges */
+        .badge-pacifico {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        .badge-warning-custom {
+            background: linear-gradient(135deg, var(--amarillo) 0%, #ffb84d 100%);
+            color: #000;
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        .badge-danger-custom {
+            background: linear-gradient(135deg, var(--rojo) 0%, #e74c3c 100%);
+            color: var(--blanco);
+            font-weight: 500;
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        /* Formularios */
+        .form-control-custom {
+            border: 2px solid var(--gris-borde);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: var(--blanco);
+        }
+
+        .form-control-custom:focus {
+            border-color: var(--verde-pacifico);
+            box-shadow: 0 0 0 0.2rem rgba(0, 156, 60, 0.25);
+            outline: none;
+        }
+
+        /* Tablas */
+        .table-custom {
+            background: var(--blanco);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .table-custom thead th {
+            background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            color: var(--blanco);
+            border: none;
+            padding: 16px;
+            font-weight: 600;
+        }
+
+        .table-custom tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: rgba(0, 156, 60, 0.05);
+            transform: scale(1.01);
+        }
+
+        /* Alertas */
+        .alert-custom {
+            border: none;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-weight: 500;
+        }
+
+        .alert-success-custom {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-left: 4px solid var(--verde-pacifico);
+        }
+
+        .alert-warning-custom {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border-left: 4px solid var(--amarillo);
+        }
+
+        .alert-danger-custom {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border-left: 4px solid var(--rojo);
+        }
+
+        /* Progress bars */
+        .progress-custom {
+            height: 12px;
+            border-radius: 6px;
+            background-color: var(--gris-claro);
+            overflow: hidden;
+        }
+
+        .progress-bar-custom {
+            background: linear-gradient(90deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+
+        /* Animaciones */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Loading spinner */
+        .spinner-custom {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gris-claro);
+            border-top: 4px solid var(--verde-pacifico);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos específicos para el workflow */
+        .workflow-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .status-in-progress {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+            border: 1px solid rgba(13, 110, 253, 0.3);
+        }
+
+        .status-completed {
+            background-color: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            border: 1px solid rgba(25, 135, 84, 0.3);
+        }
+
+        .status-overdue {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        /* Timeline para historial */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--verde-pacifico);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--blanco);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--verde-pacifico);
+            border: 3px solid var(--blanco);
+            box-shadow: 0 0 0 2px var(--verde-pacifico);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            text-align: center;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid var(--verde-pacifico);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        .loading-text {
+            color: var(--gris-texto);
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtext {
+            color: var(--gris-medio);
+            font-size: 0.875rem;
+        }
+
+        /* Page transition effect */
+        .page-transition {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .page-transition.fade-out {
+            opacity: 0;
+        }
+
+        /* ...existing styles... */
+    </style>
+</head>
+<body>
+    <!-- Sidebar Toggle Button (Mobile) -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Mobile Navbar -->
+    <nav class="mobile-navbar" id="mobileNavbar">
+        <div class="mobile-navbar-content">
+            <div class="mobile-navbar-brand">
+                <a href="/workflow/" class="text-white text-decoration-none">
+                    <img src="/static/images/logoBlanco.png" alt="Logo Pacífico" height="32">
+                    <span class="ms-2">Pacífico Workflow</span>
+                </a>
+            </div>
+            <div class="mobile-navbar-actions">
+                <button class="mobile-navbar-toggle" id="sidebarToggleMobile" type="button">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="mobile-user-info">
+                    <div class="mobile-user-avatar">
+                        
+                            
+                                A
+                            
+                        
+                    </div>
+                    <span class="d-none d-sm-inline">
+                        
+                            andresrdrgz_
+                        
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Cargando...</div>
+            <div class="loading-subtext">Por favor espere</div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <!-- Logo Section -->
+        <div class="sidebar-logo">
+            <a href="/workflow/">
+                <img src="/static/images/logoBlanco.png" alt="Logo Pacífico" class="w-full h-auto object-cover">
+            </a>
+        </div>
+
+        <!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-profile-content">
+                <div class="user-avatar">
+                    
+                        
+                            A
+                        
+                    
+                </div>
+                <div class="user-info">
+                    <div class="user-name">
+                        
+                            andresrdrgz_
+                        
+                    </div>
+                    <div class="user-role">
+                        
+                            Administrador
+                        
+                    </div>
+                    <div class="user-status">
+                        <div class="status-dot"></div>
+                        <span>En línea</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="sidebar-nav">
+            <!-- Main Navigation -->
+            <div class="nav-section">
+                <div class="nav-section-title">Navegación Principal</div>
+                <a class="nav-link " 
+                   href="/workflow/">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-link " 
+                   href="/workflow/comite/"
+                   data-tooltip="Bandeja Comité">
+                    <i class="fas fa-gavel"></i>
+                    <span>Bandeja Comité</span>
+                </a>
+                <a class="nav-link " 
+                   href="/workflow/bandeja-mixta/">
+                    <i class="fas fa-inbox"></i>
+                    <span>Bandejas de Trabajo</span>
+                </a>
+               
+                <a class="nav-link " 
+                   href="/workflow/negocios/">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Negocios</span>
+                </a>
+               
+            </div>
+
+            <!-- Administration -->
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Administración</div>
+                <a class="nav-link" href="/workflow/admin/pipelines/">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Pipelines</span>
+                </a>
+                
+                <a class="nav-link" href="/workflow/admin/usuarios/">
+                    <i class="fas fa-users"></i>
+                    <span>Usuarios</span>
+                </a>
+                <a class="nav-link " 
+                href="/proyectos/">
+                 <i class="fas fa-vial"></i>
+                 <span>Proyectos QA</span>
+             </a>
+                
+            </div>
+            
+
+            <!-- Reports -->
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Reportes</div>
+                <a class="nav-link" href="/workflow/reportes/">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reportes</span>
+                </a>
+            </div>
+            
+
+            <!-- Canales Alternos -->
+            <div class="nav-section">
+                <div class="nav-section-title">Canales Alternos</div>
+                <a class="nav-link " 
+                   href="/workflow/canal-digital/">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Canal Digital</span>
+                </a>
+            </div>
+
+            <!-- User Actions -->
+            <div class="nav-section">
+                <div class="nav-section-title">Usuario</div>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Mi Perfil</span>
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content page-transition" id="mainContent">
+        <div class="p-4">
+            
+
+            
+<div class="detalle-solicitud-container">
+<div class="max-w-7xl mx-auto px-2 py-6">
+  <!-- Solicitud Header - Matching Modal Style -->
+  <div class="detalle-header mb-6">
+    <div class="header-content">
+      <div class="solicitud-header">
+        <div class="solicitud-code-badge">
+          <span class="code-text" id="solicitudCodigo">FLU-104</span>
+          <span class="status-badge status-completed">
+            Completado
+          </span>
+        </div>
+        <div class="solicitud-type" id="solicitudCliente">Andrés Rodríguez - CI: 123123</div>
+      </div>
+      <div class="header-actions">
+        <a href="/workflow/" class="action-btn-header" title="Volver al Dashboard">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <div class="flex flex-wrap gap-2 items-center">
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold" id="solicitudEtapa">Nuevo Lead</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold" id="solicitudMonto">$ 13,341.68</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold" id="solicitudProducto">Auto</span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold" id="solicitudSLA">SLA: 30h</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabbed Interface -->
+  <div class="w-full" id="tabContainer">
+    <nav class="nav-tabs flex space-x-2 border-b border-gray-200 mb-6" aria-label="Tabs" role="tablist">
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none active" data-tab="cliente" aria-controls="tab-cliente" aria-selected="true" tabindex="0" role="tab">Datos Cliente</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="cotizacion" aria-controls="tab-cotizacion" aria-selected="false" tabindex="0" role="tab">Cotización</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="documentos" aria-controls="tab-documentos" aria-selected="false" tabindex="0" role="tab">Documentos</button>
+      <button class="tab-button px-4 py-2 font-medium border-b-2 focus:outline-none" data-tab="consulta" aria-controls="tab-consulta" aria-selected="false" tabindex="0" role="tab">Resultado Consulta</button>
+    </nav>
+
+    <!-- Datos Cliente -->
+    <section id="tab-cliente" class="tab-content active focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-cliente">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-user"></i>
+          </div>
+          <h2 class="section-title">Información del Cliente</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Nombre</span>
+              <span class="info-item-value">Andrés Rodríguez</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-id-card"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Cédula</span>
+              <span class="info-item-value">123123</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-phone"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Teléfono</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Email</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Origen</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Propietario</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Asignado a</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-calendar"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Fecha Inicio</span>
+              <span class="info-item-value">23/07/2025 12:27</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-flag"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Prioridad</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cotización -->
+    <section id="tab-cotizacion" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-cotizacion">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-calculator"></i>
+          </div>
+          <h2 class="section-title">Cotización</h2>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-tag"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Producto</span>
+              <span class="info-item-value">Auto</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Monto Solicitado</span>
+              <span class="info-item-value">$ 13,341.68</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Motivo Consulta</span>
+              <span class="info-item-value">PROSPECTO VIVE Y LABORA EN CHIRIQUI
+SALARIO DE 800 VS 750.00
+TIENE HORAS EXTRAS RECURRENTES EN FICHA 
+PODEMOS CONSIDERAR</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Como se enteró</span>
+              <span class="info-item-value">Sucursal</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Plazo</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Tasa</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Cuota</span>
+              <span class="info-item-value">-</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-item-icon">
+              <i class="fas fa-comment"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Observaciones</span>
+              <span class="info-item-value">PROSPECTO VIVE Y LABORA EN CHIRIQUI
+SALARIO DE 800 VS 750.00
+TIENE HORAS EXTRAS RECURRENTES EN FICHA 
+PODEMOS CONSIDERAR</span>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </section>
+
+    <!-- Documentos -->
+    <section id="tab-documentos" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-documentos">
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <h2 class="section-title">Requisitos y Documentos</h2>
+        </div>
+        <div id="documentosContent">
+          <!-- Loading State -->
+          <div class="flex justify-center items-center py-12" id="documentosLoading">
+            <div class="text-center">
+              <div class="inline-flex items-center justify-center w-16 h-16 mb-4 bg-gradient-to-r from-green-400 to-green-600 rounded-full">
+                <svg class="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              </div>
+              <p class="text-gray-600 font-medium">Cargando requisitos...</p>
+              <p class="text-gray-400 text-sm mt-1">Verificando documentos pendientes</p>
+            </div>
+          </div>
+          
+          <!-- Content will be loaded here by JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultado Consulta -->
+    <section id="tab-consulta" class="tab-content focus:outline-none" tabindex="0" role="tabpanel" aria-labelledby="tab-consulta">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="card-custom">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-comment"></i>
+            </div>
+            <h2 class="section-title">Comentarios del Analista</h2>
+          </div>
+          <div id="comentariosAnalistaContent">
+            <div class="flex justify-center items-center py-8" id="comentariosAnalistaLoading">
+              <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <span class="text-gray-500">Cargando comentarios del analista...</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-custom">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2 class="section-title">Compliance / APC</h2>
+          </div>
+          <div id="resultadoConsultaContent">
+            <div class="flex justify-center items-center py-8" id="resultadoConsultaLoading">
+              <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+              <span class="text-gray-500">Cargando resultado de consulta...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Comité de Crédito Section -->
+      <div class="card-custom">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h2 class="section-title">Comité de Crédito</h2>
+        </div>
+        <div id="resultadoComiteContent">
+          <div class="flex justify-center items-center py-8" id="resultadoComiteLoading">
+            <svg class="animate-spin h-6 w-6 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            <span class="text-gray-500">Cargando resultado del comité...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+
+
+
+  </div>
+</div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<script>
+  window.solicitudId = "104";
+</script>
+<script src="/static/workflow/js/detalleSolicitud.js"></script>
+<script>
+// Initialize DetalleSolicitud and Tab Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing DetalleSolicitud and Tab Functionality...');
+    
+    // Initialize DetalleSolicitud and make it globally accessible
+    window.detalleSolicitud = new DetalleSolicitud(window.solicitudId);
+    
+    // Tab Functionality
+    const tabContainer = document.getElementById('tabContainer');
+    const tabButtons = tabContainer.querySelectorAll('.tab-button');
+    const tabContents = tabContainer.querySelectorAll('.tab-content');
+
+    console.log(`📋 Found ${tabButtons.length} tab buttons and ${tabContents.length} tab contents`);
+
+    // Function to switch tabs
+    const switchTab = (targetTab) => {
+        console.log(`🔄 Switching to tab: ${targetTab}`);
+        
+        // Remove active class from all buttons and contents
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+            button.setAttribute('aria-selected', 'false');
+        });
+        
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // Add active class to target button and content
+        const targetButton = tabContainer.querySelector(`[data-tab="${targetTab}"]`);
+        const targetContent = document.getElementById(`tab-${targetTab}`);
+        
+        if (targetButton && targetContent) {
+            targetButton.classList.add('active');
+            targetButton.setAttribute('aria-selected', 'true');
+            targetContent.classList.add('active');
+            
+            // Focus the active tab for accessibility
+            targetButton.focus();
+            console.log(`✅ Successfully switched to tab: ${targetTab}`);
+        } else {
+            console.error(`❌ Could not find target button or content for tab: ${targetTab}`);
+        }
+    };
+
+    // Add click event listeners to tab buttons
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            console.log(`🖱️ Tab button clicked: ${targetTab}`);
+            switchTab(targetTab);
+        });
+
+        // Add keyboard navigation
+        button.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const targetTab = this.getAttribute('data-tab');
+                console.log(`⌨️ Tab button activated via keyboard: ${targetTab}`);
+                switchTab(targetTab);
+            }
+        });
+    });
+
+    // Initialize with first tab active
+    const firstTab = tabButtons[0].getAttribute('data-tab');
+    console.log(`🎯 Initializing with first tab: ${firstTab}`);
+    switchTab(firstTab);
+    
+    console.log('✅ DetalleSolicitud and Tab Functionality initialized successfully');
+});
+</script>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Scripts personalizados -->
+    <script>
+        // Loading overlay functionality
+        function showLoading(text = 'Cargando...', subtext = 'Por favor espere') {
+            const overlay = document.getElementById('loadingOverlay');
+            const textEl = overlay.querySelector('.loading-text');
+            const subtextEl = overlay.querySelector('.loading-subtext');
+            
+            if (textEl) textEl.textContent = text;
+            if (subtextEl) subtextEl.textContent = subtext;
+            
+            overlay.classList.add('show');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('show');
+        }
+
+        // Page navigation with loading animation
+        function navigateWithLoading(url, loadingText = 'Navegando...') {
+            showLoading(loadingText, 'Cargando contenido');
+            const mainContent = document.getElementById('mainContent');
+            mainContent.classList.add('fade-out');
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 300);
+        }
+
+        // Enhanced navigation for specific nav links only
+        function enhanceNavigation() {
+            // Only enhance navigation links that have actual URLs, not placeholder links
+            const navLinks = document.querySelectorAll('.nav-link[href]:not([href="#"]):not([href="javascript:void(0)"])');
+            console.log('Found nav links to enhance:', navLinks.length);
+            
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                console.log('Processing nav link:', href);
+                
+                // Skip external links and hash links
+                if (href.startsWith('#') || href.startsWith('javascript:') || 
+                    (href.startsWith('http') && !href.includes(window.location.hostname))) {
+                    console.log('Skipping link:', href);
+                    return;
+                }
+                
+                link.addEventListener('click', function(e) {
+                    console.log('Nav link clicked:', href);
+                    e.preventDefault();
+                    const text = this.querySelector('span')?.textContent || 'Cargando...';
+                    navigateWithLoading(href, `Cargando ${text}`);
+                });
+            });
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 3000) {
+            // Remove any existing toasts of the same type to prevent stacking
+            const existingToasts = document.querySelectorAll(`.toast-notification-${type}`);
+            existingToasts.forEach(toast => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            });
+            
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed toast-notification-${type}`;
+            toast.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 1080;
+                max-width: 400px;
+                min-width: 300px;
+                animation: slideInRight 0.3s ease-out;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.1);
+            `;
+            
+            const iconMap = {
+                'success': 'check-circle',
+                'info': 'info-circle',
+                'warning': 'exclamation-triangle',
+                'danger': 'times-circle',
+                'error': 'times-circle'
+            };
+            
+            toast.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-${iconMap[type] || 'info-circle'} me-2"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (toast && toast.parentNode) {
+                        toast.style.animation = 'slideOutRight 0.3s ease-in';
+                        setTimeout(() => {
+                            if (toast && toast.parentNode) {
+                                toast.remove();
+                            }
+                        }, 300);
+                    }
+                }, duration);
+            }
+            
+            return toast;
+        }
+
+        // Listen for online/offline events
+        window.addEventListener('online', function() {
+            showToast('Conexión restaurada', 'success');
+            
+            // Auto-reload if user was viewing offline content
+            if (window.location.pathname.includes('/offline/')) {
+                showToast('Conexión recuperada - Regresando...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/workflow/dashboard/';
+                }, 1500);
+            }
+        });
+        
+        window.addEventListener('offline', function() {
+            showToast('Sin conexión - Trabajando offline', 'warning', 8000);
+        });
+
+        // Check network status on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show initial network status
+            if (!navigator.onLine) {
+                showToast('Sin conexión - Trabajando offline', 'warning', 5000);
+            }
+            
+            // Initialize mobile sidebar toggle
+            initializeMobileSidebar();
+        });
+
+        // Mobile sidebar functionality
+        function initializeMobileSidebar() {
+            const sidebarToggle = document.getElementById('sidebarToggleMobile');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sidebar.classList.toggle('show');
+                });
+                
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768) {
+                        if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                            sidebar.classList.remove('show');
+                        }
+                    }
+                });
+                
+                // Close sidebar when pressing escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && window.innerWidth <= 768) {
+                        sidebar.classList.remove('show');
+                    }
+                });
+            }
+        }
+
+        // Función para mostrar loading (backward compatibility)
+        function showLoading(element) {
+            if (typeof element === 'string' || !element) {
+                showLoading(element);
+            } else {
+                element.innerHTML = '<div class="spinner-custom mx-auto"></div>';
+            }
+        }
+
+        // Función para actualizar badges de estado
+        function updateStatusBadge(element, status) {
+            const statusClasses = {
+                'pending': 'status-pending',
+                'in-progress': 'status-in-progress',
+                'completed': 'status-completed',
+                'overdue': 'status-overdue'
+            };
+            
+            element.className = `workflow-status ${statusClasses[status] || statusClasses['pending']}`;
+        }
+
+        // Función para formatear fechas
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Función para calcular tiempo transcurrido
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'Hace un momento';
+            if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)} minutos`;
+            if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)} horas`;
+            return `Hace ${Math.floor(diffInSeconds / 86400)} días`;
+        }
+
+        // Inicializar tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Session monitoring and error handling
+            initializeSessionMonitoring();
+        });
+        
+        // Session monitoring to detect and handle authentication issues
+        function initializeSessionMonitoring() {
+            // Removed periodic session check to prevent auto-refreshes
+            // setInterval(checkSessionStatus, 60000); // REMOVED - Check every minute
+            
+            // Keep only the fetch interceptor for error handling
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                return originalFetch.apply(this, args)
+                    .then(response => {
+                        // Check for authentication errors
+                        if (response.status === 401 || response.status === 403) {
+                            console.warn('Authentication error detected:', response.status);
+                            handleAuthenticationError();
+                        }
+                        return response;
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        // Check if it's a network error that might indicate session issues
+                        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                            console.warn('Network error - possible session issue');
+                        }
+                        throw error;
+                    });
+            };
+        }
+        
+        // Session status check function - REMOVED to prevent auto-refreshes
+        // function checkSessionStatus() {
+        //     // Make a lightweight request to check if session is still valid
+        //     fetch('/workflow/api/check-updates/', {
+        //         method: 'GET',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+        //         }
+        //     })
+        //     .then(response => {
+        //         if (!response.ok) {
+        //             if (response.status === 401 || response.status === 403) {
+        //                 handleAuthenticationError();
+        //             }
+        //         }
+        //     })
+        //     .catch(error => {
+        //         console.warn('Session check failed:', error);
+        //         // Don't show error for network issues, only for auth issues
+        //     });
+        // }
+        
+        function handleAuthenticationError() {
+            console.log('Handling authentication error - redirecting to login');
+            
+            // Show user-friendly message
+            showToast('Tu sesión ha expirado. Redirigiendo al login...', 'warning', 3000);
+            
+            // Redirect to login after a short delay
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 2000);
+        }
+        
+        // Enhanced error handling for AJAX requests
+        function handleAjaxError(xhr, status, error) {
+            console.error('AJAX Error:', {xhr, status, error});
+            
+            if (xhr.status === 401 || xhr.status === 403) {
+                handleAuthenticationError();
+                return;
+            }
+            
+            // Show generic error message
+            showToast('Error en la petición. Intenta de nuevo.', 'error', 5000);
+        }
+    </script>
+
+    
+</body>
+</html>
