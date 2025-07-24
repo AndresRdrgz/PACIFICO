@@ -42,6 +42,7 @@ urlpatterns += [
     path('solicitud/<int:solicitud_id>/requisito/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
     path('solicitud/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campos_personalizados'),
     path('solicitud/<int:solicitud_id>/analisis/', views_workflow.detalle_solicitud_analisis, name='detalle_solicitud_analisis'),
+    path('solicitud/<int:solicitud_id>/backoffice/', views_workflow.detalle_solicitud, name='detalle_solicitud_backoffice'),
     path('solicitud/<int:solicitud_id>/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
     
     # Comité de Crédito URLs

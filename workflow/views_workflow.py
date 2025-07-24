@@ -973,6 +973,12 @@ def detalle_solicitud(request, solicitud_id):
         'valores_campos': valores_campos,
     }
     
+    # Verificar si estamos en la etapa "Back Office" con bandeja grupal
+    if (solicitud.etapa_actual and 
+        solicitud.etapa_actual.nombre == "Back Office" and 
+        solicitud.etapa_actual.es_bandeja_grupal):
+        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
+    
     return render(request, 'workflow/detalle_solicitud.html', context)
 
 

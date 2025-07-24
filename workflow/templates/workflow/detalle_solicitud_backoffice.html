@@ -1,0 +1,1352 @@
+{% extends "workflow/base.html" %} {% load static %} {% load workflow_filters %}
+{% block title %}Back Office - Detalle de Solicitud - Sistema de Workflow{%
+endblock %} {% block extra_css %}
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{% static 'workflow/css/detalleSolicitud.css' %}"
+/>
+<style>
+  .backoffice-header {
+    background: linear-gradient(135deg, #2d5a3d 0%, #4a7c59 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(45, 90, 61, 0.3);
+  }
+
+  .backoffice-header h2 {
+    color: white !important;
+    font-weight: 700;
+  }
+
+  .backoffice-header p {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .backoffice-header i {
+    color: white !important;
+  }
+
+  .client-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .info-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem;
+    border-radius: 12px;
+    border-left: 4px solid #4a7c59;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .info-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(74, 124, 89, 0.15);
+    border-left-color: #2d5a3d;
+  }
+
+  .info-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .info-value {
+    font-size: 1rem;
+    color: #212529;
+    font-weight: 500;
+  }
+
+  .info-value.empty {
+    color: #dc3545;
+    font-style: italic;
+  }
+
+  .nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 12px 20px;
+  }
+
+  .nav-tabs .nav-link.active {
+    background: none;
+    border-bottom-color: #4a7c59;
+    color: #4a7c59;
+  }
+
+  .tab-content {
+    background: white;
+    border: none;
+    border-radius: 0 0 16px 16px;
+    padding: 0;
+    min-height: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .subestado-content {
+    max-width: 100%;
+  }
+
+  .subestado-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #4a7c59, #2d5a3d);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 25px rgba(74, 124, 89, 0.3);
+  }
+
+  .subestado-icon i {
+    font-size: 32px;
+    color: white;
+  }
+
+  .subestado-title {
+    text-align: center;
+    color: #2d5a3d;
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .subestado-description {
+    text-align: center;
+    color: #6c757d;
+    margin-bottom: 30px;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  /* Estilos mejorados para pestañas */
+  .nav-tabs-custom {
+    border-bottom: 3px solid #4a7c59;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px 16px 0 0;
+    padding: 8px 8px 0 8px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .nav-tabs-custom .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #666;
+    font-weight: 600;
+    padding: 15px 25px;
+    transition: all 0.3s ease;
+    border-radius: 12px 12px 0 0;
+    margin: 0 2px;
+    background: transparent;
+  }
+
+  .nav-tabs-custom .nav-link:hover {
+    border-color: transparent;
+    background: linear-gradient(
+      135deg,
+      rgba(74, 124, 89, 0.1),
+      rgba(45, 90, 61, 0.05)
+    );
+    color: #4a7c59;
+    transform: translateY(-2px);
+  }
+
+  .nav-tabs-custom .nav-link.active {
+    border-bottom-color: #4a7c59;
+    background: white;
+    color: #4a7c59;
+    font-weight: 700;
+    box-shadow: 0 -2px 10px rgba(74, 124, 89, 0.2);
+  }
+
+  /* Contenido de subestados mejorado */
+  .subestado-content {
+    padding: 50px 40px;
+    text-align: center;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+    border-radius: 0;
+    margin-top: 0;
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+
+  .subestado-content::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4a7c59, #2d5a3d, #4a7c59);
+  }
+
+  .subestado-content .subestado-icon {
+    width: 120px;
+    height: 120px;
+    font-size: 4rem;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, #4a7c59, #2d5a3d);
+    animation: pulse-green 2s infinite;
+  }
+
+  @keyframes pulse-green {
+    0% {
+      box-shadow: 0 8px 25px rgba(74, 124, 89, 0.3);
+    }
+    50% {
+      box-shadow: 0 12px 35px rgba(74, 124, 89, 0.5);
+    }
+    100% {
+      box-shadow: 0 8px 25px rgba(74, 124, 89, 0.3);
+    }
+  }
+
+  .subestado-content .subestado-title {
+    font-size: 2.2rem;
+    margin-bottom: 25px;
+    color: #2d5a3d;
+    font-weight: 800;
+  }
+
+  .subestado-content .subestado-description {
+    font-size: 1.2rem;
+    max-width: 650px;
+    margin: 0 auto 35px;
+    line-height: 1.7;
+    color: #555;
+  }
+
+  /* Alertas mejoradas */
+  .alert {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
+    padding: 20px 25px;
+    margin-top: 10px;
+  }
+
+  .alert-info {
+    background: linear-gradient(135deg, #e8f5ff 0%, #cce7ff 100%);
+    color: #1565c0;
+    border-left: 5px solid #2196f3;
+  }
+
+  .alert-warning {
+    background: linear-gradient(135deg, #fff9e6 0%, #ffe6b3 100%);
+    color: #ef6c00;
+    border-left: 5px solid #ff9800;
+  }
+
+  .alert-primary {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #0277bd;
+    border-left: 5px solid #03a9f4;
+  }
+
+  .alert-success {
+    background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+    color: #2e7d32;
+    border-left: 5px solid #4caf50;
+  }
+
+  /* Botones de acciones mejorados */
+  .btn-outline-primary {
+    border-color: #4a7c59;
+    color: #4a7c59;
+    transition: all 0.3s ease;
+    border-width: 2px;
+    font-weight: 600;
+    padding: 12px 25px;
+    border-radius: 10px;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #4a7c59;
+    border-color: #4a7c59;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(74, 124, 89, 0.4);
+  }
+
+  /* Estilos para la card principal */
+  .card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #4a7c59 0%, #2d5a3d 100%);
+    color: white;
+    border: none;
+    padding: 20px 25px;
+    font-weight: 700;
+  }
+
+  .card-header h5 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .card-header i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+  }
+
+  /* Estilos para procesos de Back Office mejorados */
+  .processes-card {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .processes-header {
+    background: linear-gradient(135deg, #2d5a3d 0%, #4a7c59 50%, #5c8a69 100%);
+    padding: 25px 30px;
+    position: relative;
+  }
+
+  .processes-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" patternUnits="userSpaceOnUse" width="100" height="100"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+  }
+
+  .process-icon-container {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .process-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: white;
+  }
+
+  .process-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+  }
+
+  .process-badge .badge {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Pestañas modernas */
+  .nav-tabs-container {
+    background: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .nav-tabs-modern {
+    border: none;
+    gap: 10px;
+  }
+
+  .tab-modern {
+    border: none !important;
+    background: white;
+    border-radius: 15px;
+    padding: 0 !important;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .tab-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 25px rgba(74, 124, 89, 0.15);
+  }
+
+  .tab-modern.active {
+    background: linear-gradient(135deg, #4a7c59, #2d5a3d) !important;
+    color: white !important;
+    box-shadow: 0 8px 30px rgba(74, 124, 89, 0.3);
+  }
+
+  .tab-content-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    gap: 15px;
+  }
+
+  .tab-number {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #e9ecef, #f8f9fa);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #495057;
+  }
+
+  .tab-modern.active .tab-number {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+  }
+
+  .tab-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tab-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #2d5a3d;
+  }
+
+  .tab-modern.active .tab-title {
+    color: white !important;
+  }
+
+  .tab-status {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+
+  .tab-modern.active .tab-status {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+
+  .tab-arrow {
+    opacity: 0.6;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    color: #6c757d;
+  }
+
+  .tab-modern:hover .tab-arrow {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+
+  .tab-modern.active .tab-arrow {
+    color: white !important;
+    opacity: 1;
+  }
+
+  /* Contenido moderno de subestados */
+  .subestado-content-modern {
+    padding: 30px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+  }
+
+  .process-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .step-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d5a3d;
+  }
+
+  .step-total {
+    font-size: 1rem;
+    color: #6c757d;
+  }
+
+  .process-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 25px 0;
+  }
+
+  .detail-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .detail-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(74, 124, 89, 0.1);
+    border-color: #4a7c59;
+  }
+
+  .detail-icon {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #4a7c59, #2d5a3d);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+  }
+
+  .detail-content h6 {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+    color: #2d5a3d;
+  }
+
+  .detail-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+
+  .action-buttons {
+    margin-top: 30px;
+    text-align: center;
+  }
+
+  .action-buttons .btn {
+    border-radius: 25px;
+    padding: 12px 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .action-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Estilos para progreso del workflow */
+  .progress-custom {
+    height: 12px;
+    border-radius: 10px;
+    background-color: #e9ecef;
+  }
+
+  .progress-custom .progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
+  }
+
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+  }
+
+  .step-item {
+    text-align: center;
+    flex: 1;
+    position: relative;
+  }
+
+  .step-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 20px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background-color: #e9ecef;
+    z-index: 1;
+  }
+
+  .step-item.active:not(:last-child)::after {
+    background-color: #4a7c59;
+  }
+
+  .step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+  }
+
+  .step-item.active .step-circle {
+    background-color: #4a7c59;
+    color: white;
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+  .step-item.active .step-label {
+    color: #4a7c59;
+    font-weight: 600;
+  }
+
+  /* Cards de información adicional */
+  .info-card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  .info-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 20px;
+  }
+
+  .info-card .card-header h6 {
+    color: #495057;
+    font-weight: 600;
+  }
+
+  .time-info {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .time-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+  }
+
+  .time-item:last-child {
+    border-bottom: none;
+  }
+
+  .time-label {
+    font-weight: 500;
+    color: #6c757d;
+  }
+
+  .time-value {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .team-member {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+
+  .member-avatar {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #4a7c59, #2d5a3d);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+  }
+
+  .member-name {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .member-role {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header Principal -->
+      <div class="card mb-4">
+        <div class="backoffice-header">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h2 class="mb-2">
+                <i class="fas fa-building me-2"></i>
+                Back Office - Etapa Especializada
+              </h2>
+              <p class="mb-0 opacity-75">
+                <i class="fas fa-file-alt me-1"></i>
+                Solicitud {{ solicitud.codigo }} - {{
+                solicitud.etapa_actual.nombre }}
+              </p>
+            </div>
+            <div class="col-md-4 text-end">
+              {% if solicitud.prioridad %}
+              <span class="badge bg-warning text-dark px-3 py-2">
+                <i class="fas fa-star"></i> {{ solicitud.prioridad }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Información del Cliente -->
+        <div class="card-body">
+          <h5 class="mb-3">
+            <i class="fas fa-user-circle"></i> Información del Cliente
+          </h5>
+          <div class="client-info-grid">
+            <div class="info-item">
+              <div class="info-label">Cliente</div>
+              <div
+                class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}"
+              >
+                {{ solicitud.cliente_nombre_completo|default:"Sin especificar"
+                }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Cédula</div>
+              <div
+                class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}"
+              >
+                {{ solicitud.cliente_cedula_completa|default:"Sin especificar"
+                }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Producto</div>
+              <div
+                class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}"
+              >
+                {{ solicitud.producto_solicitado|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Monto Solicitado</div>
+              <div
+                class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}"
+              >
+                {% if solicitud.monto_solicitado %} B/. {{
+                solicitud.monto_solicitado|floatformat:2 }} {% else %} No
+                especificado {% endif %}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Teléfono</div>
+              <div
+                class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}"
+              >
+                {{ solicitud.cliente_telefono|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Email</div>
+              <div
+                class="info-value {% if not solicitud.cliente_email %}empty{% endif %}"
+              >
+                {{ solicitud.cliente_email|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Estado Actual</div>
+              <div class="info-value">{{ solicitud.estado_actual }}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Asignado a</div>
+              <div
+                class="info-value {% if not solicitud.asignada_a %}empty{% endif %}"
+              >
+                {% if solicitud.asignada_a %} {{
+                solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username
+                }} {% else %} Sin asignar {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subestados de Back Office -->
+      <div class="card processes-card">
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle"
+                  >Gestión completa del flujo de trabajo</small
+                >
+              </div>
+            </div>
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ solicitud.etapa_actual.subestados.count }} Etapas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Pestañas de Navegación Mejoradas -->
+          <div class="nav-tabs-container">
+            <ul
+              class="nav nav-tabs nav-tabs-modern"
+              id="backoffice-tabs"
+              role="tablist"
+            >
+              {% for subestado in solicitud.etapa_actual.subestados.all %}
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link tab-modern {% if forloop.first %}active{% endif %}"
+                  id="tab-{{ subestado.id }}"
+                  data-bs-toggle="tab"
+                  data-bs-target="#content-{{ subestado.id }}"
+                  type="button"
+                  role="tab"
+                  aria-controls="content-{{ subestado.id }}"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                >
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">{{ forloop.counter }}</div>
+                    <div class="tab-text">
+                      <span class="tab-title">{{ subestado.nombre }}</span>
+                      <span class="tab-status">En proceso</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </button>
+              </li>
+              {% empty %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link tab-modern active" disabled>
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">!</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Sin Procesos</span>
+                      <span class="tab-status">No configurado</span>
+                    </div>
+                  </div>
+                </button>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Contenido de las Pestañas -->
+          <div class="tab-content" id="backoffice-content">
+            {% for subestado in solicitud.etapa_actual.subestados.all %}
+            <div
+              class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+              id="content-{{ subestado.id }}"
+              role="tabpanel"
+              aria-labelledby="tab-{{ subestado.id }}"
+            >
+              <div class="subestado-content-modern">
+                <div class="process-step-header">
+                  <div class="step-indicator">
+                    <span class="step-number">{{ forloop.counter }}</span>
+                    <span class="step-total"
+                      >/ {{ solicitud.etapa_actual.subestados.count }}</span
+                    >
+                  </div>
+                  <div class="step-status">
+                    <span class="badge bg-warning">
+                      <i class="fas fa-clock me-1"></i>En Proceso
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Contenido específico por tipo de subestado -->
+                {% if "Revisión" in subestado.nombre or "Documenta" in
+                subestado.nombre %}
+                <div class="subestado-icon">
+                  <i class="fas fa-file-check"></i>
+                </div>
+                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+                <p class="subestado-description">
+                  Revisión exhaustiva de toda la documentación presentada por el
+                  cliente. Verificación de completitud, autenticidad y vigencia
+                  de los documentos.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Documentos Requeridos</h6>
+                      <p>Identificación, ingresos, referencias</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Verificación</h6>
+                      <p>Autenticidad y vigencia</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle"></i>
+                  <strong>Proceso de Revisión Documental</strong><br />
+                  Verificación completa de documentos requeridos para el proceso
+                  crediticio.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-success me-2">
+                    <i class="fas fa-check me-1"></i>Documentos Completos
+                  </button>
+                  <button class="btn btn-warning">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Solicitar
+                    Documentos
+                  </button>
+                </div>
+
+                {% elif "Captura" in subestado.nombre or "Préstamo" in
+                subestado.nombre %}
+                <div class="subestado-icon">
+                  <i class="fas fa-edit"></i>
+                </div>
+                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+                <p class="subestado-description">
+                  Ingreso de información del préstamo en el sistema central.
+                  Captura de datos del cliente, términos del préstamo y
+                  garantías.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Datos del Cliente</h6>
+                      <p>Información personal y contacto</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Términos del Préstamo</h6>
+                      <p>Monto, plazo, tasa de interés</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-warning">
+                  <i class="fas fa-database"></i>
+                  <strong>Captura en Sistema Central</strong><br />
+                  Ingreso de datos del préstamo y términos acordados.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-primary me-2">
+                    <i class="fas fa-save me-1"></i>Guardar Información
+                  </button>
+                  <button class="btn btn-outline-secondary">
+                    <i class="fas fa-eye me-1"></i>Vista Previa
+                  </button>
+                </div>
+
+                {% elif "Firma" in subestado.nombre or "Cliente" in
+                subestado.nombre %}
+                <div class="subestado-icon">
+                  <i class="fas fa-signature"></i>
+                </div>
+                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+                <p class="subestado-description">
+                  Proceso de firma de documentos contractuales. Coordinación con
+                  el cliente para la firma de contratos y documentos legales.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-file-contract"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Documentos Legales</h6>
+                      <p>Contratos y términos legales</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Coordinación</h6>
+                      <p>Cita con el cliente</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-primary">
+                  <i class="fas fa-file-signature"></i>
+                  <strong>Proceso de Formalización</strong><br />
+                  Firma de contratos y documentos legales del préstamo.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-success me-2">
+                    <i class="fas fa-pen-fancy me-1"></i>Documentos Firmados
+                  </button>
+                  <button class="btn btn-info">
+                    <i class="fas fa-calendar me-1"></i>Agendar Cita
+                  </button>
+                </div>
+
+                {% elif "Ordenar" in subestado.nombre or "Expediente" in
+                subestado.nombre %}
+                <div class="subestado-icon">
+                  <i class="fas fa-folder-open"></i>
+                </div>
+                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+                <p class="subestado-description">
+                  Organización final del expediente completo del cliente.
+                  Verificación de que todos los documentos estén en orden y
+                  archivados correctamente.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-archive"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Archivo Final</h6>
+                      <p>Organización completa</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-check-double"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Verificación Final</h6>
+                      <p>Control de calidad</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-success">
+                  <i class="fas fa-archive"></i>
+                  <strong>Organización de Expediente</strong><br />
+                  Finalización y archivo del expediente completo.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-success me-2">
+                    <i class="fas fa-check-circle me-1"></i>Expediente Completo
+                  </button>
+                  <button class="btn btn-outline-primary">
+                    <i class="fas fa-download me-1"></i>Generar Reporte
+                  </button>
+                </div>
+
+                {% else %}
+                <!-- Subestado genérico -->
+                <div class="subestado-icon">
+                  <i class="fas fa-cogs"></i>
+                </div>
+                <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+                <p class="subestado-description">
+                  Proceso específico de Back Office para {{
+                  subestado.nombre|lower }}. Esta etapa requiere atención
+                  especial del equipo de Back Office.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Proceso Personalizado</h6>
+                      <p>Gestión específica requerida</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-users"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Equipo Especializado</h6>
+                      <p>Back Office especializado</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-secondary">
+                  <i class="fas fa-cogs"></i>
+                  <strong>{{ subestado.nombre }}</strong><br />
+                  Proceso específico de Back Office.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-primary me-2">
+                    <i class="fas fa-play me-1"></i>Iniciar Proceso
+                  </button>
+                  <button class="btn btn-outline-secondary">
+                    <i class="fas fa-info me-1"></i>Más Información
+                  </button>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% empty %}
+            <div class="tab-pane fade show active">
+              <div class="subestado-content-modern">
+                <div class="process-step-header">
+                  <div class="step-indicator">
+                    <span class="step-number">!</span>
+                    <span class="step-total">/ 0</span>
+                  </div>
+                  <div class="step-status">
+                    <span class="badge bg-warning">
+                      <i class="fas fa-exclamation-triangle me-1"></i>Sin
+                      Configurar
+                    </span>
+                  </div>
+                </div>
+
+                <div class="subestado-icon">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="subestado-title">Sin Subestados Configurados</h3>
+                <p class="subestado-description">
+                  Esta etapa de Back Office no tiene subestados configurados.
+                  Contacte al administrador para configurar los procesos
+                  específicos.
+                </p>
+
+                <div class="process-details">
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Configuración Requerida</h6>
+                      <p>Solicitar configuración al administrador</p>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-icon">
+                      <i class="fas fa-user-cog"></i>
+                    </div>
+                    <div class="detail-content">
+                      <h6>Soporte Técnico</h6>
+                      <p>Contactar equipo de sistemas</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert alert-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Sin Subestados Configurados</strong><br />
+                  Esta etapa de Back Office no tiene subestados configurados.
+                </div>
+
+                <div class="action-buttons">
+                  <button class="btn btn-primary me-2">
+                    <i class="fas fa-envelope me-1"></i>Contactar Administrador
+                  </button>
+                  <button class="btn btn-outline-secondary">
+                    <i class="fas fa-question-circle me-1"></i>Ayuda
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso del Workflow -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-line"></i> Progreso del Workflow
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="workflow-progress">
+            <div class="progress-info mb-3">
+              <div class="d-flex justify-content-between">
+                <span class="fw-bold">Progreso Actual</span>
+                <span class="text-muted"
+                  >1 de {{ solicitud.etapa_actual.subestados.count }}
+                  procesos</span
+                >
+              </div>
+            </div>
+            <div class="progress progress-custom mb-3">
+              <div
+                class="progress-bar bg-success"
+                role="progressbar"
+                style="width: {% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}%"
+                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+            <div class="progress-steps">
+              {% for subestado in solicitud.etapa_actual.subestados.all %}
+              <div class="step-item {% if forloop.first %}active{% endif %}">
+                <div class="step-circle">
+                  {% if forloop.first %}
+                  <i class="fas fa-check"></i>
+                  {% else %} {{ forloop.counter }} {% endif %}
+                </div>
+                <div class="step-label">
+                  {{ subestado.nombre|truncatechars:20 }}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información Adicional -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card info-card">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-clock"></i> Tiempo de Procesamiento
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="time-info">
+                <div class="time-item">
+                  <div class="time-label">Tiempo Transcurrido</div>
+                  <div class="time-value">
+                    {{ solicitud.fecha_creacion|timesince }}
+                  </div>
+                </div>
+                <div class="time-item">
+                  <div class="time-label">Última Actualización</div>
+                  <div class="time-value">
+                    {{ solicitud.fecha_actualizacion|timesince }} atrás
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card info-card">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="fas fa-users"></i> Equipo Asignado</h6>
+            </div>
+            <div class="card-body">
+              <div class="team-info">
+                <div class="team-member">
+                  <div class="member-avatar">
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div class="member-details">
+                    <div class="member-name">
+                      {{ solicitud.asignado_a|default:"Sin asignar" }}
+                    </div>
+                    <div class="member-role">Analista Back Office</div>
+                  </div>
+                </div>
+                <div class="team-stats">
+                  <small class="text-muted">
+                    <i class="fas fa-building me-1"></i>Departamento: Back
+                    Office
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Disponibles -->
+      {% if transiciones_disponibles %}
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-route"></i> Acciones Disponibles
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-2 flex-wrap">
+            {% for transicion in transiciones_disponibles %}
+            <button class="btn btn-outline-primary">
+              <i class="fas fa-arrow-right"></i>
+              {{ transicion.etapa_destino.nombre }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

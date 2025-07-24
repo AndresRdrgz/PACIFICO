@@ -10,7 +10,16 @@ class EtapaInline(admin.TabularInline):
 class SubEstadoInline(admin.TabularInline):
     model = SubEstado
     extra = 1
-    fk_name = 'pipeline'  # Specify which ForeignKey to use since SubEstado has two FKs
+    fk_name = 'pipeline'  # For Pipeline admin
+    fields = ('etapa', 'nombre', 'orden')
+    ordering = ('orden',)
+
+class SubEstadoEtapaInline(admin.TabularInline):
+    model = SubEstado
+    extra = 1
+    fk_name = 'etapa'  # For Etapa admin
+    fields = ('nombre', 'orden')
+    ordering = ('orden',)
 
 class TransicionEtapaInline(admin.TabularInline):
     model = TransicionEtapa
@@ -90,7 +99,7 @@ class OtroIngresoAdmin(admin.ModelAdmin):
 class PipelineAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'descripcion')
     search_fields = ('nombre',)
-    inlines = [EtapaInline, SubEstadoInline, TransicionEtapaInline, RequisitoPipelineInline, CampoPersonalizadoInline]
+    inlines = [EtapaInline, TransicionEtapaInline, RequisitoPipelineInline, CampoPersonalizadoInline]
 
 
 @admin.register(Etapa)
@@ -98,13 +107,16 @@ class EtapaAdmin(admin.ModelAdmin):
     list_display = ('id', 'pipeline', 'nombre', 'orden', 'sla', 'es_bandeja_grupal')
     search_fields = ('nombre', 'pipeline__nombre')
     list_filter = ('pipeline',)
+    inlines = [SubEstadoEtapaInline]
 
 
 @admin.register(SubEstado)
 class SubEstadoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'etapa', 'nombre', 'orden')
-    search_fields = ('nombre', 'etapa__nombre')
-    list_filter = ('etapa',)
+    list_display = ('id', 'etapa', 'nombre', 'orden', 'pipeline')
+    search_fields = ('nombre', 'etapa__nombre', 'pipeline__nombre')
+    list_filter = ('etapa', 'pipeline')
+    list_editable = ('orden',)
+    ordering = ('etapa', 'orden')
 
 
 @admin.register(TransicionEtapa)

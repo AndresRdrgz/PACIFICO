@@ -1,0 +1,698 @@
+{% extends "workflow/base.html" %} {% load static %} {% load workflow_filters %}
+{% block title %}Back Office - Detalle de Solicitud - Sistema de Workflow{%
+endblock %} {% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'workflow/css/detalleSolicitud.css' %}"
+/>
+<style>
+  .backoffice-header {
+    background: linear-gradient(
+      135deg,
+      var(--verde-pacifico) 0%,
+      var(--verde-claro) 100%
+    );
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 156, 60, 0.2);
+  }
+
+  .general-info {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid var(--verde-pacifico);
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .info-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .info-value {
+    font-size: 1rem;
+    color: #212529;
+    font-weight: 500;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .info-value.empty {
+    color: #6c757d;
+    font-style: italic;
+  }
+
+  /* Pestañas de subestados */
+  .subestados-tabs {
+    margin-top: 2rem;
+  }
+
+  .nav-tabs-custom {
+    border-bottom: 3px solid #e9ecef;
+    margin-bottom: 0;
+  }
+
+  .nav-tabs-custom .nav-link {
+    border: none;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: #6c757d;
+    background: #f8f9fa;
+    margin-right: 0.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .nav-tabs-custom .nav-link:hover {
+    background: #e9ecef;
+    color: var(--verde-pacifico);
+  }
+
+  .nav-tabs-custom .nav-link.active {
+    background: var(--verde-pacifico);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 156, 60, 0.3);
+  }
+
+  .nav-tabs-custom .nav-link.active::after {
+    content: "";
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--verde-pacifico);
+  }
+
+  .tab-content-custom {
+    background: white;
+    border-radius: 0 16px 16px 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    min-height: 400px;
+  }
+
+  .tab-pane-custom {
+    padding: 2rem;
+  }
+
+  .subestado-content {
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+
+  .subestado-icon {
+    font-size: 4rem;
+    color: var(--verde-pacifico);
+    margin-bottom: 1rem;
+  }
+
+  .subestado-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1rem;
+  }
+
+  .subestado-description {
+    color: #6c757d;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+  }
+
+  .status-badges {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .status-badge {
+    padding: 0.75rem 1.5rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-pending {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb84d 100%);
+    color: #000;
+  }
+
+  .status-in-progress {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+  }
+
+  .status-completed {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+  }
+
+  .priority-alta {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+    color: white;
+  }
+
+  .priority-media {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb84d 100%);
+    color: #000;
+  }
+
+  .priority-baja {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+  }
+
+  .checklist-item {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+
+  .checklist-item.completed {
+    border-left-color: var(--verde-pacifico);
+    background: rgba(0, 156, 60, 0.05);
+  }
+
+  .checklist-item.pending {
+    border-left-color: #ffc107;
+    background: rgba(255, 193, 7, 0.05);
+  }
+
+  .action-buttons {
+    position: sticky;
+    bottom: 2rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .backoffice-header {
+      padding: 1.5rem;
+    }
+
+    .nav-tabs-custom .nav-link {
+      padding: 0.75rem 1rem;
+      margin-right: 0.25rem;
+      font-size: 0.875rem;
+    }
+
+    .tab-pane-custom {
+      padding: 1rem;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid">
+  <!-- Header con datos generales -->
+  <div class="backoffice-header">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h1 class="mb-2">
+          <i class="fas fa-building"></i>
+          Back Office - Análisis de Solicitud
+        </h1>
+        <p class="mb-1">
+          <strong>Código:</strong> {{ solicitud.codigo|default:"Sin código
+          asignado" }}
+        </p>
+        <p class="mb-0">
+          <strong>Pipeline:</strong> {{ solicitud.pipeline.nombre }} |
+          <strong>Etapa:</strong> {{ solicitud.etapa_actual.nombre }}
+        </p>
+      </div>
+      <div class="text-end">
+        {% if solicitud.prioridad %}
+        <div class="status-badge priority-{{ solicitud.prioridad|lower }} mb-2">
+          <i class="fas fa-exclamation-triangle"></i>
+          Prioridad {{ solicitud.prioridad }}
+        </div>
+        {% endif %}
+        <div class="status-badge status-in-progress">
+          <i class="fas fa-clock"></i>
+          En Back Office
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información General -->
+  <div class="general-info">
+    <h3 class="mb-3">
+      <i class="fas fa-info-circle"></i>
+      Información General de la Solicitud
+    </h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Cliente</span>
+        <div
+          class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}"
+        >
+          {{ solicitud.cliente_nombre_completo|default:"No especificado" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Cédula</span>
+        <div
+          class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}"
+        >
+          {{ solicitud.cliente_cedula_completa|default:"No especificado" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Producto</span>
+        <div
+          class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}"
+        >
+          {{ solicitud.producto_solicitado|default:"No especificado" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Monto</span>
+        <div
+          class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}"
+        >
+          {% if solicitud.monto_solicitado %} B/. {{
+          solicitud.monto_solicitado|floatformat:2 }} {% else %} No especificado
+          {% endif %}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Teléfono</span>
+        <div
+          class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}"
+        >
+          {{ solicitud.cliente_telefono|default:"No especificado" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Email</span>
+        <div
+          class="info-value {% if not solicitud.cliente_email %}empty{% endif %}"
+        >
+          {{ solicitud.cliente_email|default:"No especificado" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Fecha Creación</span>
+        <div class="info-value">
+          {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}
+        </div>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Asignado a</span>
+        <div
+          class="info-value {% if not solicitud.asignada_a %}empty{% endif %}"
+        >
+          {% if solicitud.asignada_a %} {{
+          solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username
+          }} {% else %} Sin asignar {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Subestados -->
+  <div class="subestados-tabs">
+    <ul class="nav nav-tabs nav-tabs-custom" id="subestadosTab" role="tablist">
+      {% for subestado in solicitud.etapa_actual.subestados.all %}
+      <li class="nav-item" role="presentation">
+        <button
+          class="nav-link {% if forloop.first %}active{% endif %}"
+          id="tab-{{ subestado.id }}"
+          data-bs-toggle="tab"
+          data-bs-target="#content-{{ subestado.id }}"
+          type="button"
+          role="tab"
+          aria-controls="content-{{ subestado.id }}"
+          aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+        >
+          <i class="fas fa-clipboard-check me-2"></i>
+          {{ subestado.nombre }}
+        </button>
+      </li>
+      {% empty %}
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" disabled>
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Sin subestados configurados
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="tab-content tab-content-custom" id="subestadosTabContent">
+      {% for subestado in solicitud.etapa_actual.subestados.all %}
+      <div
+        class="tab-pane fade {% if forloop.first %}show active{% endif %} tab-pane-custom"
+        id="content-{{ subestado.id }}"
+        role="tabpanel"
+        aria-labelledby="tab-{{ subestado.id }}"
+      >
+        <div class="subestado-content">
+          {% if subestado.nombre == "Revisión de Documentación" or "Revisar" in
+          subestado.nombre or "Documentos" in subestado.nombre %}
+          <div class="subestado-icon">
+            <i class="fas fa-file-check"></i>
+          </div>
+          <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+          <p class="subestado-description">
+            Revisión exhaustiva de toda la documentación presentada por el
+            cliente. Verificación de completitud, autenticidad y vigencia de los
+            documentos.
+          </p>
+
+          <div class="row">
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-list-check"></i> Lista de Verificación
+              </h5>
+              <div class="checklist-item pending">
+                <i class="fas fa-id-card"></i>
+                <strong>Cédula de Identidad</strong><br />
+                <small>Verificar vigencia y autenticidad</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-file-invoice"></i>
+                <strong>Comprobantes de Ingreso</strong><br />
+                <small>Últimos 3 meses de salario</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-home"></i>
+                <strong>Comprobante de Residencia</strong><br />
+                <small>Recibo de servicios públicos</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-clipboard-list"></i> Estado Actual
+              </h5>
+              <div class="status-badges">
+                <span class="status-badge status-pending">
+                  <i class="fas fa-clock"></i> Pendiente Revisión
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {% elif subestado.nombre == "Captura de Préstamo" or "Captura" in
+          subestado.nombre or "Préstamo" in subestado.nombre %}
+          <div class="subestado-icon">
+            <i class="fas fa-database"></i>
+          </div>
+          <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+          <p class="subestado-description">
+            Registro y captura de todos los datos del préstamo en el sistema.
+            Ingreso de información del cliente, términos del préstamo y
+            condiciones.
+          </p>
+
+          <div class="row">
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-database"></i> Datos a Capturar
+              </h5>
+              <div class="checklist-item pending">
+                <i class="fas fa-user"></i> <strong>Datos del Cliente</strong
+                ><br />
+                <small>Información personal y contacto</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-calculator"></i>
+                <strong>Términos del Préstamo</strong><br />
+                <small>Monto, plazo, tasa de interés</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-shield-alt"></i> <strong>Garantías</strong
+                ><br />
+                <small>Detalles de garantías ofrecidas</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-info-circle"></i> Información
+              </h5>
+              <div class="status-badges">
+                <span class="status-badge status-pending">
+                  <i class="fas fa-edit"></i> Listo para Captura
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {% elif subestado.nombre == "Firma del Cliente" or "Firma" in
+          subestado.nombre or "Cliente" in subestado.nombre %}
+          <div class="subestado-icon">
+            <i class="fas fa-signature"></i>
+          </div>
+          <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+          <p class="subestado-description">
+            Proceso de firma de documentos contractuales. Coordinación con el
+            cliente para la firma de contratos y documentos legales.
+          </p>
+
+          <div class="row">
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-file-signature"></i> Documentos a Firmar
+              </h5>
+              <div class="checklist-item pending">
+                <i class="fas fa-contract"></i>
+                <strong>Contrato de Préstamo</strong><br />
+                <small>Documento principal del crédito</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-file-alt"></i> <strong>Pagaré</strong><br />
+                <small>Documento de compromiso de pago</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-info-circle"></i>
+                <strong>Condiciones Generales</strong><br />
+                <small>Términos y condiciones del préstamo</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-calendar-alt"></i> Programación
+              </h5>
+              <div class="status-badges">
+                <span class="status-badge status-pending">
+                  <i class="fas fa-calendar-check"></i> Pendiente Cita
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {% elif subestado.nombre == "Ordenar Expediente" or "Ordenar" in
+          subestado.nombre or "Expediente" in subestado.nombre %}
+          <div class="subestado-icon">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+          <p class="subestado-description">
+            Organización final del expediente completo del cliente. Verificación
+            de que todos los documentos estén en orden y archivados
+            correctamente.
+          </p>
+
+          <div class="row">
+            <div class="col-md-6">
+              <h5 class="mb-3"><i class="fas fa-archive"></i> Organización</h5>
+              <div class="checklist-item pending">
+                <i class="fas fa-sort-numeric-up"></i>
+                <strong>Numeración</strong><br />
+                <small>Foliado de documentos</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-paperclip"></i> <strong>Empastado</strong
+                ><br />
+                <small>Organización física del expediente</small>
+              </div>
+              <div class="checklist-item pending">
+                <i class="fas fa-qrcode"></i> <strong>Codificación</strong
+                ><br />
+                <small>Asignación de código de expediente</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h5 class="mb-3">
+                <i class="fas fa-check-circle"></i> Finalización
+              </h5>
+              <div class="status-badges">
+                <span class="status-badge status-pending">
+                  <i class="fas fa-tasks"></i> En Proceso
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {% else %}
+          <!-- Subestado genérico -->
+          <div class="subestado-icon">
+            <i class="fas fa-cogs"></i>
+          </div>
+          <h3 class="subestado-title">{{ subestado.nombre }}</h3>
+          <p class="subestado-description">
+            Proceso específico de Back Office para {{ subestado.nombre|lower }}.
+            Esta etapa requiere atención especial del equipo de Back Office.
+          </p>
+
+          <div class="status-badges">
+            <span class="status-badge status-pending">
+              <i class="fas fa-clock"></i> Pendiente
+            </span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="tab-pane fade show active tab-pane-custom">
+        <div class="subestado-content">
+          <div class="subestado-icon">
+            <i class="fas fa-exclamation-triangle text-warning"></i>
+          </div>
+          <h3 class="subestado-title">Sin Subestados Configurados</h3>
+          <p class="subestado-description">
+            Esta etapa de Back Office no tiene subestados configurados. Contacte
+            al administrador para configurar los procesos específicos.
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Acciones Disponibles -->
+  {% if transiciones_disponibles %}
+  <div class="action-buttons">
+    <h4 class="mb-3">
+      <i class="fas fa-arrow-right"></i>
+      Acciones Disponibles
+    </h4>
+    <div class="d-flex flex-wrap gap-2">
+      {% for transicion in transiciones_disponibles %}
+      <form
+        method="post"
+        action="{% url 'workflow:transicion_solicitud' solicitud.id %}"
+        class="d-inline"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="transicion_id" value="{{ transicion.id }}" />
+        <button type="submit" class="btn btn-pacifico">
+          <i class="fas fa-arrow-right"></i>
+          {{ transicion.nombre }}
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Agregar animaciones de entrada
+    const header = document.querySelector(".backoffice-header");
+    const generalInfo = document.querySelector(".general-info");
+    const tabs = document.querySelector(".subestados-tabs");
+
+    // Animación secuencial
+    setTimeout(() => {
+      header.style.opacity = "0";
+      header.style.transform = "translateY(-20px)";
+      header.style.transition = "all 0.6s ease";
+      setTimeout(() => {
+        header.style.opacity = "1";
+        header.style.transform = "translateY(0)";
+      }, 100);
+    }, 100);
+
+    setTimeout(() => {
+      generalInfo.style.opacity = "0";
+      generalInfo.style.transform = "translateY(20px)";
+      generalInfo.style.transition = "all 0.6s ease";
+      setTimeout(() => {
+        generalInfo.style.opacity = "1";
+        generalInfo.style.transform = "translateY(0)";
+      }, 100);
+    }, 300);
+
+    setTimeout(() => {
+      tabs.style.opacity = "0";
+      tabs.style.transform = "translateY(20px)";
+      tabs.style.transition = "all 0.6s ease";
+      setTimeout(() => {
+        tabs.style.opacity = "1";
+        tabs.style.transform = "translateY(0)";
+      }, 100);
+    }, 500);
+
+    // Mejorar la experiencia de las transiciones
+    const transicionForms = document.querySelectorAll(
+      'form[action*="transicion_solicitud"]'
+    );
+    transicionForms.forEach((form) => {
+      form.addEventListener("submit", function (e) {
+        const button = this.querySelector("button");
+        button.disabled = true;
+        button.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+      });
+    });
+
+    // Añadir funcionalidad a las pestañas
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        // Agregar efecto de carga
+        const targetId = this.getAttribute("data-bs-target");
+        const targetPane = document.querySelector(targetId);
+        if (targetPane) {
+          targetPane.style.opacity = "0.5";
+          setTimeout(() => {
+            targetPane.style.opacity = "1";
+          }, 200);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}
