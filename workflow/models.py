@@ -384,3 +384,98 @@ class FormularioWeb(models.Model):
         """Retorna el salario con formato amigable"""
         return self.get_salario_display() if self.salario else "No especificado"
 
+
+# =============================================================================
+# MODELOS PARA CALIFICACIÓN DE DOCUMENTOS
+# =============================================================================
+
+class OpcionDesplegable(models.Model):
+    """Opciones predefinidas para el desplegable de calificación de documentos"""
+    nombre = models.CharField(max_length=100, verbose_name="Opción")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+    orden = models.PositiveIntegerField(default=0, verbose_name="Orden")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'workflow_opcion_desplegable'
+        verbose_name = 'Opción de Desplegable'
+        verbose_name_plural = 'Opciones de Desplegable'
+        ordering = ['orden', 'nombre']
+    
+    def __str__(self):
+        return self.nombre
+
+
+class CalificacionDocumentoBackoffice(models.Model):
+    """Calificaciones de documentos por parte de analistas - Backoffice"""
+    ESTADO_CHOICES = [
+        ('bueno', 'Bueno'),
+        ('malo', 'Malo'),
+    ]
+    
+    requisito_solicitud = models.ForeignKey(
+        'RequisitoSolicitud', 
+        on_delete=models.CASCADE, 
+        related_name='calificaciones_backoffice',
+        verbose_name="Requisito de Solicitud"
+    )
+    calificado_por = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.CASCADE, 
+        verbose_name="Calificado por"
+    )
+    estado = models.CharField(
+        max_length=10, 
+        choices=ESTADO_CHOICES, 
+        verbose_name="Estado"
+    )
+    opcion_desplegable = models.ForeignKey(
+        OpcionDesplegable, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        verbose_name="Opción Seleccionada"
+    )
+    fecha_calificacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'workflow_calificacion_documento_backoffice'
+        verbose_name = 'Calificación de Documento - Backoffice'
+        verbose_name_plural = 'Calificaciones de Documentos - Backoffice'
+        ordering = ['-fecha_calificacion']
+        # Un usuario solo puede tener una calificación activa por requisito
+        unique_together = ['requisito_solicitud', 'calificado_por']
+    
+    def __str__(self):
+        return f"{self.requisito_solicitud.requisito.nombre} - {self.get_estado_display()} por {self.calificado_por.username}"
+
+
+class ComentarioDocumentoBackoffice(models.Model):
+    """Comentarios sobre documentos - Backoffice"""
+    requisito_solicitud = models.ForeignKey(
+        'RequisitoSolicitud', 
+        on_delete=models.CASCADE, 
+        related_name='comentarios_backoffice',
+        verbose_name="Requisito de Solicitud"
+    )
+    comentario_por = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.CASCADE, 
+        verbose_name="Comentario por"
+    )
+    comentario = models.TextField(verbose_name="Comentario")
+    fecha_comentario = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+    
+    class Meta:
+        db_table = 'workflow_comentario_documento_backoffice'
+        verbose_name = 'Comentario de Documento - Backoffice'
+        verbose_name_plural = 'Comentarios de Documentos - Backoffice'
+        ordering = ['-fecha_comentario']
+    
+    def __str__(self):
+        return f"Comentario en {self.requisito_solicitud.requisito.nombre} por {self.comentario_por.username}"
+

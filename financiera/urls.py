@@ -10,8 +10,12 @@ from pacifico.ViewsLogin import (
 from financiera.views import SecureMediaView
 
 # Import test views for error page testing (only in DEBUG mode)
+test_error_pages = None
 if settings.DEBUG:
-    from financiera.test_views import test_error_pages
+    try:
+        from financiera.test_views import test_error_pages
+    except ImportError:
+        pass
 
 urlpatterns = [
     # Custom authentication URLs with custom templates
@@ -33,7 +37,7 @@ urlpatterns = [
 ]
 
 # Add test URL for error pages (only in DEBUG mode)
-if settings.DEBUG:
+if settings.DEBUG and test_error_pages is not None:
     urlpatterns += [
         path('test-errors/', test_error_pages, name='test_error_pages'),
     ]

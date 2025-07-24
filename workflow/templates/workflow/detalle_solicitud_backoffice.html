@@ -1,0 +1,1146 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Detalle de Solicitud - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header Principal -->
+      <div class="card mb-4">
+        <div class="backoffice-header">
+          <div class="row align-items-center">
+            <div class="col-lg-8 col-md-7 col-sm-12">
+              <h2 class="mb-2">
+                <i class="fas fa-building me-2"></i>
+                Back Office - Etapa Especializada
+              </h2>
+              <p class="mb-0 opacity-75">
+                <i class="fas fa-file-alt me-1"></i>
+                Solicitud {{ solicitud.codigo }} - {{ solicitud.etapa_actual.nombre }}
+              </p>
+            </div>
+            <div class="col-lg-4 col-md-5 col-sm-12 text-md-end text-center mt-2 mt-md-0">
+              {% if solicitud.prioridad %}
+              <span class="badge bg-warning text-dark px-3 py-2">
+                <i class="fas fa-star"></i> {{ solicitud.prioridad }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Información del Cliente -->
+        <div class="card-body">
+          <h5 class="mb-3">
+            <i class="fas fa-user-circle"></i> Información del Cliente
+          </h5>
+          <div class="client-info-grid">
+            <div class="info-item">
+              <div class="info-label">Cliente</div>
+              <div class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}">
+                {{ solicitud.cliente_nombre_completo|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Cédula</div>
+              <div class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}">
+                {{ solicitud.cliente_cedula_completa|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Producto</div>
+              <div class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}">
+                {{ solicitud.producto_solicitado|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Monto Solicitado</div>
+              <div class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}">
+                {% if solicitud.monto_solicitado %}B/. {{ solicitud.monto_solicitado|floatformat:2 }}{% else %}No
+                especificado{% endif %}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Teléfono</div>
+              <div class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}">
+                {{ solicitud.cliente_telefono|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Email</div>
+              <div class="info-value {% if not solicitud.cliente_email %}empty{% endif %}">
+                {{ solicitud.cliente_email|default:"Sin especificar" }}
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Estado Actual</div>
+              <div class="info-value {% if not solicitud.estado_actual %}empty{% endif %}">
+                {{ solicitud.estado_actual|default:"Sin especificar" }}
+              </div>
+            </div>
+            <!-- Campo Asignado a temporalmente removido -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Subestados de Back Office -->
+      <div class="card processes-card">
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
+            </div>
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ solicitud.etapa_actual.subestados.count }} Etapas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Pestañas de Navegación Mejoradas -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              {% for subestado in solicitud.etapa_actual.subestados.all %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link tab-modern {% if forloop.first %}active{% endif %}" id="tab-{{ subestado.id }}"
+                  data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
+                  aria-controls="content-{{ subestado.id }}"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">{{ forloop.counter }}</div>
+                    <div class="tab-text">
+                      <span class="tab-title">{{ subestado.nombre }}</span>
+                      <span class="tab-status">En proceso</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </button>
+              </li>
+              {% empty %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link tab-modern active" disabled>
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">!</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Sin Procesos</span>
+                      <span class="tab-status">No configurado</span>
+                    </div>
+                  </div>
+                </button>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Contenido de las Pestañas -->
+          <div class="tab-content" id="backoffice-content">
+            {% for subestado in solicitud.etapa_actual.subestados.all %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ subestado.id }}"
+              role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
+              <div class="subestado-content-modern">
+                <div class="process-step-header">
+                  <div class="step-indicator">
+                    <span class="step-number">{{ forloop.counter }}</span>
+                    <span class="step-total">/ {{ solicitud.etapa_actual.subestados.count }}</span>
+                  </div>
+                  <div class="subestado-icon">
+                    <i class="fas fa-folder-open"></i>
+                  </div>
+                  <div class="step-status">
+                    <span class="badge bg-primary">
+                      <i class="fas fa-cog me-1"></i>Procesando
+                    </span>
+                  </div>
+                </div>
+
+
+
+                <!-- Archivos Requeridos Dinámicos -->
+                {% if archivos_por_subestado and subestado.id in archivos_por_subestado %}
+                {% with archivos=archivos_por_subestado|get_item:subestado.id %}
+                {% if archivos|length > 0 %}
+
+                <div class="process-details">
+                  {% for archivo_info in archivos %}
+                  <div class="detail-card archivo-card-mejorada-backoffice"
+                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
+                    <!-- Header del archivo -->
+                    <div class="archivo-header-backoffice">
+                      <!-- IZQUIERDA: Información del documento -->
+                      <div class="archivo-info-basica-backoffice">
+                        <div class="detail-icon archivo-icon-backoffice">
+                          {% if archivo_info.esta_cumplido %}
+                          <i class="fas fa-check-circle text-success"></i>
+                          {% else %}
+                          <i class="fas fa-file-upload text-warning"></i>
+                          {% endif %}
+                        </div>
+                        <div class="detail-content-backoffice">
+                          <h6>{{ archivo_info.requisito.nombre }}</h6>
+                          <p class="mb-1">{{ archivo_info.requisito.descripcion|default:"Sin descripción disponible" }}
+                          </p>
+
+                          {% if archivo_info.esta_cumplido and archivo_info.archivo_actual %}
+                          <div class="archivo-info-backoffice mt-2">
+                            <span class="badge bg-success me-2">
+                              <i class="fas fa-check me-1"></i>Completo
+                            </span>
+                            <small class="text-muted">
+                              Archivo: {{ archivo_info.archivo_actual.archivo.name|slice:"10:" }}
+                            </small>
+                          </div>
+                          {% else %}
+                          <div class="archivo-info-backoffice mt-2">
+                            <span class="badge bg-warning me-2">
+                              <i class="fas fa-exclamation-triangle me-1"></i>Pendiente
+                            </span>
+                            {% if archivo_info.obligatorio %}
+                            <small class="text-danger">Obligatorio</small>
+                            {% else %}
+                            <small class="text-muted">Opcional</small>
+                            {% endif %}
+                          </div>
+                          {% endif %}
+
+                          {% if archivo_info.mensaje_personalizado %}
+                          <div class="mensaje-personalizado mt-2">
+                            <small class="text-info">
+                              <i class="fas fa-info-circle me-1"></i>
+                              {{ archivo_info.mensaje_personalizado }}
+                            </small>
+                          </div>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <!-- CENTRO: Botones Ver/Descargar -->
+                      {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
+                      <div class="seccion-ver-descargar-backoffice">
+                        <div class="btn-group">
+                          <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
+                            rel="noopener noreferrer" class="btn btn-outline-primary"
+                            title="Ver archivo en nueva pestaña">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                          <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
+                            class="btn btn-outline-success" title="Descargar archivo">
+                            <i class="fas fa-download"></i> Descargar
+                          </a>
+                        </div>
+                      </div>
+                      {% endif %}
+
+                      <!-- DERECHA: Botones de calificación -->
+                      <div class="seccion-acciones-derecha-backoffice">
+                        <!-- Botones de Calificación -->
+                        <div class="botones-calificacion-backoffice">
+                          <!-- Bueno -->
+                          <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Marcar como bueno">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>Bueno</span>
+                          </button>
+                          <!-- Malo -->
+                          <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Marcar como malo">
+                            <i class="fas fa-thumbs-down"></i>
+                            <span>Malo</span>
+                          </button>
+                          <!-- Comentarios -->
+                          <button type="button" class="btn comentario-btn-backoffice"
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
+                            title="Ver/Agregar comentarios">
+                            <i class="fas fa-comment"></i>
+                            <span>Comentar</span>
+                            <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                          </button>
+                        </div>
+                        <!-- Opciones -->
+                        <div class="seccion-opciones">
+                          <button class="btn opciones-dropdown-btn-backoffice" type="button"
+                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
+                            title="Opciones adicionales">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <span>Opciones</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+
+
+                  </div>
+                  {% endfor %}
+                </div>
+
+                <!-- Resumen de archivos -->
+                {% with stats=archivos_stats|get_item:subestado.id %}
+                {% if stats %}
+                <div
+                  class="alert {% if stats.completos == stats.total %}alert-success{% else %}alert-warning{% endif %}">
+                  <div class="d-flex align-items-center">
+                    {% if stats.completos == stats.total %}
+                    <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Documentación Completa</strong><br />
+                      <small>Todos los archivos requeridos han sido proporcionados.</small>
+                    </div>
+                    {% else %}
+                    <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Documentación Pendiente</strong><br />
+                      <small>Se han completado {{ stats.completos }} de {{ stats.total }} archivos requeridos.</small>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>
+                  <strong>Sin Archivos Específicos</strong><br />
+                  No hay archivos específicos requeridos para esta etapa.
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% else %}
+                <div class="alert alert-secondary">
+                  <i class="fas fa-file-alt me-2"></i>
+                  <strong>Configuración Pendiente</strong><br />
+                  Los requisitos para esta etapa aún no han sido configurados.
+                </div>
+                {% endif %}
+
+                <div class="action-buttons">
+                  <button class="btn btn-primary me-2" onclick="refreshFiles({{ subestado.id }})">
+                    <i class="fas fa-sync me-1"></i>Actualizar Estado
+                  </button>
+                  <button class="btn btn-outline-secondary" onclick="generateReport({{ subestado.id }})">
+                    <i class="fas fa-download me-1"></i>Generar Reporte
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="tab-pane fade show active">
+              <div class="subestado-content-modern">
+                <div class="alert alert-warning text-center">
+                  <div class="subestado-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <h3 class="subestado-title">Sin Procesos Configurados</h3>
+                  <p class="subestado-description">
+                    No hay subestados configurados para esta etapa de Back Office.
+                  </p>
+                  <div class="action-buttons">
+                    <button class="btn btn-outline-primary">
+                      <i class="fas fa-cog me-1"></i>Configurar Procesos
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso del Workflow -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-chart-line"></i> Progreso del Workflow
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="workflow-progress">
+            <div class="progress-info mb-3">
+              <div class="d-flex justify-content-between">
+                <span class="fw-bold">Progreso Actual</span>
+                <span class="text-muted">1 de {{ solicitud.etapa_actual.subestados.count }}
+                  procesos</span>
+              </div>
+            </div>
+            <div class="progress progress-custom mb-3">
+              <div class="progress-bar bg-success" role="progressbar"
+                style="width: {% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}%"
+                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
+                aria-valuemax="100"></div>
+            </div>
+            <div class="progress-steps">
+              {% for subestado in solicitud.etapa_actual.subestados.all %}
+              <div class="step-item {% if forloop.first %}active{% endif %}">
+                <div class="step-circle">
+                  {% if forloop.first %}
+                  <i class="fas fa-check"></i>
+                  {% else %} {{ forloop.counter }} {% endif %}
+                </div>
+                <div class="step-label">
+                  {{ subestado.nombre|truncatechars:20 }}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información Adicional -->
+      <div class="row mt-4">
+        <div class="col-lg-6 col-md-12 mb-3">
+          <div class="card info-card">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-clock"></i> Tiempo de Procesamiento
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="time-info">
+                <div class="time-item">
+                  <div class="time-label">Tiempo Transcurrido</div>
+                  <div class="time-value">
+                    {{ solicitud.fecha_creacion|timesince }}
+                  </div>
+                </div>
+                <div class="time-item">
+                  <div class="time-label">Última Actualización</div>
+                  <div class="time-value">
+                    {{ solicitud.fecha_actualizacion|timesince }} atrás
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6 col-md-12 mb-3">
+          <div class="card info-card">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="fas fa-users"></i> Equipo Asignado</h6>
+            </div>
+            <div class="card-body">
+              <div class="team-info">
+                <div class="team-member">
+                  <div class="member-avatar">
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div class="member-details">
+                    <div class="member-name">
+                      {{ solicitud.asignado_a|default:"Sin asignar" }}
+                    </div>
+                    <div class="member-role">Analista Back Office</div>
+                  </div>
+                </div>
+                <div class="team-stats">
+                  <small class="text-muted">
+                    <i class="fas fa-building me-1"></i>Departamento: Back
+                    Office
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Disponibles -->
+      {% if transiciones_disponibles %}
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-route"></i> Acciones Disponibles
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-2 flex-wrap justify-content-center justify-content-md-start">
+            {% for transicion in transiciones_disponibles %}
+            <button class="btn btn-outline-primary flex-fill flex-md-grow-0">
+              <i class="fas fa-arrow-right"></i>
+              {{ transicion.etapa_destino.nombre }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  // Funciones JavaScript para el backoffice
+  function refreshFiles(subestadoId) {
+    console.log('Actualizando archivos para subestado:', subestadoId);
+
+    // Mostrar spinner de carga
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+    button.disabled = true;
+
+    // Simular actualización (en implementación real sería una llamada AJAX)
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+
+      // Mostrar notificación de éxito
+      showToast('Estado de archivos actualizado correctamente', 'success');
+
+      // Recargar la página para mostrar datos actualizados
+      location.reload();
+    }, 2000);
+  }
+
+  function generateReport(subestadoId) {
+    console.log('Generando reporte para subestado:', subestadoId);
+
+    // Mostrar spinner de carga
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando...';
+    button.disabled = true;
+
+    // Simular generación de reporte
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+
+      showToast('Reporte generado y descargado', 'success');
+    }, 3000);
+  }
+
+  function showToast(message, type = 'info') {
+    // Crear toast notification
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'primary'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Mostrar toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // Remover toast después de que se oculte
+    toast.addEventListener('hidden.bs.toast', () => {
+      toast.remove();
+    });
+  }
+
+  function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+  }
+
+  // Inicialización cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log('🔧 Backoffice con visualización de archivos inicializado');
+
+    // Agregar tooltips a los botones de archivo
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Agregar hover effects a las cards de archivo
+    const archivoCards = document.querySelectorAll('.archivo-card');
+    archivoCards.forEach(card => {
+      card.addEventListener('mouseenter', function () {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 8px 25px rgba(74, 124, 89, 0.15)';
+      });
+
+      card.addEventListener('mouseleave', function () {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.05)';
+      });
+    });
+  });
+
+  // =======================================================
+  // FUNCIONALIDAD DE CALIFICACIÓN DE DOCUMENTOS
+  // =======================================================
+
+  // Variables globales
+  let currentRequisitoId = null;
+
+  // Función para calificar documento
+  function calificarDocumento(requisitoId, estado, opcionId = null) {
+    const data = {
+      requisito_solicitud_id: requisitoId,
+      estado: estado,
+      opcion_desplegable_id: opcionId
+    };
+
+    fetch('/workflow/api/documento/calificar/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify(data)
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Actualizar interfaz
+          actualizarEstadoCalificacion(requisitoId, estado, data.data || {});
+          mostrarMensaje('Calificación guardada exitosamente', 'success');
+        } else {
+          mostrarMensaje('Error al guardar calificación: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+      });
+  }
+
+  // Función para agregar comentario
+  function agregarComentario(requisitoId, comentario) {
+    const data = {
+      requisito_solicitud_id: requisitoId,
+      comentario: comentario
+    };
+
+    fetch('/workflow/api/documento/comentar/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify(data)
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Actualizar modal de comentarios
+          actualizarModalComentarios(requisitoId);
+          mostrarMensaje('Comentario agregado exitosamente', 'success');
+        } else {
+          mostrarMensaje('Error al agregar comentario: ' + data.error, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+      });
+  }
+
+  // Función para obtener comentarios
+  function obtenerComentarios(requisitoId) {
+    return fetch(`/workflow/api/documento/${requisitoId}/comentarios/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          return data.data;
+        } else {
+          throw new Error(data.error);
+        }
+      });
+  }
+
+  // Función para actualizar estado de calificación en la interfaz
+  function actualizarEstadoCalificacion(requisitoId, estado, data) {
+    if (!requisitoId) {
+      console.warn('requisitoId es null o undefined');
+      return;
+    }
+
+    const card = document.querySelector(`[data-requisito-id="${requisitoId}"]`);
+    if (!card) {
+      console.warn(`No se encontró la tarjeta para el requisito ${requisitoId}`);
+      return;
+    }
+
+    console.log(`Actualizando estado de calificación: requisito=${requisitoId}, estado=${estado}`);
+
+    // Actualizar botones de calificación
+    const botones = card.querySelectorAll('.calificar-btn-backoffice');
+    console.log(`Encontrados ${botones.length} botones de calificación`);
+
+    botones.forEach(btn => {
+      const btnEstado = btn.dataset.estado;
+      console.log(`Botón: estado=${btnEstado}, debe ser activo: ${btnEstado === estado}`);
+
+      // Remover clase activo de todos los botones
+      btn.classList.remove('activo');
+
+      // Agregar clase activo solo al botón correspondiente
+      if (btnEstado === estado) {
+        btn.classList.add('activo');
+        console.log(`Botón ${btnEstado} marcado como activo`);
+
+        // Animación de feedback
+        btn.classList.add(estado === 'bueno' ? 'feedback-success' : 'feedback-danger');
+        setTimeout(() => {
+          btn.classList.remove('feedback-success', 'feedback-danger');
+        }, 600);
+      }
+    });
+
+    // Actualizar estado de calificación en el header
+    let estadoDiv = card.querySelector('.calificacion-estado');
+    if (!estadoDiv) {
+      estadoDiv = document.createElement('div');
+      estadoDiv.className = 'calificacion-estado';
+      const headerElement = card.querySelector('.archivo-header-backoffice');
+      if (headerElement) {
+        headerElement.appendChild(estadoDiv);
+      }
+    }
+
+    const badgeClass = estado === 'bueno' ? 'bg-success' : 'bg-danger';
+    const iconClass = estado === 'bueno' ? 'fa-thumbs-up' : 'fa-thumbs-down';
+
+    estadoDiv.innerHTML = `
+        <span class="badge ${badgeClass}">
+            <i class="fas ${iconClass} me-1"></i>
+            ${estado.toUpperCase()}
+        </span>
+        <small class="text-muted d-block mt-1">
+            por ${data.usuario}
+        </small>
+    `;
+  }
+
+  // Función para actualizar modal de comentarios
+  function actualizarModalComentarios(requisitoId) {
+    obtenerComentarios(requisitoId)
+      .then(comentarios => {
+        const comentariosContainer = document.getElementById('comentarios-container');
+        if (!comentariosContainer) return;
+
+        comentariosContainer.innerHTML = '';
+
+        if (comentarios.length === 0) {
+          comentariosContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                        <p>No hay comentarios aún</p>
+                    </div>
+                `;
+          return;
+        }
+
+        comentarios.forEach(comentario => {
+          const comentarioDiv = document.createElement('div');
+          comentarioDiv.className = 'comentario-item';
+
+          // Obtener información adicional del contexto
+          const solicitudCodigo = '{{ solicitud.codigo|default:"Sin código" }}';
+
+          // Usar la información que viene del backend
+          const currentEtapa = comentario.etapa || 'Sin etapa';
+          const currentSubestado = comentario.subestado || 'Sin subestado';
+
+          // Calcular tiempo transcurrido
+          const fechaComentario = new Date(comentario.fecha);
+          const ahora = new Date();
+          const diffMs = ahora - fechaComentario;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+
+          let tiempoTranscurrido = '';
+          if (diffDays > 0) {
+            tiempoTranscurrido = `hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+          } else if (diffHours > 0) {
+            tiempoTranscurrido = `hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+          } else if (diffMins > 0) {
+            tiempoTranscurrido = `hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
+          } else {
+            tiempoTranscurrido = 'hace unos segundos';
+          }
+
+          comentarioDiv.innerHTML = `
+                    <div class="comentario-header">
+                        <div class="comentario-info-principal">
+                            <div class="comentario-autor-info">
+                                <div class="comentario-avatar">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <div class="comentario-details">
+                                    <div class="comentario-autor">${comentario.usuario_nombre}</div>
+                                    <div class="comentario-meta">
+                                        <span class="comentario-etapa">
+                                            <i class="fas fa-layer-group me-1"></i>
+                                            ${currentEtapa}
+                                        </span>
+                                        <span class="comentario-subestado">
+                                            <i class="fas fa-tag me-1"></i>
+                                            ${currentSubestado}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="comentario-tiempo">
+                                <div class="comentario-fecha">${comentario.fecha}</div>
+                                <div class="comentario-tiempo-transcurrido">${tiempoTranscurrido}</div>
+                            </div>
+                        </div>
+                        ${comentario.puede_editar ? `
+                            <div class="comentario-acciones">
+                                <button class="btn btn-sm btn-outline-primary btn-editar-comentario" 
+                                        onclick="editarComentario(${comentario.id}, '${comentario.comentario}')"
+                                        title="Editar comentario">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="comentario-content">
+                        <div class="comentario-texto">${comentario.comentario}</div>
+                        <div class="comentario-footer">
+                            <div class="comentario-solicitud">
+                                <i class="fas fa-file-alt me-1"></i>
+                                Solicitud: ${solicitudCodigo}
+                            </div>
+                            <div class="comentario-id">
+                                <i class="fas fa-hashtag me-1"></i>
+                                Comentario #${comentario.id}
+                            </div>
+                        </div>
+                    </div>
+                `;
+          comentariosContainer.appendChild(comentarioDiv);
+        });
+
+        // Actualizar contador de comentarios en el botón
+        const comentarioBtn = document.querySelector(`[data-requisito="${requisitoId}"].comentario-btn-backoffice`);
+        if (comentarioBtn) {
+          const badge = comentarioBtn.querySelector('.badge');
+          if (badge) {
+            badge.textContent = comentarios.length;
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error al obtener comentarios:', error);
+      });
+  }
+
+  // Función para mostrar modal de comentarios
+  function mostrarModalComentarios(requisitoId) {
+    currentRequisitoId = requisitoId;
+
+    // Actualizar contenido del modal
+    actualizarModalComentarios(requisitoId);
+
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalComentarios'));
+    modal.show();
+  }
+
+  // Función para cargar estados iniciales de calificaciones
+  function cargarEstadosInicialesCalificaciones() {
+    console.log('Cargando estados iniciales de calificaciones...');
+
+    // Obtener todos los requisitos que tienen calificaciones
+    const requisitos = document.querySelectorAll('[data-requisito-id]');
+
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      if (requisitoId) {
+        // Obtener calificaciones para este requisito
+        fetch(`/workflow/api/documento/${requisitoId}/calificaciones/`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+              // Tomar la calificación más reciente
+              const ultimaCalificacion = data.data[0];
+              console.log(`Calificación encontrada para requisito ${requisitoId}:`, ultimaCalificacion);
+
+              // Actualizar el estado visual
+              actualizarEstadoCalificacion(requisitoId, ultimaCalificacion.estado, {
+                usuario: ultimaCalificacion.usuario_nombre || 'Usuario'
+              });
+            }
+          })
+          .catch(error => {
+            console.error(`Error al cargar calificaciones para requisito ${requisitoId}:`, error);
+          });
+      }
+    });
+  }
+
+  // Función para obtener CSRF token
+  function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+
+  // Función para mostrar mensajes
+  function mostrarMensaje(mensaje, tipo) {
+    // Crear elemento de alerta
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = `
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    // Auto-remover después de 3 segundos
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
+    }, 3000);
+  }
+
+  // Event listeners cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', function () {
+    // Cargar estados iniciales de calificaciones
+    cargarEstadosInicialesCalificaciones();
+
+    // Botones de calificación
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.calificar-btn-backoffice')) {
+        const btn = e.target.closest('.calificar-btn-backoffice');
+        const requisitoId = btn.dataset.requisito;
+        const estado = btn.dataset.estado;
+
+        if (requisitoId && estado) {
+          calificarDocumento(requisitoId, estado);
+        }
+      }
+
+      // Botón de comentarios
+      if (e.target.closest('.comentario-btn-backoffice')) {
+        const btn = e.target.closest('.comentario-btn-backoffice');
+        const requisitoId = btn.dataset.requisito;
+
+        if (requisitoId) {
+          mostrarModalComentarios(requisitoId);
+        }
+      }
+
+
+    });
+
+    // Formulario de nuevo comentario
+    const formComentario = document.getElementById('form-nuevo-comentario');
+    if (formComentario) {
+      formComentario.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const textarea = this.querySelector('textarea[name="comentario"]');
+        const comentario = textarea.value.trim();
+
+        if (comentario && currentRequisitoId) {
+          agregarComentario(currentRequisitoId, comentario);
+          textarea.value = '';
+        }
+      });
+    }
+  });
+
+  // =======================================================
+  // FUNCIONALIDAD DEL MODAL DE OPCIONES
+  // =======================================================
+
+  // Variable global para almacenar el requisito actual
+  let currentRequisitoForOpciones = null;
+
+  // Función para mostrar el modal de opciones
+  function mostrarModalOpciones(requisitoId, documentoNombre) {
+    currentRequisitoForOpciones = requisitoId;
+
+    // Actualizar el nombre del documento en el modal
+    document.getElementById('opciones-documento-nombre').textContent = documentoNombre;
+
+    // Cargar las opciones disponibles
+    cargarOpcionesDisponibles();
+
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('modalOpciones'));
+    modal.show();
+  }
+
+  // Función para cargar las opciones disponibles
+  function cargarOpcionesDisponibles() {
+    const opcionesContainer = document.getElementById('opciones-container');
+
+    // Opciones predefinidas (puedes obtenerlas del backend si es necesario)
+    const opciones = [
+      { id: 1, nombre: 'Documento ilegible o borroso' },
+      { id: 2, nombre: 'Documento incompleto o faltante' },
+      { id: 3, nombre: 'Documento vencido o desactualizado' },
+      { id: 4, nombre: 'Documento no corresponde al solicitado' },
+      { id: 5, nombre: 'Documento con información incorrecta' },
+      { id: 6, nombre: 'Documento de baja calidad' },
+      { id: 7, nombre: 'Otro problema' }
+    ];
+
+    opcionesContainer.innerHTML = '';
+
+    opciones.forEach(opcion => {
+      const opcionDiv = document.createElement('div');
+      opcionDiv.className = 'opcion-item-modal mb-2 p-3 border rounded cursor-pointer';
+      opcionDiv.style.cursor = 'pointer';
+      opcionDiv.style.transition = 'all 0.2s ease';
+      opcionDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="fas fa-exclamation-circle text-warning me-3"></i>
+          <div class="flex-grow-1">
+            <strong>${opcion.nombre}</strong>
+          </div>
+          <i class="fas fa-chevron-right text-muted"></i>
+        </div>
+      `;
+
+      // Agregar efectos hover
+      opcionDiv.addEventListener('mouseenter', function () {
+        this.style.backgroundColor = '#f8f9fa';
+        this.style.borderColor = '#4a7c59';
+      });
+
+      opcionDiv.addEventListener('mouseleave', function () {
+        this.style.backgroundColor = '';
+        this.style.borderColor = '';
+      });
+
+      // Agregar evento click
+      opcionDiv.addEventListener('click', function () {
+        seleccionarOpcion(opcion.id, opcion.nombre);
+      });
+
+      opcionesContainer.appendChild(opcionDiv);
+    });
+  }
+
+  // Función para seleccionar una opción
+  function seleccionarOpcion(opcionId, opcionNombre) {
+    if (!currentRequisitoForOpciones) {
+      console.error('No hay requisito seleccionado');
+      return;
+    }
+
+    // Calificar como malo con la opción seleccionada
+    calificarDocumento(currentRequisitoForOpciones, 'malo', opcionId);
+
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalOpciones'));
+    if (modal) {
+      modal.hide();
+    }
+
+    // Mostrar mensaje de confirmación
+    mostrarMensaje(`Documento calificado como malo: ${opcionNombre}`, 'success');
+  }
+
+</script>
+
+<!-- Modal para Comentarios -->
+<div class="modal fade" id="modalComentarios" tabindex="-1" aria-labelledby="modalComentariosLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalComentariosLabel">
+          <i class="fas fa-comments me-2"></i>Comentarios del Documento
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body modal-comentarios">
+        <!-- Contenedor de comentarios con scroll -->
+        <div id="comentarios-container">
+          <!-- Los comentarios se cargan dinámicamente aquí -->
+        </div>
+
+        <!-- Formulario para nuevo comentario (fijo en la parte inferior) -->
+        <div class="form-nuevo-comentario-section">
+          <h6 class="mb-3">Agregar Comentario</h6>
+          <form id="form-nuevo-comentario">
+            {% csrf_token %}
+            <div class="mb-3">
+              <textarea class="form-control" name="comentario" rows="3" placeholder="Escribe tu comentario aquí..."
+                required></textarea>
+            </div>
+            <div class="text-end">
+              <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Agregar Comentario
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Opciones -->
+<div class="modal fade" id="modalOpciones" tabindex="-1" aria-labelledby="modalOpcionesLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalOpcionesLabel">
+          <i class="fas fa-cog me-2"></i>Opciones de Calificación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong>Documento:</strong> <span id="opciones-documento-nombre"></span>
+        </div>
+        <div class="mb-3">
+          <p class="text-muted">Selecciona una opción para calificar este documento como "malo":</p>
+        </div>
+        <div id="opciones-container">
+          <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

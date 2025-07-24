@@ -26,6 +26,13 @@ def get_etapa_solicitudes(solicitudes_por_etapa, etapa):
     return []
 
 @register.filter
+def get_item(dictionary, key):
+    """Obtener un elemento de un diccionario por su clave"""
+    if dictionary and key in dictionary:
+        return dictionary[key]
+    return []
+
+@register.filter
 def filter_activas(solicitudes):
     """Filtrar solicitudes activas"""
     if not solicitudes:

@@ -3,6 +3,7 @@ from . import views
 from . import api
 from . import views_workflow
 from . import dashboard_views
+from . import views_calificacion
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
@@ -108,6 +109,13 @@ urlpatterns = [
     path('api/comite/usuarios/<int:usuario_id>/niveles/<int:nivel_id>/desasignar/', views_workflow.api_desasignar_usuario_nivel_comite, name='api_desasignar_usuario_nivel_comite'),
     path('api/comite/estadisticas/', views_workflow.api_estadisticas_comite, name='api_estadisticas_comite'),
     path('api/usuarios/', views_workflow.api_obtener_usuarios, name='api_obtener_usuarios'),
+    
+    # URLs para calificación de documentos
+    path('api/documento/calificar/', views_calificacion.calificar_documento, name='calificar_documento'),
+    path('api/documento/comentar/', views_calificacion.comentar_documento, name='comentar_documento'),
+    path('api/documento/comentario/editar/', views_calificacion.editar_comentario, name='editar_comentario'),
+    path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
+    path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
