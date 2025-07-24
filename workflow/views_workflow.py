@@ -4887,6 +4887,11 @@ def api_solicitud_brief(request, solicitud_id):
             'vencimiento': solicitud.historial.last().fecha_fin.strftime('%d/%m/%Y') if solicitud.historial.last() and solicitud.historial.last().fecha_fin else '-',
             'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '-',
             'area': '-',  # Campo no existe en el modelo, usar valor por defecto
+            'propietario': (
+                solicitud.propietario.get_full_name() or solicitud.propietario.username
+            ) if solicitud.propietario else (
+                solicitud.creada_por.get_full_name() or solicitud.creada_por.username
+            ) if solicitud.creada_por else 'N/A',
         }
 
         # Cliente info
@@ -7286,7 +7291,7 @@ def api_eliminar_nivel_comite(request, nivel_id):
         nivel = NivelComite.objects.get(id=nivel_id)
         
         # Verificar que no tenga usuarios asignados
-        if nivel.usuarionivecomite_set.filter(activo=True).exists():
+        if nivel.usuarionivelcomite_set.filter(activo=True).exists():
             return JsonResponse({
                 'success': False, 
                 'error': 'No se puede eliminar un nivel que tiene usuarios asignados'
@@ -8104,7 +8109,7 @@ def test_apc_upload_email(request):
                     'solicitud_codigo': solicitud.codigo,
                     'usuario_destinatario': solicitud.creada_por.username,
                     'email_destinatario': solicitud.creada_por.email,
-                    'cliente_nombre': solicitud.cliente_nombre
+                    'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente'
                 }
             })
             
@@ -8166,7 +8171,7 @@ def test_apc_iniciado_email(request):
                     'solicitud_codigo': solicitud.codigo,
                     'usuario_destinatario': solicitud.creada_por.username,
                     'email_destinatario': solicitud.creada_por.email,
-                    'cliente_nombre': solicitud.cliente_nombre,
+                    'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
                     'status_simulado': 'in_progress'
                 }
             })
@@ -8235,7 +8240,7 @@ def api_apc_list(request):
         for solicitud in queryset:
             data.append({
                 'codigo': solicitud.codigo,
-                'cliente_nombre': solicitud.cliente_nombre,
+                'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
                 'apc_tipo_documento': solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else '',
                 'apc_no_cedula': solicitud.apc_no_cedula,
                 'apc_status': solicitud.apc_status,
@@ -8291,7 +8296,7 @@ def api_apc_detail(request, solicitud_codigo):
         # Construir respuesta detallada
         data = {
             'codigo': solicitud.codigo,
-            'cliente_nombre': solicitud.cliente_nombre,
+            'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
             'apc_tipo_documento': solicitud.get_apc_tipo_documento_display() if solicitud.apc_tipo_documento else '',
             'apc_no_cedula': solicitud.apc_no_cedula,
             'apc_status': solicitud.apc_status,

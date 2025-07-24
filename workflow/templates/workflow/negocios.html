@@ -459,86 +459,84 @@
 
     <!-- Tabla Desktop Mejorada con Vanilla JavaScript -->
     <div class="vista-desktop d-none d-sm-block">
-        <!-- Filtros -->
-        <div class="apc-filters">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="section-title mb-0">
-                    <i class="fas fa-filter"></i> Filtros
+        <!-- Table Container with Filters and Table in Same Container -->
+        <div class="apc-table-container" style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                <h4 class="section-title" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: #333;">
+                    <i class="fas fa-list"></i> Solicitudes
                 </h4>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse" aria-expanded="false" aria-controls="filtrosCollapse">
-                    <i class="fas fa-eye-slash" id="toggleIcon"></i>
-                    <span id="toggleText">Mostrar filtros</span>
-                </button>
-            </div>
-            <div class="collapse" id="filtrosCollapse">
-                <div class="filter-row">
-                <div class="filter-group">
-                    <label for="filtroEtapa">Etapa</label>
-                    <select id="filtroEtapa">
-                        <option value="">Todas las etapas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filtroSLA">SLA</label>
-                    <select id="filtroSLA">
-                        <option value="">Todos los SLA</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="busquedaGlobal">Búsqueda</label>
-                    <input type="text" id="busquedaGlobal" placeholder="Buscar solicitudes...">
-                </div>
-                <div class="filter-group">
-                    <label>&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button class="refresh-btn" id="exportarExcel" title="Exportar a Excel">
-                            <i class="fas fa-file-excel"></i> Excel
-                        </button>
-                        <button class="refresh-btn" id="limpiarFiltros" title="Limpiar filtros">
-                            <i class="fas fa-times"></i> Limpiar
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <!-- Quick Search Bar -->
+                    <div class="search-container" style="position: relative; min-width: 300px;">
+                        <input 
+                            type="text" 
+                            id="quickTableSearch" 
+                            placeholder="Buscar por cliente, producto, propietario, código..."
+                            style="width: 100%; padding: 12px 16px 12px 45px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; transition: all 0.2s ease; background: white; color: #333;"
+                            oninput="handleQuickSearch()"
+                        >
+                        <i class="fas fa-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none;"></i>
+                        <button 
+                            id="clearQuickSearch" 
+                            onclick="handleClearSearch()"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease; display: none;"
+                            title="Limpiar búsqueda"
+                        >
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
-                </div>
-            </div>
-            </div>
-        </div>
-
-        <!-- Quick search bar -->
-        <div class="quick-search-container mb-3" style="background: white; padding: 8px; border: 1px solid #e9ecef; border-radius: 8px;">
-            <div class="d-flex align-items-center">
-                <div class="position-relative flex-grow-1">
-                    <input type="text" 
-                           id="quickTableSearch" 
-                           class="form-control form-control-sm" 
-                           placeholder="Búsqueda rápida en tabla..." 
-                           style="padding-left: 35px; border-radius: 20px; border: 1px solid #ddd;">
-                    <i class="fas fa-search position-absolute" 
-                       style="left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 0.875rem;"></i>
-                    <button type="button" 
-                            id="clearQuickSearch" 
-                            class="btn btn-sm position-absolute" 
-                            style="right: 5px; top: 50%; transform: translateY(-50%); border: none; background: none; color: #6c757d; display: none;"
-                            title="Limpiar búsqueda">
-                        <i class="fas fa-times"></i>
+                    
+                    <!-- Compact Filters -->
+                    <div class="filter-group" style="margin: 0;">
+                        <select id="filtroEtapa" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;" title="Filtrar por etapa">
+                            <option value="">Todas las etapas</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin: 0;">
+                        <select id="filtroSLA" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 120px;" title="Filtrar por SLA">
+                            <option value="">Todos los SLA</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin: 0;">
+                        <select id="filtroAsignado" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;" title="Filtrar por asignado">
+                            <option value="">Todos los asignados</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="margin: 0;">
+                        <select id="filtroPrioridad" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 120px;" title="Filtrar por prioridad">
+                            <option value="">Todas las prioridades</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <button class="refresh-btn" onclick="clearFilters()" style="padding: 8px 12px; font-size: 0.875rem; background: linear-gradient(135deg, #2d5a2d, #1e5f2a); color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);" title="Limpiar filtros">
+                        <i class="fas fa-times"></i> Limpiar
                     </button>
                 </div>
-                <small class="text-muted ms-3" id="searchResultCount" style="display: none;">
-                    <span id="resultCount">0</span> resultados
-                </small>
-            </div>
-        </div>
-
-        <!-- tabla-->
-        <div id="tableContainer" class="table-responsive" style="position: relative; display: block;">
-            <!-- Scroll indicators -->
-            <div class="table-scroll-indicator left" id="scrollLeftIndicator">
-                <i class="fas fa-chevron-left"></i>
-            </div>
-            <div class="table-scroll-indicator right" id="scrollRightIndicator">
-                <i class="fas fa-chevron-right"></i>
             </div>
             
-            <table class="workflow-table apc-table" id="tablaSolicitudes">
+            <!-- Search Results Count -->
+            <small class="text-muted" id="searchResultCount" style="display: none; font-size: 0.875rem; margin-bottom: 16px;">
+                <span id="resultCount">0</span> resultados encontrados
+            </small>
+            
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Cargando datos...</span>
+            </div>
+            
+            <!-- Table Container -->
+            <div id="tableContainer" class="table-responsive" style="position: relative; display: block;">
+                <!-- Scroll indicators -->
+                <div class="table-scroll-indicator left" id="scrollLeftIndicator">
+                    <i class="fas fa-chevron-left"></i>
+                </div>
+                <div class="table-scroll-indicator right" id="scrollRightIndicator">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                
+                <table class="workflow-table apc-table" id="tablaSolicitudes">
                 <thead>
                     <tr>
                         <th style="width: 200px;">Cliente</th>
@@ -551,6 +549,7 @@
                         <th style="width: 120px;">SLA</th>
                         <th style="width: 120px;">Etiquetas</th>
                         <th style="width: 100px;">Prioridad</th>
+                        <th style="width: 120px;">Código</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -703,10 +702,17 @@
                                     {% endfor %}
                                 </select>
                             </td>
+                            <td>
+                                <div class="text-center">
+                                    <span class="badge bg-secondary text-white fw-bold" style="font-size: 0.75rem;">
+                                        {{ s.codigo|default:"N/A" }}
+                                    </span>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="10" class="text-center py-4">
+                            <td colspan="11" class="text-center py-4">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                 <p class="text-muted">No hay solicitudes para mostrar</p>
                             </td>
@@ -719,6 +725,12 @@
             <div class="scroll-hint" id="scrollHint">
                 <i class="fas fa-arrows-alt-h"></i> Desliza para ver más columnas
             </div>
+        </div>
+        
+        <!-- No Data Message -->
+        <div id="noDataMessage" class="no-data" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <p>No se encontraron solicitudes con los filtros aplicados</p>
         </div>
     </div>
     </div>
@@ -1301,14 +1313,15 @@
                         visibleCount++;
                     }
                 } else {
-                    // Get all searchable text from the row
-                    const clienteText = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
-                    const productoText = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
-                    const propietarioText = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
-                    const etapaText = row.querySelector('td:nth-child(5)')?.textContent.toLowerCase() || '';
-                    const estadoText = row.querySelector('td:nth-child(6)')?.textContent.toLowerCase() || '';
-                    
-                    const searchableText = `${clienteText} ${productoText} ${propietarioText} ${etapaText} ${estadoText}`;
+                                    // Get all searchable text from the row
+                const clienteText = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+                const productoText = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                const propietarioText = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                const etapaText = row.querySelector('td:nth-child(5)')?.textContent.toLowerCase() || '';
+                const estadoText = row.querySelector('td:nth-child(6)')?.textContent.toLowerCase() || '';
+                const codigoText = row.querySelector('td:nth-child(11)')?.textContent.toLowerCase() || '';
+                
+                const searchableText = `${clienteText} ${productoText} ${propietarioText} ${etapaText} ${estadoText} ${codigoText}`;
                     
                     if (searchableText.includes(searchTerm) && !row.classList.contains('filter-hidden')) {
                         row.style.display = '';
@@ -1347,6 +1360,76 @@
             quickSearchInput.focus();
         });
     }
+
+    // New compact search functions
+    let searchTimeout;
+    
+    const handleQuickSearch = () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const searchTerm = document.getElementById('quickTableSearch').value.toLowerCase().trim();
+            const clearButton = document.getElementById('clearQuickSearch');
+            
+            // Show/hide clear button
+            if (searchTerm) {
+                clearButton.style.display = 'block';
+            } else {
+                clearButton.style.display = 'none';
+            }
+            
+            // Filter data
+            filterAndRenderData(searchTerm);
+        }, 300); // Debounce for 300ms
+    };
+
+    const handleClearSearch = () => {
+        document.getElementById('quickTableSearch').value = '';
+        document.getElementById('clearQuickSearch').style.display = 'none';
+        filterAndRenderData('');
+    };
+
+    const filterAndRenderData = (searchTerm) => {
+        const tableRows = document.querySelectorAll('#tablaSolicitudes tbody tr[data-solicitud-id]');
+        let visibleCount = 0;
+        
+        tableRows.forEach(row => {
+            if (searchTerm === '') {
+                // If search is empty, show all rows that aren't hidden by other filters
+                if (!row.classList.contains('filter-hidden')) {
+                    row.style.display = '';
+                    visibleCount++;
+                }
+            } else {
+                // Get all searchable text from the row
+                const clienteText = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+                const productoText = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                const propietarioText = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                const etapaText = row.querySelector('td:nth-child(5)')?.textContent.toLowerCase() || '';
+                const estadoText = row.querySelector('td:nth-child(6)')?.textContent.toLowerCase() || '';
+                const codigoText = row.querySelector('td:nth-child(11)')?.textContent.toLowerCase() || '';
+                
+                const searchableText = `${clienteText} ${productoText} ${propietarioText} ${etapaText} ${estadoText} ${codigoText}`;
+                
+                if (searchableText.includes(searchTerm) && !row.classList.contains('filter-hidden')) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+        
+        // Update result count
+        const resultCountElement = document.getElementById('searchResultCount');
+        const resultNumber = document.getElementById('resultCount');
+        
+        if (searchTerm) {
+            resultNumber.textContent = visibleCount;
+            resultCountElement.style.display = 'block';
+        } else {
+            resultCountElement.style.display = 'none';
+        }
+    };
     
     // Función para aplicar filtros
     function applyFilters() {
@@ -1883,7 +1966,7 @@
                         optionActual.setAttribute('data-puede-realizar', 'true');
                         optionActual.setAttribute('data-requisitos-faltantes', '0');
                         optionActual.selected = true;
-                        optionActual.textContent = `📍 ${data.etapa_actual.nombre} (Actual)`;
+                        optionActual.textContent = `${data.etapa_actual.nombre} (Actual)`;
                         select.appendChild(optionActual);
                     }
                     
@@ -1903,7 +1986,7 @@
                         optionTransicion.className = warningClass;
                         optionTransicion.setAttribute('data-puede-realizar', transicion.puede_realizar);
                         optionTransicion.setAttribute('data-requisitos-faltantes', transicion.total_requisitos_faltantes);
-                        optionTransicion.textContent = `➡️ ${transicion.etapa_destino.nombre}${requisitosInfo}`;
+                        optionTransicion.textContent = `${transicion.etapa_destino.nombre}${requisitosInfo}`;
                         select.appendChild(optionTransicion);
                     });
                     
@@ -1915,7 +1998,7 @@
                         optionFallback.setAttribute('data-puede-realizar', 'true');
                         optionFallback.setAttribute('data-requisitos-faltantes', '0');
                         optionFallback.selected = true;
-                        optionFallback.textContent = `📍 Etapa actual (ID: ${etapaActual})`;
+                        optionFallback.textContent = `Etapa actual (ID: ${etapaActual})`;
                         select.appendChild(optionFallback);
                     }
                     
@@ -4501,6 +4584,53 @@ body .table-responsive {
 
 #filtrosCollapse.collapse:not(.show) {
     opacity: 0;
+}
+
+/* Compact layout responsive design */
+@media (max-width: 768px) {
+    .vista-desktop .card-body > div:first-child > div:last-child {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .vista-desktop .search-container {
+        min-width: 100% !important;
+    }
+
+    .vista-desktop .filter-group {
+        width: 100%;
+    }
+}
+
+/* Compact layout hover effects */
+.vista-desktop .search-container input:focus {
+    outline: none;
+    border-color: #2d5a2d;
+    box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+}
+
+.vista-desktop .search-container input:hover {
+    border-color: #2d5a2d;
+}
+
+.vista-desktop .filter-group select:focus {
+    outline: none;
+    border-color: #2d5a2d;
+    box-shadow: 0 0 0 3px rgba(45, 90, 45, 0.1);
+}
+
+.vista-desktop .filter-group select:hover {
+    border-color: #2d5a2d;
+}
+
+.vista-desktop .refresh-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.vista-desktop .refresh-btn:active {
+    transform: translateY(0);
 }
 </style>
 
