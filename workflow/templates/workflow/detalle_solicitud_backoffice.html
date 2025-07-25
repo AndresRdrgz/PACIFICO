@@ -7,6 +7,302 @@
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
 {% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos para pestañas con validación secuencial */
+.tab-modern.tab-blocked {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: auto; /* Permitir eventos para mostrar mensaje */
+  filter: grayscale(0.8);
+  position: relative;
+}
+
+/* Estilos para modal de entrevistas */
+.modal-entrevistas {
+  max-width: 90%;
+  margin: 2rem auto;
+}
+
+/* Estilos para documentos pendientes de calificar */
+.documento-pendiente {
+    border: 2px solid #ff6b6b !important;
+    box-shadow: 0 0 10px rgba(255, 107, 107, 0.5) !important;
+    position: relative;
+    animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+.documento-pendiente::after {
+    content: "¡Pendiente de calificar!";
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #ff6b6b;
+    color: white;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    border-bottom-left-radius: 5px;
+    z-index: 10;
+}
+
+/* Estilos para botón pulsante de avanzar */
+.btn-pulsating {
+    animation: btn-pulse 1s infinite;
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+}
+
+@keyframes btn-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+#entrevistaSeleccionada {
+  transition: all 0.3s ease-in-out;
+}
+
+.modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+}
+
+.tab-modern.tab-blocked:hover {
+  opacity: 0.6;
+  background-color: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper {
+  position: relative;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper::after {
+  content: '\f023'; /* Icono de candado */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+.tab-modern.tab-blocked .tab-status {
+  color: #6c757d !important;
+}
+
+.tab-modern.tab-available {
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  animation: pulse-available 2s infinite;
+  border-color: #0d6efd !important;
+}
+
+.tab-modern.tab-available:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.tab-modern.tab-highlighted {
+  animation: tab-highlight-pulse 2s infinite;
+  box-shadow: 0 0 15px rgba(25, 135, 84, 0.6);
+  transform: translateY(-3px);
+  transition: all 0.5s ease;
+  border-color: #198754 !important;
+}
+
+@keyframes tab-highlight-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(25, 135, 84, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.6);
+  }
+}
+
+@keyframes pulse-available {
+  0% {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  }
+}
+
+.tab-modern.tab-completed {
+  background: linear-gradient(135deg, #d1edff 0%, #e8f7ff 100%);
+  border-color: #198754 !important;
+  position: relative;
+}
+
+.tab-modern.tab-completed .tab-number {
+  background: #198754;
+  color: white;
+  position: relative;
+}
+
+.tab-modern.tab-completed .tab-number::before {
+  content: '\f00c'; /* Icono de check */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7em;
+}
+
+.tab-modern.tab-completed .tab-status {
+  color: #198754 !important;
+  font-weight: 500;
+}
+
+/* Efecto de bloqueo visual más fuerte */
+.tab-modern.tab-blocked::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(108, 117, 125, 0.1) 2px,
+    rgba(108, 117, 125, 0.1) 4px
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tooltip personalizado para pestañas bloqueadas */
+.tab-blocked-tooltip {
+  position: absolute;
+  background: #dc3545;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.tab-blocked-tooltip.show {
+  opacity: 1;
+}
+
+.tab-blocked-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #dc3545 transparent transparent transparent;
+}
+
+/* Mejora visual para pestaña actual */
+.tab-modern.active {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Transiciones suaves */
+.tab-modern {
+  transition: all 0.3s ease;
+}
+
+/* Indicador de proceso secuencial */
+.sequential-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ffc107;
+  color: #000;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -29,11 +325,13 @@
               </p>
             </div>
             <div class="col-lg-4 col-md-5 col-sm-12 text-md-end text-center mt-2 mt-md-0">
-              {% if solicitud.prioridad %}
-              <span class="badge bg-warning text-dark px-3 py-2">
-                <i class="fas fa-star"></i> {{ solicitud.prioridad }}
-              </span>
-              {% endif %}
+              <div class="d-flex align-items-center justify-content-md-end justify-content-center flex-wrap gap-2">
+                {% if solicitud.prioridad %}
+                <span class="badge bg-warning text-dark px-3 py-2">
+                  <i class="fas fa-star"></i> {{ solicitud.prioridad }}
+                </span>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>
@@ -120,15 +418,17 @@
             <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern {% if forloop.first %}active{% endif %}" id="tab-{{ subestado.id }}"
+                <button class="nav-link tab-modern {% if subestado.id == solicitud.subestado_actual.id %}active{% endif %}" id="tab-{{ subestado.id }}"
                   data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
                   aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}"
+                  data-subestado-orden="{{ subestado.orden }}"
+                  data-subestado-id="{{ subestado.id }}">
                   <div class="tab-content-wrapper">
                     <div class="tab-number">{{ forloop.counter }}</div>
                     <div class="tab-text">
                       <span class="tab-title">{{ subestado.nombre }}</span>
-                      <span class="tab-status">En proceso</span>
+                      <span class="tab-status">{% if subestado.id == solicitud.subestado_actual.id %}Activo{% else %}En proceso{% endif %}</span>
                     </div>
                     <div class="tab-arrow">
                       <i class="fas fa-chevron-right"></i>
@@ -155,7 +455,7 @@
           <!-- Contenido de las Pestañas -->
           <div class="tab-content" id="backoffice-content">
             {% for subestado in solicitud.etapa_actual.subestados.all %}
-            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ subestado.id }}"
+            <div class="tab-pane fade {% if subestado.id == solicitud.subestado_actual.id %}show active{% endif %}" id="content-{{ subestado.id }}"
               role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
               <div class="subestado-content-modern">
                 <div class="process-step-header">
@@ -237,11 +537,19 @@
                       {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
                       <div class="seccion-ver-descargar-backoffice">
                         <div class="btn-group">
+                          {% if archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".docx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".doc" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".pdf" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".xls" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".xlsx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".ppt" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".pptx" %}
+                          <a href="https://docs.google.com/viewer?url={{ request.build_absolute_uri }}{{ archivo_info.archivo_actual.archivo.url }}&embedded=true" target="_blank"
+                            rel="noopener noreferrer" class="btn btn-outline-primary"
+                            title="Ver documento en Google Viewer">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                          {% else %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
                             rel="noopener noreferrer" class="btn btn-outline-primary"
                             title="Ver archivo en nueva pestaña">
                             <i class="fas fa-eye"></i> Ver
                           </a>
+                          {% endif %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
                             class="btn btn-outline-success" title="Descargar archivo">
                             <i class="fas fa-download"></i> Descargar
@@ -256,22 +564,25 @@
                         <div class="botones-calificacion-backoffice">
                           <!-- Bueno -->
                           <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Marcar como bueno">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Marcar como bueno"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-thumbs-up"></i>
                             <span>Bueno</span>
                           </button>
                           <!-- Malo -->
                           <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Marcar como malo">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Marcar como malo"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-thumbs-down"></i>
                             <span>Malo</span>
                           </button>
                           <!-- Comentarios -->
                           <button type="button" class="btn comentario-btn-backoffice"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Ver/Agregar comentarios">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Ver/Agregar comentarios"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-comment"></i>
                             <span>Comentar</span>
                             <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
@@ -280,7 +591,7 @@
                         <!-- Opciones -->
                         <div class="seccion-opciones">
                           <button class="btn opciones-dropdown-btn-backoffice" type="button"
-                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
+                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
                             title="Opciones adicionales">
                             <i class="fas fa-ellipsis-v"></i>
                             <span>Opciones</span>
@@ -295,29 +606,72 @@
                   {% endfor %}
                 </div>
 
-                <!-- Resumen de archivos -->
-                {% with stats=archivos_stats|get_item:subestado.id %}
-                {% if stats %}
-                <div
-                  class="alert {% if stats.completos == stats.total %}alert-success{% else %}alert-warning{% endif %}">
-                  <div class="d-flex align-items-center">
-                    {% if stats.completos == stats.total %}
+                <!-- Asociación de Entrevista de Cliente -->
+                {% if solicitud.entrevista_cliente %}
+                <div class="alert alert-success">
+                  <div class="d-flex align-items-center mb-2">
                     <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
                     <div>
-                      <strong>Documentación Completa</strong><br />
-                      <small>Todos los archivos requeridos han sido proporcionados.</small>
+                      <strong>Entrevista Asociada</strong><br />
+                      <small>Cliente: {{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }} - {{ solicitud.entrevista_cliente.email }}</small>
                     </div>
-                    {% else %}
-                    <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.5rem;"></i>
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="desasociarEntrevista()">
+                        <i class="fas fa-unlink me-1"></i> Desasociar
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Botones de acciones para la entrevista -->
+                  <div class="border-top pt-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                      <a href="{% url 'descargar_entrevista_excel' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en Excel">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        <span>Excel</span>
+                      </a>
+                      <a href="{% url 'entrevista_admin' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         target="_blank" 
+                         title="Modo Administrador - Control de Calidad">
+                        <i class="fa-solid fa-user-gear me-1"></i>
+                        <span>Admin</span>
+                      </a>
+                      <button onclick="enviarAAAPX({{ solicitud.entrevista_cliente.id }}, '{{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }}')" 
+                              class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center" 
+                              style="min-width: 80px; height: 32px;"
+                              title="Enviar al Sistema Core APPX">
+                        <i class="fa-solid fa-paper-plane me-1"></i>
+                        <span>APPX</span>
+                      </button>
+                      <a href="{% url 'descargar_entrevista_pdf' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en PDF">
+                        <i class="fa-solid fa-file-pdf me-1"></i>
+                        <span>PDF</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user-edit text-info me-3" style="font-size: 1.5rem;"></i>
                     <div>
-                      <strong>Documentación Pendiente</strong><br />
-                      <small>Se han completado {{ stats.completos }} de {{ stats.total }} archivos requeridos.</small>
+                      <strong>Asociar Entrevista de Cliente</strong><br />
+                      <small>Vincule los datos generales del cliente con esta solicitud.</small>
                     </div>
-                    {% endif %}
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-info btn-sm" onclick="mostrarModalEntrevista()">
+                        <i class="fas fa-link me-1"></i> Asociar
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {% endif %}
-                {% endwith %}
 
                 {% else %}
                 <div class="alert alert-info">
@@ -336,11 +690,12 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <button class="btn btn-primary me-2" onclick="refreshFiles({{ subestado.id }})">
-                    <i class="fas fa-sync me-1"></i>Actualizar Estado
+                  <button id="btn-control-calidad" class="btn btn-primary me-2" onclick="marcarControlCalidad()">
+                    <i class="fas fa-check-circle me-1"></i>Control de Calidad Realizado
                   </button>
-                  <button class="btn btn-outline-secondary" onclick="generateReport({{ subestado.id }})">
-                    <i class="fas fa-download me-1"></i>Generar Reporte
+                  <button id="btn-avanzar-etapa" type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa" disabled>
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Avanzar Etapa
                   </button>
                 </div>
               </div>
@@ -381,23 +736,27 @@
             <div class="progress-info mb-3">
               <div class="d-flex justify-content-between">
                 <span class="fw-bold">Progreso Actual</span>
-                <span class="text-muted">1 de {{ solicitud.etapa_actual.subestados.count }}
+                <span class="text-muted">{{ solicitud.subestado_actual.orden|default:1 }} de {{ solicitud.etapa_actual.subestados.count }}
                   procesos</span>
               </div>
             </div>
             <div class="progress progress-custom mb-3">
               <div class="progress-bar bg-success" role="progressbar"
-                style="width: {% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}%"
-                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
+                style="width: {% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}%"
+                aria-valuenow="{% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
                 aria-valuemax="100"></div>
             </div>
             <div class="progress-steps">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
-              <div class="step-item {% if forloop.first %}active{% endif %}">
+              <div class="step-item {% if subestado.id == solicitud.subestado_actual.id %}active{% elif subestado.orden < solicitud.subestado_actual.orden %}completed{% endif %}">
                 <div class="step-circle">
-                  {% if forloop.first %}
+                  {% if subestado.id == solicitud.subestado_actual.id %}
                   <i class="fas fa-check"></i>
-                  {% else %} {{ forloop.counter }} {% endif %}
+                  {% elif subestado.orden < solicitud.subestado_actual.orden %}
+                  <i class="fas fa-check"></i>
+                  {% else %} 
+                  {{ forloop.counter }} 
+                  {% endif %}
                 </div>
                 <div class="step-label">
                   {{ subestado.nombre|truncatechars:20 }}
@@ -465,27 +824,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Acciones Disponibles -->
-      {% if transiciones_disponibles %}
-      <div class="card mt-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-route"></i> Acciones Disponibles
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex gap-2 flex-wrap justify-content-center justify-content-md-start">
-            {% for transicion in transiciones_disponibles %}
-            <button class="btn btn-outline-primary flex-fill flex-md-grow-0">
-              <i class="fas fa-arrow-right"></i>
-              {{ transicion.etapa_destino.nombre }}
-            </button>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
   </div>
 </div>
@@ -512,6 +850,47 @@
       // Recargar la página para mostrar datos actualizados
       location.reload();
     }, 2000);
+  }
+  
+  function marcarControlCalidad() {
+    console.log('Marcando control de calidad como realizado');
+
+    // Mostrar spinner de carga
+    const button = document.getElementById('btn-control-calidad');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    button.disabled = true;
+
+    // Simular proceso (en implementación real sería una validación de los documentos)
+    setTimeout(() => {
+      // Cambiar el estado del botón de control de calidad
+      button.innerHTML = '<i class="fas fa-check-circle me-1"></i>Control de Calidad Completado';
+      button.classList.remove('btn-primary');
+      button.classList.add('btn-success');
+      button.disabled = true;
+      
+      // Habilitar el botón de avanzar etapa
+      const botonAvanzar = document.getElementById('btn-avanzar-etapa');
+      botonAvanzar.removeAttribute('disabled');
+      botonAvanzar.classList.add('btn-pulsating');
+      
+      // Habilitar la navegación a la siguiente pestaña disponible
+      const tabDisponible = document.querySelector('.tab-modern.tab-available');
+      if (tabDisponible) {
+        // Habilitar la navegación con Bootstrap
+        tabDisponible.setAttribute('data-bs-toggle', 'tab');
+        tabDisponible.setAttribute('data-bs-target', `#content-${tabDisponible.getAttribute('data-subestado-id')}`);
+        tabDisponible.removeAttribute('aria-disabled');
+        tabDisponible.setAttribute('role', 'tab');
+        tabDisponible.removeEventListener('click', alertaControlCalidad);
+        tabDisponible.addEventListener('shown.bs.tab', manejarCambioTab);
+        tabDisponible.classList.add('tab-highlighted');
+        tabDisponible.setAttribute('title', 'Haga clic para navegar a esta etapa');
+      }
+      
+      // Mostrar notificación de éxito
+      showToast('Control de calidad completado correctamente. Ahora puede avanzar a la siguiente etapa o pestaña.', 'success');
+    }, 1500);
   }
 
   function generateReport(subestadoId) {
@@ -577,11 +956,46 @@
   document.addEventListener('DOMContentLoaded', function () {
     console.log('🔧 Backoffice con visualización de archivos inicializado');
 
+    // Aplicar validación secuencial a las pestañas
+    aplicarValidacionSecuencialTabs();
+    
+    // Inicialmente deshabilitar navegación a la siguiente pestaña hasta que se complete el control de calidad
+    const tabDisponible = document.querySelector('.tab-modern.tab-available');
+    if (tabDisponible) {
+      // Al inicio, la pestaña disponible solo muestra que es la siguiente, pero no se puede hacer clic hasta control de calidad
+      tabDisponible.removeAttribute('data-bs-toggle');
+      tabDisponible.removeAttribute('data-bs-target');
+      tabDisponible.setAttribute('aria-disabled', 'true');
+      tabDisponible.setAttribute('role', 'button');
+      tabDisponible.setAttribute('title', 'Complete el Control de Calidad primero');
+      tabDisponible.addEventListener('click', alertaControlCalidad);
+    }
+
     // Agregar tooltips a los botones de archivo
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Verificar estado de calificación de documentos
+    setTimeout(() => {
+      const verificacion = verificarDocumentosPendientes();
+      
+      // Resaltar documentos pendientes si los hay
+      if (!verificacion.todoCalificado) {
+        verificacion.pendientes.forEach(req => {
+          if (req.elemento) {
+            req.elemento.classList.add('documento-pendiente');
+          }
+        });
+        
+        // Mostrar mensaje informativo solo si hay subestados disponibles para avanzar
+        const btnAvanzar = document.querySelector('#subestados-container button:not([disabled])');
+        if (btnAvanzar && verificacion.pendientes.length > 0) {
+          mostrarMensaje(`Recuerde calificar todos los documentos antes de avanzar (${verificacion.pendientes.length} pendientes)`, 'info');
+        }
+      }
+    }, 1500);
 
     // Agregar hover effects a las cards de archivo
     const archivoCards = document.querySelectorAll('.archivo-card');
@@ -599,14 +1013,327 @@
   });
 
   // =======================================================
+  // VALIDACIÓN SECUENCIAL PARA PESTAÑAS
+  // =======================================================
+
+  function aplicarValidacionSecuencialTabs() {
+    const subestadoActualId = {{ solicitud.subestado_actual.id|default:"null" }};
+    const subestadoActualOrden = {{ solicitud.subestado_actual.orden|default:"1" }};
+    
+    console.log('Aplicando validación secuencial a pestañas');
+    console.log('Subestado actual ID:', subestadoActualId);
+    console.log('Subestado actual orden:', subestadoActualOrden);
+
+    const tabs = document.querySelectorAll('#backoffice-tabs .nav-link.tab-modern');
+    
+    tabs.forEach(tab => {
+      const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+      const subestadoOrden = parseInt(tab.getAttribute('data-subestado-orden'));
+      
+      if (!subestadoId || !subestadoOrden) return;
+      
+      console.log(`Procesando tab: ID=${subestadoId}, Orden=${subestadoOrden}`);
+      
+      // Determinar el estado de la pestaña
+      const esActual = subestadoId === subestadoActualId;
+      const esCompletado = subestadoOrden < subestadoActualOrden;
+      const esDisponible = subestadoOrden === subestadoActualOrden + 1;
+      const esBloqueado = subestadoOrden > subestadoActualOrden + 1;
+      
+      console.log(`Tab ${subestadoOrden}: actual=${esActual}, completado=${esCompletado}, disponible=${esDisponible}, bloqueado=${esBloqueado}`);
+      
+      // Limpiar clases previas
+      tab.classList.remove('tab-blocked', 'tab-available', 'tab-completed');
+      
+      // Remover listeners previos para evitar duplicados
+      tab.removeEventListener('click', bloquearClickInvalido);
+      tab.removeEventListener('shown.bs.tab', manejarCambioTab);
+      tab.removeEventListener('shown.bs.tab', manejarRetrocesoTab);
+      
+      // Aplicar estilos según el estado
+      if (esActual) {
+        // Pestaña actual - mantener estilo activo
+        console.log(`Tab ${subestadoOrden}: Configurado como ACTUAL`);
+        tab.setAttribute('data-tab-state', 'actual');
+      } else if (esCompletado) {
+        // Pestañas completadas - permitir acceso COMPLETO (navegación libre)
+        tab.classList.add('tab-completed');
+        tab.setAttribute('data-tab-state', 'completado');
+        
+        // Mantener funcionalidad de Bootstrap para pestañas completadas (NAVEGACIÓN LIBRE)
+        tab.setAttribute('data-bs-toggle', 'tab');
+        tab.setAttribute('data-bs-target', `#content-${subestadoId}`);
+        tab.removeAttribute('tabindex');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Completado';
+        }
+        
+        // Agregar listener para manejar retrocesos automáticos
+        tab.addEventListener('shown.bs.tab', manejarRetrocesoTab);
+        console.log(`Tab ${subestadoOrden}: Configurado como COMPLETADO (navegación libre)`);
+      } else if (esDisponible) {
+        // Siguiente pestaña disponible - destacar y permitir avance
+        tab.classList.add('tab-available');
+        tab.setAttribute('data-tab-state', 'disponible');
+        
+        // Mantener funcionalidad de Bootstrap pero agregar handler personalizado
+        tab.setAttribute('data-bs-toggle', 'tab');
+        tab.setAttribute('data-bs-target', `#content-${subestadoId}`);
+        tab.removeAttribute('tabindex');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Disponible';
+        }
+        
+        // Agregar listener para manejar el avance automático
+        tab.addEventListener('shown.bs.tab', manejarCambioTab);
+        console.log(`Tab ${subestadoOrden}: Configurado como DISPONIBLE`);
+      } else if (esBloqueado) {
+        // Pestañas bloqueadas - SOLO para avanzar más allá de lo permitido
+        tab.classList.add('tab-blocked');
+        tab.setAttribute('aria-disabled', 'true');
+        tab.setAttribute('title', 'No puede avanzar más allá del siguiente subestado disponible');
+        tab.setAttribute('data-tab-state', 'bloqueado');
+        
+        // Deshabilitar funcionalidad de Bootstrap
+        tab.removeAttribute('data-bs-toggle');
+        tab.removeAttribute('data-bs-target');
+        tab.setAttribute('tabindex', '-1');
+        tab.setAttribute('role', 'button');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Bloqueado';
+        }
+        
+        // Agregar evento para bloquear clicks inválidos
+        tab.addEventListener('click', bloquearClickInvalido);
+        
+        console.log(`Tab ${subestadoOrden}: Configurado como BLOQUEADO`);
+      }
+    });
+  }
+
+  // Función para bloquear clicks en pestañas no disponibles
+  function bloquearClickInvalido(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    const tab = e.currentTarget;
+    const tabState = tab.getAttribute('data-tab-state');
+    const subestadoOrden = tab.getAttribute('data-subestado-orden');
+    
+    if (tabState === 'bloqueado') {
+      // Mostrar tooltip personalizado en la posición del click
+      mostrarTooltipBloqueo(e, `Etapa ${subestadoOrden} bloqueada. No puede avanzar más allá del siguiente subestado disponible.`);
+      
+      // También mostrar mensaje general
+      mostrarMensaje('No puede avanzar más allá del siguiente subestado disponible. Complete primero la etapa actual.', 'warning');
+    }
+    
+    return false;
+  }
+
+  // Función para alertar sobre completar control de calidad primero
+  function alertaControlCalidad(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Mostrar tooltip personalizado en la posición del click
+    mostrarTooltipBloqueo(e, 'Debe completar el Control de Calidad primero');
+    
+    // Resaltar el botón de control de calidad con un efecto visual
+    const botonControl = document.getElementById('btn-control-calidad');
+    botonControl.classList.add('btn-pulsating');
+    
+    // Quitar el efecto después de 3 segundos
+    setTimeout(() => {
+      botonControl.classList.remove('btn-pulsating');
+    }, 3000);
+    
+    // Mostrar toast con instrucciones
+    showToast('Debe completar el Control de Calidad antes de avanzar a la siguiente etapa', 'warning');
+    
+    return false;
+  }
+  
+  // Función para mostrar tooltip de bloqueo
+  function mostrarTooltipBloqueo(event, mensaje) {
+    // Remover tooltip anterior si existe
+    const tooltipAnterior = document.querySelector('.tab-blocked-tooltip');
+    if (tooltipAnterior) {
+      tooltipAnterior.remove();
+    }
+    
+    // Crear nuevo tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tab-blocked-tooltip';
+    tooltip.textContent = mensaje;
+    
+    // Posicionar tooltip
+    tooltip.style.position = 'fixed';
+    tooltip.style.left = event.clientX + 'px';
+    tooltip.style.top = (event.clientY - 40) + 'px';
+    tooltip.style.zIndex = '9999';
+    
+    document.body.appendChild(tooltip);
+    
+    // Mostrar tooltip con animación
+    setTimeout(() => {
+      tooltip.classList.add('show');
+    }, 10);
+    
+    // Remover tooltip después de 3 segundos
+    setTimeout(() => {
+      if (tooltip.parentNode) {
+        tooltip.classList.remove('show');
+        setTimeout(() => {
+          if (tooltip.parentNode) {
+            tooltip.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
+  }
+
+  // Función para manejar cambio de pestaña disponible
+  function manejarCambioTab(e) {
+    const tab = e.target;
+    const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+    const tabState = tab.getAttribute('data-tab-state');
+    
+    console.log(`Cambio de tab detectado: ID=${subestadoId}, Estado=${tabState}`);
+    
+    if (tabState === 'disponible' && subestadoId) {
+      // Avanzar automáticamente al subestado cuando se hace clic en pestaña disponible
+      console.log(`Avanzando automáticamente al subestado ${subestadoId}`);
+      avanzarSubestadoAutomatico(subestadoId);
+    }
+  }
+
+  // Función para manejar clicks en pestañas completadas (retrocesos)
+  function manejarRetrocesoTab(e) {
+    const tab = e.target;
+    const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+    const tabState = tab.getAttribute('data-tab-state');
+    
+    console.log(`Retroceso de tab detectado: ID=${subestadoId}, Estado=${tabState}`);
+    
+    if (tabState === 'completado' && subestadoId) {
+      // Retroceder automáticamente al subestado cuando se hace clic en pestaña completada
+      console.log(`Retrocediendo automáticamente al subestado ${subestadoId}`);
+      avanzarSubestadoAutomatico(subestadoId, 'retroceso');
+    }
+  }
+
+  // Función para avanzar subestado automáticamente desde pestaña
+  async function avanzarSubestadoAutomatico(subestadoId, accion = 'avance') {
+    const solicitudId = {{ solicitud.id }};
+    
+    console.log(`Navegación automática (${accion}): solicitud=${solicitudId}, subestado=${subestadoId}`);
+    
+    try {
+      const response = await fetch(`/workflow/api/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          subestado_id: subestadoId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`${accion} automático exitoso`);
+        const mensajeAccion = accion === 'retroceso' ? 'Retrocediendo a subestado anterior...' : 'Avanzando al siguiente subestado...';
+        mostrarMensaje(data.message || mensajeAccion, 'success');
+        
+        // Actualizar pestañas y recargar después de un breve delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        console.error(`Error en ${accion} automático:`, data.message);
+        mostrarMensaje(data.message || `Error al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
+        
+        // Volver a la pestaña anterior
+        const pestañaActual = document.querySelector('#backoffice-tabs .nav-link.active');
+        if (pestañaActual) {
+          const tab = new bootstrap.Tab(pestañaActual);
+          tab.show();
+        }
+      }
+    } catch (error) {
+      console.error(`Error de conexión en ${accion} automático:`, error);
+      mostrarMensaje(`Error de conexión al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
+      
+      // Volver a la pestaña anterior
+      const pestañaActual = document.querySelector('#backoffice-tabs .nav-link.active');
+      if (pestañaActual) {
+        const tab = new bootstrap.Tab(pestañaActual);
+        tab.show();
+      }
+    }
+  }
+
+  // Función para actualizar las pestañas después de avanzar subestado
+  function actualizarPestanasSecuenciales() {
+    setTimeout(() => {
+      aplicarValidacionSecuencialTabs();
+    }, 100);
+  }
+
+  // =======================================================
   // FUNCIONALIDAD DE CALIFICACIÓN DE DOCUMENTOS
   // =======================================================
 
   // Variables globales
   let currentRequisitoId = null;
 
+  // Función para verificar y preservar estados de botones
+  function preservarEstadosBotones() {
+    console.log('🔄 Preservando estados de botones...');
+    
+    // Recorrer todas las cards de requisitos
+    const cards = document.querySelectorAll('.card[data-requisito-id]');
+    console.log(`📋 Encontradas ${cards.length} cards para preservar estados`);
+    
+    cards.forEach(card => {
+      const requisitoId = card.getAttribute('data-requisito-id');
+      console.log(`🔍 Verificando estado para requisito ${requisitoId}`);
+      
+      // Buscar todos los botones de calificación en esta card
+      const botonesBueno = card.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"]');
+      const botonesMalo = card.querySelectorAll('.calificar-btn-backoffice[data-estado="malo"]');
+      
+      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos`);
+      
+      // Verificar si debe estar marcado como bueno o malo basado en el estado guardado
+      // Esta función se ejecutará después de que actualizarEstadoCalificacion haya hecho su trabajo
+      setTimeout(() => {
+        const botonesActivos = card.querySelectorAll('.calificar-btn-backoffice.activo');
+        console.log(`✨ Requisito ${requisitoId}: ${botonesActivos.length} botones con clase activo después de delay`);
+        
+        botonesActivos.forEach(btn => {
+          const estado = btn.dataset.estado;
+          console.log(`🎯 Botón ${estado} mantiene clase activo para requisito ${requisitoId}`);
+        });
+      }, 50);
+    });
+  }
+
   // Función para calificar documento
   function calificarDocumento(requisitoId, estado, opcionId = null) {
+    console.log(`Calificando documento: requisitoId=${requisitoId}, estado=${estado}, opcionId=${opcionId}`);
+    
     const data = {
       requisito_solicitud_id: requisitoId,
       estado: estado,
@@ -621,18 +1348,60 @@
       },
       body: JSON.stringify(data)
     })
-      .then(response => response.json())
+      .then(response => {
+        console.log('Respuesta del servidor calificar:', response.status);
+        return response.json();
+      })
       .then(data => {
+        console.log('Datos recibidos de calificación:', data);
         if (data.success) {
           // Actualizar interfaz
-          actualizarEstadoCalificacion(requisitoId, estado, data.data || {});
+          console.log('Llamando a actualizarEstadoCalificacion...');
+          actualizarEstadoCalificacion(requisitoId, estado, data.data || { usuario: 'Usuario actual' });
+          
+          // Preservar estado después de un breve delay
+          setTimeout(() => {
+            console.log('Preservando estado después de calificación...');
+            preservarEstadosBotones();
+            
+            // Verificar si todos los documentos están calificados y mostrar mensaje indicativo
+            const verificacion = verificarDocumentosPendientes();
+            
+            // Eliminar clase documento-pendiente de todos los elementos
+            document.querySelectorAll('.documento-pendiente').forEach(elem => {
+              elem.classList.remove('documento-pendiente');
+            });
+            
+            // Si hay documentos pendientes, resaltarlos
+            verificacion.pendientes.forEach(req => {
+              if (req.elemento) {
+                req.elemento.classList.add('documento-pendiente');
+              }
+            });
+            
+            // Si todos los documentos están calificados, mostrar mensaje informativo
+            if (verificacion.todoCalificado) {
+              const btnAvanzar = document.querySelector('#subestados-container button:not([disabled])');
+              if (btnAvanzar) {
+                // Hacer parpadear el botón de avanzar
+                btnAvanzar.classList.add('btn-pulsating');
+                setTimeout(() => {
+                  btnAvanzar.classList.remove('btn-pulsating');
+                }, 3000);
+                
+                // Mostrar mensaje informativo
+                mostrarMensaje('¡Todos los documentos han sido calificados! Ahora puede avanzar al siguiente estado.', 'info');
+              }
+            }
+          }, 100);
+          
           mostrarMensaje('Calificación guardada exitosamente', 'success');
         } else {
           mostrarMensaje('Error al guardar calificación: ' + data.error, 'error');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
+        console.error('Error en calificarDocumento:', error);
         mostrarMensaje('Error de conexión', 'error');
       });
   }
@@ -683,66 +1452,72 @@
 
   // Función para actualizar estado de calificación en la interfaz
   function actualizarEstadoCalificacion(requisitoId, estado, data) {
+    console.log(`🎯 Actualizando estado: requisito=${requisitoId}, estado=${estado}`);
+    
     if (!requisitoId) {
-      console.warn('requisitoId es null o undefined');
+      console.warn('⚠️ requisitoId es null o undefined');
       return;
     }
 
     const card = document.querySelector(`[data-requisito-id="${requisitoId}"]`);
     if (!card) {
-      console.warn(`No se encontró la tarjeta para el requisito ${requisitoId}`);
+      console.warn(`⚠️ No se encontró la card para el requisito ${requisitoId}`);
       return;
     }
 
-    console.log(`Actualizando estado de calificación: requisito=${requisitoId}, estado=${estado}`);
+    console.log(`✅ Card encontrada para requisito ${requisitoId}`);
 
     // Actualizar botones de calificación
     const botones = card.querySelectorAll('.calificar-btn-backoffice');
-    console.log(`Encontrados ${botones.length} botones de calificación`);
+    console.log(`🔘 Encontrados ${botones.length} botones de calificación`);
 
-    botones.forEach(btn => {
+    botones.forEach((btn, index) => {
       const btnEstado = btn.dataset.estado;
-      console.log(`Botón: estado=${btnEstado}, debe ser activo: ${btnEstado === estado}`);
-
-      // Remover clase activo de todos los botones
+      const esteEsElBotonActivo = btnEstado === estado;
+      
+      console.log(`🔘 Botón ${index + 1}: estado="${btnEstado}", debe estar activo: ${esteEsElBotonActivo}`);
+      
+      // Limpiar estado anterior
       btn.classList.remove('activo');
-
-      // Agregar clase activo solo al botón correspondiente
-      if (btnEstado === estado) {
+      
+      // Activar solo el botón correspondiente
+      if (esteEsElBotonActivo) {
         btn.classList.add('activo');
-        console.log(`Botón ${btnEstado} marcado como activo`);
-
-        // Animación de feedback
-        btn.classList.add(estado === 'bueno' ? 'feedback-success' : 'feedback-danger');
+        console.log(`✨ Clase 'activo' agregada al botón ${btnEstado}`);
+        
+        // Forzar estilo inline para asegurar que se vea - MÁS FUERTE
+        if (estado === 'bueno') {
+          btn.style.backgroundColor = '#198754 !important';
+          btn.style.borderColor = '#198754 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(25, 135, 84, 0.5)';
+        } else {
+          btn.style.backgroundColor = '#dc3545 !important';
+          btn.style.borderColor = '#dc3545 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        }
+        
+        // FORZAR que se mantenga así para siempre
+        btn.setAttribute('data-calificado', estado);
+        
+        // Verificar que la clase se agregó correctamente
         setTimeout(() => {
-          btn.classList.remove('feedback-success', 'feedback-danger');
-        }, 600);
+          const tieneActivo = btn.classList.contains('activo');
+          console.log(`🔍 Verificación: botón ${btnEstado} tiene clase activo: ${tieneActivo}`);
+          console.log(`📝 Clases finales del botón: ${btn.className}`);
+        }, 10);
+      } else {
+        // Resetear estilo para botones no activos
+        btn.style.backgroundColor = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
       }
     });
 
-    // Actualizar estado de calificación en el header
-    let estadoDiv = card.querySelector('.calificacion-estado');
-    if (!estadoDiv) {
-      estadoDiv = document.createElement('div');
-      estadoDiv.className = 'calificacion-estado';
-      const headerElement = card.querySelector('.archivo-header-backoffice');
-      if (headerElement) {
-        headerElement.appendChild(estadoDiv);
-      }
-    }
-
-    const badgeClass = estado === 'bueno' ? 'bg-success' : 'bg-danger';
-    const iconClass = estado === 'bueno' ? 'fa-thumbs-up' : 'fa-thumbs-down';
-
-    estadoDiv.innerHTML = `
-        <span class="badge ${badgeClass}">
-            <i class="fas ${iconClass} me-1"></i>
-            ${estado.toUpperCase()}
-        </span>
-        <small class="text-muted d-block mt-1">
-            por ${data.usuario}
-        </small>
-    `;
+    console.log(`🏁 Estado visual actualizado para requisito ${requisitoId}`);
   }
 
   // Función para actualizar modal de comentarios
@@ -879,14 +1654,31 @@
 
     // Obtener todos los requisitos que tienen calificaciones
     const requisitos = document.querySelectorAll('[data-requisito-id]');
+    console.log(`Encontrados ${requisitos.length} requisitos con data-requisito-id`);
 
     requisitos.forEach(requisito => {
       const requisitoId = requisito.getAttribute('data-requisito-id');
-      if (requisitoId) {
+      console.log(`Procesando requisito ID: ${requisitoId}`);
+      
+      if (requisitoId && requisitoId !== 'null' && requisitoId !== 'undefined') {
+        // Validar que el ID sea un número válido
+        const numericId = parseInt(requisitoId);
+        if (isNaN(numericId) || numericId <= 0) {
+          console.warn(`ID de requisito inválido: ${requisitoId}`);
+          return;
+        }
+        
         // Obtener calificaciones para este requisito
         fetch(`/workflow/api/documento/${requisitoId}/calificaciones/`)
-          .then(response => response.json())
+          .then(response => {
+            console.log(`Respuesta para requisito ${requisitoId}: status ${response.status}`);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+          })
           .then(data => {
+            console.log(`Datos recibidos para requisito ${requisitoId}:`, data);
             if (data.success && data.data && data.data.length > 0) {
               // Tomar la calificación más reciente
               const ultimaCalificacion = data.data[0];
@@ -896,13 +1688,25 @@
               actualizarEstadoCalificacion(requisitoId, ultimaCalificacion.estado, {
                 usuario: ultimaCalificacion.usuario_nombre || 'Usuario'
               });
+            } else {
+              console.log(`No hay calificaciones para requisito ${requisitoId}`);
             }
           })
           .catch(error => {
             console.error(`Error al cargar calificaciones para requisito ${requisitoId}:`, error);
+            // No mostrar mensaje de error al usuario para evitar spam de errores
+            // Solo loggear en consola para debugging
           });
+      } else {
+        console.warn(`RequisitoId inválido o vacío: ${requisitoId}`);
       }
     });
+    
+    // Preservar estados después de cargar todos los requisitos
+    setTimeout(() => {
+      console.log('Preservando estados después de cargar todos los requisitos...');
+      preservarEstadosBotones();
+    }, 500);
   }
 
   // Función para obtener CSRF token
@@ -914,30 +1718,80 @@
   function mostrarMensaje(mensaje, tipo) {
     // Crear elemento de alerta
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    let alertClass = 'alert alert-dismissible fade show';
+    let iconClass = '';
+    
+    switch(tipo) {
+      case 'success':
+        alertClass += ' alert-success';
+        iconClass = 'fas fa-check-circle';
+        break;
+      case 'warning':
+        alertClass += ' alert-warning';
+        iconClass = 'fas fa-exclamation-triangle';
+        break;
+      case 'info':
+        alertClass += ' alert-info';
+        iconClass = 'fas fa-info-circle';
+        break;
+      case 'error':
+      default:
+        alertClass += ' alert-danger';
+        iconClass = 'fas fa-exclamation-circle';
+        break;
+    }
+    
+    alertDiv.className = alertClass;
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
     alertDiv.style.zIndex = '9999';
+    alertDiv.style.maxWidth = '400px';
     alertDiv.innerHTML = `
-        ${mensaje}
+        <i class="${iconClass} me-2"></i>${mensaje}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
     document.body.appendChild(alertDiv);
 
-    // Auto-remover después de 3 segundos
+    // Auto-remover después de 5 segundos para warnings, 3 para otros
+    const timeout = tipo === 'warning' ? 5000 : 3000;
     setTimeout(() => {
       if (alertDiv.parentNode) {
         alertDiv.remove();
       }
-    }, 3000);
+    }, timeout);
   }
 
   // Event listeners cuando el DOM esté listo
   document.addEventListener('DOMContentLoaded', function () {
     // Cargar estados iniciales de calificaciones
     cargarEstadosInicialesCalificaciones();
+
+    // VERIFICAR Y MARCAR BOTONES QUE YA ESTÁN CALIFICADOS
+    setTimeout(() => {
+      const todosBotones = document.querySelectorAll('.calificar-btn-backoffice[data-calificado]');
+      console.log(`🔍 Encontrados ${todosBotones.length} botones que deberían estar marcados`);
+      
+      todosBotones.forEach(btn => {
+        const estado = btn.getAttribute('data-calificado');
+        console.log(`🎯 Forzando estilo para botón ${estado}`);
+        
+        if (estado === 'bueno') {
+          btn.style.backgroundColor = '#198754 !important';
+          btn.style.borderColor = '#198754 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(25, 135, 84, 0.5)';
+        } else if (estado === 'malo') {
+          btn.style.backgroundColor = '#dc3545 !important';
+          btn.style.borderColor = '#dc3545 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        }
+      });
+    }, 1000);
 
     // Botones de calificación
     document.addEventListener('click', function (e) {
@@ -946,8 +1800,10 @@
         const requisitoId = btn.dataset.requisito;
         const estado = btn.dataset.estado;
 
-        if (requisitoId && estado) {
+        if (requisitoId && estado && !btn.disabled) {
           calificarDocumento(requisitoId, estado);
+        } else if (!requisitoId) {
+          mostrarMensaje('No se puede calificar: archivo no subido todavía', 'warning');
         }
       }
 
@@ -956,11 +1812,12 @@
         const btn = e.target.closest('.comentario-btn-backoffice');
         const requisitoId = btn.dataset.requisito;
 
-        if (requisitoId) {
+        if (requisitoId && !btn.disabled) {
           mostrarModalComentarios(requisitoId);
+        } else if (!requisitoId) {
+          mostrarMensaje('No se pueden agregar comentarios: archivo no subido todavía', 'warning');
         }
       }
-
 
     });
 
@@ -977,6 +1834,14 @@
           agregarComentario(currentRequisitoId, comentario);
           textarea.value = '';
         }
+      });
+    }
+
+    // Modal Avanzar Etapa
+    const modalAvanzarEtapa = document.getElementById('modalAvanzarEtapa');
+    if (modalAvanzarEtapa) {
+      modalAvanzarEtapa.addEventListener('show.bs.modal', function (event) {
+        cargarOpcionesAvance();
       });
     }
   });
@@ -1075,6 +1940,1206 @@
     mostrarMensaje(`Documento calificado como malo: ${opcionNombre}`, 'success');
   }
 
+  // =====================================================
+  // FUNCIONES PARA AVANZAR ETAPA
+  // =====================================================
+
+  async function cargarOpcionesAvance() {
+    const solicitudId = {{ solicitud.id }};
+    console.log('Cargando opciones de avance para solicitud:', solicitudId);
+    
+    try {
+      // Cargar subestados disponibles
+      console.log('Llamando a API de subestados...');
+      const responseSubestados = await fetch(`/workflow/api/subestados-disponibles/${solicitudId}/`);
+      console.log('Respuesta subestados status:', responseSubestados.status);
+      const dataSubestados = await responseSubestados.json();
+      console.log('Data subestados:', dataSubestados);
+      
+      // Cargar transiciones disponibles
+      console.log('Llamando a API de transiciones...');
+      const responseTransiciones = await fetch(`/workflow/api/transiciones-disponibles/${solicitudId}/`);
+      console.log('Respuesta transiciones status:', responseTransiciones.status);
+      const dataTransiciones = await responseTransiciones.json();
+      console.log('Data transiciones:', dataTransiciones);
+      
+      // Renderizar opciones
+      renderizarSubestados(dataSubestados);
+      renderizarTransiciones(dataTransiciones);
+      
+    } catch (error) {
+      console.error('Error cargando opciones de avance:', error);
+      mostrarMensaje('Error al cargar las opciones de avance', 'error');
+    }
+  }
+
+  function renderizarSubestados(data) {
+    console.log('Renderizando subestados con validación secuencial:', data);
+    const container = document.getElementById('subestados-container');
+    
+    if (!data.success) {
+      container.innerHTML = `<div class="alert alert-warning">${data.message || 'Error al cargar subestados'}</div>`;
+      return;
+    }
+    
+    if (!data.subestados || data.subestados.length === 0) {
+      container.innerHTML = '<p class="text-muted">No hay subestados disponibles para avanzar.</p>';
+      return;
+    }
+    
+    let html = '';
+    
+    // Agregar información sobre validación secuencial
+    if (data.validacion_secuencial) {
+      if (data.navegacion_libre_atras && data.bloqueo_solo_avance) {
+        html += `
+          <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Navegación Flexible:</strong> Puedes retroceder a etapas completadas o avanzar al siguiente subestado disponible.
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Navegación Secuencial:</strong> Solo puedes avanzar al siguiente subestado en orden.
+          </div>
+        `;
+      }
+    }
+    
+    data.subestados.forEach(subestado => {
+      const isActual = subestado.es_actual || subestado.id === data.subestado_actual_id;
+      const esCompletado = subestado.es_completado;
+      const puedeAvanzar = subestado.puede_avanzar;
+      const estaBloqueado = subestado.esta_bloqueado;
+      
+      let cardClass = 'card mb-2';
+      let btnClass = 'btn btn-sm';
+      let btnText = '';
+      let disabled = '';
+      let statusBadge = '';
+      let reasonMessage = '';
+      
+      if (isActual) {
+        cardClass += ' border-success bg-light';
+        btnClass += ' btn-outline-secondary';
+        btnText = 'Actual';
+        disabled = 'disabled';
+        statusBadge = '<span class="badge bg-success ms-2">Actual</span>';
+      } else if (esCompletado) {
+        // Subestados completados - navegación libre permitida
+        cardClass += ' border-warning bg-light';
+        btnClass += ' btn-warning';
+        btnText = 'Regresar';
+        statusBadge = '<span class="badge bg-warning ms-2">Completado</span>';
+      } else if (puedeAvanzar) {
+        // Siguiente subestado disponible
+        cardClass += ' border-primary';
+        btnClass += ' btn-primary';
+        btnText = 'Avanzar';
+        statusBadge = '<span class="badge bg-primary ms-2">Disponible</span>';
+      } else if (estaBloqueado) {
+        // Subestados bloqueados (saltos hacia adelante)
+        cardClass += ' border-secondary';
+        btnClass += ' btn-outline-secondary';
+        btnText = 'Bloqueado';
+        disabled = 'disabled';
+        statusBadge = '<span class="badge bg-secondary ms-2">Bloqueado</span>';
+        if (subestado.razon_bloqueado) {
+          reasonMessage = `<small class="text-muted d-block mt-1"><i class="fas fa-lock me-1"></i>${subestado.razon_bloqueado}</small>`;
+        }
+      }
+      
+      html += `
+        <div class="${cardClass}">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="flex-grow-1">
+                <h6 class="mb-1">
+                  <span class="badge bg-dark me-2">${subestado.orden}</span>
+                  ${subestado.nombre}
+                  ${statusBadge}
+                </h6>
+                ${isActual ? '<small class="text-success"><i class="fas fa-check-circle me-1"></i>Subestado activo actualmente</small>' : ''}
+                ${esCompletado ? '<small class="text-warning"><i class="fas fa-undo me-1"></i>Puedes regresar a esta etapa completada</small>' : ''}
+                ${puedeAvanzar && !isActual ? '<small class="text-primary"><i class="fas fa-arrow-right me-1"></i>Siguiente subestado disponible</small>' : ''}
+                ${estaBloqueado ? '<small class="text-muted"><i class="fas fa-ban me-1"></i>No puede saltar a esta etapa</small>' : ''}
+                ${reasonMessage}
+              </div>
+              <button class="${btnClass}" ${disabled} 
+                      onclick="avanzarSubestado(${subestado.id})"
+                      data-subestado-id="${subestado.id}"
+                      title="${isActual ? 'Subestado actual' : esCompletado ? 'Regresar a esta etapa completada' : puedeAvanzar ? 'Avanzar a este subestado' : subestado.razon_bloqueado || 'No disponible'}">
+                <i class="fas fa-${isActual ? 'check' : esCompletado ? 'undo' : puedeAvanzar ? 'arrow-right' : 'lock'} me-1"></i>${btnText}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  function renderizarTransiciones(data) {
+    console.log('Renderizando transiciones:', data);
+    const container = document.getElementById('transiciones-container');
+    
+    if (!data.success) {
+      container.innerHTML = `<div class="alert alert-warning">${data.message || 'Error al cargar transiciones'}</div>`;
+      return;
+    }
+    
+    if (!data.transiciones || data.transiciones.length === 0) {
+      container.innerHTML = '<p class="text-muted">No hay transiciones disponibles.</p>';
+      return;
+    }
+    
+    let html = '';
+    data.transiciones.forEach(transicion => {
+      html += `
+        <div class="card mb-2">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">${transicion.nombre}</h6>
+                <small class="text-muted">
+                  ${transicion.etapa_origen} → ${transicion.etapa_destino}
+                </small>
+              </div>
+              <button class="btn btn-sm btn-outline-success" 
+                      onclick="ejecutarTransicion(${transicion.id})">
+                <i class="fas fa-exchange-alt me-1"></i>Ejecutar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  // Función para verificar si todos los documentos han sido calificados
+  function verificarDocumentosPendientes() {
+    const requisitos = document.querySelectorAll('[data-requisito-id]');
+    const totalRequisitos = requisitos.length;
+    let requisitosSinCalificar = [];
+
+    // Si no hay requisitos, consideramos que todo está calificado
+    if (totalRequisitos === 0) {
+      console.log('No hay requisitos para calificar');
+      return {
+        todoCalificado: true,
+        pendientes: []
+      };
+    }
+
+    // Verificar cada requisito
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      const requisitoNombre = requisito.querySelector('.card-title')?.textContent?.trim() || `Requisito ${requisitoId}`;
+      
+      // Verificar si tiene algún botón activo (calificado)
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn-backoffice.active');
+      
+      if (botonesCalificados.length === 0) {
+        // Este requisito no ha sido calificado
+        requisitosSinCalificar.push({
+          id: requisitoId,
+          nombre: requisitoNombre
+        });
+      }
+    });
+
+    return {
+      todoCalificado: requisitosSinCalificar.length === 0,
+      pendientes: requisitosSinCalificar
+    };
+  }
+
+  // Función para verificar si todos los documentos han sido calificados
+  function verificarDocumentosPendientes() {
+    const requisitos = document.querySelectorAll('.requisito-item');
+    const totalRequisitos = requisitos.length;
+    let requisitosSinCalificar = [];
+
+    // Si no hay requisitos, consideramos que todo está calificado
+    if (totalRequisitos === 0) {
+      console.log('No hay requisitos para calificar');
+      return {
+        todoCalificado: true,
+        pendientes: []
+      };
+    }
+
+    // Verificar cada requisito
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      const requisitoNombre = requisito.querySelector('.card-title')?.textContent?.trim() || 
+                              requisito.querySelector('h5')?.textContent?.trim() || 
+                              `Requisito ${requisitoId}`;
+      
+      // Verificar si tiene algún botón activo (calificado)
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.active, .calificar-btn-backoffice.active');
+      
+      if (botonesCalificados.length === 0) {
+        // Este requisito no ha sido calificado
+        requisitosSinCalificar.push({
+          id: requisitoId,
+          nombre: requisitoNombre,
+          elemento: requisito
+        });
+      }
+    });
+
+    return {
+      todoCalificado: requisitosSinCalificar.length === 0,
+      pendientes: requisitosSinCalificar
+    };
+  }
+
+  async function avanzarSubestado(subestadoId) {
+    const solicitudId = {{ solicitud.id }};
+    
+    console.log(`Intentando avanzar subestado: solicitud=${solicitudId}, subestado=${subestadoId}`);
+    
+    try {
+      // Verificar si todos los documentos han sido calificados
+      const verificacion = verificarDocumentosPendientes();
+      
+      if (!verificacion.todoCalificado) {
+        // Si hay documentos sin calificar, mostrar un mensaje al usuario
+        let listaPendientes = '';
+        verificacion.pendientes.forEach(req => {
+          listaPendientes += `<li>${req.nombre}</li>`;
+          
+          // Resaltar visualmente los documentos pendientes
+          if (req.elemento) {
+            req.elemento.classList.add('documento-pendiente');
+            
+            // Hacer scroll al primer documento pendiente
+            if (listaPendientes.split('<li>').length - 1 === 1) {
+              req.elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+        
+        Swal.fire({
+          title: 'Documentos sin calificar',
+          html: `<div class="text-start">
+                  <p>No puede avanzar al siguiente estado hasta calificar todos los documentos:</p>
+                  <ul class="text-start">${listaPendientes}</ul>
+                 </div>`,
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#3085d6',
+          allowOutsideClick: false
+        });
+        
+        return; // Detener la ejecución y no permitir avanzar
+      }
+      
+      // Deshabilitar todos los botones temporalmente
+      const buttons = document.querySelectorAll('#subestados-container button');
+      const targetButton = document.querySelector(`button[data-subestado-id="${subestadoId}"]`);
+      
+      buttons.forEach(btn => {
+        btn.disabled = true;
+      });
+
+      if (targetButton) {
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+      }
+
+      const response = await fetch(`/workflow/api/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          subestado_id: subestadoId
+        })
+      });
+      
+      console.log('Respuesta del servidor:', response.status);
+      const data = await response.json();
+      console.log('Data recibida:', data);
+      
+      if (data.success) {
+        mostrarMensaje(data.message || 'Subestado avanzado correctamente', 'success');
+        
+        // Actualizar pestañas secuenciales
+        actualizarPestanasSecuenciales();
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        if (modal) {
+          modal.hide();
+        }
+        
+        // Mostrar mensaje de recarga
+        mostrarMensaje('Recargando página para reflejar los cambios...', 'info');
+        
+        // Recargar página después de un breve delay
+        setTimeout(() => {
+          console.log('Recargando página...');
+          window.location.reload();
+        }, 2000);
+      } else {
+        // Manejar diferentes tipos de errores
+        let tipoMensaje = 'error';
+        
+        // Si es un error de validación secuencial, usar tipo 'warning'
+        if (data.message && (
+          data.message.includes('secuencialmente') || 
+          data.message.includes('siguiente subestado') ||
+          data.message.includes('retroceder') ||
+          data.message.includes('mismo subestado')
+        )) {
+          tipoMensaje = 'warning';
+        }
+        
+        mostrarMensaje(data.message || 'Error al avanzar subestado', tipoMensaje);
+        
+        // Rehabilitar botones
+        buttons.forEach(btn => {
+          // Solo rehabilitar botones que no están marcados como "actual"
+          if (!btn.innerHTML.includes('Actual')) {
+            btn.disabled = false;
+          }
+        });
+        
+        // Restaurar texto original del botón específico
+        if (targetButton && !targetButton.innerHTML.includes('Actual')) {
+          const isBlocked = targetButton.innerHTML.includes('Bloqueado');
+          if (isBlocked) {
+            targetButton.innerHTML = '<i class="fas fa-lock me-1"></i>Bloqueado';
+            targetButton.disabled = true;
+          } else {
+            targetButton.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+            targetButton.disabled = false;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error avanzando subestado:', error);
+      mostrarMensaje('Error de conexión al avanzar subestado', 'error');
+      
+      // Rehabilitar botones en caso de error
+      const buttons = document.querySelectorAll('#subestados-container button');
+      buttons.forEach(btn => {
+        if (!btn.innerHTML.includes('Actual')) {
+          btn.disabled = false;
+        }
+      });
+      
+      if (targetButton && !targetButton.innerHTML.includes('Actual')) {
+        targetButton.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+        targetButton.disabled = false;
+      }
+    }
+  }
+
+  async function ejecutarTransicion(transicionId) {
+    const solicitudId = {{ solicitud.id }};
+    
+    try {
+      const response = await fetch(`/workflow/api/ejecutar-transicion/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          transicion_id: transicionId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        mostrarMensaje('Transición ejecutada correctamente', 'success');
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        modal.hide();
+        // Redirigir a la nueva etapa
+        setTimeout(() => window.location.href = data.redirect_url || window.location.href, 1000);
+      } else {
+        mostrarMensaje(data.message || 'Error al ejecutar transición', 'error');
+      }
+    } catch (error) {
+      console.error('Error ejecutando transición:', error);
+      mostrarMensaje('Error al ejecutar transición', 'error');
+    }
+  }
+
+  // =======================================================
+  // FUNCIONALIDAD PARA ASOCIAR ENTREVISTA DE CLIENTE
+  // =======================================================
+
+  let entrevistaSeleccionadaId = null;
+
+  function mostrarModalEntrevista() {
+    // Obtener datos del cliente de la solicitud actual
+    const clienteNombre = "{{ solicitud.cliente_nombre_completo|default:'Cliente' }}";
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    // Actualizar el encabezado del modal con los datos del cliente
+    document.getElementById('clienteNombreModal').textContent = clienteNombre;
+    document.getElementById('clienteCedulaModal').textContent = clienteCedula;
+    document.getElementById('filteredByCedula').textContent = clienteCedula;
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
+    modal.show();
+    
+    // Limpiar búsqueda anterior y configurarla con la cédula del cliente
+    const inputBusqueda = document.getElementById('buscarEntrevista');
+    inputBusqueda.value = '';
+    inputBusqueda.placeholder = `Buscar por nombre o email (ya filtrado por cédula)`;
+    
+    // Automáticamente buscar entrevistas con la misma cédula
+    buscarEntrevistasPorCedula(clienteCedula);
+    document.getElementById('resultadosEntrevistas').innerHTML = '';
+    document.getElementById('entrevistaSeleccionada').style.display = 'none';
+    document.getElementById('btnConfirmarAsociacion').disabled = true;
+    entrevistaSeleccionadaId = null;
+  }
+
+  function buscarEntrevistasPorCedula(cedula) {
+    if (!cedula || cedula === 'No disponible') {
+      document.getElementById('resultadosEntrevistas').innerHTML = 
+        '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No se puede buscar entrevistas porque la solicitud no tiene un número de cédula asociado.</div>';
+      return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('resultadosEntrevistas').innerHTML = 
+      '<div class="text-center p-3"><i class="fas fa-spinner fa-spin me-2"></i> Buscando entrevistas para la cédula ' + cedula + '...</div>';
+    
+    // Realizar búsqueda AJAX filtrando por cédula
+    fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
+      .then(response => response.json())
+      .then(data => {
+        // Mostrar mensaje sobre la búsqueda flexible
+        const mensajeFlexible = `
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500"></i>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                  <strong>Búsqueda inteligente:</strong> El sistema busca entrevistas que tengan una cédula similar a <strong>${cedula}</strong>, 
+                  incluso si el formato de escritura es diferente.
+                </p>
+                <p class="text-sm text-blue-700 mt-1">
+                  <i class="fas fa-shield-alt text-blue-600 me-1"></i>
+                <div class="d-flex align-items-center">
+                  <strong>Nota:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-info p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </div>
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        const container = document.getElementById('resultadosEntrevistas');
+        container.innerHTML = mensajeFlexible;
+        mostrarResultadosEntrevistas(data.entrevistas, cedula);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+          '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+      });
+  }
+
+  function buscarEntrevistas() {
+    const termino = document.getElementById('buscarEntrevista').value.trim();
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    if (termino.length < 3) {
+      // Si no hay término de búsqueda, volvemos a la búsqueda por cédula
+      buscarEntrevistasPorCedula(clienteCedula);
+      return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('resultadosEntrevistas').innerHTML = 
+      '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i> Buscando...</div>';
+    
+    // Realizar búsqueda AJAX con filtro adicional de cédula
+    fetch(`/workflow/buscar-entrevistas/?q=${encodeURIComponent(termino)}&cedula=${encodeURIComponent(clienteCedula)}`)
+      .then(response => response.json())
+      .then(data => {
+        mostrarResultadosEntrevistas(data.entrevistas, clienteCedula);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+          '<div class="alert alert-danger">Error al buscar entrevistas</div>';
+      });
+  }
+
+  function mostrarResultadosEntrevistas(entrevistas, cedula) {
+    const container = document.getElementById('resultadosEntrevistas');
+    
+    // Función para comparar similitud entre cédulas
+    function compararCedulas(cedula1, cedula2) {
+      // 1. Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
+      
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
+      
+      // 2. Extraer números y letras por separado
+      const numerosYLetras1 = normalizada1.match(/[0-9A-Z]/g) || [];
+      const numerosYLetras2 = normalizada2.match(/[0-9A-Z]/g) || [];
+      
+      // Verificar si las versiones sin caracteres especiales coinciden
+      if (numerosYLetras1.join('') === numerosYLetras2.join('')) return 'exacta';
+      
+      // 3. Extraer solo números para comparación numérica
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      // Si ambas tienen números
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // 4. Comparar primeros dígitos (entre 3-4 dígitos iniciales)
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        
+        // 5. Comparar últimos dígitos (6-8 dígitos finales)
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        // Si coinciden los primeros o últimos dígitos significativos
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+        
+        // 6. Calcular distancia de Levenshtein para detectar errores de tipografía
+        // Solo si las longitudes son similares (diferencia máxima de 2 caracteres)
+        if (Math.abs(numeros1.length - numeros2.length) <= 2) {
+          const distancia = levenshteinDistance(numeros1, numeros2);
+          // Si la distancia es pequeña en relación al tamaño de la cédula (máximo 2 caracteres diferentes)
+          if (distancia <= 2) {
+            return 'parcial';
+          }
+        }
+        
+        // 7. Verificar si al menos la mitad de los caracteres coinciden (para cédulas de longitud similar)
+        if (Math.abs(normalizada1.length - normalizada2.length) <= 3) {
+          let coincidencias = 0;
+          const minLength = Math.min(normalizada1.length, normalizada2.length);
+          
+          // Contar caracteres coincidentes en las mismas posiciones
+          for (let i = 0; i < minLength; i++) {
+            if (normalizada1[i] === normalizada2[i]) {
+              coincidencias++;
+            }
+          }
+          
+          // Si coinciden más del 70% de los caracteres
+          if (coincidencias >= 0.7 * minLength) {
+            return 'parcial';
+          }
+        }
+      }
+      
+      // 8. Comparar letras (importante para extranjeros)
+      const letras1 = normalizada1.replace(/[^A-Z]/g, '');
+      const letras2 = normalizada2.replace(/[^A-Z]/g, '');
+      
+      // Si ambas tienen la misma letra de extranjero y algunos dígitos coinciden
+      if (letras1 && letras2 && letras1 === letras2) {
+        // Verificar si al menos algunos dígitos coinciden
+        if (numeros1 && numeros2 && 
+            (numeros1.includes(numeros2.slice(-4)) || numeros2.includes(numeros1.slice(-4)))) {
+          return 'parcial';
+        }
+      }
+      
+      return 'ninguna';
+    }
+    
+    // Función para calcular distancia de Levenshtein (para comparación fuzzy)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      
+      const matrix = [];
+      
+      // Inicializar matriz
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      
+      // Rellenar matriz
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const costo = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,      // eliminación
+            matrix[i][j - 1] + 1,      // inserción
+            matrix[i - 1][j - 1] + costo  // sustitución
+          );
+        }
+      }
+      
+      return matrix[b.length][a.length];
+    }
+    
+    if (entrevistas.length === 0) {
+      const mensajeNoEntrevistas = `
+        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-3">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <i class="fas fa-info-circle text-yellow-500"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-yellow-700">
+                No se encontraron entrevistas para la cédula <strong>${cedula}</strong>
+              </p>
+            </div>
+          </div>
+        </div>`;
+      
+      // Agregamos el mensaje al contenido existente (no reemplazamos)
+      container.innerHTML += mensajeNoEntrevistas;
+      return;
+    }
+    
+    let html = `
+      <div class="divide-y divide-gray-200 max-h-[50vh] overflow-y-auto px-1 py-2 rounded-md shadow-inner bg-gray-50">`;
+    
+    entrevistas.forEach(entrevista => {
+      const coincidencia = compararCedulas(entrevista.cedula, cedula);
+      let rowClass, badgeClass, badgeText;
+      
+      let cursorStyle, onclickAttr;
+      
+      if (coincidencia === 'exacta') {
+        rowClass = 'bg-green-50 border border-green-200 shadow-sm hover:shadow-md';
+        badgeClass = 'bg-green-100 text-green-800';
+        badgeText = '<i class="fas fa-check-circle mr-1"></i>Coincidencia exacta';
+        cursorStyle = 'cursor-pointer';
+        onclickAttr = `onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')"`;
+      } else if (coincidencia === 'parcial') {
+        rowClass = 'bg-blue-50 border border-blue-200 shadow-sm hover:shadow-md'; 
+        badgeClass = 'bg-blue-100 text-blue-800';
+        badgeText = '<i class="fas fa-check mr-1"></i>Coincidencia parcial';
+        cursorStyle = 'cursor-pointer';
+        onclickAttr = `onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')"`;
+      } else {
+        rowClass = 'bg-gray-50 opacity-70'; // Gris claro para mostrar que está deshabilitado
+        badgeClass = 'bg-red-100 text-red-800';
+        badgeText = '<i class="fas fa-times-circle mr-1"></i>Sin coincidencia';
+        cursorStyle = 'cursor-not-allowed';
+        onclickAttr = `onclick="mostrarMensajeCoincidencia('${entrevista.cedula}', '${cedula}')"`;
+      }
+      
+      html += `
+        <div class="p-4 hover:bg-gray-100 rounded-md ${cursorStyle} transition-all duration-300 ${rowClass} mb-2" 
+             ${onclickAttr}>
+          <div class="flex justify-between items-start">
+            <div>
+              <h6 class="font-medium text-gray-900 mb-1">${entrevista.nombre_completo}</h6>
+              <p class="text-gray-800 font-mono mb-1">
+                <strong class="text-gray-600">Cédula:</strong> ${entrevista.cedula}
+                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+                  ${badgeText}
+                </span>
+              </p>
+              <p class="text-gray-600 text-sm">
+                <strong>Email:</strong> ${entrevista.email || 'No disponible'} | 
+                <strong>Teléfono:</strong> ${entrevista.telefono || 'No disponible'}
+              </p>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${entrevista.tipo_producto || 'Sin producto'}</span>
+              <small class="text-gray-500 mt-2">${entrevista.fecha_entrevista || 'Fecha no disponible'}</small>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+  
+  // Función para mostrar detalles sobre las coincidencias
+  function mostrarInfoCoincidencias() {
+    Swal.fire({
+      title: 'Criterios de Coincidencia de Cédulas',
+      html: `
+        <div class="text-left">
+          <h5 class="font-weight-bold mb-3">Coincidencia Exacta:</h5>
+          <ul class="pl-4">
+            <li>Cédulas idénticas después de normalizar (eliminar guiones y espacios)</li>
+            <li>Mismos caracteres alfanuméricos en el mismo orden</li>
+          </ul>
+          
+          <h5 class="font-weight-bold mb-3 mt-4">Coincidencia Parcial:</h5>
+          <ul class="pl-4">
+            <li>Coinciden los primeros 3-4 dígitos <strong>o</strong> los últimos 4-8 dígitos</li>
+            <li>Cédulas que difieren en máximo 2 caracteres (errores tipográficos)</li>
+            <li>Más del 70% de caracteres coinciden en las mismas posiciones</li>
+            <li>Misma letra para extranjeros con algunos dígitos coincidentes</li>
+          </ul>
+          
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-lightbulb mr-2"></i>
+            <strong>Ejemplos de coincidencia parcial:</strong>
+            <ul class="mb-0 mt-1">
+              <li>"8-123-456" y "8123456" (mismos dígitos, formato diferente)</li>
+              <li>"1-E-234-567" y "E234567" (letra de extranjero igual)</li>
+              <li>"9-876-5432" y "9-876-5431" (error tipográfico en un dígito)</li>
+              <li>"10-123-456" y "123-456" (últimos 6 dígitos iguales)</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Entendido'
+    });
+  }
+
+  function seleccionarEntrevista(id, nombre, cedula) {
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    // Función para comparar coincidencia entre cédulas
+    function compararCedulas(cedula1, cedula2) {
+      if (!cedula1 || !cedula2 || cedula1 === 'No disponible' || cedula2 === 'No disponible') return 'ninguna';
+      
+      // 1. Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
+      
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
+      
+      // 2. Extraer números y letras por separado
+      const numerosYLetras1 = normalizada1.match(/[0-9A-Z]/g) || [];
+      const numerosYLetras2 = normalizada2.match(/[0-9A-Z]/g) || [];
+      
+      // Verificar si las versiones sin caracteres especiales coinciden
+      if (numerosYLetras1.join('') === numerosYLetras2.join('')) return 'exacta';
+      
+      // 3. Extraer solo números para comparación numérica
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      // Si ambas tienen números
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // 4. Comparar primeros dígitos (entre 3-4 dígitos iniciales)
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        
+        // 5. Comparar últimos dígitos (6-8 dígitos finales)
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        // Si coinciden los primeros o últimos dígitos significativos
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+        
+        // 6. Calcular distancia de Levenshtein para detectar errores de tipografía
+        // Solo si las longitudes son similares (diferencia máxima de 2 caracteres)
+        if (Math.abs(numeros1.length - numeros2.length) <= 2) {
+          const distancia = levenshteinDistance(numeros1, numeros2);
+          // Si la distancia es pequeña en relación al tamaño de la cédula (máximo 2 caracteres diferentes)
+          if (distancia <= 2) {
+            return 'parcial';
+          }
+        }
+        
+        // 7. Verificar si al menos la mitad de los caracteres coinciden (para cédulas de longitud similar)
+        if (Math.abs(normalizada1.length - normalizada2.length) <= 3) {
+          let coincidencias = 0;
+          const minLength = Math.min(normalizada1.length, normalizada2.length);
+          
+          // Contar caracteres coincidentes en las mismas posiciones
+          for (let i = 0; i < minLength; i++) {
+            if (normalizada1[i] === normalizada2[i]) {
+              coincidencias++;
+            }
+          }
+          
+          // Si coinciden más del 70% de los caracteres
+          if (coincidencias >= 0.7 * minLength) {
+            return 'parcial';
+          }
+        }
+      }
+      
+      // 8. Comparar letras (importante para extranjeros)
+      const letras1 = normalizada1.replace(/[^A-Z]/g, '');
+      const letras2 = normalizada2.replace(/[^A-Z]/g, '');
+      
+      // Si ambas tienen la misma letra de extranjero y algunos dígitos coinciden
+      if (letras1 && letras2 && letras1 === letras2) {
+        // Verificar si al menos algunos dígitos coinciden
+        if (numeros1 && numeros2 && 
+            (numeros1.includes(numeros2.slice(-4)) || numeros2.includes(numeros1.slice(-4)))) {
+          return 'parcial';
+        }
+      }
+      
+      return 'ninguna';
+    }
+    
+    // Función para calcular distancia de Levenshtein (para comparación fuzzy)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      
+      const matrix = [];
+      
+      // Inicializar matriz
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      
+      // Rellenar matriz
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const costo = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,      // eliminación
+            matrix[i][j - 1] + 1,      // inserción
+            matrix[i - 1][j - 1] + costo  // sustitución
+          );
+        }
+      }
+      
+      return matrix[b.length][a.length];
+    }
+    
+    // Verificar el tipo de coincidencia entre cédulas
+    const coincidencia = compararCedulas(cedula, clienteCedula);
+    
+    // Solo permitir seleccionar si hay coincidencia exacta o parcial
+    if (coincidencia === 'ninguna') {
+      Swal.fire({
+        title: 'No se puede asociar',
+        html: `<p>La cédula de esta entrevista <strong>(${cedula})</strong> no coincide con la cédula del cliente de la solicitud <strong>(${clienteCedula})</strong>.</p>
+              <p class="mt-2">Por motivos de seguridad, solo puede asociar entrevistas con coincidencia exacta o parcial de cédula.</p>`,
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+    
+    
+    entrevistaSeleccionadaId = id;
+    
+    // Animar el scroll hacia la sección de entrevista seleccionada
+    const entrevistaSeleccionadaEl = document.getElementById('entrevistaSeleccionada');
+    
+    // Mostrar entrevista seleccionada con animación
+    document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
+    document.getElementById('cedulaEntrevistaSeleccionada').textContent = cedula;
+    
+    // Aplicar animación
+    entrevistaSeleccionadaEl.style.opacity = '0';
+    entrevistaSeleccionadaEl.style.transform = 'translateY(20px)';
+    entrevistaSeleccionadaEl.style.display = 'block';
+    
+    // Efecto de aparición
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.style.opacity = '1';
+      entrevistaSeleccionadaEl.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Scroll suave hasta la sección
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
+    
+    // Habilitar botón de confirmación
+    document.getElementById('btnConfirmarAsociacion').disabled = false;
+    
+    // Resaltar selección con animación
+    document.querySelectorAll('.p-4[onclick]').forEach(item => {
+      item.classList.remove('ring-2', 'ring-green-500', 'bg-green-100');
+    });
+    
+    const selectedItem = event.target.closest('.p-4');
+    if (selectedItem) {
+      selectedItem.classList.add('ring-2', 'ring-green-500', 'bg-green-100');
+    }
+  }
+
+  function mostrarMensajeCoincidencia(cedulaEntrevista, cedulaSolicitud) {
+    // Muestra un mensaje de error cuando intentan seleccionar una entrevista sin coincidencia
+    Swal.fire({
+      title: 'No se puede asociar',
+      html: `<p>La cédula de esta entrevista <strong>(${cedulaEntrevista})</strong> no coincide con la cédula del cliente de la solicitud <strong>(${cedulaSolicitud})</strong>.</p>
+             <p class="mt-2">Por motivos de seguridad, solo puede asociar entrevistas con coincidencia exacta o parcial de cédula.</p>`,
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+  }
+
+  function confirmarAsociacion() {
+    if (!entrevistaSeleccionadaId) return;
+    
+    const solicitudId = {{ solicitud.id }};
+    
+    // Mostrar loading en el botón
+    const btn = document.getElementById('btnConfirmarAsociacion');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
+    btn.disabled = true;
+    
+    // Realizar asociación AJAX
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        entrevista_id: entrevistaSeleccionadaId,
+        accion: 'asociar'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalAsociarEntrevista')).hide();
+        
+        // Mostrar mensaje de éxito
+        mostrarMensaje('Entrevista asociada correctamente', 'success');
+        
+        // Recargar la página para mostrar la entrevista asociada
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+        
+      } else {
+        mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarMensaje('Error al asociar entrevista', 'error');
+    })
+    .finally(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+  }
+
+  function desasociarEntrevista() {
+    const solicitudId = {{ solicitud.id }};
+    
+    if (!confirm('¿Está seguro de que desea desasociar la entrevista de esta solicitud?')) {
+      return;
+    }
+    
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        accion: 'desasociar'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarMensaje('Entrevista desasociada correctamente', 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else {
+        mostrarMensaje(data.error || 'Error al desasociar entrevista', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarMensaje('Error al desasociar entrevista', 'error');
+    });
+  }
+
+  function verDetallesEntrevista(entrevistaId) {
+    // Abrir modal o página con detalles de la entrevista
+    window.open(`/workflow/entrevista/${entrevistaId}/`, '_blank');
+  }
+
+  // Función para devolver solicitud a bandeja grupal
+  async function devolverABandejaGrupal() {
+    const solicitudId = {{ solicitud.id }};
+    
+    console.log('Devolviendo solicitud a bandeja grupal:', solicitudId);
+    
+    // Confirmar acción con el usuario
+    if (!confirm('¿Estás seguro de que deseas devolver esta solicitud a la bandeja grupal?\n\nOtros usuarios podrán tomarla y continuar con el proceso.')) {
+      return;
+    }
+    
+    try {
+      // Deshabilitar botón mientras se procesa
+      const btn = document.getElementById('btn-devolver-bandeja');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Devolviendo...';
+      
+      const response = await fetch(`/workflow/api/devolver-bandeja-grupal/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId
+        })
+      });
+      
+      console.log('Respuesta devolver bandeja:', response.status);
+      const data = await response.json();
+      console.log('Data devolver bandeja:', data);
+      
+      if (data.success) {
+        mostrarMensaje('Solicitud devuelta a bandeja grupal exitosamente', 'success');
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        if (modal) {
+          modal.hide();
+        }
+        
+        // Mostrar mensaje informativo
+        mostrarMensaje('Redirigiendo a la bandeja grupal...', 'info');
+        
+        // Redirigir a la bandeja grupal después de un breve delay
+        setTimeout(() => {
+          // Redirigir a la vista de bandeja grupal o dashboard
+          window.location.href = data.redirect_url || '/workflow/bandeja-grupal/';
+        }, 2000);
+        
+      } else {
+        mostrarMensaje(data.message || 'Error al devolver solicitud a bandeja grupal', 'error');
+        
+        // Rehabilitar botón
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+      
+    } catch (error) {
+      console.error('Error devolviendo a bandeja grupal:', error);
+      mostrarMensaje('Error de conexión al devolver solicitud', 'error');
+      
+      // Rehabilitar botón en caso de error
+      const btn = document.getElementById('btn-devolver-bandeja');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-share me-1"></i>Devolver a Bandeja Grupal';
+    }
+  }
+
+  // =======================================================
+  // FUNCIONALIDAD PARA ENVIAR ENTREVISTA A APPX
+  // =======================================================
+
+  // Función para enviar entrevista a APPX
+  function enviarAAAPX(entrevistaId, nombreCliente) {
+    // Confirmar antes de enviar
+    if (confirm(`¿Está seguro que desea enviar la entrevista de ${nombreCliente} al sistema APPX Core?\n\nEsta acción enviará todos los datos de la entrevista al sistema central.`)) {
+      
+      // Deshabilitar el botón mientras se procesa
+      const boton = event.target.closest('button');
+      const textoOriginal = boton.innerHTML;
+      boton.disabled = true;
+      boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+      
+      // Obtener el token CSRF
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                       getCookie('csrftoken');
+      
+      // Hacer la petición AJAX
+      fetch(`/workflow/api/entrevistas/${entrevistaId}/enviar-appx/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Éxito
+          alert(`✅ ÉXITO: ${data.message}\n\nTimestamp: ${data.timestamp}`);
+          
+          // Opcional: Marcar visualmente la entrevista como enviada
+          boton.innerHTML = '<i class="fa-solid fa-check"></i> ENVIADO';
+          boton.classList.remove('btn-outline-warning');
+          boton.classList.add('btn-success');
+          boton.disabled = true;
+          
+        } else {
+          // Error
+          alert(`❌ ERROR: ${data.message}\n\nDetalles: ${data.error_details || 'No disponible'}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert(`❌ ERROR DE CONEXIÓN: No se pudo enviar la entrevista.\n\nError técnico: ${error.message}`);
+      })
+      .finally(() => {
+        // Solo restaurar el botón si no fue exitoso
+        if (!boton.classList.contains('btn-success')) {
+          boton.disabled = false;
+          boton.innerHTML = textoOriginal;
+        }
+      });
+    }
+  }
+
+  // Función auxiliar para obtener el CSRF token de las cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
 </script>
 
 <!-- Modal para Comentarios -->
@@ -1138,6 +3203,198 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Avanzar Etapa -->
+<div class="modal fade" id="modalAvanzarEtapa" tabindex="-1" aria-labelledby="modalAvanzarEtapaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAvanzarEtapaLabel">
+          <i class="fas fa-arrow-right me-2"></i>Avanzar Etapa
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <!-- Columna de Subestados -->
+          <div class="col-md-4">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-list-ol me-2"></i>Avanzar Subestado
+            </h6>
+            <p class="text-muted small">Avanza al siguiente subestado dentro de la etapa actual:</p>
+            
+            <div id="subestados-container">
+              <!-- Los subestados se cargan dinámicamente aquí -->
+            </div>
+          </div>
+          
+          <!-- Columna de Transiciones -->
+          <div class="col-md-4">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-exchange-alt me-2"></i>Cambiar Etapa
+            </h6>
+            <p class="text-muted small">Cambia a una etapa diferente según las transiciones configuradas:</p>
+            
+            <div id="transiciones-container">
+              <!-- Las transiciones se cargan dinámicamente aquí -->
+            </div>
+          </div>
+          
+          <!-- Columna de Bandeja Grupal -->
+          <div class="col-md-4">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-users me-2"></i>Bandeja Grupal
+            </h6>
+            <p class="text-muted small">Devuelve la solicitud a la bandeja grupal para que otros usuarios la puedan tomar:</p>
+            
+            <div id="bandeja-grupal-container">
+              <div class="card border-info">
+                <div class="card-body p-3">
+                  <div class="text-center">
+                    <div class="mb-3">
+                      <i class="fas fa-inbox fa-2x text-info mb-2"></i>
+                      <h6 class="mb-1">Devolver a Bandeja Grupal</h6>
+                      <small class="text-muted">
+                        Permite que otros usuarios continúen con el siguiente subestado
+                      </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="badge bg-info mb-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Subestado Actual: <span id="subestado-actual-nombre">{{ solicitud.subestado_actual.nombre|default:"Sin subestado" }}</span>
+                      </div>
+                      <br>
+                      <small class="text-muted d-block">
+                        Al devolver a bandeja grupal, la solicitud estará disponible para que cualquier usuario autorizado la tome y continúe con el flujo.
+                      </small>
+                    </div>
+                    
+                    <button class="btn btn-info btn-sm w-100" 
+                            onclick="devolverABandejaGrupal()"
+                            id="btn-devolver-bandeja">
+                      <i class="fas fa-share me-1"></i>Devolver a Bandeja Grupal
+                    </button>
+                    
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        Útil cuando has completado tu parte del proceso y quieres que otro usuario continúe.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Asociar Entrevista -->
+<div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-b p-4 sticky-top shadow-sm">
+        <div>
+          <h5 class="modal-title text-lg font-medium mb-2" id="modalAsociarEntrevistaLabel">
+            <i class="fas fa-user-edit me-2 text-blue-600"></i>Asociar Entrevista de Cliente
+          </h5>
+          <div class="flex flex-col bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-sm">
+            <div class="text-gray-800 mb-1">
+              <i class="fas fa-user me-1 text-blue-600"></i>
+              <strong>Cliente:</strong> <span id="clienteNombreModal" class="font-semibold ml-1">Cargando...</span>
+            </div>
+            <div class="text-gray-800">
+              <i class="fas fa-id-card me-1 text-blue-600"></i>
+              <strong>Cédula:</strong> <span id="clienteCedulaModal" class="font-mono font-semibold ml-1">Cargando...</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" style="max-height: 60vh; overflow-y: auto;">
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 sticky top-0 z-10">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fas fa-shield-alt text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+              <div class="d-flex align-items-center">
+                <p class="text-sm text-yellow-700 mb-0">
+                  <strong>Seguridad:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-yellow-700 p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-4 sticky top-20 z-10 pt-2 pb-2 bg-white">
+          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="form-control pl-10" id="buscarEntrevista" 
+                   placeholder="Refinar búsqueda por nombre o email (opcional)..."
+                   onkeyup="buscarEntrevistas()">
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            <i class="fas fa-filter me-1"></i>Ya filtrado por cédula: <span id="filteredByCedula" class="font-mono">Cargando...</span>
+          </div>
+        </div>
+        
+        <div id="resultadosEntrevistas" class="mt-4 transition-all duration-300">
+          <!-- Aquí se cargarán los resultados -->
+        </div>
+        
+        <div id="entrevistaSeleccionada" class="mt-4 p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm transition-all duration-300" style="display: none;">
+          <div class="flex items-center mb-2">
+            <div class="flex-shrink-0">
+              <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <div class="mb-1">
+                <strong class="text-gray-700">Entrevista seleccionada:</strong>
+                <span id="nombreEntrevistaSeleccionada" class="font-medium"></span>
+              </div>
+              <div class="text-sm">
+                <strong class="text-gray-700">Cédula:</strong>
+                <span id="cedulaEntrevistaSeleccionada" class="font-mono font-medium"></span>
+                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <i class="fas fa-shield-alt mr-1"></i>Verificada
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white p-3 rounded-md border border-gray-200 mt-2 text-sm">
+            <p class="text-gray-700 mb-0">
+              <i class="fas fa-info-circle text-blue-600 mr-1"></i>
+              Esta acción vinculará los datos de la entrevista seleccionada con la solicitud actual.
+              <br>Solo se asocian entrevistas del mismo cliente por motivos de seguridad.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-gray-50 p-3 sticky-bottom shadow-sm">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
+          <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
       </div>
     </div>
   </div>

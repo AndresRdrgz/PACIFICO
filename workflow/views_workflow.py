@@ -1075,6 +1075,14 @@ def detalle_solicitud(request, solicitud_id):
     if (solicitud.etapa_actual and 
         solicitud.etapa_actual.nombre == "Back Office" and 
         solicitud.etapa_actual.es_bandeja_grupal):
+        
+        # Asegurar que hay un subestado actual asignado
+        if not solicitud.subestado_actual and solicitud.etapa_actual.subestados.exists():
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            solicitud.subestado_actual = primer_subestado
+            solicitud.save()
+            print(f"DEBUG: Asignado primer subestado por defecto: {primer_subestado.nombre}")
+        
         return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
     
     return render(request, 'workflow/detalle_solicitud.html', context)
@@ -11606,3 +11614,824 @@ def api_obtener_configuracion_canal_digital(request):
             'success': False,
             'error': str(e)
         })
+
+
+# =====================================================
+# APIS PARA AVANZAR SUBESTADOS Y TRANSICIONES
+# =====================================================
+
+@login_required
+def api_subestados_disponibles(request, solicitud_id):
+    """API para obtener los subestados disponibles para una solicitud (secuencial)"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Debug logging
+        print(f"DEBUG: Obteniendo subestados para solicitud {solicitud_id}")
+        print(f"DEBUG: Solicitud subestado_actual: {solicitud.subestado_actual}")
+        print(f"DEBUG: Solicitud etapa_actual: {solicitud.etapa_actual}")
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            })
+        
+        # Obtener todos los subestados de la etapa actual
+        if not solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud no tiene etapa actual asignada.'
+            })
+        
+        # Asegurar que la solicitud tenga un subestado_actual asignado
+        if not solicitud.subestado_actual:
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            if primer_subestado:
+                solicitud.subestado_actual = primer_subestado
+                solicitud.save()
+                print(f"DEBUG: Auto-asignado primer subestado: {primer_subestado.nombre}")
+        
+        todos_subestados = solicitud.etapa_actual.subestados.all().order_by('orden')
+        subestado_actual_orden = solicitud.subestado_actual.orden if solicitud.subestado_actual else 0
+        
+        print(f"DEBUG: Subestado actual orden: {subestado_actual_orden}")
+        
+        subestados_data = []
+        for subestado in todos_subestados:
+            # Determinar disponibilidad basada en nueva lógica unidireccional
+            es_actual = subestado.id == (solicitud.subestado_actual.id if solicitud.subestado_actual else None)
+            
+            # NUEVA LÓGICA:
+            # - Subestados anteriores (completados): siempre disponibles para navegación
+            # - Subestado siguiente: disponible para avance
+            # - Subestados más lejanos: bloqueados
+            es_completado = subestado.orden < subestado_actual_orden  # Navegación libre hacia atrás
+            puede_avanzar = subestado.orden == subestado_actual_orden + 1  # Solo el siguiente para avanzar
+            esta_bloqueado = subestado.orden > subestado_actual_orden + 1  # Saltos hacia adelante bloqueados
+            
+            print(f"DEBUG: Subestado {subestado.nombre} - orden: {subestado.orden}, es_actual: {es_actual}, es_completado: {es_completado}, puede_avanzar: {puede_avanzar}, esta_bloqueado: {esta_bloqueado}")
+            
+            # Determinar el motivo de bloqueo
+            razon_bloqueado = None
+            if esta_bloqueado:
+                razon_bloqueado = f'No puede avanzar más allá del siguiente subestado (orden {subestado_actual_orden + 1})'
+            
+            subestados_data.append({
+                'id': subestado.id,
+                'nombre': subestado.nombre,
+                'orden': subestado.orden,
+                'es_actual': es_actual,
+                'es_completado': es_completado,
+                'puede_avanzar': puede_avanzar,
+                'esta_bloqueado': esta_bloqueado,
+                'razon_bloqueado': razon_bloqueado
+            })
+        
+        subestado_actual_id = solicitud.subestado_actual.id if solicitud.subestado_actual else None
+        
+        print(f"DEBUG: Subestados procesados: {len(subestados_data)}")
+        print(f"DEBUG: Subestado actual ID: {subestado_actual_id}")
+        
+        return JsonResponse({
+            'success': True,
+            'subestados': subestados_data,
+            'subestado_actual_id': subestado_actual_id,
+            'validacion_secuencial': True,
+            'navegacion_libre_atras': True,  # Nueva propiedad para indicar navegación libre hacia atrás
+            'bloqueo_solo_avance': True      # Nueva propiedad para indicar que solo se bloquea avance
+        })
+        
+    except Exception as e:
+        print(f"DEBUG ERROR: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener subestados: {str(e)}'
+        })
+
+
+@login_required
+def api_transiciones_disponibles(request, solicitud_id):
+    """API para obtener las transiciones disponibles para una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            })
+        
+        # Obtener todas las transiciones desde la etapa actual
+        if not solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud no tiene etapa actual asignada.'
+            })
+        
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        )
+        
+        transiciones_data = []
+        for transicion in transiciones:
+            transiciones_data.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': transicion.etapa_origen.nombre,
+                'etapa_destino': transicion.etapa_destino.nombre,
+                'requiere_permiso': transicion.requiere_permiso
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones': transiciones_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener transiciones: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avanzar_subestado(request):
+    """API para avanzar al siguiente subestado con validación secuencial"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        subestado_id = data.get('subestado_id')
+        
+        print(f"DEBUG: Avanzando subestado - solicitud_id: {solicitud_id}, subestado_id: {subestado_id}")
+        
+        if not solicitud_id or not subestado_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        subestado_destino = get_object_or_404(SubEstado, id=subestado_id)
+        
+        print(f"DEBUG: Solicitud encontrada: {solicitud.codigo}")
+        print(f"DEBUG: Subestado destino: {subestado_destino.nombre}")
+        print(f"DEBUG: Subestado actual antes del cambio: {solicitud.subestado_actual}")
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para modificar esta solicitud.'
+            })
+        
+        # Verificar que el subestado pertenece a la etapa actual
+        if subestado_destino.etapa != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'El subestado no pertenece a la etapa actual.'
+            })
+        
+        # Asegurar que la solicitud tenga un subestado_actual asignado
+        if not solicitud.subestado_actual:
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            if primer_subestado:
+                solicitud.subestado_actual = primer_subestado
+                solicitud.save()
+                print(f"DEBUG: Auto-asignado primer subestado: {primer_subestado.nombre}")
+        
+        # VALIDACIÓN SECUENCIAL UNIDIRECCIONAL: 
+        # - Permitir retroceder a cualquier subestado anterior (completado)
+        # - Solo permitir avanzar al siguiente subestado en orden
+        subestado_actual_orden = solicitud.subestado_actual.orden if solicitud.subestado_actual else 0
+        subestado_destino_orden = subestado_destino.orden
+        
+        print(f"DEBUG: Orden actual: {subestado_actual_orden}, Orden destino: {subestado_destino_orden}")
+        
+        # Permitir permanecer en el mismo subestado (refresh)
+        if subestado_destino_orden == subestado_actual_orden:
+            return JsonResponse({
+                'success': False,
+                'message': 'Ya te encuentras en este subestado.'
+            })
+        
+        # NAVEGACIÓN HACIA ATRÁS: Permitir retroceder a subestados anteriores (completados)
+        elif subestado_destino_orden < subestado_actual_orden:
+            print(f"DEBUG: Navegación hacia atrás permitida - de orden {subestado_actual_orden} a orden {subestado_destino_orden}")
+            # No hay validación adicional para retrocesos - siempre permitidos
+        
+        # NAVEGACIÓN HACIA ADELANTE: Solo permitir avanzar al siguiente subestado
+        elif subestado_destino_orden > subestado_actual_orden:
+            if subestado_destino_orden != subestado_actual_orden + 1:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'No puede avanzar más allá del siguiente subestado. Solo puede avanzar al subestado de orden {subestado_actual_orden + 1}.'
+                })
+            print(f"DEBUG: Avance secuencial permitido - de orden {subestado_actual_orden} a orden {subestado_destino_orden}")
+        
+        # Si llegamos aquí, la validación es correcta (avance secuencial o retroceso permitido)
+        action_type = "retrocediendo" if subestado_destino_orden < subestado_actual_orden else "avanzando"
+        print(f"DEBUG: Validación aprobada. {action_type} de orden {subestado_actual_orden} a {subestado_destino_orden}")
+        
+        # Actualizar el subestado actual
+        solicitud.subestado_actual = subestado_destino
+        solicitud.save()
+        
+        print(f"DEBUG: Subestado actualizado exitosamente a: {subestado_destino.nombre}")
+        
+        # Actualizar el historial si existe una entrada activa
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.subestado = subestado_destino
+            historial_actual.save()
+            print(f"DEBUG: Historial actualizado también")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Navegación exitosa a: {subestado_destino.nombre}',
+            'nuevo_subestado': {
+                'id': subestado_destino.id,
+                'nombre': subestado_destino.nombre,
+                'orden': subestado_destino.orden
+            },
+            'accion': action_type
+        })
+        
+    except Exception as e:
+        print(f"DEBUG ERROR en api_avanzar_subestado: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al avanzar subestado: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_ejecutar_transicion(request):
+    """API para ejecutar una transición a otra etapa"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        transicion_id = data.get('transicion_id')
+        
+        if not solicitud_id or not transicion_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para modificar esta solicitud.'
+            })
+        
+        # Verificar que la transición es válida
+        if transicion.etapa_origen != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La transición no es válida para la etapa actual.'
+            })
+        
+        # Verificar permisos de transición si es requerido
+        if transicion.requiere_permiso:
+            # Aquí podrías agregar lógica adicional de permisos
+            pass
+        
+        # Cerrar el historial actual
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.fecha_fin = timezone.now()
+            historial_actual.save()
+        
+        # Actualizar la solicitud
+        solicitud.etapa_actual = transicion.etapa_destino
+        # Resetear subestado al primer subestado de la nueva etapa
+        primer_subestado = transicion.etapa_destino.subestados.order_by('orden').first()
+        solicitud.subestado_actual = primer_subestado
+        solicitud.save()
+        
+        # Crear nuevo historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=transicion.etapa_destino,
+            subestado=primer_subestado,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Determinar URL de redirección
+        if transicion.etapa_destino.nombre == 'Back Office' and transicion.etapa_destino.es_bandeja_grupal:
+            redirect_url = f'/workflow/solicitudes/{solicitud.id}/backoffice/'
+        else:
+            redirect_url = f'/workflow/solicitudes/{solicitud.id}/detalle/'
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Transición ejecutada: {transicion.nombre}',
+            'redirect_url': redirect_url
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al ejecutar transición: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_devolver_bandeja_grupal(request):
+    """API para devolver una solicitud a la bandeja grupal"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        
+        if not solicitud_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID de solicitud requerido.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos - solo el usuario asignado o con permisos especiales puede devolver
+        if not (solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo puedes devolver solicitudes que están asignadas a ti.'
+            })
+        
+        # Verificar que la solicitud está en una etapa que permite devolución a bandeja grupal
+        if not solicitud.etapa_actual or not solicitud.etapa_actual.es_bandeja_grupal:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta etapa no permite devolución a bandeja grupal.'
+            })
+        
+        # Verificar que la solicitud está actualmente asignada (no en bandeja grupal)
+        if not solicitud.asignada_a:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud ya está en bandeja grupal.'
+            })
+        
+        # Crear registro en el historial antes de cambiar la asignación
+        comentario_devolucion = f"Solicitud devuelta a bandeja grupal por {request.user.get_full_name() or request.user.username}"
+        
+        # Actualizar la solicitud - remover asignación para que vuelva a bandeja grupal
+        usuario_anterior = solicitud.asignada_a
+        solicitud.asignada_a = None  # Esto la devuelve a bandeja grupal
+        solicitud.save()
+        
+        # Crear comentario de sistema
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"📤 Solicitud devuelta a bandeja grupal. Ahora está disponible para que otros usuarios la tomen y continúen con el subestado: {solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado'}",
+            es_sistema=True,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual
+        )
+        
+        # Determinar URL de redirección
+        redirect_url = '/workflow/bandeja-grupal/'
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud devuelta a bandeja grupal exitosamente. Ahora otros usuarios pueden tomarla y continuar con el proceso.',
+            'redirect_url': redirect_url,
+            'data': {
+                'usuario_anterior': usuario_anterior.get_full_name() if usuario_anterior else None,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+                'fecha_devolucion': timezone.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al devolver solicitud a bandeja grupal: {str(e)}'
+        })
+
+
+# ==========================================
+# VISTAS PARA FORMULARIO GENERAL
+# ==========================================
+
+@login_required
+def buscar_entrevistas_api(request):
+    """
+    API para buscar entrevistas de clientes
+    """
+    try:
+        if request.method != 'GET':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Obtener parámetros de búsqueda
+        busqueda = request.GET.get('q', '').strip()
+        
+        # Construir query base
+        query = ClienteEntrevista.objects.all().order_by('-fecha_creacion')
+        
+        # Aplicar filtros si hay búsqueda
+        if busqueda:
+            query = query.filter(
+                Q(nombre__icontains=busqueda) | 
+                Q(apellido__icontains=busqueda) |
+                Q(cedulaCliente__icontains=busqueda) |
+                Q(celular__icontains=busqueda)
+            )
+        
+        # Limitar resultados
+        entrevistas = query[:50]
+        
+        # Preparar datos para respuesta
+        entrevistas_data = []
+        for entrevista in entrevistas:
+            entrevistas_data.append({
+                'id': entrevista.id,
+                'nombre': entrevista.nombre or '',
+                'apellido': entrevista.apellido or '',
+                'cedula': entrevista.cedulaCliente or '',
+                'celular': entrevista.celular or '',
+                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+                'producto_interesado': entrevista.producto_interesado or ''
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'entrevistas': entrevistas_data,
+            'total': len(entrevistas_data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en buscar_entrevistas_api: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+@login_required
+def asociar_formulario_general(request, solicitud_id):
+    """
+    Asocia una entrevista de cliente al campo formulario_general de una solicitud
+    """
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Verificar que la solicitud existe y el usuario tiene permisos
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Obtener datos del request
+        import json
+        data = json.loads(request.body)
+        entrevista_id = data.get('entrevista_id')
+        
+        if not entrevista_id:
+            return JsonResponse({'error': 'ID de entrevista requerido'}, status=400)
+        
+        # Verificar que la entrevista existe
+        entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
+        
+        # Asociar la entrevista a la solicitud
+        solicitud.formulario_general = entrevista
+        solicitud.save()
+        
+        # Registrar en historial si es necesario
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Preparar datos de respuesta
+        entrevista_data = {
+            'id': entrevista.id,
+            'nombre': entrevista.nombre or '',
+            'apellido': entrevista.apellido or '',
+            'cedula': entrevista.cedulaCliente or '',
+            'celular': entrevista.celular or '',
+            'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+            'producto_interesado': entrevista.producto_interesado or ''
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Entrevista asociada correctamente',
+            'entrevista': entrevista_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en asociar_formulario_general: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+@login_required 
+def obtener_formulario_general_asociado(request, solicitud_id):
+    """
+    Obtiene la entrevista asociada al formulario general de una solicitud
+    """
+    try:
+        if request.method != 'GET':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Verificar que la solicitud existe
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        if solicitud.formulario_general:
+            entrevista = solicitud.formulario_general
+            entrevista_data = {
+                'id': entrevista.id,
+                'nombre': entrevista.nombre or '',
+                'apellido': entrevista.apellido or '',
+                'cedula': entrevista.cedulaCliente or '',
+                'celular': entrevista.celular or '',
+                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+                'producto_interesado': entrevista.producto_interesado or ''
+            }
+            
+            return JsonResponse({
+                'success': True,
+                'entrevista': entrevista_data
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'entrevista': None
+            })
+        
+    except Exception as e:
+        print(f"❌ Error en obtener_formulario_general_asociado: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+# ==========================================
+# VISTAS PARA ASOCIACIÓN DE ENTREVISTAS
+# ==========================================
+
+@login_required
+def buscar_entrevistas(request):
+    """API para buscar entrevistas de clientes"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        cedula = request.GET.get('cedula', '').strip()
+        
+        try:
+            from .models import ClienteEntrevista
+            
+            # Base queryset
+            queryset = ClienteEntrevista.objects.all()
+            
+            # Si tenemos una cédula específica para filtrar
+            if cedula:
+                # Intentar dividir la cédula en sus componentes
+                cedula_parts = cedula.split('-')
+                
+                # Extraer solo números para búsqueda flexible
+                numeros_cedula = ''.join(filter(str.isdigit, cedula))
+                
+                if len(cedula_parts) == 4:  # Formato completo: provincia-letra-tomo-partida
+                    provincia, letra, tomo, partida = cedula_parts
+                    
+                    # Usando Q objects para hacer búsqueda OR para ser más flexibles
+                    from django.db.models import Q
+                    
+                    # Intentar diferentes combinaciones de búsqueda
+                    # 1. Búsqueda exacta por todos los componentes
+                    # 2. Búsqueda por tomo y partida (los más identificativos)
+                    # 3. Búsqueda por los últimos dígitos en cualquier campo de cédula
+                    queryset = queryset.filter(
+                        Q(provincia_cedula=provincia, tipo_letra=letra, tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula=tomo, partida_cedula=partida)
+                    )
+                elif len(cedula_parts) >= 2:  # Formato parcial
+                    # Si tenemos al menos tomo y partida, filtramos por ellos
+                    tomo = cedula_parts[-2]
+                    partida = cedula_parts[-1]
+                    queryset = queryset.filter(
+                        Q(tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula__endswith=tomo, partida_cedula=partida)
+                    )
+                        
+            # Aplicar filtro de búsqueda si hay un query
+            if query and len(query) >= 2:
+                queryset = queryset.filter(
+                    Q(primer_nombre__icontains=query) |
+                    Q(primer_apellido__icontains=query) |
+                    Q(email__icontains=query)
+                )
+            elif not cedula:  # Si no hay cédula ni query, retornamos vacío
+                return JsonResponse({
+                    'success': True,
+                    'entrevistas': []
+                })
+                
+            # Limitar resultados y ordenar
+            entrevistas = queryset.order_by('-fecha_entrevista')[:20]
+            
+            # Serializar resultados
+            resultados = []
+            for entrevista in entrevistas:
+                # Construir cédula completa
+                cedula_completa = ""
+                if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                    cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+                else:
+                    cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
+                
+                resultados.append({
+                    'id': entrevista.id,
+                    'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                    'nombre': entrevista.primer_nombre or '',
+                    'apellido': entrevista.primer_apellido or '',
+                    'cedula': cedula_completa,
+                    'celular': entrevista.telefono or 'Sin celular',
+                    'email': entrevista.email or 'Sin email',
+                    'telefono': entrevista.telefono or 'Sin teléfono',
+                    'fecha_entrevista': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
+                    'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
+                    'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
+                    'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
+                    'salario': float(entrevista.salario) if entrevista.salario else 0,
+                    'empresa': entrevista.trabajo_lugar or 'Sin empresa',
+                    'completada': entrevista.completada_por_admin or False
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'entrevistas': resultados
+            })
+            
+        except Exception as e:
+            print(f"❌ Error en buscar_entrevistas: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Error interno del servidor'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    }, status=405)
+
+
+@login_required
+def asociar_entrevista(request):
+    """API para asociar/desasociar una entrevista con una solicitud"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            solicitud_id = data.get('solicitud_id')
+            entrevista_id = data.get('entrevista_id')
+            accion = data.get('accion')  # 'asociar' o 'desasociar'
+            
+            if not solicitud_id or not accion:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Datos requeridos faltantes'
+                }, status=400)
+            
+            # Obtener la solicitud
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            
+            # Verificar permisos (el usuario debe tener acceso a la solicitud)
+            if not (solicitud.creada_por == request.user or 
+                    solicitud.asignada_a == request.user or 
+                    request.user.is_superuser or 
+                    request.user.is_staff):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tienes permisos para modificar esta solicitud'
+                }, status=403)
+            
+            if accion == 'asociar':
+                if not entrevista_id:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'ID de entrevista requerido para asociar'
+                    }, status=400)
+                
+                # Obtener la entrevista
+                from .models import ClienteEntrevista
+                entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
+                
+                # Verificar que la entrevista no esté ya asociada a otra solicitud
+                solicitud_existente = Solicitud.objects.filter(
+                    entrevista_cliente=entrevista
+                ).exclude(id=solicitud_id).first()
+                
+                if solicitud_existente:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Esta entrevista ya está asociada a la solicitud {solicitud_existente.codigo}',
+                        'solicitud_existente': {
+                            'codigo': solicitud_existente.codigo,
+                            'id': solicitud_existente.id
+                        }
+                    }, status=400)
+                
+                # Asociar la entrevista
+                solicitud.entrevista_cliente = entrevista
+                solicitud.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente',
+                    'entrevista': {
+                        'id': entrevista.id,
+                        'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                        'cedula': f"{entrevista.provincia_cedula or ''}-{entrevista.tipo_letra or ''}-{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}",
+                        'celular': entrevista.telefono or 'Sin celular',
+                        'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else ''
+                    }
+                })
+                
+            elif accion == 'desasociar':
+                # Desasociar la entrevista
+                entrevista_anterior = solicitud.entrevista_cliente
+                solicitud.entrevista_cliente = None
+                solicitud.save()
+                
+                nombre_entrevista = 'la entrevista'
+                if entrevista_anterior:
+                    nombre_entrevista = f"{entrevista_anterior.primer_nombre or ''} {entrevista_anterior.primer_apellido or ''}".strip()
+                    if not nombre_entrevista:
+                        nombre_entrevista = 'la entrevista'
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': f'Entrevista de {nombre_entrevista} desasociada exitosamente'
+                })
+            
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Acción no válida'
+                }, status=400)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'JSON inválido'
+            }, status=400)
+        except Exception as e:
+            print(f"❌ Error en asociar_entrevista: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Error interno del servidor'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    }, status=405)

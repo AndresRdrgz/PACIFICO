@@ -4,15 +4,23 @@ from . import api
 from . import views_workflow
 from . import dashboard_views
 from . import views_calificacion
+from . import views_formulario
+from . import api_appx_conexion
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
-    path('entrevista/', views.entrevista_cliente_view, name='entrevista_cliente'),
-    path('gracias/', views.gracias, name='formulario_gracias'),
-    path('entrevistas/', views.lista_entrevistas, name='lista_entrevistas'),
-    path('descargar-entrevistas-excel/', views.descargar_entrevistas_excel, name='descargar_entrevistas_excel'),
-    path('entrevistas/descargar/<int:entrevista_id>/', views.descargar_entrevista_excel, name='descargar_entrevista_excel'),
+    path('entrevista/', views_formulario.entrevista_cliente_view, name='entrevista_cliente'),
+    path('entrevistas/admin/<int:entrevista_id>/', views_formulario.entrevista_admin_view, name='entrevista_admin'),
+    path('gracias/', views_formulario.gracias, name='formulario_gracias'),
+    path('entrevistas/', views_formulario.lista_entrevistas, name='lista_entrevistas'),
+    path('descargar-entrevistas-excel/', views_formulario.descargar_entrevistas_excel, name='descargar_entrevistas_excel'),
+    path('entrevistas/descargar/<int:entrevista_id>/', views_formulario.descargar_entrevista_excel, name='descargar_entrevista_excel'),
+    path('entrevistas/pdf/<int:entrevista_id>/', views_formulario.descargar_entrevista_pdf, name='descargar_entrevista_pdf'),
     path('entrevistas/json/', api.entrevistas_json, name='entrevistas_json'),
+    
+    # APPX Core Integration APIs
+    path('api/entrevistas/<int:entrevista_id>/enviar-appx/', api_appx_conexion.enviar_entrevista_a_appx, name='enviar_entrevista_appx'),
+    path('api/appx/verificar-conexion/', api_appx_conexion.verificar_conexion_appx, name='verificar_conexion_appx'),
     
     # Workflow URLs
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
@@ -20,6 +28,7 @@ urlpatterns = [
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
+    path('solicitudes/<int:solicitud_id>/backoffice/', views_workflow.detalle_solicitud, name='detalle_solicitud_backoffice'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
@@ -66,6 +75,13 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/comentarios/crear/', views_workflow.api_crear_comentario, name='api_crear_comentario'),
     path('api/comentarios/<int:comentario_id>/editar/', views_workflow.api_editar_comentario, name='api_editar_comentario'),
     path('api/comentarios/<int:comentario_id>/eliminar/', views_workflow.api_eliminar_comentario, name='api_eliminar_comentario'),
+    
+    # Subestados and Transiciones API URLs
+    path('api/subestados-disponibles/<int:solicitud_id>/', views_workflow.api_subestados_disponibles, name='api_subestados_disponibles'),
+    path('api/transiciones-disponibles/<int:solicitud_id>/', views_workflow.api_transiciones_disponibles, name='api_transiciones_disponibles'),
+    path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
+    path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
+    path('api/devolver-bandeja-grupal/', views_workflow.api_devolver_bandeja_grupal, name='api_devolver_bandeja_grupal'),
     
     # PDF Download API URLs
     path('api/solicitudes/<int:solicitud_id>/download-merged-pdf/', views_workflow.api_download_merged_pdf, name='api_download_merged_pdf'),
@@ -116,6 +132,10 @@ urlpatterns = [
     path('api/documento/comentario/editar/', views_calificacion.editar_comentario, name='editar_comentario'),
     path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
     path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
+    
+    # URLs para asociación de entrevistas
+    path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),
+    path('asociar-entrevista/', views_workflow.asociar_entrevista, name='asociar_entrevista'),
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),

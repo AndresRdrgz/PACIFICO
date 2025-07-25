@@ -69,6 +69,13 @@ class ClienteEntrevistaAdmin(admin.ModelAdmin):
     )
     list_filter = ('tipo_producto', 'oficial', 'fecha_entrevista', 'sexo', 'estado_civil', 'jubilado')
     list_per_page = 25
+    
+    # Para facilitar la búsqueda en el autocomplete de Solicitud
+    def get_search_results(self, request, queryset, search_term):
+        queryset, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term,
+        )
+        return queryset, may_have_duplicates
 
 
 @admin.register(ReferenciaPersonal)
@@ -136,9 +143,36 @@ class PermisoEtapaAdmin(admin.ModelAdmin):
 @admin.register(Solicitud)
 class SolicitudAdmin(admin.ModelAdmin):
     form = SolicitudAdminForm
-    list_display = ('id', 'codigo', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'fecha_creacion', 'fecha_ultima_actualizacion')
-    search_fields = ('codigo', 'pipeline__nombre')
-    list_filter = ('pipeline', 'etapa_actual', 'subestado_actual')
+    list_display = ('id', 'codigo', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'entrevista_cliente', 'fecha_creacion', 'fecha_ultima_actualizacion')
+    search_fields = ('codigo', 'pipeline__nombre', 'entrevista_cliente__primer_nombre', 'entrevista_cliente__primer_apellido', 'entrevista_cliente__email')
+    list_filter = ('pipeline', 'etapa_actual', 'subestado_actual', 'entrevista_cliente__tipo_producto')
+    autocomplete_fields = ('entrevista_cliente',)
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('codigo', 'pipeline', 'etapa_actual', 'subestado_actual')
+        }),
+        ('Asignación', {
+            'fields': ('creada_por', 'asignada_a', 'propietario')
+        }),
+        ('Datos del Cliente', {
+            'fields': ('cliente', 'cotizacion', 'entrevista_cliente')
+        }),
+        ('Información Adicional', {
+            'fields': ('motivo_consulta', 'como_se_entero', 'prioridad', 'etiquetas_oficial', 'origen')
+        }),
+        ('Canal Digital', {
+            'fields': ('cliente_nombre', 'cliente_cedula', 'cliente_telefono', 'cliente_email', 'producto_solicitado', 'monto_solicitado'),
+            'classes': ('collapse',)
+        }),
+        ('APC Makito', {
+            'fields': ('descargar_apc_makito', 'apc_no_cedula', 'apc_tipo_documento', 'apc_status', 'apc_fecha_solicitud', 'apc_fecha_inicio', 'apc_fecha_completado', 'apc_observaciones', 'apc_archivo'),
+            'classes': ('collapse',)
+        }),
+        ('Observaciones', {
+            'fields': ('observaciones',)
+        }),
+    )
 
 
 @admin.register(HistorialSolicitud)

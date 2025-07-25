@@ -1,0 +1,878 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modo Administrador - Completar Entrevista</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- FontAwesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <!-- CSS personalizado -->
+  <link href="{% static 'formulario/css/formulario.css' %}" rel="stylesheet" />
+
+  <style>
+    :root {
+      --azul-corporativo: #1e40af;
+      --azul-claro: #eff6ff;
+      --azul-oscuro: #1e3a8a;
+      --gris-texto: #4a4a4a;
+      --gris-fondo: #f9f9f9;
+      --gris-borde: #ddd;
+      --verde-completado: #28a745;
+    }
+
+    body.form-bg {
+      background: linear-gradient(135deg, var(--azul-corporativo) 0%, #3b82f6 100%);
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--gris-texto);
+    }
+
+    .form-container {
+      background: #ffffff;
+      max-width: 950px;
+      width: 100%;
+      padding: 2rem 3rem;
+      border-radius: 22px;
+      border: 2px solid var(--azul-corporativo);
+      box-shadow: 0 8px 32px rgba(30, 64, 175, 0.15), 0 1.5px 8px rgba(0,0,0,0.06);
+      margin-bottom: 2rem;
+      position: relative;
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+
+    .form-container:hover {
+      box-shadow: 0 16px 40px rgba(30, 64, 175, 0.25), 0 2px 12px rgba(0,0,0,0.10);
+      border-color: var(--azul-oscuro);
+    }
+
+    .form-container::before {
+      content: "";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 8px;
+      border-radius: 22px 22px 0 0;
+      background: linear-gradient(90deg, var(--azul-corporativo) 0%, #3b82f6 100%);
+    }
+
+    /* Banner de Modo Administrador */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--azul-corporativo), var(--azul-oscuro));
+      color: white;
+      padding: 1rem 2rem;
+      margin: -2rem -3rem 2rem -3rem;
+      border-radius: 20px 20px 0 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+    }
+
+    .admin-banner i {
+      margin-right: 0.5rem;
+      font-size: 1.4rem;
+    }
+
+    .form-header .logo {
+      max-width: 160px;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-header h2 {
+      color: var(--azul-corporativo);
+      font-weight: 700;
+      font-size: 2.2rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.3rem;
+    }
+
+    .subtitulo {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--azul-oscuro);
+      margin-bottom: 0.5rem;
+    }
+
+    .cliente-info {
+      background: var(--azul-claro);
+      border: 2px solid var(--azul-corporativo);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .cliente-info h4 {
+      color: var(--azul-corporativo);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    .seccion {
+      border-top: 2px solid var(--azul-corporativo);
+      padding-top: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .seccion h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--azul-corporativo);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .seccion h2 .section-icon {
+      color: var(--azul-corporativo);
+      font-size: 1.5rem;
+    }
+
+    /* Campos completados por el cliente */
+    .campo-cliente {
+      background-color: #e8f5e9 !important;
+      border-left: 4px solid var(--verde-completado) !important;
+      position: relative;
+    }
+
+    .campo-cliente::after {
+      content: "✓ Cliente";
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: var(--verde-completado);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    /* Campos vacíos para completar */
+    .campo-vacio {
+      background-color: #fff3cd !important;
+      border-left: 4px solid #ffc107 !important;
+      position: relative;
+    }
+
+    .campo-vacio::after {
+      content: "⚠ Completar";
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: #ffc107;
+      color: #212529;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .form-control,
+    .form-select {
+      border-radius: 8px;
+      border: 1.5px solid var(--gris-borde);
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--azul-corporativo);
+      box-shadow: 0 0 8px rgba(30, 64, 175, 0.3);
+      outline: none;
+    }
+
+    .btn-admin-save {
+      background: var(--azul-corporativo);
+      border: none;
+      color: white;
+      font-weight: 700;
+      font-size: 1.3rem;
+      padding: 1rem 4rem;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(30, 64, 175, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .btn-admin-save:hover {
+      background: var(--azul-oscuro);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(30, 58, 138, 0.6);
+      color: white;
+    }
+
+    .btn-admin-save i {
+      margin-right: 0.5rem;
+      font-size: 1.4rem;
+    }
+
+    .alert-danger {
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-color: var(--azul-corporativo);
+    }
+
+    .alert-success {
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #155724;
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      padding: 2rem;
+    }
+
+    .control-calidad {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border: 1px solid var(--naranja-admin);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .control-calidad i {
+      color: var(--naranja-admin);
+      margin-right: 0.5rem;
+    }
+
+    @media (max-width: 576px) {
+      .form-container {
+        padding: 1rem 1.5rem;
+      }
+
+      .admin-banner {
+        margin: -1rem -1.5rem 1.5rem -1.5rem;
+        font-size: 1rem;
+      }
+
+      .form-header h2 {
+        font-size: 1.8rem;
+      }
+
+      .seccion h2 {
+        font-size: 1.2rem;
+      }
+
+      .btn-admin-save {
+        font-size: 1.1rem;
+        padding: 0.8rem 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="form-bg">
+  <div class="form-container">
+    <!-- Banner de Modo Administrador -->
+    <div class="admin-banner">
+      <i class="fas fa-user-shield"></i>
+      MODO ADMINISTRADOR - CONTROL DE CALIDAD
+    </div>
+
+    <div class="form-header text-center"> 
+      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="logo mb-2" style="filter: hue-rotate(25deg) saturate(1.2);" /> 
+      <h2 class="fw-bold mb-0">Completar Entrevista de Cliente</h2>
+      <p class="mb-0 subtitulo">Revise, corrija y complete los datos faltantes</p>
+    </div>
+
+    <!-- Información del Cliente -->
+    <div class="cliente-info">
+      <h4>Cliente: {{ entrevista.primer_nombre|default:"[Sin nombre]" }} {{ entrevista.primer_apellido|default:"[Sin apellido]" }}</h4>
+      <p class="mb-0">
+        <strong>Email:</strong> {{ entrevista.email|default:"No especificado" }} | 
+        <strong>Teléfono:</strong> {{ entrevista.telefono|default:"No especificado" }} |
+        <strong>Fecha Entrevista:</strong> {% if entrevista.fecha_entrevista %}{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}{% else %}No especificada{% endif %}
+      </p>
+    </div>
+
+    <!-- Información de Control de Calidad -->
+    <div class="control-calidad">
+      <i class="fas fa-info-circle"></i>
+      <strong>Instrucciones:</strong> Los campos con fondo verde fueron completados por el cliente. 
+      Los campos con fondo amarillo necesitan ser completados o corregidos. 
+      En modo administrador, las validaciones son flexibles para facilitar el control de calidad.
+    </div>
+
+    <div class="form-body">
+      <form method="post" enctype="multipart/form-data" novalidate id="entrevista-admin-form">
+        {% csrf_token %}
+
+        {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
+          <div class="alert alert-danger">
+            <strong>Hay algunos campos que requieren atención:</strong>
+            <ul class="mb-0">
+              {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+            <small class="mt-2 d-block"><em>Nota: En modo administrador, puede guardar con algunos campos vacíos si es necesario.</em></small>
+          </div>
+        {% endif %}
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-check"></i></span> 1. Datos Generales</h2>
+          <div class="row g-3">
+            <!-- Nombres completos -->
+            <div class="col-md-3">
+              <label class="form-label">Primer Nombre <span class="text-danger">*</span></label>
+              {{ form.primer_nombre }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Segundo Nombre</label>
+              {{ form.segundo_nombre }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Primer Apellido <span class="text-danger">*</span></label>
+              {{ form.primer_apellido }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Segundo Apellido</label>
+              {{ form.segundo_apellido }}
+            </div>
+            
+            <!-- Apellido de casada -->
+            <div class="col-md-4">
+              <label class="form-label">Apellido de Casada</label>
+              {{ form.apellido_casada }}
+            </div>
+            
+            <!-- Cédula -->
+            <div class="col-md-2">
+              <label class="form-label">Provincia <span class="text-danger">*</span></label>
+              {{ form.provincia_cedula }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Letra <span class="text-danger">*</span></label>
+              {{ form.tipo_letra }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Tomo <span class="text-danger">*</span></label>
+              {{ form.tomo_cedula }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Partida <span class="text-danger">*</span></label>
+              {{ form.partida_cedula }}
+            </div>
+            
+            <!-- Información personal -->
+            <div class="col-md-4">
+              <label class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
+              {{ form.fecha_nacimiento }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Sexo <span class="text-danger">*</span></label>
+              {{ form.sexo }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Lugar de Nacimiento</label>
+              {{ form.lugar_nacimiento }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Nacionalidad</label>
+              {{ form.nacionalidad }}
+            </div>
+            
+            <!-- Estado civil y dependientes -->
+            <div class="col-md-3">
+              <label class="form-label">Estado Civil</label>
+              {{ form.estado_civil }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">No. Dependientes</label>
+              {{ form.no_dependientes }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Nivel Académico</label>
+              {{ form.nivel_academico }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Título Obtenido</label>
+              {{ form.titulo }}
+            </div>
+            
+            <!-- Datos físicos -->
+            <div class="col-md-3">
+              <label class="form-label">Peso (lb)</label>
+              {{ form.peso }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Estatura (m)</label>
+              {{ form.estatura }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">¿Es Jubilado?</label>
+              {{ form.jubilado }}
+            </div>
+            
+            <!-- Contacto -->
+            <div class="col-md-4">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+              {{ form.telefono }}
+            </div>
+            
+            <!-- Producto y oficial -->
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Producto <span class="text-danger">*</span></label>
+              {{ form.tipo_producto }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Oficial <span class="text-danger">*</span></label>
+              {{ form.oficial }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Empresa</label>
+              {{ form.empresa }}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-map-marker-alt"></i></span> 2. Dirección Residencial</h2>
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label">Dirección Completa</label>
+              {{ form.direccion_completa }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Barrio</label>
+              {{ form.barrio }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Calle</label>
+              {{ form.calle }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Casa/Apto</label>
+              {{ form.casa_apto }}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-users"></i></span> 3. Datos del Cónyuge o Deudor Solidario</h2>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Nombre Completo del Cónyuge</label>
+              {{ form.conyuge_nombre }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cédula del Cónyuge</label>
+              {{ form.conyuge_cedula }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Teléfono del Cónyuge</label>
+              {{ form.conyuge_telefono }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Lugar de Trabajo del Cónyuge</label>
+              {{ form.conyuge_lugar_trabajo }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cargo del Cónyuge</label>
+              {{ form.conyuge_cargo }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Ingreso del Cónyuge</label>
+              {{ form.conyuge_ingreso }}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-briefcase"></i></span> 4. Información Laboral y Otros Ingresos</h2>
+          <div class="row g-3">
+            <!-- Información laboral principal -->
+            <div class="col-md-6">
+              <label class="form-label">Dirección del Trabajo</label>
+              {{ form.trabajo_direccion }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Lugar de Trabajo</label>
+              {{ form.trabajo_lugar }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Cargo en el Trabajo</label>
+              {{ form.trabajo_cargo }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Trabajo</label>
+              {{ form.tipo_trabajo }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Frecuencia de Pago</label>
+              {{ form.frecuencia_pago }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Salario <span class="text-danger">*</span></label>
+              {{ form.salario }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Teléfono del Trabajo</label>
+              {{ form.tel_trabajo }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Extensión</label>
+              {{ form.tel_ext }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Origen de Fondos</label>
+              {{ form.origen_fondos }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Fecha Inicio en el Trabajo</label>
+              {{ form.fecha_inicio_trabajo }}
+            </div>
+            
+            <!-- Otros ingresos del modelo principal -->
+            <div class="col-12"><hr><h5>Otros Ingresos Adicionales</h5></div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Ingreso 1</label>
+              {{ form.tipo_ingreso_1 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Descripción Ingreso 1</label>
+              {{ form.descripcion_ingreso_1 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Monto Ingreso 1</label>
+              {{ form.monto_ingreso_1 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Ingreso 2</label>
+              {{ form.tipo_ingreso_2 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Descripción Ingreso 2</label>
+              {{ form.descripcion_ingreso_2 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Monto Ingreso 2</label>
+              {{ form.monto_ingreso_2 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Ingreso 3</label>
+              {{ form.tipo_ingreso_3 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Descripción Ingreso 3</label>
+              {{ form.descripcion_ingreso_3 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Monto Ingreso 3</label>
+              {{ form.monto_ingreso_3 }}
+            </div>
+          </div>
+          
+          <!-- Otros ingresos del formset -->
+          <div class="row g-3 mt-3">
+            <div class="col-12"><hr><h5>Otros Ingresos (Formset)</h5></div>
+            {{ otros_ingresos_formset.management_form }}
+            {% for form_ingreso in otros_ingresos_formset %}
+              <div class="otros-ingresos-item border p-3 mb-3">
+                <h6>Ingreso #{{ forloop.counter }}</h6>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label class="form-label">Tipo</label>
+                    {{ form_ingreso.tipo }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Descripción</label>
+                    {{ form_ingreso.descripcion }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Monto</label>
+                    {{ form_ingreso.monto }}
+                  </div>
+                </div>
+                {% for hidden in form_ingreso.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-shield"></i></span> 5. PEP - Persona Expuesta Políticamente</h2>
+          <div class="row g-3">
+            <!-- PEP Personal -->
+            <div class="col-md-12">
+              <h5>¿Es Usted una Persona Expuesta Políticamente (PEP)?</h5>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">¿Es PEP?</label>
+              {{ form.es_pep }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Ingreso como PEP</label>
+              {{ form.pep_ingreso }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fecha Inicio PEP</label>
+              {{ form.pep_inicio }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fecha Fin PEP</label>
+              {{ form.pep_fin }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cargo Actual PEP</label>
+              {{ form.pep_cargo_actual }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cargo Anterior PEP</label>
+              {{ form.pep_cargo_anterior }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fecha Fin Cargo Anterior</label>
+              {{ form.pep_fin_anterior }}
+            </div>
+            
+            <!-- PEP Familiar -->
+            <div class="col-md-12"><hr><h5>¿Algún familiar es PEP?</h5></div>
+            <div class="col-md-3">
+              <label class="form-label">¿Familiar es PEP?</label>
+              {{ form.es_familiar_pep }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Parentesco</label>
+              {{ form.parentesco_pep }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Nombre del PEP Familiar</label>
+              {{ form.nombre_pep }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Cargo del PEP Familiar</label>
+              {{ form.cargo_pep }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Institución del PEP Familiar</label>
+              {{ form.institucion_pep }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Fecha Inicio PEP Familiar</label>
+              {{ form.pep_fam_inicio }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Fecha Fin PEP Familiar</label>
+              {{ form.pep_fam_fin }}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-friends"></i></span> 6. Referencias Personales</h2>
+          <div class="row g-3">
+            {{ referencias_formset.management_form }}
+            {% for form_ref in referencias_formset %}
+              <div class="referencia-personal-item border p-3 mb-3">
+                <h6>Referencia Personal #{{ forloop.counter }}</h6>
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    <label class="form-label">Nombre</label>
+                    {{ form_ref.nombre }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Teléfono</label>
+                    {{ form_ref.telefono }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Relación</label>
+                    {{ form_ref.relacion }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Tiempo de Conocerse</label>
+                    {{ form_ref.tiempo_conocerse }}
+                  </div>
+                </div>
+                {% for hidden in form_ref.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-briefcase"></i></span> 7. Referencias Comerciales</h2>
+          <div class="row g-3">
+            {{ referencias_comerciales_formset.management_form }}
+            {% for form_ref in referencias_comerciales_formset %}
+              <div class="referencia-comercial-item border p-3 mb-3">
+                <h6>Referencia Comercial #{{ forloop.counter }}</h6>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label class="form-label">Nombre de la Empresa</label>
+                    {{ form_ref.nombre_empresa }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Teléfono</label>
+                    {{ form_ref.telefono }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Contacto</label>
+                    {{ form_ref.contacto }}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Tipo de Relación</label>
+                    {{ form_ref.tipo_relacion }}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Tiempo de Relación</label>
+                    {{ form_ref.tiempo_relacion }}
+                  </div>
+                </div>
+                {% for hidden in form_ref.hidden_fields %}{{ hidden }}{% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-university"></i></span> 8. Datos Bancarios</h2>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Banco</label>
+              {{ form.banco }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tipo de Cuenta</label>
+              {{ form.tipo_cuenta }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Número de Cuenta</label>
+              {{ form.numero_cuenta }}
+            </div>
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-check-circle"></i></span> 9. Autorizaciones</h2>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check">
+                {{ form.autoriza_apc }}
+                <label class="form-check-label" for="{{ form.autoriza_apc.id_for_label }}">
+                  Autoriza consulta APC
+                </label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                {{ form.acepta_datos }}
+                <label class="form-check-label" for="{{ form.acepta_datos.id_for_label }}">
+                  Acepta tratamiento de datos
+                </label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                {{ form.es_beneficiario_final }}
+                <label class="form-check-label" for="{{ form.es_beneficiario_final.id_for_label }}">
+                  Es beneficiario final
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-admin-save">
+            <i class="fas fa-save"></i>
+            Guardar y Finalizar
+          </button>
+        </div>
+      </form>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-success mt-4 text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- JavaScript para marcar campos -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Agregar clases Bootstrap a todos los campos
+      const formControls = document.querySelectorAll('input, select, textarea');
+      formControls.forEach(function(field) {
+        if (field.type === 'checkbox') {
+          field.classList.add('form-check-input');
+        } else {
+          field.classList.add('form-control');
+        }
+      });
+      
+      // Marcar campos completados vs vacíos
+      const allFields = document.querySelectorAll('input, select, textarea');
+      
+      allFields.forEach(function(field) {
+        const container = field.closest('.col-md-3, .col-md-4, .col-md-6, .col-md-12, .col-12, .form-check');
+        if (container) {
+          // Función para verificar si el campo tiene valor
+          function hasValue() {
+            if (field.type === 'checkbox') {
+              return field.checked;
+            }
+            return field.value && field.value.trim() !== '' && field.value !== '-----';
+          }
+          
+          // Marcar inicialmente
+          if (hasValue()) {
+            container.classList.add('campo-cliente');
+            container.classList.remove('campo-vacio');
+          } else {
+            container.classList.add('campo-vacio');
+            container.classList.remove('campo-cliente');
+          }
+          
+          // Actualizar marcas cuando se cambian los valores
+          field.addEventListener('change', function() {
+            if (hasValue()) {
+              container.classList.add('campo-cliente');
+              container.classList.remove('campo-vacio');
+            } else {
+              container.classList.add('campo-vacio');
+              container.classList.remove('campo-cliente');
+            }
+          });
+          
+          field.addEventListener('input', function() {
+            if (hasValue()) {
+              container.classList.add('campo-cliente');
+              container.classList.remove('campo-vacio');
+            } else {
+              container.classList.add('campo-vacio');
+              container.classList.remove('campo-cliente');
+            }
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
