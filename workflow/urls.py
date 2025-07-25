@@ -133,6 +133,10 @@ urlpatterns = [
     path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
     path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
     
+    # URLs para asociación de entrevistas
+    path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),
+    path('asociar-entrevista/', views_workflow.asociar_entrevista, name='asociar_entrevista'),
+    
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
 ]

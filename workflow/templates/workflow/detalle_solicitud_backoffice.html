@@ -515,6 +515,42 @@
                 {% endif %}
                 {% endwith %}
 
+                <!-- Asociación de Entrevista de Cliente -->
+                {% if solicitud.entrevista_cliente %}
+                <div class="alert alert-success">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Entrevista Asociada</strong><br />
+                      <small>Cliente: {{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }} - {{ solicitud.entrevista_cliente.email }}</small>
+                    </div>
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-success btn-sm" onclick="verDetallesEntrevista({{ solicitud.entrevista_cliente.id }})">
+                        <i class="fas fa-eye me-1"></i> Ver Detalles
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm ms-1" onclick="desasociarEntrevista()">
+                        <i class="fas fa-unlink me-1"></i> Desasociar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user-edit text-info me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Asociar Entrevista de Cliente</strong><br />
+                      <small>Vincule los datos generales del cliente con esta solicitud.</small>
+                    </div>
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-info btn-sm" onclick="mostrarModalEntrevista()">
+                        <i class="fas fa-link me-1"></i> Asociar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
                 {% else %}
                 <div class="alert alert-info">
                   <i class="fas fa-info-circle me-2"></i>
@@ -2000,6 +2036,188 @@
     }
   }
 
+  // =======================================================
+  // FUNCIONALIDAD PARA ASOCIAR ENTREVISTA DE CLIENTE
+  // =======================================================
+
+  let entrevistaSeleccionadaId = null;
+
+  function mostrarModalEntrevista() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
+    modal.show();
+    // Limpiar búsqueda anterior
+    document.getElementById('buscarEntrevista').value = '';
+    document.getElementById('resultadosEntrevistas').innerHTML = '';
+    document.getElementById('entrevistaSeleccionada').style.display = 'none';
+    document.getElementById('btnConfirmarAsociacion').disabled = true;
+    entrevistaSeleccionadaId = null;
+  }
+
+  function buscarEntrevistas() {
+    const termino = document.getElementById('buscarEntrevista').value.trim();
+    
+    if (termino.length < 3) {
+      document.getElementById('resultadosEntrevistas').innerHTML = 
+        '<div class="text-muted">Escriba al menos 3 caracteres para buscar...</div>';
+      return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('resultadosEntrevistas').innerHTML = 
+      '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
+    
+    // Realizar búsqueda AJAX
+    fetch(`/workflow/buscar-entrevistas/?q=${encodeURIComponent(termino)}`)
+      .then(response => response.json())
+      .then(data => {
+        mostrarResultadosEntrevistas(data.entrevistas);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+          '<div class="alert alert-danger">Error al buscar entrevistas</div>';
+      });
+  }
+
+  function mostrarResultadosEntrevistas(entrevistas) {
+    const container = document.getElementById('resultadosEntrevistas');
+    
+    if (entrevistas.length === 0) {
+      container.innerHTML = '<div class="text-muted">No se encontraron entrevistas</div>';
+      return;
+    }
+    
+    let html = '<div class="list-group">';
+    entrevistas.forEach(entrevista => {
+      html += `
+        <div class="list-group-item list-group-item-action" onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}')">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">${entrevista.nombre_completo}</h6>
+            <small>${entrevista.fecha_entrevista}</small>
+          </div>
+          <p class="mb-1">
+            <strong>Cédula:</strong> ${entrevista.cedula} | 
+            <strong>Email:</strong> ${entrevista.email} | 
+            <strong>Teléfono:</strong> ${entrevista.telefono}
+          </p>
+          <small><strong>Producto:</strong> ${entrevista.tipo_producto}</small>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+
+  function seleccionarEntrevista(id, nombre) {
+    entrevistaSeleccionadaId = id;
+    
+    // Mostrar entrevista seleccionada
+    document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
+    document.getElementById('entrevistaSeleccionada').style.display = 'block';
+    
+    // Habilitar botón de confirmación
+    document.getElementById('btnConfirmarAsociacion').disabled = false;
+    
+    // Resaltar selección
+    document.querySelectorAll('.list-group-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    event.target.closest('.list-group-item').classList.add('active');
+  }
+
+  function confirmarAsociacion() {
+    if (!entrevistaSeleccionadaId) return;
+    
+    const solicitudId = {{ solicitud.id }};
+    
+    // Mostrar loading en el botón
+    const btn = document.getElementById('btnConfirmarAsociacion');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
+    btn.disabled = true;
+    
+    // Realizar asociación AJAX
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        entrevista_id: entrevistaSeleccionadaId,
+        accion: 'asociar'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalAsociarEntrevista')).hide();
+        
+        // Mostrar mensaje de éxito
+        mostrarMensaje('Entrevista asociada correctamente', 'success');
+        
+        // Recargar la página para mostrar la entrevista asociada
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+        
+      } else {
+        mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarMensaje('Error al asociar entrevista', 'error');
+    })
+    .finally(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+  }
+
+  function desasociarEntrevista() {
+    const solicitudId = {{ solicitud.id }};
+    
+    if (!confirm('¿Está seguro de que desea desasociar la entrevista de esta solicitud?')) {
+      return;
+    }
+    
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        accion: 'desasociar'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarMensaje('Entrevista desasociada correctamente', 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else {
+        mostrarMensaje(data.error || 'Error al desasociar entrevista', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarMensaje('Error al desasociar entrevista', 'error');
+    });
+  }
+
+  function verDetallesEntrevista(entrevistaId) {
+    // Abrir modal o página con detalles de la entrevista
+    window.open(`/workflow/entrevista/${entrevistaId}/`, '_blank');
+  }
+
   // Función para devolver solicitud a bandeja grupal
   async function devolverABandejaGrupal() {
     const solicitudId = {{ solicitud.id }};
@@ -2225,6 +2443,48 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Asociar Entrevista -->
+<div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAsociarEntrevistaLabel">
+          <i class="fas fa-user-edit me-2"></i>Asociar Entrevista de Cliente
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <label for="buscarEntrevista" class="form-label">Buscar Entrevista</label>
+            <input type="text" class="form-control" id="buscarEntrevista" 
+                   placeholder="Escriba nombre, apellido, cédula o email del cliente..."
+                   onkeyup="buscarEntrevistas()">
+          </div>
+        </div>
+        
+        <div id="resultadosEntrevistas" class="mt-3">
+          <!-- Aquí se cargarán los resultados -->
+        </div>
+        
+        <div id="entrevistaSeleccionada" class="mt-3" style="display: none;">
+          <div class="alert alert-success">
+            <i class="fas fa-check me-2"></i>
+            <strong>Entrevista seleccionada:</strong>
+            <span id="nombreEntrevistaSeleccionada"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
+          <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
       </div>
     </div>
   </div>

@@ -8809,3 +8809,346 @@ def api_devolver_bandeja_grupal(request):
             'success': False,
             'message': f'Error al devolver solicitud a bandeja grupal: {str(e)}'
         })
+
+
+# ==========================================
+# VISTAS PARA FORMULARIO GENERAL
+# ==========================================
+
+@login_required
+def buscar_entrevistas_api(request):
+    """
+    API para buscar entrevistas de clientes
+    """
+    try:
+        if request.method != 'GET':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Obtener parámetros de búsqueda
+        busqueda = request.GET.get('q', '').strip()
+        
+        # Construir query base
+        query = ClienteEntrevista.objects.all().order_by('-fecha_creacion')
+        
+        # Aplicar filtros si hay búsqueda
+        if busqueda:
+            query = query.filter(
+                Q(nombre__icontains=busqueda) | 
+                Q(apellido__icontains=busqueda) |
+                Q(cedulaCliente__icontains=busqueda) |
+                Q(celular__icontains=busqueda)
+            )
+        
+        # Limitar resultados
+        entrevistas = query[:50]
+        
+        # Preparar datos para respuesta
+        entrevistas_data = []
+        for entrevista in entrevistas:
+            entrevistas_data.append({
+                'id': entrevista.id,
+                'nombre': entrevista.nombre or '',
+                'apellido': entrevista.apellido or '',
+                'cedula': entrevista.cedulaCliente or '',
+                'celular': entrevista.celular or '',
+                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+                'producto_interesado': entrevista.producto_interesado or ''
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'entrevistas': entrevistas_data,
+            'total': len(entrevistas_data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en buscar_entrevistas_api: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+@login_required
+def asociar_formulario_general(request, solicitud_id):
+    """
+    Asocia una entrevista de cliente al campo formulario_general de una solicitud
+    """
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Verificar que la solicitud existe y el usuario tiene permisos
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Obtener datos del request
+        import json
+        data = json.loads(request.body)
+        entrevista_id = data.get('entrevista_id')
+        
+        if not entrevista_id:
+            return JsonResponse({'error': 'ID de entrevista requerido'}, status=400)
+        
+        # Verificar que la entrevista existe
+        entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
+        
+        # Asociar la entrevista a la solicitud
+        solicitud.formulario_general = entrevista
+        solicitud.save()
+        
+        # Registrar en historial si es necesario
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Preparar datos de respuesta
+        entrevista_data = {
+            'id': entrevista.id,
+            'nombre': entrevista.nombre or '',
+            'apellido': entrevista.apellido or '',
+            'cedula': entrevista.cedulaCliente or '',
+            'celular': entrevista.celular or '',
+            'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+            'producto_interesado': entrevista.producto_interesado or ''
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Entrevista asociada correctamente',
+            'entrevista': entrevista_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en asociar_formulario_general: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+@login_required 
+def obtener_formulario_general_asociado(request, solicitud_id):
+    """
+    Obtiene la entrevista asociada al formulario general de una solicitud
+    """
+    try:
+        if request.method != 'GET':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Verificar que la solicitud existe
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        if solicitud.formulario_general:
+            entrevista = solicitud.formulario_general
+            entrevista_data = {
+                'id': entrevista.id,
+                'nombre': entrevista.nombre or '',
+                'apellido': entrevista.apellido or '',
+                'cedula': entrevista.cedulaCliente or '',
+                'celular': entrevista.celular or '',
+                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
+                'producto_interesado': entrevista.producto_interesado or ''
+            }
+            
+            return JsonResponse({
+                'success': True,
+                'entrevista': entrevista_data
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'entrevista': None
+            })
+        
+    except Exception as e:
+        print(f"❌ Error en obtener_formulario_general_asociado: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+
+# ==========================================
+# VISTAS PARA ASOCIACIÓN DE ENTREVISTAS
+# ==========================================
+
+@login_required
+def buscar_entrevistas(request):
+    """API para buscar entrevistas de clientes"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        
+        if not query or len(query) < 2:
+            return JsonResponse({
+                'success': True,
+                'entrevistas': []
+            })
+        
+        try:
+            from .models import ClienteEntrevista
+            
+            # Buscar entrevistas por nombre, apellido o cédula
+            entrevistas = ClienteEntrevista.objects.filter(
+                Q(primer_nombre__icontains=query) |
+                Q(primer_apellido__icontains=query) |
+                Q(tomo_cedula__icontains=query) |
+                Q(partida_cedula__icontains=query)
+            ).order_by('-fecha_entrevista')[:20]
+            
+            # Serializar resultados
+            resultados = []
+            for entrevista in entrevistas:
+                # Construir cédula completa
+                cedula_completa = ""
+                if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                    cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+                else:
+                    cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
+                
+                resultados.append({
+                    'id': entrevista.id,
+                    'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                    'nombre': entrevista.primer_nombre or '',
+                    'apellido': entrevista.primer_apellido or '',
+                    'cedula': cedula_completa,
+                    'celular': entrevista.telefono or 'Sin celular',
+                    'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
+                    'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
+                    'salario': float(entrevista.salario) if entrevista.salario else 0,
+                    'empresa': entrevista.trabajo_lugar or 'Sin empresa'
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'entrevistas': resultados
+            })
+            
+        except Exception as e:
+            print(f"❌ Error en buscar_entrevistas: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Error interno del servidor'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    }, status=405)
+
+
+@login_required
+def asociar_entrevista(request):
+    """API para asociar/desasociar una entrevista con una solicitud"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            solicitud_id = data.get('solicitud_id')
+            entrevista_id = data.get('entrevista_id')
+            accion = data.get('accion')  # 'asociar' o 'desasociar'
+            
+            if not solicitud_id or not accion:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Datos requeridos faltantes'
+                }, status=400)
+            
+            # Obtener la solicitud
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            
+            # Verificar permisos (el usuario debe tener acceso a la solicitud)
+            if not (solicitud.creada_por == request.user or 
+                    solicitud.asignada_a == request.user or 
+                    request.user.is_superuser or 
+                    request.user.is_staff):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tienes permisos para modificar esta solicitud'
+                }, status=403)
+            
+            if accion == 'asociar':
+                if not entrevista_id:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'ID de entrevista requerido para asociar'
+                    }, status=400)
+                
+                # Obtener la entrevista
+                from .models import ClienteEntrevista
+                entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
+                
+                # Verificar que la entrevista no esté ya asociada a otra solicitud
+                solicitud_existente = Solicitud.objects.filter(
+                    entrevista_cliente=entrevista
+                ).exclude(id=solicitud_id).first()
+                
+                if solicitud_existente:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Esta entrevista ya está asociada a la solicitud {solicitud_existente.codigo}',
+                        'solicitud_existente': {
+                            'codigo': solicitud_existente.codigo,
+                            'id': solicitud_existente.id
+                        }
+                    }, status=400)
+                
+                # Asociar la entrevista
+                solicitud.entrevista_cliente = entrevista
+                solicitud.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente',
+                    'entrevista': {
+                        'id': entrevista.id,
+                        'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                        'cedula': f"{entrevista.provincia_cedula or ''}-{entrevista.tipo_letra or ''}-{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}",
+                        'celular': entrevista.telefono or 'Sin celular',
+                        'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else ''
+                    }
+                })
+                
+            elif accion == 'desasociar':
+                # Desasociar la entrevista
+                entrevista_anterior = solicitud.entrevista_cliente
+                solicitud.entrevista_cliente = None
+                solicitud.save()
+                
+                nombre_entrevista = 'la entrevista'
+                if entrevista_anterior:
+                    nombre_entrevista = f"{entrevista_anterior.primer_nombre or ''} {entrevista_anterior.primer_apellido or ''}".strip()
+                    if not nombre_entrevista:
+                        nombre_entrevista = 'la entrevista'
+                
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': f'Entrevista de {nombre_entrevista} desasociada exitosamente'
+                })
+            
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Acción no válida'
+                }, status=400)
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'JSON inválido'
+            }, status=400)
+        except Exception as e:
+            print(f"❌ Error en asociar_entrevista: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Error interno del servidor'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Método no permitido'
+    }, status=405)

@@ -157,6 +157,9 @@ class Solicitud(models.Model):
     monto_solicitado = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, help_text="Monto solicitado")
     propietario = models.ForeignKey(User, related_name='solicitudes_propias', on_delete=models.SET_NULL, null=True, blank=True, help_text="Usuario propietario de la solicitud")
     observaciones = models.TextField(blank=True, null=True, help_text="Observaciones adicionales")
+    
+    # Relación con entrevista de cliente
+    entrevista_cliente = models.ForeignKey('workflow.ClienteEntrevista', on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes', help_text="Entrevista de cliente asociada a esta solicitud")
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
