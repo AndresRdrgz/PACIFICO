@@ -5,7 +5,7 @@ from . import views_workflow
 from . import dashboard_views
 from . import views_calificacion
 from . import views_formulario
-from . import api_appx_conexion
+#from . import api_appx_conexion
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
@@ -19,8 +19,8 @@ urlpatterns = [
     path('entrevistas/json/', api.entrevistas_json, name='entrevistas_json'),
     
     # APPX Core Integration APIs
-    path('api/entrevistas/<int:entrevista_id>/enviar-appx/', api_appx_conexion.enviar_entrevista_a_appx, name='enviar_entrevista_appx'),
-    path('api/appx/verificar-conexion/', api_appx_conexion.verificar_conexion_appx, name='verificar_conexion_appx'),
+    #path('api/entrevistas/<int:entrevista_id>/enviar-appx/', api_appx_conexion.enviar_entrevista_a_appx, name='enviar_entrevista_appx'),
+    #path('api/appx/verificar-conexion/', api_appx_conexion.verificar_conexion_appx, name='verificar_conexion_appx'),
     
     # Workflow URLs
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
