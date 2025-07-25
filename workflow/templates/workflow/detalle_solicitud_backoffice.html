@@ -376,7 +376,7 @@
                 <div class="process-details">
                   {% for archivo_info in archivos %}
                   <div class="detail-card archivo-card-mejorada-backoffice"
-                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
+                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{% endif %}">
                     <!-- Header del archivo -->
                     <div class="archivo-header-backoffice">
                       <!-- IZQUIERDA: Información del documento -->
@@ -449,22 +449,25 @@
                         <div class="botones-calificacion-backoffice">
                           <!-- Bueno -->
                           <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Marcar como bueno">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Marcar como bueno"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-thumbs-up"></i>
                             <span>Bueno</span>
                           </button>
                           <!-- Malo -->
                           <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Marcar como malo">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Marcar como malo"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-thumbs-down"></i>
                             <span>Malo</span>
                           </button>
                           <!-- Comentarios -->
                           <button type="button" class="btn comentario-btn-backoffice"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}"
-                            title="Ver/Agregar comentarios">
+                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
+                            title="Ver/Agregar comentarios"
+                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-comment"></i>
                             <span>Comentar</span>
                             <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
@@ -1335,14 +1338,31 @@
 
     // Obtener todos los requisitos que tienen calificaciones
     const requisitos = document.querySelectorAll('[data-requisito-id]');
+    console.log(`Encontrados ${requisitos.length} requisitos con data-requisito-id`);
 
     requisitos.forEach(requisito => {
       const requisitoId = requisito.getAttribute('data-requisito-id');
-      if (requisitoId) {
+      console.log(`Procesando requisito ID: ${requisitoId}`);
+      
+      if (requisitoId && requisitoId !== 'null' && requisitoId !== 'undefined') {
+        // Validar que el ID sea un número válido
+        const numericId = parseInt(requisitoId);
+        if (isNaN(numericId) || numericId <= 0) {
+          console.warn(`ID de requisito inválido: ${requisitoId}`);
+          return;
+        }
+        
         // Obtener calificaciones para este requisito
         fetch(`/workflow/api/documento/${requisitoId}/calificaciones/`)
-          .then(response => response.json())
+          .then(response => {
+            console.log(`Respuesta para requisito ${requisitoId}: status ${response.status}`);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+          })
           .then(data => {
+            console.log(`Datos recibidos para requisito ${requisitoId}:`, data);
             if (data.success && data.data && data.data.length > 0) {
               // Tomar la calificación más reciente
               const ultimaCalificacion = data.data[0];
@@ -1352,11 +1372,17 @@
               actualizarEstadoCalificacion(requisitoId, ultimaCalificacion.estado, {
                 usuario: ultimaCalificacion.usuario_nombre || 'Usuario'
               });
+            } else {
+              console.log(`No hay calificaciones para requisito ${requisitoId}`);
             }
           })
           .catch(error => {
             console.error(`Error al cargar calificaciones para requisito ${requisitoId}:`, error);
+            // No mostrar mensaje de error al usuario para evitar spam de errores
+            // Solo loggear en consola para debugging
           });
+      } else {
+        console.warn(`RequisitoId inválido o vacío: ${requisitoId}`);
       }
     });
   }
@@ -1427,8 +1453,10 @@
         const requisitoId = btn.dataset.requisito;
         const estado = btn.dataset.estado;
 
-        if (requisitoId && estado) {
+        if (requisitoId && estado && !btn.disabled) {
           calificarDocumento(requisitoId, estado);
+        } else if (!requisitoId) {
+          mostrarMensaje('No se puede calificar: archivo no subido todavía', 'warning');
         }
       }
 
@@ -1437,11 +1465,12 @@
         const btn = e.target.closest('.comentario-btn-backoffice');
         const requisitoId = btn.dataset.requisito;
 
-        if (requisitoId) {
+        if (requisitoId && !btn.disabled) {
           mostrarModalComentarios(requisitoId);
+        } else if (!requisitoId) {
+          mostrarMensaje('No se pueden agregar comentarios: archivo no subido todavía', 'warning');
         }
       }
-
 
     });
 

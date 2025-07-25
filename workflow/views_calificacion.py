@@ -184,11 +184,16 @@ def obtener_comentarios_documento(request, requisito_solicitud_id):
 def obtener_calificaciones_documento(request, requisito_solicitud_id):
     """Vista AJAX para obtener todas las calificaciones de un documento"""
     try:
+        print(f"DEBUG: Solicitando calificaciones para requisito_solicitud_id: {requisito_solicitud_id}")
+        
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
+        print(f"DEBUG: RequisitoSolicitud encontrado: {requisito_solicitud}")
         
         calificaciones = CalificacionDocumentoBackoffice.objects.filter(
             requisito_solicitud=requisito_solicitud
         ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
+        
+        print(f"DEBUG: Calificaciones encontradas: {calificaciones.count()}")
         
         calificaciones_data = []
         for calificacion in calificaciones:
@@ -202,10 +207,16 @@ def obtener_calificaciones_documento(request, requisito_solicitud_id):
                 'puede_editar': calificacion.calificado_por == request.user
             })
         
+        print(f"DEBUG: Datos de respuesta preparados: {len(calificaciones_data)} items")
+        
         return JsonResponse({
             'success': True,
             'data': calificaciones_data
         })
         
     except Exception as e:
+        print(f"DEBUG ERROR: {str(e)}")
+        print(f"DEBUG ERROR TYPE: {type(e)}")
+        import traceback
+        print(f"DEBUG TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({'error': str(e)}, status=500)
