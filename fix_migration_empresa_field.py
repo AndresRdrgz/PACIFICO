@@ -14,8 +14,11 @@ import os
 import sys
 import django
 
-# Add the project directory to Python path
-sys.path.append('/www/wwwroot/PACIFICO')
+# Add the project directory to Python path (adjust for local vs production)
+project_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(project_dir)
+
+# Set up Django settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'financiera.settings')
 
 django.setup()
