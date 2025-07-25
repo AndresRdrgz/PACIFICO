@@ -879,8 +879,7 @@ class PrestamoPersonalForm(forms.ModelForm):
                 'placeholder': 'Monto 1',
                 'class': 'w-full bg-gray-100 text-slate-700 text-sm border border-slate-200 rounded-md px-3 py-2',
                 'step': '0.01',
-                'default': 0.00,
-                
+                'default': 0.00,   
             }),
              #CAMPOS TAPE
             'letraHipoteca2': forms.NumberInput(attrs={
