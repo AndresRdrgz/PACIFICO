@@ -213,12 +213,6 @@
             </div>
             <div class="col-lg-4 col-md-5 col-sm-12 text-md-end text-center mt-2 mt-md-0">
               <div class="d-flex align-items-center justify-content-md-end justify-content-center flex-wrap gap-2">
-                <!-- Botón Avanzar Etapa -->
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa">
-                  <i class="fas fa-arrow-right me-1"></i>
-                  Avanzar Etapa
-                </button>
-                
                 {% if solicitud.prioridad %}
                 <span class="badge bg-warning text-dark px-3 py-2">
                   <i class="fas fa-star"></i> {{ solicitud.prioridad }}
@@ -430,11 +424,19 @@
                       {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
                       <div class="seccion-ver-descargar-backoffice">
                         <div class="btn-group">
+                          {% if archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".docx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".doc" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".pdf" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".xls" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".xlsx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".ppt" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".pptx" %}
+                          <a href="https://docs.google.com/viewer?url={{ request.build_absolute_uri }}{{ archivo_info.archivo_actual.archivo.url }}&embedded=true" target="_blank"
+                            rel="noopener noreferrer" class="btn btn-outline-primary"
+                            title="Ver documento en Google Viewer">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                          {% else %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
                             rel="noopener noreferrer" class="btn btn-outline-primary"
                             title="Ver archivo en nueva pestaña">
                             <i class="fas fa-eye"></i> Ver
                           </a>
+                          {% endif %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
                             class="btn btn-outline-success" title="Descargar archivo">
                             <i class="fas fa-download"></i> Descargar
@@ -491,46 +493,53 @@
                   {% endfor %}
                 </div>
 
-                <!-- Resumen de archivos -->
-                {% with stats=archivos_stats|get_item:subestado.id %}
-                {% if stats %}
-                <div
-                  class="alert {% if stats.completos == stats.total %}alert-success{% else %}alert-warning{% endif %}">
-                  <div class="d-flex align-items-center">
-                    {% if stats.completos == stats.total %}
-                    <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
-                    <div>
-                      <strong>Documentación Completa</strong><br />
-                      <small>Todos los archivos requeridos han sido proporcionados.</small>
-                    </div>
-                    {% else %}
-                    <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.5rem;"></i>
-                    <div>
-                      <strong>Documentación Pendiente</strong><br />
-                      <small>Se han completado {{ stats.completos }} de {{ stats.total }} archivos requeridos.</small>
-                    </div>
-                    {% endif %}
-                  </div>
-                </div>
-                {% endif %}
-                {% endwith %}
-
                 <!-- Asociación de Entrevista de Cliente -->
                 {% if solicitud.entrevista_cliente %}
                 <div class="alert alert-success">
-                  <div class="d-flex align-items-center">
+                  <div class="d-flex align-items-center mb-2">
                     <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
                     <div>
                       <strong>Entrevista Asociada</strong><br />
                       <small>Cliente: {{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }} - {{ solicitud.entrevista_cliente.email }}</small>
                     </div>
                     <div class="ms-auto">
-                      <button type="button" class="btn btn-outline-success btn-sm" onclick="verDetallesEntrevista({{ solicitud.entrevista_cliente.id }})">
-                        <i class="fas fa-eye me-1"></i> Ver Detalles
-                      </button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm ms-1" onclick="desasociarEntrevista()">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="desasociarEntrevista()">
                         <i class="fas fa-unlink me-1"></i> Desasociar
                       </button>
+                    </div>
+                  </div>
+                  <!-- Botones de acciones para la entrevista -->
+                  <div class="border-top pt-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                      <a href="{% url 'descargar_entrevista_excel' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en Excel">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        <span>Excel</span>
+                      </a>
+                      <a href="{% url 'entrevista_admin' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         target="_blank" 
+                         title="Modo Administrador - Control de Calidad">
+                        <i class="fa-solid fa-user-gear me-1"></i>
+                        <span>Admin</span>
+                      </a>
+                      <button onclick="enviarAAAPX({{ solicitud.entrevista_cliente.id }}, '{{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }}')" 
+                              class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center" 
+                              style="min-width: 80px; height: 32px;"
+                              title="Enviar al Sistema Core APPX">
+                        <i class="fa-solid fa-paper-plane me-1"></i>
+                        <span>APPX</span>
+                      </button>
+                      <a href="{% url 'descargar_entrevista_pdf' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en PDF">
+                        <i class="fa-solid fa-file-pdf me-1"></i>
+                        <span>PDF</span>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -571,8 +580,9 @@
                   <button class="btn btn-primary me-2" onclick="refreshFiles({{ subestado.id }})">
                     <i class="fas fa-sync me-1"></i>Actualizar Estado
                   </button>
-                  <button class="btn btn-outline-secondary" onclick="generateReport({{ subestado.id }})">
-                    <i class="fas fa-download me-1"></i>Generar Reporte
+                  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa">
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Avanzar Etapa
                   </button>
                 </div>
               </div>
@@ -701,27 +711,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Acciones Disponibles -->
-      {% if transiciones_disponibles %}
-      <div class="card mt-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-route"></i> Acciones Disponibles
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex gap-2 flex-wrap justify-content-center justify-content-md-start">
-            {% for transicion in transiciones_disponibles %}
-            <button class="btn btn-outline-primary flex-fill flex-md-grow-0">
-              <i class="fas fa-arrow-right"></i>
-              {{ transicion.etapa_destino.nombre }}
-            </button>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
   </div>
 </div>
@@ -2286,6 +2275,82 @@
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-share me-1"></i>Devolver a Bandeja Grupal';
     }
+  }
+
+  // =======================================================
+  // FUNCIONALIDAD PARA ENVIAR ENTREVISTA A APPX
+  // =======================================================
+
+  // Función para enviar entrevista a APPX
+  function enviarAAAPX(entrevistaId, nombreCliente) {
+    // Confirmar antes de enviar
+    if (confirm(`¿Está seguro que desea enviar la entrevista de ${nombreCliente} al sistema APPX Core?\n\nEsta acción enviará todos los datos de la entrevista al sistema central.`)) {
+      
+      // Deshabilitar el botón mientras se procesa
+      const boton = event.target.closest('button');
+      const textoOriginal = boton.innerHTML;
+      boton.disabled = true;
+      boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+      
+      // Obtener el token CSRF
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                       getCookie('csrftoken');
+      
+      // Hacer la petición AJAX
+      fetch(`/workflow/api/entrevistas/${entrevistaId}/enviar-appx/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Éxito
+          alert(`✅ ÉXITO: ${data.message}\n\nTimestamp: ${data.timestamp}`);
+          
+          // Opcional: Marcar visualmente la entrevista como enviada
+          boton.innerHTML = '<i class="fa-solid fa-check"></i> ENVIADO';
+          boton.classList.remove('btn-outline-warning');
+          boton.classList.add('btn-success');
+          boton.disabled = true;
+          
+        } else {
+          // Error
+          alert(`❌ ERROR: ${data.message}\n\nDetalles: ${data.error_details || 'No disponible'}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert(`❌ ERROR DE CONEXIÓN: No se pudo enviar la entrevista.\n\nError técnico: ${error.message}`);
+      })
+      .finally(() => {
+        // Solo restaurar el botón si no fue exitoso
+        if (!boton.classList.contains('btn-success')) {
+          boton.disabled = false;
+          boton.innerHTML = textoOriginal;
+        }
+      });
+    }
+  }
+
+  // Función auxiliar para obtener el CSRF token de las cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
   }
 
 </script>
