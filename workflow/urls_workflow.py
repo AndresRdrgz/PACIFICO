@@ -5,6 +5,8 @@ from . import views_workflow
 from . import views
 from . import api
 from . import api_apc
+from . import api_upload
+from . import api_documentos
 from . import views_comite
 from . import apicomite
 from . import dashboard_views
@@ -81,8 +83,17 @@ urlpatterns += [
     path('api/comentarios/<int:comentario_id>/editar/', views_workflow.api_editar_comentario, name='api_editar_comentario'),
     path('api/comentarios/<int:comentario_id>/eliminar/', views_workflow.api_eliminar_comentario, name='api_eliminar_comentario'),
     
+    # Document Upload API URL
+    path('api/upload-documento/', api_upload.api_upload_documento, name='api_upload_documento'),
+    
+    # Document List API URL
+    path('api/solicitud/<int:solicitud_id>/documentos/', api_documentos.api_obtener_documentos_solicitud, name='api_obtener_documentos_solicitud'),
+    
     # Solicitud brief API
     path('api/solicitud_brief/<int:solicitud_id>/', views_workflow.api_solicitud_brief, name='api_solicitud_brief'),
+    
+    # APC Status Check API
+    path('api/solicitud/<int:solicitud_id>/apc-status/', views_workflow.api_check_apc_status, name='api_check_apc_status'),
     
     # Vistas de administración
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),

@@ -1660,7 +1660,2945 @@ def procesar_formularios_masivo(request):
                     propietario=None,
                     cliente=cliente,
                     origen='Canal Digital',
-                    observaciones=f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+                    observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})"
+                )
+                
+                # Crear historial inicial
+                HistorialSolicitud.objects.create(
+                    solicitud=solicitud,
+                    etapa_anterior=None,
+                    etapa_nueva=etapa,
+                    usuario=request.user,
+                    observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})",
+                    es_automatico=True
+                )
+                
+                # Marcar formulario como procesado
+                formulario.procesado = True
+                formulario.save()
+                
+                solicitudes_creadas.append({
+                    'formulario_id': formulario.id,
+                    'solicitud_codigo': solicitud.codigo,
+                    'solicitud_id': solicitud.id
+                })
+                
+            except Exception as e:
+                errores.append({
+                    'formulario_id': formulario.id,
+                    'nombre': formulario.get_nombre_completo(),
+                    'error': str(e)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes_creadas': len(solicitudes_creadas),
+            'errores': len(errores),
+            'detalle_solicitudes': solicitudes_creadas,
+            'detalle_errores': errores,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def formulario_web(request):
+    """Vista para el formulario web del canal digital - Crea solicitud automáticamente"""
+    
+    if request.method == 'POST':
+        from .forms import FormularioWebForm
+        form = FormularioWebForm(request.POST)
+        
+        if form.is_valid():
+            # Guardar el formulario
+            formulario = form.save(commit=False)
+            
+            # Agregar información adicional
+            if request.META.get('HTTP_X_FORWARDED_FOR'):
+                formulario.ip_address = request.META.get('HTTP_X_FORWARDED_FOR').split(',')[0]
+            else:
+                formulario.ip_address = request.META.get('REMOTE_ADDR')
+            
+            formulario.user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]  # Limitar tamaño
+            formulario.save()
+            
+            # CREAR SOLICITUD AUTOMÁTICAMENTE
+            try:
+                from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+                from pacifico.models import Cliente
+                from django.contrib.auth.models import User
+                
+                # Usar configuración del Canal Digital
+                pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+                etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+                
+                if not pipeline:
+                    # Fallback al primer pipeline disponible
+                    pipeline = Pipeline.objects.first()
+                
+                if pipeline:
+                    # Si no hay etapa configurada o no pertenece al pipeline, usar la primera
+                    if not etapa or etapa.pipeline != pipeline:
+                        etapa = pipeline.etapas.first()
+                    
+                    if etapa:
+                        # Buscar o crear cliente basado en la cédula
+                        cliente = None
+                        if formulario.cedulaCliente:
+                            try:
+                                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                            except:
+                                pass
+                        
+                        # Obtener usuario del sistema para crear la solicitud (primer superuser disponible)
+                        usuario_sistema = User.objects.filter(is_superuser=True).first()
+                        if not usuario_sistema:
+                            usuario_sistema = User.objects.first()  # Fallback
+                        
+                        # Crear la solicitud automáticamente
+                        import uuid
+                        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+                        
+                        solicitud = Solicitud()
+                        solicitud.codigo = codigo
+                        solicitud.pipeline = pipeline
+                        solicitud.etapa_actual = etapa
+                        # Asignar datos del formulario directamente a los campos del modelo
+                        solicitud.cliente_nombre = formulario.get_nombre_completo()
+                        solicitud.cliente_cedula = formulario.cedulaCliente
+                        solicitud.cliente_telefono = formulario.celular
+                        solicitud.cliente_email = formulario.correo_electronico
+                        
+                        # Convertir el producto antes de guardarlo
+                        producto_original = formulario.producto_interesado
+                        if producto_original == 'Préstamos personal':
+                            solicitud.producto_solicitado = 'Personal'
+                        elif producto_original == 'Préstamo de auto':
+                            solicitud.producto_solicitado = 'Auto'
+                        else:
+                            solicitud.producto_solicitado = producto_original
+                            
+                        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+                        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                        solicitud.propietario = None
+                        solicitud.creada_por = usuario_sistema
+                        solicitud.cliente = cliente
+                        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+                        solicitud.observaciones = f"Solicitud creada automáticamente desde Canal Digital - IP: {formulario.ip_address}"
+                        solicitud.save()
+                        
+                        # Crear historial inicial
+                        HistorialSolicitud.objects.create(
+                            solicitud=solicitud,
+                            etapa=etapa,
+                            usuario_responsable=usuario_sistema
+                        )
+                        
+                        # Marcar formulario como procesado
+                        formulario.procesado = True
+                        formulario.save()
+                        
+                        print(f"✅ Solicitud {solicitud.codigo} creada automáticamente desde Canal Digital")
+                        
+            except Exception as e:
+                # Si hay error creando la solicitud, continuar pero logear el error
+                print(f"❌ Error creando solicitud automática: {str(e)}")
+                # El formulario se guarda de todas formas
+            
+            # Redirigir a página de éxito
+            return redirect('https://fpacifico.com/prestamos/')
+        else:
+            # Si hay errores, mostrar el formulario con errores
+            context = {
+                'form': form,
+                'error_message': True,
+            }
+            return render(request, 'workflow/formulario_web.html', context)
+    else:
+        # GET request - mostrar formulario vacío
+        from .forms import FormularioWebForm
+        form = FormularioWebForm()
+        
+        context = {
+            'form': form,
+            'error_message': False,
+        }
+        return render(request, 'workflow/formulario_web.html', context)
+
+
+# ==========================================
+# VISTAS DE API PARA PIPELINES
+# ==========================================
+
+@login_required
+@superuser_permission_required('workflow.add_pipeline')
+def api_crear_pipeline(request):
+    """API para crear un nuevo pipeline"""
+    if request.method == 'POST':
+        try:
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            
+            if not nombre:
+                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            pipeline = Pipeline.objects.create(
+                nombre=nombre,
+                descripcion=descripcion
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'pipeline': {
+                    'id': pipeline.id,
+                    'nombre': pipeline.nombre,
+                    'descripcion': pipeline.descripcion
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_pipeline')
+def api_editar_pipeline(request, pipeline_id):
+    """API para editar un pipeline"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            
+            if not nombre:
+                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            pipeline.nombre = nombre
+            pipeline.descripcion = descripcion
+            pipeline.save()
+            
+            return JsonResponse({
+                'success': True,
+                'pipeline': {
+                    'id': pipeline.id,
+                    'nombre': pipeline.nombre,
+                    'descripcion': pipeline.descripcion
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_pipeline')
+def api_eliminar_pipeline(request, pipeline_id):
+    """API para eliminar un pipeline"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            # Verificar que no hay solicitudes activas
+            if pipeline.solicitud_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar un pipeline con solicitudes activas'
+                })
+            
+            pipeline.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_etapa')
+def api_obtener_etapas(request, pipeline_id):
+    """API para obtener etapas de un pipeline"""
+    try:
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        etapas = pipeline.etapas.all().order_by('orden')
+        
+        datos_etapas = []
+        for etapa in etapas:
+            datos_etapas.append({
+                'id': etapa.id,
+                'nombre': etapa.nombre,
+                'orden': etapa.orden,
+                'sla': str(etapa.sla),
+                'es_bandeja_grupal': etapa.es_bandeja_grupal,
+                'subestados': list(etapa.subestados.values('id', 'nombre', 'orden')),
+                'permisos': list(etapa.permisos.values('grupo__name', 'puede_ver', 'puede_autoasignar'))
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipeline_nombre': pipeline.nombre,
+            'etapas': datos_etapas
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@superuser_permission_required('workflow.add_etapa')
+def api_crear_etapa(request, pipeline_id):
+    """API para crear una nueva etapa"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            nombre = request.POST.get('nombre')
+            orden = request.POST.get('orden')
+            sla_horas = request.POST.get('sla_horas', 24)
+            es_bandeja_grupal = request.POST.get('es_bandeja_grupal') == 'true'
+            
+            if not nombre or not orden:
+                return JsonResponse({'success': False, 'error': 'Nombre y orden son obligatorios'})
+            
+            # Convertir SLA a timedelta
+            sla = timedelta(hours=int(sla_horas))
+            
+            etapa = Etapa.objects.create(
+                pipeline=pipeline,
+                nombre=nombre,
+                orden=int(orden),
+                sla=sla,
+                es_bandeja_grupal=es_bandeja_grupal
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'etapa': {
+                    'id': etapa.id,
+                    'nombre': etapa.nombre,
+                    'orden': etapa.orden,
+                    'sla': str(etapa.sla),
+                    'es_bandeja_grupal': etapa.es_bandeja_grupal
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_etapa')
+def api_editar_etapa(request, etapa_id):
+    """API para editar una etapa"""
+    if request.method == 'POST':
+        try:
+            etapa = get_object_or_404(Etapa, id=etapa_id)
+            
+            nombre = request.POST.get('nombre')
+            orden = request.POST.get('orden')
+            sla_horas = request.POST.get('sla_horas', 24)
+            es_bandeja_grupal = request.POST.get('es_bandeja_grupal') == 'true'
+            
+            if not nombre or not orden:
+                return JsonResponse({'success': False, 'error': 'Nombre y orden son obligatorios'})
+            
+            # Convertir SLA a timedelta
+            sla = timedelta(hours=int(sla_horas))
+            
+            etapa.nombre = nombre
+            etapa.orden = int(orden)
+            etapa.sla = sla
+            etapa.es_bandeja_grupal = es_bandeja_grupal
+            etapa.save()
+            
+            return JsonResponse({
+                'success': True,
+                'etapa': {
+                    'id': etapa.id,
+                    'nombre': etapa.nombre,
+                    'orden': etapa.orden,
+                    'sla': str(etapa.sla),
+                    'es_bandeja_grupal': etapa.es_bandeja_grupal
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_etapa')
+def api_eliminar_etapa(request, etapa_id):
+    """API para eliminar una etapa"""
+    if request.method == 'POST':
+        try:
+            etapa = get_object_or_404(Etapa, id=etapa_id)
+            
+            # Verificar que no hay solicitudes en esta etapa
+            if etapa.solicitud_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar una etapa con solicitudes activas'
+                })
+            
+            etapa.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_subestado')
+def api_crear_subestado(request, etapa_id):
+    """API para crear un subestado"""
+    if request.method == 'POST':
+        try:
+            etapa = get_object_or_404(Etapa, id=etapa_id)
+            
+            nombre = request.POST.get('nombre')
+            orden = request.POST.get('orden', 0)
+            
+            if not nombre:
+                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            subestado = SubEstado.objects.create(
+                etapa=etapa,
+                pipeline=etapa.pipeline,
+                nombre=nombre,
+                orden=int(orden)
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'subestado': {
+                    'id': subestado.id,
+                    'nombre': subestado.nombre,
+                    'orden': subestado.orden
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_transicionetapa')
+def api_crear_transicion(request, pipeline_id):
+    """API para crear una transición"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            etapa_origen_id = request.POST.get('etapa_origen')
+            etapa_destino_id = request.POST.get('etapa_destino')
+            nombre = request.POST.get('nombre')
+            requiere_permiso = request.POST.get('requiere_permiso') == 'true'
+            
+            if not all([etapa_origen_id, etapa_destino_id, nombre]):
+                return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios'})
+            
+            etapa_origen = get_object_or_404(Etapa, id=etapa_origen_id, pipeline=pipeline)
+            etapa_destino = get_object_or_404(Etapa, id=etapa_destino_id, pipeline=pipeline)
+            
+            transicion = TransicionEtapa.objects.create(
+                pipeline=pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino,
+                nombre=nombre,
+                requiere_permiso=requiere_permiso
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'transicion': {
+                    'id': transicion.id,
+                    'nombre': transicion.nombre,
+                    'etapa_origen': transicion.etapa_origen.nombre,
+                    'etapa_destino': transicion.etapa_destino.nombre,
+                    'requiere_permiso': transicion.requiere_permiso
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_requisito')
+def api_crear_requisito(request):
+    """API para crear un requisito"""
+    if request.method == 'POST':
+        try:
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            
+            if not nombre:
+                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            requisito = Requisito.objects.create(
+                nombre=nombre,
+                descripcion=descripcion
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'requisito': {
+                    'id': requisito.id,
+                    'nombre': requisito.nombre,
+                    'descripcion': requisito.descripcion
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_requisitopipeline')
+def api_asignar_requisito_pipeline(request, pipeline_id):
+    """API para asignar un requisito a un pipeline"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            requisito_id = request.POST.get('requisito_id')
+            obligatorio = request.POST.get('obligatorio') == 'true'
+            
+            if not requisito_id:
+                return JsonResponse({'success': False, 'error': 'El requisito es obligatorio'})
+            
+            requisito = get_object_or_404(Requisito, id=requisito_id)
+            
+            requisito_pipeline, created = RequisitoPipeline.objects.get_or_create(
+                pipeline=pipeline,
+                requisito=requisito,
+                defaults={'obligatorio': obligatorio}
+            )
+            
+            if not created:
+                requisito_pipeline.obligatorio = obligatorio
+                requisito_pipeline.save()
+            
+            return JsonResponse({
+                'success': True,
+                'requisito_pipeline': {
+                    'id': requisito_pipeline.id,
+                    'requisito_nombre': requisito.nombre,
+                    'obligatorio': requisito_pipeline.obligatorio
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.add_campopersonalizado')
+def api_crear_campo_personalizado(request, pipeline_id):
+    """API para crear un campo personalizado"""
+    if request.method == 'POST':
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            nombre = request.POST.get('nombre')
+            tipo = request.POST.get('tipo')
+            requerido = request.POST.get('requerido') == 'true'
+            
+            if not all([nombre, tipo]):
+                return JsonResponse({'success': False, 'error': 'Nombre y tipo son obligatorios'})
+            
+            campo = CampoPersonalizado.objects.create(
+                pipeline=pipeline,
+                nombre=nombre,
+                tipo=tipo,
+                requerido=requerido
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'campo': {
+                    'id': campo.id,
+                    'nombre': campo.nombre,
+                    'tipo': campo.tipo,
+                    'requerido': campo.requerido
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_transicionetapa')
+def api_eliminar_transicion(request, transicion_id):
+    """API para eliminar una transición"""
+    if request.method == 'POST':
+        try:
+            transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+            
+            # Verificar que no hay solicitudes usando esta transición
+            if transicion.solicitud_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar una transición que está siendo utilizada'
+                })
+            
+            transicion.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_transicionetapa')
+def api_editar_transicion(request, transicion_id):
+    """API para editar una transición"""
+    if request.method == 'POST':
+        try:
+            transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+            
+            # Obtener datos del formulario
+            nombre = request.POST.get('nombre')
+            etapa_origen_id = request.POST.get('etapa_origen')
+            etapa_destino_id = request.POST.get('etapa_destino')
+            
+            # Validaciones
+            if not nombre or not etapa_origen_id or not etapa_destino_id:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Todos los campos son obligatorios'
+                })
+            
+            if etapa_origen_id == etapa_destino_id:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'El origen y destino no pueden ser la misma etapa'
+                })
+            
+            # Verificar que las etapas existen y pertenecen al mismo pipeline
+            try:
+                etapa_origen = Etapa.objects.get(id=etapa_origen_id, pipeline=transicion.pipeline)
+                etapa_destino = Etapa.objects.get(id=etapa_destino_id, pipeline=transicion.pipeline)
+            except Etapa.DoesNotExist:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
+                })
+            
+            # Verificar que no hay otra transición con el mismo origen y destino
+            transicion_existente = TransicionEtapa.objects.filter(
+                pipeline=transicion.pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino
+            ).exclude(id=transicion_id).first()
+            
+            if transicion_existente:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Ya existe una transición entre estas etapas'
+                })
+            
+            # Actualizar la transición
+            transicion.nombre = nombre
+            transicion.etapa_origen = etapa_origen
+            transicion.etapa_destino = etapa_destino
+            transicion.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_requisitopipeline')
+def api_eliminar_requisito_pipeline(request, requisito_pipeline_id):
+    """API para eliminar un requisito de un pipeline"""
+    if request.method == 'POST':
+        try:
+            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
+            
+            # Verificar que no hay solicitudes con este requisito
+            if RequisitoSolicitud.objects.filter(requisito_pipeline=requisito_pipeline).exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar un requisito que está siendo utilizado'
+                })
+            
+            requisito_pipeline.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.change_requisitopipeline')
+def api_editar_requisito_pipeline(request, requisito_pipeline_id):
+    """API para editar un requisito de un pipeline"""
+    if request.method == 'POST':
+        try:
+            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
+            
+            # Obtener datos del formulario
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            obligatorio = request.POST.get('obligatorio') == 'on'
+            
+            # Validaciones
+            if not nombre:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'El nombre es obligatorio'
+                })
+            
+            # Actualizar el requisito base
+            requisito = requisito_pipeline.requisito
+            requisito.nombre = nombre
+            requisito.descripcion = descripcion
+            requisito.save()
+            
+            # Actualizar el requisito del pipeline
+            requisito_pipeline.obligatorio = obligatorio
+            requisito_pipeline.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+@superuser_permission_required('workflow.delete_campopersonalizado')
+def api_eliminar_campo_personalizado(request, campo_id):
+    """API para eliminar un campo personalizado"""
+    if request.method == 'POST':
+        try:
+            campo = get_object_or_404(CampoPersonalizado, id=campo_id)
+            
+            # Verificar que no hay solicitudes con este campo
+            if campo.valorcampopersonalizado_set.exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se puede eliminar un campo que está siendo utilizado'
+                })
+            
+            campo.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_obtener_datos_pipeline(request, pipeline_id):
+    """API para obtener todos los datos de un pipeline"""
+    try:
+        pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        
+        # Etapas
+        etapas = pipeline.etapas.all().order_by('orden')
+        datos_etapas = []
+        for etapa in etapas:
+            datos_etapas.append({
+                'id': etapa.id,
+                'nombre': etapa.nombre,
+                'orden': etapa.orden,
+                'sla': str(etapa.sla),
+                'es_bandeja_grupal': etapa.es_bandeja_grupal,
+                'subestados': list(etapa.subestados.values('id', 'nombre', 'orden')),
+                'permisos': list(etapa.permisos.values('grupo__name', 'puede_ver', 'puede_autoasignar'))
+            })
+        
+        # Transiciones
+        transiciones = pipeline.transiciones.all()
+        datos_transiciones = []
+        for transicion in transiciones:
+            datos_transiciones.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': transicion.etapa_origen.nombre,
+                'etapa_destino': transicion.etapa_destino.nombre,
+                'etapa_origen_id': transicion.etapa_origen.id,
+                'etapa_destino_id': transicion.etapa_destino.id,
+                'requiere_permiso': transicion.requiere_permiso
+            })
+        
+        # Requisitos
+        requisitos_pipeline = pipeline.requisitos_pipeline.all().select_related('requisito')
+        datos_requisitos = []
+        for req_pipeline in requisitos_pipeline:
+            datos_requisitos.append({
+                'id': req_pipeline.id,
+                'requisito_nombre': req_pipeline.requisito.nombre,
+                'requisito_descripcion': req_pipeline.requisito.descripcion or '',
+                'obligatorio': req_pipeline.obligatorio
+            })
+        
+        # Campos personalizados
+        campos = pipeline.campos_personalizados.all()
+        datos_campos = []
+        for campo in campos:
+            datos_campos.append({
+                'id': campo.id,
+                'nombre': campo.nombre,
+                'tipo': campo.tipo,
+                'requerido': campo.requerido
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pipeline': {
+                'id': pipeline.id,
+                'nombre': pipeline.nombre,
+                'descripcion': pipeline.descripcion
+            },
+            'etapas': datos_etapas,
+            'transiciones': datos_transiciones,
+            'requisitos': datos_requisitos,
+            'campos_personalizados': datos_campos
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ==========================================
+# VISTAS DE API
+# ==========================================
+
+def api_solicitudes(request):
+    """API para obtener solicitudes"""
+    
+    solicitudes = Solicitud.objects.all().select_related(
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
+    )
+    
+    # Filtros
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        solicitudes = solicitudes.filter(pipeline_id=pipeline_id)
+    
+    estado = request.GET.get('estado')
+    if estado == 'activas':
+        solicitudes = solicitudes.filter(etapa_actual__isnull=False)
+    elif estado == 'completadas':
+        solicitudes = solicitudes.filter(etapa_actual__isnull=True)
+    
+    # Serializar datos
+    datos = []
+    for solicitud in solicitudes:
+        datos.append({
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline': solicitud.pipeline.nombre,
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+            'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+            'creada_por': solicitud.creada_por.username,
+            'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
+            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+            'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+        })
+    
+    return JsonResponse({'solicitudes': datos})
+
+
+def api_estadisticas(request):
+    """API para obtener estadísticas"""
+    
+    # Estadísticas básicas
+    total_solicitudes = Solicitud.objects.count()
+    solicitudes_activas = Solicitud.objects.filter(etapa_actual__isnull=False).count()
+    solicitudes_completadas = Solicitud.objects.filter(etapa_actual__isnull=True).count()
+    
+    # Solicitudes por pipeline
+    solicitudes_por_pipeline = Pipeline.objects.annotate(
+        total=Count('solicitud')
+    ).values('nombre', 'total')
+    
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
+    
+    return JsonResponse({
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_activas': solicitudes_activas,
+        'solicitudes_completadas': solicitudes_completadas,
+        'solicitudes_vencidas': solicitudes_vencidas,
+        'solicitudes_por_pipeline': list(solicitudes_por_pipeline),
+    })
+
+
+def sitio_construccion(request):
+    """Vista para página de sitio en construcción"""
+    return render(request, 'workflow/sitio_construccion.html')
+
+
+@login_required
+def api_actualizar_prioridad(request, solicitud_id):
+    """API para actualizar la prioridad de una solicitud"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            prioridad = data.get('prioridad', '').strip()
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            # Eliminar validación de permisos, permitir a cualquier usuario
+            prioridades_validas = ['Alta', 'Media', 'Baja']
+            if prioridad and prioridad not in prioridades_validas:
+                return JsonResponse({'success': False, 'error': 'Prioridad no válida'})
+            solicitud.prioridad = prioridad
+            solicitud.save()
+            return JsonResponse({'success': True, 'prioridad': prioridad})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_actualizar_etiquetas(request, solicitud_id):
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        etiquetas = data.get('etiquetas_oficial', '')
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        # Limpiar espacios de cada etiqueta
+        etiquetas_limpias = ','.join([e.strip() for e in etiquetas.split(',') if e.strip()])
+        solicitud.etiquetas_oficial = etiquetas_limpias
+        solicitud.save()
+        return JsonResponse({'success': True, 'etiquetas_oficial': etiquetas_limpias})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_buscar_clientes(request):
+    """API para buscar clientes"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 20))
+        
+        if not query:
+            return JsonResponse({'clientes': []})
+        
+        # Buscar clientes por nombre o cédula
+        clientes = Cliente.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query)
+        ).order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cliente in clientes:
+            resultados.append({
+                'id': cliente.id,
+                'nombre': cliente.nombreCliente or 'Sin nombre',
+                'cedula': cliente.cedulaCliente or 'Sin cédula',
+                'fecha_creacion': cliente.created_at.strftime('%d/%m/%Y') if cliente.created_at else '',
+                'texto_completo': f"{cliente.nombreCliente or 'Sin nombre'} - {cliente.cedulaCliente or 'Sin cédula'}"
+            })
+        
+        return JsonResponse({'clientes': resultados})
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_buscar_cotizaciones(request):
+    """API para buscar cotizaciones"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        cliente_id = request.GET.get('cliente_id', '').strip()
+        limit = int(request.GET.get('limit', 20))
+        
+        # Filtrar cotizaciones
+        cotizaciones = Cotizacion.objects.all()
+        
+        # Filtrar por cliente si se especifica
+        if cliente_id:
+            cotizaciones = cotizaciones.filter(cedulaCliente=cliente_id)
+        
+        # Buscar por número de cotización, nombre de cliente o monto
+        if query:
+            cotizaciones = cotizaciones.filter(
+                Q(NumeroCotizacion__icontains=query) |
+                Q(nombreCliente__icontains=query) |
+                Q(montoPrestamo__icontains=query)
+            )
+        
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            # Use auxMonto2 as "Monto Financiado" instead of montoPrestamo
+            monto_financiado = cotizacion.auxMonto2 or cotizacion.montoPrestamo or 0
+            resultados.append({
+                'id': cotizacion.id,
+                'numero': cotizacion.NumeroCotizacion or cotizacion.id,
+                'cliente': cotizacion.nombreCliente or 'Sin cliente',
+                'monto_financiado': float(monto_financiado),
+                'tipo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'fecha_creacion': cotizacion.created_at.strftime('%d/%m/%Y') if cotizacion.created_at else '',
+                'texto_completo': f"#{cotizacion.NumeroCotizacion or cotizacion.id} - {cotizacion.nombreCliente or 'Sin cliente'} - Monto Financiado: ${monto_financiado}"
+            })
+        
+        return JsonResponse({'cotizaciones': resultados})
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_buscar_cotizaciones_drawer(request):
+    """API para buscar cotizaciones en el drawer - solo Préstamos de Auto"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 10))
+        
+        if not query:
+            return JsonResponse({'success': True, 'cotizaciones': []})
+        
+        # Base query - SOLO PRÉSTAMOS DE AUTO
+        cotizaciones = Cotizacion.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query) |
+            Q(id__icontains=query),
+            tipoPrestamo='auto'  # Solo cotizaciones de préstamos de auto
+        )
+        
+        # Filtrar por permisos de usuario
+        if not (request.user.is_superuser or request.user.is_staff):
+            # Usuarios regulares solo ven sus propias cotizaciones
+            cotizaciones = cotizaciones.filter(added_by=request.user)
+        
+        # Ordenar y limitar resultados
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            resultado = {
+                'id': cotizacion.id,
+                'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
+                'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
+                'oficial': cotizacion.oficial or 'Sin oficial',
+                'observaciones': cotizacion.observaciones or '',  # Campo observaciones
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
+            }
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            resultados.append(resultado)
+        
+        return JsonResponse({'success': True, 'cotizaciones': resultados})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_buscar_clientes_drawer(request):
+    """API para buscar clientes en el drawer"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 10))
+        
+        if not query:
+            return JsonResponse({'success': True, 'clientes': []})
+        
+        # Buscar clientes por nombre o cédula
+        clientes = Cliente.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query)
+        ).order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cliente in clientes:
+            resultados.append({
+                'id': cliente.id,
+                'nombreCliente': cliente.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cliente.cedulaCliente or 'Sin cédula',
+                'edad': cliente.edad or 'Sin edad',
+                'sexo': cliente.sexo or 'Sin sexo'
+            })
+        
+        return JsonResponse({'success': True, 'clientes': resultados})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+@login_required
+def api_formulario_datos(request):
+    """API para obtener datos del formulario basado en el pipeline"""
+    if request.method == 'GET':
+        pipeline_id = request.GET.get('pipeline_id')
+        
+        if not pipeline_id:
+            return JsonResponse({'success': False, 'error': 'ID de pipeline requerido'})
+        
+        try:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            # Obtener campos personalizados del pipeline
+            campos_personalizados = CampoPersonalizado.objects.filter(
+                pipeline=pipeline
+            ).values('id', 'nombre', 'tipo', 'requerido', 'descripcion')
+            
+            # Obtener requisitos del pipeline
+            requisitos_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=pipeline
+            ).select_related('requisito')
+            
+            requisitos = []
+            for req_pipeline in requisitos_pipeline:
+                requisitos.append({
+                    'id': req_pipeline.requisito.id,
+                    'nombre': req_pipeline.requisito.nombre,
+                    'descripcion': req_pipeline.requisito.descripcion,
+                    'obligatorio': req_pipeline.obligatorio
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'campos_personalizados': list(campos_personalizados),
+                'requisitos': requisitos
+            })
+            
+        except Pipeline.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Pipeline no encontrado'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+
+# Sistema de notificaciones en tiempo real
+class NotificationManager:
+    def __init__(self):
+        self.clients = {}
+        self.last_update = {}
+    
+    def add_client(self, user_id, response_queue):
+        """Agregar cliente para notificaciones"""
+        self.clients[user_id] = response_queue
+        self.last_update[user_id] = timezone.now()
+    
+    def remove_client(self, user_id):
+        """Remover cliente"""
+        if user_id in self.clients:
+            del self.clients[user_id]
+        if user_id in self.last_update:
+            del self.last_update[user_id]
+    
+    def notify_change(self, change_type, data, affected_users=None):
+        """Notificar cambio a usuarios específicos o todos"""
+        if affected_users is None:
+            affected_users = list(self.clients.keys())
+        
+        notification = {
+            'type': change_type,
+            'data': data,
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        for user_id in affected_users:
+            if user_id in self.clients:
+                try:
+                    self.clients[user_id].put(notification)
+                except:
+                    # Cliente desconectado, remover
+                    self.remove_client(user_id)
+
+# Instancia global del manager
+notification_manager = NotificationManager()
+
+@login_required
+def api_notifications_stream(request):
+    """API de Server-Sent Events para notificaciones en tiempo real"""
+    def event_stream():
+        user_id = request.user.id
+        response_queue = queue.Queue()
+        
+        # Agregar cliente
+        notification_manager.add_client(user_id, response_queue)
+        
+        try:
+            # Enviar evento inicial
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'Conectado a notificaciones'})}\n\n"
+            
+            while True:
+                try:
+                    # Esperar por notificaciones con timeout
+                    notification = response_queue.get(timeout=30)
+                    yield f"data: {json.dumps(notification)}\n\n"
+                except queue.Empty:
+                    # Enviar heartbeat cada 30 segundos
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': timezone.now().isoformat()})}\n\n"
+                except:
+                    break
+        finally:
+            # Limpiar cliente al desconectar
+            notification_manager.remove_client(user_id)
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
+
+@login_required
+def api_check_updates(request):
+    """API mejorada para verificar actualizaciones con detección inteligente"""
+    print(f"🔍 DEBUG: api_check_updates llamado por usuario: {request.user.username}")
+    print(f"🔍 DEBUG: Método: {request.method}")
+    print(f"🔍 DEBUG: Parámetros: {request.GET}")
+    
+    try:
+        # Obtener timestamp de la última actualización del usuario
+        last_check = request.GET.get('last_check')
+        if last_check:
+            try:
+                last_check_time = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+            except:
+                last_check_time = timezone.now() - timedelta(minutes=5)
+        else:
+            last_check_time = timezone.now() - timedelta(minutes=5)
+        
+        # Obtener vista actual para filtros específicos
+        current_view = request.GET.get('view', 'bandejas')  # bandejas, tabla, kanban
+        
+        # Solicitudes del usuario según sus grupos
+        solicitudes_base = Solicitud.objects.filter(
+            etapa_actual__pipeline__grupos__in=request.user.groups.all()
+        ).select_related('etapa_actual', 'asignada_a', 'pipeline')
+        
+        # Verificar cambios específicos por tipo de vista
+        cambios_detectados = []
+        
+        # 1. Cambios en bandeja grupal (para vista bandejas)
+        if current_view in ['bandejas', 'all']:
+            solicitudes_grupales_nuevas = solicitudes_base.filter(
+                etapa_actual__es_bandeja_grupal=True,
+                asignada_a__isnull=True,
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_grupales_nuevas > 0:
+                cambios_detectados.append({
+                    'tipo': 'bandeja_grupal',
+                    'count': solicitudes_grupales_nuevas
+                })
+        
+        # 2. Cambios en tareas personales (para vista bandejas)
+        if current_view in ['bandejas', 'all']:
+            solicitudes_personales_nuevas = solicitudes_base.filter(
+                asignada_a=request.user,
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_personales_nuevas > 0:
+                cambios_detectados.append({
+                    'tipo': 'bandeja_personal',
+                    'count': solicitudes_personales_nuevas
+                })
+        
+        # 3. Cambios generales en solicitudes (para tabla/kanban)
+        if current_view in ['tabla', 'kanban', 'all']:
+            solicitudes_actualizadas = solicitudes_base.filter(
+                fecha_ultima_actualizacion__gt=last_check_time
+            ).count()
+            
+            if solicitudes_actualizadas > 0:
+                cambios_detectados.append({
+                    'tipo': 'solicitudes_generales',
+                    'count': solicitudes_actualizadas
+                })
+        
+        # 4. Nuevas solicitudes creadas
+        nuevas_solicitudes = solicitudes_base.filter(
+            fecha_creacion__gt=last_check_time
+        ).count()
+        
+        if nuevas_solicitudes > 0:
+            cambios_detectados.append({
+                'tipo': 'nuevas_solicitudes',
+                'count': nuevas_solicitudes
+            })
+        
+        # Obtener detalles de cambios para debugging
+        solicitudes_modificadas = list(solicitudes_base.filter(
+            fecha_ultima_actualizacion__gt=last_check_time
+        ).values('id', 'codigo', 'etapa_actual__nombre', 'asignada_a__username')[:10])
+        
+        has_updates = len(cambios_detectados) > 0
+        
+        return JsonResponse({
+            'success': True,
+            'has_updates': has_updates,
+            'cambios_detectados': cambios_detectados,
+            'total_cambios': sum(c['count'] for c in cambios_detectados),
+            'nuevas_solicitudes': nuevas_solicitudes,
+            'solicitudes_modificadas': solicitudes_modificadas,
+            'timestamp': timezone.now().isoformat(),
+            'last_check': last_check_time.isoformat(),
+            'view': current_view
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        })
+
+# Función para notificar cambios automáticamente
+def notify_solicitud_change(solicitud, change_type, user=None):
+    """Notificar cambio en solicitud a usuarios relevantes"""
+    try:
+        # Obtener usuarios que deben ser notificados
+        affected_users = []
+        
+        # Usuarios del grupo de la etapa actual
+        if solicitud.etapa_actual:
+            group_users = User.objects.filter(
+                groups__in=solicitud.etapa_actual.pipeline.grupos.all()
+            ).values_list('id', flat=True)
+            affected_users.extend(group_users)
+        
+        # Usuario asignado
+        if solicitud.asignada_a:
+            affected_users.append(solicitud.asignada_a.id)
+        
+        # Datos de la notificación
+        notification_data = {
+            'solicitud_id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'etapa_actual': {
+                'id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'es_bandeja_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False
+            },
+            'asignada_a': {
+                'id': solicitud.asignada_a.id if solicitud.asignada_a else None,
+                'username': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                'nombre_completo': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else None
+            },
+            'user_action': {
+                'id': user.id if user else None,
+                'username': user.username if user else None,
+                'nombre_completo': user.get_full_name() if user else None
+            },
+            'pipeline_id': solicitud.pipeline.id if solicitud.pipeline else None,
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        # Enviar notificación
+        notification_manager.notify_change(change_type, notification_data, affected_users)
+        
+    except Exception as e:
+        print(f"Error notificando cambio: {e}")
+
+# ==========================================
+# VISTAS PRINCIPALES DEL WORKFLOW
+# ==========================================
+
+@login_required
+def dashboard_workflow(request):
+    """Dashboard principal del sistema de workflow (vista original)"""
+    
+    # Obtener solicitudes del usuario
+    solicitudes_asignadas = Solicitud.objects.filter(
+        asignada_a=request.user
+    ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    
+    # Obtener bandejas grupales a las que tiene acceso
+    if request.user.is_superuser or request.user.is_staff:
+        # Superuser y super staff ven TODAS las bandejas grupales
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    else:
+        # Usuarios regulares - permisos normales
+        grupos_usuario = request.user.groups.all()
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_ver=True
+        )
+        
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related('pipeline', 'etapa_actual', 'subestado_actual')
+    
+    # Estadísticas
+    total_solicitudes = solicitudes_asignadas.count() + solicitudes_grupales.count()
+    solicitudes_vencidas = 0
+    solicitudes_proximo_vencer = 0
+    
+    for solicitud in solicitudes_asignadas:
+        if solicitud.etapa_actual:
+            tiempo_en_etapa = timezone.now() - solicitud.fecha_ultima_actualizacion
+            if tiempo_en_etapa > solicitud.etapa_actual.sla:
+                solicitudes_vencidas += 1
+            elif tiempo_en_etapa > solicitud.etapa_actual.sla * 0.8:  # 80% del SLA
+                solicitudes_proximo_vencer += 1
+    
+    # Pipelines disponibles
+    pipelines = Pipeline.objects.all()
+    
+    context = {
+        'solicitudes_asignadas': solicitudes_asignadas[:10],
+        'solicitudes_grupales': solicitudes_grupales[:10],
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_vencidas': solicitudes_vencidas,
+        'solicitudes_proximo_vencer': solicitudes_proximo_vencer,
+        'pipelines': pipelines,
+        'etapas_grupales': etapas_grupales,
+    }
+    
+    return render(request, 'workflow/dashboard.html', context)
+
+
+@login_required
+def negocios_view(request):
+    """Vista de Negocios - Ver todas las solicitudes de un pipeline"""
+    
+    # Obtener pipeline seleccionado
+    pipeline_id = request.GET.get('pipeline')
+    view_type = request.GET.get('view', 'table')  # table or kanban
+    
+    # Obtener todos los pipelines disponibles
+    pipelines = Pipeline.objects.all()
+    
+    # Si no hay pipeline seleccionado, intentar seleccionar uno por defecto
+    if not pipeline_id:
+        # 1. Intentar usar el último pipeline visitado (guardado en sesión)
+        pipeline_id = request.session.get('ultimo_pipeline_id')
+        
+        # 2. Verificar que el pipeline de la sesión aún existe
+        if pipeline_id:
+            try:
+                Pipeline.objects.get(id=pipeline_id)
+            except Pipeline.DoesNotExist:
+                # Pipeline de la sesión ya no existe, limpiar la sesión
+                pipeline_id = None
+                if 'ultimo_pipeline_id' in request.session:
+                    del request.session['ultimo_pipeline_id']
+        
+        # 3. Si no hay pipeline válido en sesión, seleccionar el primer pipeline disponible
+        if not pipeline_id and pipelines.exists():
+            # Para usuarios regulares, verificar permisos de pipeline
+            if not (request.user.is_superuser or request.user.is_staff):
+                from .modelsWorkflow import PermisoPipeline
+                
+                # Obtener grupos del usuario
+                user_groups = request.user.groups.all()
+                
+                # Filtrar pipelines a los que el usuario tiene acceso
+                pipelines_permitidos = []
+                for pipeline in pipelines:
+                    # Verificar si el usuario tiene permisos directos
+                    tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                        pipeline=pipeline,
+                        usuario=request.user,
+                        puede_ver=True
+                    ).exists()
+                    
+                    # Verificar si el usuario tiene permisos por grupo
+                    tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                        pipeline=pipeline,
+                        grupo__in=user_groups,
+                        puede_ver=True
+                    ).exists()
+                    
+                    if tiene_permiso_usuario or tiene_permiso_grupo:
+                        pipelines_permitidos.append(pipeline)
+                
+                # Si tiene pipelines permitidos, seleccionar el primero
+                if pipelines_permitidos:
+                    pipeline_id = pipelines_permitidos[0].id
+            else:
+                # Para superusers y staff, seleccionar el primer pipeline
+                pipeline_id = pipelines.first().id
+        
+        # 4. Si se seleccionó un pipeline por defecto, redirigir con el parámetro
+        if pipeline_id:
+            # Preservar otros parámetros de la URL
+            params = request.GET.copy()
+            params['pipeline'] = pipeline_id
+            
+            # Construir la URL completa
+            url = f"{request.path}?{params.urlencode()}"
+            return HttpResponseRedirect(url)
+    
+    # Verificar si el usuario tiene acceso a algún pipeline
+    if not (request.user.is_superuser or request.user.is_staff):
+        # Para usuarios regulares, verificar permisos de pipeline
+        from .modelsWorkflow import PermisoPipeline
+        
+        # Obtener grupos del usuario
+        user_groups = request.user.groups.all()
+        
+        # Filtrar pipelines a los que el usuario tiene acceso
+        pipelines_permitidos = []
+        for pipeline in pipelines:
+            # Verificar si el usuario tiene permisos directos
+            tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                pipeline=pipeline,
+                usuario=request.user,
+                puede_ver=True
+            ).exists()
+            
+            # Verificar si el usuario tiene permisos por grupo
+            tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                pipeline=pipeline,
+                grupo__in=user_groups,
+                puede_ver=True
+            ).exists()
+            
+            if tiene_permiso_usuario or tiene_permiso_grupo:
+                pipelines_permitidos.append(pipeline)
+        
+        # Si no tiene acceso a ningún pipeline, mostrar mensaje de ayuda
+        if not pipelines_permitidos:
+            context = {
+                'pipelines': [],
+                'view_type': view_type,
+                'no_access': True,
+                'user_role': 'Usuario',
+                'oficiales': [],
+            }
+            return render(request, 'workflow/negocios.html', context)
+        
+        # Usar solo los pipelines permitidos
+        pipelines = pipelines_permitidos
+    
+    if pipeline_id:
+        # Verificar que el pipeline existe y el usuario tiene acceso
+        try:
+            pipeline = Pipeline.objects.get(id=pipeline_id)
+            
+            # Verificar permisos para este pipeline específico
+            if not (request.user.is_superuser or request.user.is_staff):
+                from .modelsWorkflow import PermisoPipeline
+                user_groups = request.user.groups.all()
+                
+                tiene_permiso_usuario = PermisoPipeline.objects.filter(
+                    pipeline=pipeline,
+                    usuario=request.user,
+                    puede_ver=True
+                ).exists()
+                
+                tiene_permiso_grupo = PermisoPipeline.objects.filter(
+                    pipeline=pipeline,
+                    grupo__in=user_groups,
+                    puede_ver=True
+                ).exists()
+                
+                if not (tiene_permiso_usuario or tiene_permiso_grupo):
+                    # Usuario no tiene acceso a este pipeline específico
+                    context = {
+                        'pipelines': pipelines,
+                        'view_type': view_type,
+                        'no_access': True,
+                        'user_role': 'Usuario',
+                        'oficiales': [],
+                        'error_message': f'No tienes acceso al pipeline "{pipeline.nombre}". Contacta a tu administrador para solicitar permisos.'
+                    }
+                    return render(request, 'workflow/negocios.html', context)
+                    
+        except Pipeline.DoesNotExist:
+            # Pipeline no existe
+            context = {
+                'pipelines': pipelines,
+                'view_type': view_type,
+                'no_access': True,
+                'user_role': 'Usuario',
+                'oficiales': [],
+                'error_message': 'El pipeline solicitado no existe.'
+            }
+            return render(request, 'workflow/negocios.html', context)
+        # Guardar último pipeline visitado en la sesión
+        request.session['ultimo_pipeline_id'] = pipeline_id
+        
+        # Obtener el rol del usuario desde UserProfile
+        user_role = 'Usuario'  # Rol por defecto
+        
+        # Verificar primero si es superuser
+        if request.user.is_superuser:
+            user_role = 'Administrador'
+        else:
+            # Si no es superuser, verificar UserProfile
+            try:
+                user_profile = request.user.userprofile
+                user_role = user_profile.rol
+            except Exception:
+                # Si no tiene UserProfile, mantener rol por defecto
+                pass
+        
+        # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
+        # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
+        if request.user.is_superuser or request.user.is_staff:
+            # Superuser y super staff ven TODAS las solicitudes del pipeline
+            solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'asignada_a'
+            )
+        else:
+            # Lógica de permisos basada en rol para usuarios regulares
+            if user_role == 'Administrador':
+                # Administrador ve TODAS las solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
+            elif user_role == 'Supervisor':
+                # Supervisor ve todas las solicitudes de su(s) grupo(s)
+                user_groups = request.user.groups.all()
+                if user_groups.exists():
+                    group_users = User.objects.filter(groups__in=user_groups)
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por__in=group_users).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+                else:
+                    # Si no tiene grupos asignados, solo ve las suyas
+                    solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                        'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                        'creada_por', 'asignada_a'
+                    )
+            else:
+                # Oficial y Usuario solo ven sus propias solicitudes
+                solicitudes = Solicitud.objects.filter(pipeline=pipeline, creada_por=request.user).select_related(
+                    'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+                    'creada_por', 'asignada_a'
+                )
+        
+        # Filtros básicos
+        filtro_estado = request.GET.get('estado', '')
+        filtro_asignado = request.GET.get('asignado', '')
+        filtro_fecha = request.GET.get('fecha', '')
+        
+        # Nuevos filtros avanzados
+        busqueda = request.GET.get('busqueda', '')
+        filtro_sla = request.GET.get('sla', '')
+        ordenar_por = request.GET.get('ordenar', 'fecha_creacion')
+        
+        # Aplicar filtros
+        if filtro_estado == 'activas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=False)
+        elif filtro_estado == 'completadas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=True)
+        elif filtro_estado == 'vencidas':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+            )
+        
+        if filtro_asignado == 'asignadas':
+            solicitudes = solicitudes.filter(asignada_a__isnull=False)
+        elif filtro_asignado == 'sin_asignar':
+            solicitudes = solicitudes.filter(asignada_a__isnull=True)
+        
+        if filtro_fecha == 'hoy':
+            solicitudes = solicitudes.filter(fecha_creacion__date=timezone.now().date())
+        elif filtro_fecha == 'semana':
+            solicitudes = solicitudes.filter(
+                fecha_creacion__gte=timezone.now() - timedelta(days=7)
+            )
+        elif filtro_fecha == 'mes':
+            solicitudes = solicitudes.filter(
+                fecha_creacion__gte=timezone.now() - timedelta(days=30)
+            )
+        
+        # Filtro de búsqueda
+        if busqueda:
+            solicitudes = solicitudes.filter(
+                Q(codigo__icontains=busqueda) |
+                Q(creada_por__first_name__icontains=busqueda) |
+                Q(creada_por__last_name__icontains=busqueda) |
+                Q(creada_por__username__icontains=busqueda) |
+                Q(asignada_a__first_name__icontains=busqueda) |
+                Q(asignada_a__last_name__icontains=busqueda) |
+                Q(asignada_a__username__icontains=busqueda)
+            )
+        
+        # Filtro de SLA
+        if filtro_sla == 'vencido':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+            )
+        elif filtro_sla == 'proximo':
+            # Solicitudes próximas a vencer (80% del SLA)
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla') * 0.8,
+                fecha_ultima_actualizacion__gte=timezone.now() - F('etapa_actual__sla')
+            )
+        elif filtro_sla == 'ok':
+            solicitudes = solicitudes.filter(
+                etapa_actual__isnull=False,
+                fecha_ultima_actualizacion__gte=timezone.now() - F('etapa_actual__sla') * 0.8
+            )
+        
+        # Ordenamiento
+        if ordenar_por == 'fecha_creacion':
+            solicitudes = solicitudes.order_by('-fecha_creacion')
+        elif ordenar_por == 'fecha_ultima_actualizacion':
+            solicitudes = solicitudes.order_by('-fecha_ultima_actualizacion')
+        elif ordenar_por == 'codigo':
+            solicitudes = solicitudes.order_by('codigo')
+        elif ordenar_por == 'etapa':
+            solicitudes = solicitudes.order_by('etapa_actual__orden')
+        else:
+            solicitudes = solicitudes.order_by('-fecha_creacion')
+        
+        # Paginación
+        paginator = Paginator(solicitudes, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # --- ENRIQUECER DATOS PARA LA TABLA ---
+        solicitudes_tabla = []
+        now = timezone.now()
+        ETAPA_COLORS = [
+            'bg-primary', 'bg-info', 'bg-warning', 'bg-success', 'bg-danger', 'bg-secondary', 'bg-dark'
+        ]
+        etapas_pipeline = list(pipeline.etapas.order_by('orden').values_list('nombre', flat=True))
+        etapa_color_map = {nombre: ETAPA_COLORS[i % len(ETAPA_COLORS)] for i, nombre in enumerate(etapas_pipeline)}
+
+        for solicitud in page_obj:
+            # === DEBUG TEMPORAL ===
+            if solicitud.codigo == 'PRU-4811C164':
+                print(f"DEBUG - Solicitud {solicitud.codigo}:")
+                print(f"  - Cliente: {solicitud.cliente}")
+                print(f"  - Cotización: {solicitud.cotizacion}")
+                if solicitud.cotizacion:
+                    print(f"  - Cotización nombreCliente: {solicitud.cotizacion.nombreCliente}")
+                    print(f"  - Cotización cedulaCliente: {solicitud.cotizacion.cedulaCliente}")
+                    print(f"  - Cotización montoPrestamo: {solicitud.cotizacion.montoPrestamo}")
+                    print(f"  - Cotización tipoPrestamo: {solicitud.cotizacion.tipoPrestamo}")
+                if solicitud.cliente:
+                    print(f"  - Cliente nombreCliente: {solicitud.cliente.nombreCliente}")
+                    print(f"  - Cliente cedulaCliente: {solicitud.cliente.cedulaCliente}")
+                print(f"  - Propiedades:")
+                print(f"    - cliente_nombre: {solicitud.cliente_nombre}")
+                print(f"    - cliente_cedula: {solicitud.cliente_cedula}")
+                print(f"    - producto_descripcion: {solicitud.producto_descripcion}")
+                print(f"    - monto_formateado: {solicitud.monto_formateado}")
+            # === FIN DEBUG ===
+
+            # Campos personalizados
+            valores = {v.campo.nombre.lower(): v for v in solicitud.valores_personalizados.select_related('campo').all()}
+            get_valor = lambda nombre: valores.get(nombre.lower()).valor() if valores.get(nombre.lower()) else None
+
+            # Cliente, cédula, producto y monto usando los campos directos del modelo
+            cliente = solicitud.cliente_nombre or solicitud.cliente_nombre_completo
+            cedula = solicitud.cliente_cedula or solicitud.cliente_cedula_completa
+            producto = solicitud.producto_solicitado or solicitud.producto_descripcion
+            monto_formateado = solicitud.monto_formateado
+
+            # Fechas
+            fecha_inicio = solicitud.fecha_creacion
+            sla = solicitud.etapa_actual.sla if solicitud.etapa_actual else None
+            vencimiento_sla = fecha_inicio + sla if sla else None
+            fecha_vencimiento_str = vencimiento_sla.strftime('%d/%m/%Y') if vencimiento_sla else 'N/A'
+
+            # SLA restante mejorado con semáforo visual
+            if sla and solicitud.etapa_actual:
+                tiempo_total = sla.total_seconds()
+                tiempo_restante = (fecha_inicio + sla) - now
+                segundos_restantes = tiempo_restante.total_seconds()
+                porcentaje_restante = (segundos_restantes / tiempo_total) * 100 if tiempo_total > 0 else 0
+                abs_segundos = abs(int(segundos_restantes))
+                horas = abs_segundos // 3600
+                minutos = (abs_segundos % 3600) // 60
+                if segundos_restantes < 0:
+                    if horas > 0:
+                        sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"-{minutos}m"
+                    sla_color = 'text-danger'
+                elif porcentaje_restante > 40:
+                    if horas > 0:
+                        sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"{minutos}m"
+                    sla_color = 'text-success'
+                elif porcentaje_restante > 0:
+                    if horas > 0:
+                        sla_restante = f"{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"{minutos}m"
+                    sla_color = 'text-warning'
+                else:
+                    if horas > 0:
+                        sla_restante = f"-{horas}h {minutos}m"
+                    else:
+                        sla_restante = f"-{minutos}m"
+                    sla_color = 'text-danger'
+            else:
+                sla_restante = 'N/A'
+                sla_color = 'text-secondary'
+
+            # Alertas automáticas
+            alertas = []
+            if sla_color == 'text-danger':
+                alertas.append({'icon': 'fa-exclamation-triangle', 'color': 'danger', 'tooltip': 'SLA vencido'})
+            elif sla_color == 'text-warning':
+                alertas.append({'icon': 'fa-exclamation-circle', 'color': 'warning', 'tooltip': 'SLA por vencer'})
+            else:
+                alertas.append({'icon': 'fa-check-circle', 'color': 'success', 'tooltip': 'SLA en tiempo'})
+
+            # Estado actual
+            estado_actual = solicitud.subestado_actual.nombre if solicitud.subestado_actual else ("En Proceso" if solicitud.etapa_actual else "Completado")
+            estado_color = 'primary' if estado_actual == 'En Proceso' else 'success' if estado_actual == 'Completado' else 'secondary'
+
+            # Acciones (estructura lista para condicionar por etapa)
+            acciones = {
+                'ver': True,
+                'cambiar_etapa': True,
+                'exportar': True,
+                'eliminar': True,
+            }
+
+            etapa_nombre = solicitud.etapa_actual.nombre if solicitud.etapa_actual else ''
+            etapa_color = etapa_color_map.get(etapa_nombre, 'bg-secondary')
+
+            solicitudes_tabla.append({
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente,
+                'cliente_cedula': cedula,
+                'producto_descripcion': producto,
+                'monto_formateado': monto_formateado,
+                # Mantener compatibilidad con código existente
+                'cliente': cliente,
+                'cedula': cedula,
+                'producto': producto,
+                'monto': monto_formateado,
+                'propietario': (solicitud.propietario.get_full_name() or solicitud.propietario.username) if solicitud.propietario else (solicitud.creada_por.get_full_name() or solicitud.creada_por.username),
+                'propietario_user': solicitud.propietario or solicitud.creada_por,  # Pasar el objeto usuario completo
+                'asignado_a': (solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username) if solicitud.asignada_a else 'Sin asignar',
+                'asignado_a_user': solicitud.asignada_a,  # Pasar el objeto usuario completo
+                'etapa': solicitud.etapa_actual.nombre if solicitud.etapa_actual else '',
+                'etapa_actual': solicitud.etapa_actual,  # Pasar el objeto completo para acceder a es_bandeja_grupal
+                'estado_actual': estado_actual,
+                'estado_color': estado_color,
+                'fecha_inicio': fecha_inicio,
+                'fecha_inicio_str': fecha_inicio.strftime('%d/%m/%Y'),
+                'vencimiento_sla': vencimiento_sla,
+                'vencimiento_sla_str': fecha_vencimiento_str,
+                'sla_restante': sla_restante,
+                'sla_color': sla_color,
+                'alertas': alertas,
+                'acciones': acciones,
+                'id': solicitud.id,
+                'etapa_color': etapa_color,
+                'prioridad': solicitud.prioridad or '',
+                'etiquetas_oficial': solicitud.etiquetas_oficial or '',
+                'origen': solicitud.origen or '',  # Campo para identificar el origen (Canal Digital, etc.)
+            })
+
+        # Para vista kanban, crear datos enriquecidos por etapa
+        if view_type == 'kanban':
+            etapas_kanban = pipeline.etapas.all().order_by('orden')
+            solicitudes_por_etapa = {}
+            
+            # Crear diccionario con todas las solicitudes enriquecidas
+            solicitudes_dict = {s['id']: s for s in solicitudes_tabla}
+            
+            for etapa in etapas_kanban:
+                solicitudes_etapa = solicitudes.filter(etapa_actual=etapa)
+                solicitudes_por_etapa[etapa.id] = [
+                    solicitudes_dict.get(sol.id, {
+                        'id': sol.id,
+                        'codigo': sol.codigo,
+                        'cliente_nombre': sol.cliente_nombre,
+                        'cliente_cedula': sol.cliente_cedula,
+                        'producto_descripcion': sol.producto_descripcion,
+                        'monto_formateado': sol.monto_formateado,
+                        # Mantener compatibilidad
+                        'cliente': sol.cliente_nombre,
+                        'monto': sol.monto_formateado,
+                        'asignado_a': 'Sin asignar',
+                        'sla_restante': 'N/A',
+                        'sla_color': 'text-secondary',
+                        'estado_actual': 'En proceso',
+                        'estado_color': 'primary',
+                        'fecha_inicio': sol.fecha_creacion.strftime('%d/%m/%Y'),
+                        'prioridad': sol.prioridad or '',
+                        'etapa_actual': sol.etapa_actual
+                    }) for sol in solicitudes_etapa
+                ]
+        else:
+            solicitudes_por_etapa = None
+            etapas_kanban = None
+        
+        etiquetas_predefinidas = [
+            "📞 No responde", "🗓️ Cita agendada", "✅ Documentos completos", "📎 Falta carta trabajo",
+            "🔄 Seguimiento en 48h", "💬 WhatsApp activo", "⚠️ Cliente indeciso", "🚀 Cliente caliente",
+            "🕐 Esperando confirmación", "🧾 Enviado a crédito", "🔒 En validación", "❌ Caso descartado"
+        ]
+        
+        # Obtener lista de oficiales para el drawer
+        oficiales = User.objects.filter(
+            userprofile__rol__in=['Oficial', 'Supervisor', 'Administrador']
+        ).values_list('username', flat=True).distinct()
+        
+        context = {
+            'pipeline': pipeline,
+            'pipelines': pipelines,
+            'solicitudes': solicitudes,
+            'page_obj': page_obj,
+            'solicitudes_tabla': solicitudes_tabla,
+            'view_type': view_type,
+            'solicitudes_por_etapa': solicitudes_por_etapa,
+            'etapas_kanban': etapas_kanban,
+            'filtros': {
+                'estado': filtro_estado,
+                'asignado': filtro_asignado,
+                'fecha': filtro_fecha,
+                'busqueda': busqueda,
+                'sla': filtro_sla,
+                'ordenar': ordenar_por,
+            },
+            'prioridades_posibles': ['Alta', 'Media', 'Baja'],
+            'etiquetas_predefinidas': etiquetas_predefinidas,
+            'user_role': user_role,  # Agregar rol del usuario al contexto
+            'oficiales': oficiales,  # Para el drawer
+        }
+    else:
+        # Si no hay pipeline seleccionado, mostrar lista de pipelines
+        # Obtener lista de oficiales para el drawer
+        oficiales = User.objects.filter(
+            userprofile__rol__in=['Oficial', 'Supervisor', 'Administrador']
+        ).values_list('username', flat=True).distinct()
+        
+        context = {
+            'pipelines': pipelines,
+            'view_type': view_type,
+            'oficiales': oficiales,  # Para el drawer
+        }
+    
+    return render(request, 'workflow/negocios.html', context)
+
+
+@login_required
+def bandeja_trabajo(request):
+    """Bandeja de trabajo del usuario"""
+    
+    # === SISTEMA DE PERMISOS SUPERUSER Y SUPER STAFF ===
+    # Los usuarios superuser y super staff (is_staff=True) pueden ver TODO
+    if request.user.is_superuser or request.user.is_staff:
+        # Superuser y super staff ven TODAS las solicitudes asignadas
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a__isnull=False
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Superuser y super staff ven TODAS las bandejas grupales (excluir Comité de Crédito)
+        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito")
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+    else:
+        # Usuarios regulares - permisos normales
+        # Obtener solicitudes asignadas al usuario
+        solicitudes_asignadas = Solicitud.objects.filter(
+            asignada_a=request.user
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+        
+        # Obtener bandejas grupales (excluir Comité de Crédito)
+        grupos_usuario = request.user.groups.all()
+        etapas_grupales = Etapa.objects.filter(
+            es_bandeja_grupal=True,
+            permisos__grupo__in=grupos_usuario,
+            permisos__puede_autoasignar=True
+        ).exclude(nombre__iexact="Comité de Crédito")
+        
+        solicitudes_grupales = Solicitud.objects.filter(
+            etapa_actual__in=etapas_grupales,
+            asignada_a__isnull=True
+        ).select_related(
+            'cliente', 'cotizacion', 'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        )
+    
+    # Filtros
+    filtro_estado = request.GET.get('estado', '')
+    filtro_pipeline = request.GET.get('pipeline', '')
+    
+    if filtro_estado == 'vencidas':
+        solicitudes_asignadas = solicitudes_asignadas.filter(
+            fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+        )
+        solicitudes_grupales = solicitudes_grupales.filter(
+            fecha_ultima_actualizacion__lt=timezone.now() - F('etapa_actual__sla')
+        )
+    
+    if filtro_pipeline:
+        solicitudes_asignadas = solicitudes_asignadas.filter(pipeline_id=filtro_pipeline)
+        solicitudes_grupales = solicitudes_grupales.filter(pipeline_id=filtro_pipeline)
+    
+    # Paginación
+    todas_solicitudes = list(solicitudes_asignadas) + list(solicitudes_grupales)
+    paginator = Paginator(todas_solicitudes, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'solicitudes_asignadas': solicitudes_asignadas,
+        'solicitudes_grupales': solicitudes_grupales,
+        'pipelines': Pipeline.objects.all(),
+        'filtros': {
+            'estado': filtro_estado,
+            'pipeline': filtro_pipeline,
+        }
+    }
+    
+    return render(request, 'workflow/bandeja_trabajo.html', context)
+
+
+@login_required
+def nueva_solicitud(request):
+    """Crear una nueva solicitud"""
+    
+    if request.method == 'POST':
+        pipeline_id = request.POST.get('pipeline')
+        cliente_id = request.POST.get('cliente')
+        cotizacion_id = request.POST.get('cotizacion')
+        
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            
+            # Obtener primera etapa del pipeline
+            primera_etapa = pipeline.etapas.order_by('orden').first()
+            
+            # Obtener cliente y cotización si se proporcionaron
+            cliente = None
+            cotizacion = None
+            
+            if cliente_id:
+                cliente = get_object_or_404(Cliente, id=cliente_id)
+            
+            if cotizacion_id:
+                cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
+            
+            # Obtener motivo de consulta, como se enteró y APC fields del formulario
+            motivo_consulta = request.POST.get('motivo_consulta', '')
+            como_se_entero = request.POST.get('como_se_entero', '')
+            
+            # APC Makito fields
+            descargar_apc_makito = request.POST.get('descargar_apc_makito') == '1'
+            apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
+            apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
+            
+            # Crear solicitud (el código se generará automáticamente via signal)
+            solicitud = Solicitud.objects.create(
+                pipeline=pipeline,
+                etapa_actual=primera_etapa,
+                creada_por=request.user,
+                cliente=cliente,
+                cotizacion=cotizacion,
+                motivo_consulta=motivo_consulta,
+                como_se_entero=como_se_entero if como_se_entero else None,
+                descargar_apc_makito=descargar_apc_makito,
+                apc_no_cedula=apc_no_cedula,
+                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None
+            )
+            
+            # Crear historial inicial
+            if primera_etapa:
+                HistorialSolicitud.objects.create(
+                    solicitud=solicitud,
+                    etapa=primera_etapa,
+                    usuario_responsable=request.user,
+                    fecha_inicio=timezone.now()
+                )
+            
+            # Crear requisitos automáticamente
+            requisitos_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=pipeline
+            )
+            
+            for req_pipeline in requisitos_pipeline:
+                requisito_solicitud = RequisitoSolicitud.objects.create(
+                    solicitud=solicitud,
+                    requisito=req_pipeline.requisito
+                )
+                
+                # Verificar si hay archivo subido para este requisito
+                archivo_key = f'archivo_requisito_{req_pipeline.requisito.id}'
+                if archivo_key in request.FILES:
+                    requisito_solicitud.archivo = request.FILES[archivo_key]
+                    requisito_solicitud.cumplido = True  # Marcar como cumplido cuando se sube archivo
+                    requisito_solicitud.save()
+            
+            # Guardar campos personalizados
+            campos_personalizados = CampoPersonalizado.objects.filter(pipeline=pipeline)
+            for campo in campos_personalizados:
+                valor = request.POST.get(f'campo_{campo.id}')
+                if valor:
+                    valor_campo = ValorCampoSolicitud.objects.create(
+                        solicitud=solicitud,
+                        campo=campo
+                    )
+                    
+                    # Guardar según el tipo de campo
+                    if campo.tipo == 'texto':
+                        valor_campo.valor_texto = valor
+                    elif campo.tipo == 'numero':
+                        valor_campo.valor_numero = float(valor) if valor else None
+                    elif campo.tipo == 'entero':
+                        valor_campo.valor_entero = int(valor) if valor else None
+                    elif campo.tipo == 'fecha':
+                        from datetime import datetime
+                        valor_campo.valor_fecha = datetime.strptime(valor, '%Y-%m-%d').date() if valor else None
+                    elif campo.tipo == 'booleano':
+                        valor_campo.valor_booleano = valor == 'true'
+                    
+                    valor_campo.save()
+            
+            # Send APC email if requested
+            if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
+                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+            
+            # Responder con JSON para requests AJAX
+            if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'solicitud_id': solicitud.id,
+                    'codigo': solicitud.codigo,
+                    'message': f'Solicitud {solicitud.codigo} creada exitosamente.'
+                })
+            
+            messages.success(request, f'Solicitud {solicitud.codigo} creada exitosamente.')
+            return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
+    
+    # Obtener clientes y cotizaciones para el formulario
+    
+    # Obtener clientes del usuario actual o todos si es superuser
+    if request.user.is_superuser:
+        clientes = Cliente.objects.all().order_by('-created_at')[:100]  # Últimos 100 clientes
+    else:
+        clientes = Cliente.objects.filter(
+            Q(added_by=request.user) | 
+            Q(propietario=request.user)
+        ).order_by('-created_at')[:100]
+    
+    # Obtener cotizaciones del usuario actual o todas si es superuser
+    if request.user.is_superuser:
+        cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
+    else:
+        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+    
+    context = {
+        'pipelines': Pipeline.objects.all(),
+        'clientes': clientes,
+        'cotizaciones': cotizaciones,
+    }
+    
+    return render(request, 'workflow/nueva_solicitud.html', context)
+
+
+@login_required
+def detalle_solicitud(request, solicitud_id):
+    """Detalle de una solicitud específica"""
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar permisos
+    if solicitud.asignada_a and solicitud.asignada_a != request.user:
+        # Superusers bypass permission checks
+        if not (request.user.is_superuser or request.user.is_staff):
+            grupos_usuario = request.user.groups.all()
+            tiene_permiso = PermisoEtapa.objects.filter(
+                etapa=solicitud.etapa_actual,
+                grupo__in=grupos_usuario,
+                puede_ver=True
+            ).exists()
+            
+            if not tiene_permiso:
+                messages.error(request, 'No tienes permisos para ver esta solicitud.')
+                return redirect('bandeja_trabajo')
+    
+    # Obtener transiciones disponibles
+    transiciones_disponibles = []
+    if solicitud.etapa_actual:
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        )
+        
+        for transicion in transiciones:
+            # Verificar requisitos para esta transición
+            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
+            
+            if not transicion.requiere_permiso:
+                transiciones_disponibles.append({
+                    'transicion': transicion,
+                    'puede_realizar': len(requisitos_faltantes) == 0,
+                    'requisitos_faltantes': requisitos_faltantes,
+                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                })
+            else:
+                # Verificar si el usuario tiene permisos específicos
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=transicion.etapa_destino,
+                    grupo__in=grupos_usuario
+                ).exists()
+                if tiene_permiso:
+                    transiciones_disponibles.append({
+                        'transicion': transicion,
+                        'puede_realizar': len(requisitos_faltantes) == 0,
+                        'requisitos_faltantes': requisitos_faltantes,
+                        'total_requisitos_faltantes': len(requisitos_faltantes)
+                    })
+    
+    # Obtener historial
+    historial = solicitud.historial.all().order_by('-fecha_inicio')
+    
+    # Obtener requisitos
+    requisitos = solicitud.requisitos.all()
+    
+    # Obtener campos personalizados
+    campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
+    valores_campos = solicitud.valores_personalizados.all()
+    
+    # Para vista backoffice: obtener archivos requeridos por subestado
+    archivos_por_subestado = {}
+    if (solicitud.etapa_actual and 
+        solicitud.etapa_actual.nombre == "Back Office" and 
+        solicitud.etapa_actual.es_bandeja_grupal):
+        
+        # Obtener transiciones de salida desde la etapa actual
+        transiciones_salida = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
+        requisitos_necesarios = {}
+        
+        # Procesar requisitos de transiciones de salida
+        for transicion in transiciones_salida:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_necesarios:
+                    requisitos_necesarios[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'archivo_actual': None,
+                        'esta_cumplido': False,
+                        'tipo_transicion': 'salida'
+                    }
+        
+        # Procesar requisitos de transiciones de entrada
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_necesarios:
+                    requisitos_necesarios[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'archivo_actual': None,
+                        'esta_cumplido': False,
+                        'tipo_transicion': 'entrada'
+                    }
+        
+        # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud).select_related('requisito')
+        for req_sol in requisitos_solicitud:
+            req_id = req_sol.requisito_id  # Usar el foreign key directamente
+            if req_id in requisitos_necesarios:
+                # Obtener calificaciones y comentarios
+                from .models import CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, OpcionDesplegable
+                
+                calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+                    requisito_solicitud=req_sol
+                ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
+                
+                comentarios = ComentarioDocumentoBackoffice.objects.filter(
+                    requisito_solicitud=req_sol,
+                    activo=True
+                ).select_related('comentario_por').order_by('-fecha_comentario')
+                
+                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
+                requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
+                requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
+        
+        # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
+        for subestado in solicitud.etapa_actual.subestados.all():
+            archivos_por_subestado[subestado.id] = list(requisitos_necesarios.values())
+    
+    # Calcular estadísticas de archivos para el template
+    archivos_stats = {}
+    if archivos_por_subestado:
+        for subestado_id, archivos in archivos_por_subestado.items():
+            total_archivos = len(archivos)
+            archivos_completos = len([archivo for archivo in archivos if archivo['esta_cumplido']])
+            archivos_stats[subestado_id] = {
+                'total': total_archivos,
+                'completos': archivos_completos,
+                'pendientes': total_archivos - archivos_completos,
+                'porcentaje': round((archivos_completos / total_archivos * 100) if total_archivos > 0 else 0, 1)
+            }
+    
+    # Obtener opciones de desplegable para calificación
+    opciones_desplegable = []
+    if archivos_por_subestado:  # Solo si estamos en Back Office
+        from .models import OpcionDesplegable
+        opciones_desplegable = OpcionDesplegable.objects.filter(activo=True).order_by('orden')
+    
+    context = {
+        'solicitud': solicitud,
+        'transiciones_disponibles': transiciones_disponibles,
+        'historial': historial,
+        'requisitos': requisitos,
+        'campos_personalizados': campos_personalizados,
+        'valores_campos': valores_campos,
+        'archivos_por_subestado': archivos_por_subestado,
+        'archivos_stats': archivos_stats,
+        'opciones_desplegable': opciones_desplegable,
+    }
+    
+    # Verificar si estamos en la etapa "Back Office" con bandeja grupal
+    if (solicitud.etapa_actual and 
+        solicitud.etapa_actual.nombre == "Back Office" and 
+        solicitud.etapa_actual.es_bandeja_grupal):
+        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
+    
+    return render(request, 'workflow/detalle_solicitud.html', context)
+
+
+@login_required
+def transicion_solicitud(request, solicitud_id):
+    """Realizar transición de una solicitud"""
+    
+    if request.method == 'POST':
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion_id = request.POST.get('transicion_id')
+        
+        if transicion_id:
+            transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+            
+            # Verificar que la transición es válida
+            if transicion.pipeline != solicitud.pipeline or transicion.etapa_origen != solicitud.etapa_actual:
+                messages.error(request, 'Transición no válida.')
+                return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+            
+            # Verificar permisos si es necesario
+            if transicion.requiere_permiso:
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=transicion.etapa_destino,
+                    grupo__in=grupos_usuario
+                ).exists()
+                if not tiene_permiso:
+                    messages.error(request, 'No tienes permisos para realizar esta transición.')
+                    return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+            
+            # Verificar requisitos obligatorios
+            requisitos_pendientes = solicitud.requisitos.filter(
+                requisito__requisitopipelinetipo__obligatorio=True,
+                cumplido=False
+            )
+            
+            if requisitos_pendientes.exists():
+                messages.error(request, 'Debes cumplir todos los requisitos obligatorios antes de continuar.')
+                return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+            
+            # Cerrar historial actual
+            historial_actual = solicitud.historial.filter(fecha_fin__isnull=True).first()
+            if historial_actual:
+                historial_actual.fecha_fin = timezone.now()
+                historial_actual.save()
+            
+            # Actualizar solicitud
+            solicitud.etapa_actual = transicion.etapa_destino
+            solicitud.subestado_actual = None  # Resetear subestado
+            solicitud.save()
+            
+            # Crear nuevo historial
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=transicion.etapa_destino,
+                usuario_responsable=request.user,
+                fecha_inicio=timezone.now()
+            )
+            
+            messages.success(request, f'Solicitud movida a {transicion.etapa_destino.nombre}')
+            return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+
+
+@login_required
+def auto_asignar_solicitud(request, solicitud_id):
+    """Auto-asignar una solicitud de bandeja grupal"""
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que la solicitud está en bandeja grupal
+    if not solicitud.etapa_actual.es_bandeja_grupal or solicitud.asignada_a:
+        messages.error(request, 'Esta solicitud no está disponible para auto-asignación.')
+        return redirect('bandeja_trabajo')
+    
+    # Verificar permisos
+    # Superusers bypass permission checks
+    if not (request.user.is_superuser or request.user.is_staff):
+        grupos_usuario = request.user.groups.all()
+        tiene_permiso = PermisoEtapa.objects.filter(
+            etapa=solicitud.etapa_actual,
+            grupo__in=grupos_usuario,
+            puede_autoasignar=True
+        ).exists()
+        
+        if not tiene_permiso:
+            messages.error(request, 'No tienes permisos para auto-asignar solicitudes en esta etapa.')
+            return redirect('bandeja_trabajo')
+    
+    # Asignar solicitud
+    solicitud.asignada_a = request.user
+    solicitud.save()
+    
+    messages.success(request, f'Solicitud {solicitud.codigo} asignada exitosamente.')
+    return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+
+
+@login_required
+def actualizar_requisito(request, solicitud_id, requisito_id):
+    """Actualizar estado de un requisito"""
+    
+    if request.method == 'POST':
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_id, solicitud=solicitud)
+        
+        # Verificar permisos
+        if solicitud.asignada_a and solicitud.asignada_a != request.user:
+            # Superusers bypass permission checks
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
+        
+        # Actualizar requisito
+        cumplido = request.POST.get('cumplido') == 'true'
+        observaciones = request.POST.get('observaciones', '')
+        
+        requisito_solicitud.cumplido = cumplido
+        requisito_solicitud.observaciones = observaciones
+        
+        # Manejar archivo si se sube
+        if 'archivo' in request.FILES:
+            requisito_solicitud.archivo = request.FILES['archivo']
+        
+        requisito_solicitud.save()
+        
+        return JsonResponse({
+            'success': True,
+            'cumplido': cumplido,
+            'observaciones': observaciones
+        })
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def actualizar_campo_personalizado(request, solicitud_id):
+    """Actualizar campos personalizados de una solicitud"""
+    
+    if request.method == 'POST':
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if solicitud.asignada_a and solicitud.asignada_a != request.user:
+            # Superusers bypass permission checks
+            if not (request.user.is_superuser or request.user.is_staff):
+                grupos_usuario = request.user.groups.all()
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_ver=True
+                ).exists()
+                
+                if not tiene_permiso:
+                    return JsonResponse({'error': 'No tienes permisos para actualizar esta solicitud.'}, status=403)
+        
+        campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
+        
+        for campo in campos_personalizados:
+            valor_campo, created = ValorCampoSolicitud.objects.get_or_create(
+                solicitud=solicitud,
+                campo=campo
+            )
+            
+            valor = request.POST.get(f'campo_{campo.id}')
+            
+            if campo.tipo == 'texto':
+                valor_campo.valor_texto = valor
+            elif campo.tipo == 'numero':
+                valor_campo.valor_numero = float(valor) if valor else None
+            elif campo.tipo == 'entero':
+                valor_campo.valor_entero = int(valor) if valor else None
+            elif campo.tipo == 'fecha':
+                valor_campo.valor_fecha = datetime.strptime(valor, '%Y-%m-%d').date() if valor else None
+            elif campo.tipo == 'booleano':
+                valor_campo.valor_booleano = valor == 'true'
+            
+            valor_campo.save()
+        
+        messages.success(request, 'Campos personalizados actualizados exitosamente.')
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+# ==========================================
+# VISTAS DE ADMINISTRACIÓN
+# ==========================================
+
+@login_required
+@superuser_permission_required('workflow.add_pipeline')
+def administrar_pipelines(request):
+    """Administración de pipelines"""
+    
+    pipelines = Pipeline.objects.all().prefetch_related('etapas')
+    
+    context = {
+        'pipelines': pipelines,
+    }
+    
+    return render(request, 'workflow/admin/pipelines.html', context)
+
+
+@login_required
+@superuser_permission_required('workflow.add_requisito')
+def administrar_requisitos(request):
+    """Administración de requisitos"""
+    
+    requisitos = Requisito.objects.all()
+    requisitos_pipeline = RequisitoPipeline.objects.all().select_related('pipeline', 'requisito')
+    
+    context = {
+        'requisitos': requisitos,
+        'requisitos_pipeline': requisitos_pipeline,
+    }
+    
+    return render(request, 'workflow/admin/requisitos.html', context)
+
+
+@login_required
+@superuser_permission_required('workflow.add_campopersonalizado')
+def administrar_campos_personalizados(request):
+    """Administración de campos personalizados"""
+    
+    campos = CampoPersonalizado.objects.all().select_related('pipeline')
+    
+    context = {
+        'campos': campos,
+    }
+    
+    return render(request, 'workflow/admin/campos_personalizados.html', context)
+
+
+@login_required
+def administrar_usuarios(request):
+    """Vista para administrar usuarios y grupos - Solo para administradores"""
+    
+    # Verificar permisos de administrador
+    if not request.user.is_superuser and not request.user.is_staff:
+        messages.error(request, 'No tienes permisos para acceder a esta sección.')
+        return redirect('workflow:dashboard')
+    
+    # Obtener usuarios y grupos
+    usuarios = User.objects.select_related('userprofile').all().order_by('username')
+    grupos = Group.objects.all().order_by('name')
+    
+    # Estadísticas
+    total_usuarios = usuarios.count()
+    usuarios_activos = usuarios.filter(is_active=True).count()
+    usuarios_inactivos = total_usuarios - usuarios_activos
+    total_grupos = grupos.count()
+    
+    # Usuarios por grupo
+    usuarios_por_grupo = {}
+    for grupo in grupos:
+        usuarios_por_grupo[grupo.name] = grupo.user_set.count()
+    
+    # Usuarios sin grupos
+    usuarios_sin_grupos = usuarios.filter(groups__isnull=True).count()
+    
+    context = {
+        'usuarios': usuarios,
+        'grupos': grupos,
+        'total_usuarios': total_usuarios,
+        'usuarios_activos': usuarios_activos,
+        'usuarios_inactivos': usuarios_inactivos,
+        'total_grupos': total_grupos,
+        'usuarios_por_grupo': usuarios_por_grupo,
+        'usuarios_sin_grupos': usuarios_sin_grupos,
+    }
+    
+    return render(request, 'workflow/admin/usuarios.html', context)
+
+
+# ==========================================
+# VISTAS DE REPORTES
+# ==========================================
+
+@login_required
+def reportes_workflow(request):
+    """Reportes del sistema de workflow"""
+    
+    # Estadísticas generales
+    total_solicitudes = Solicitud.objects.count()
+    solicitudes_activas = Solicitud.objects.filter(etapa_actual__isnull=False).count()
+    solicitudes_completadas = Solicitud.objects.filter(etapa_actual__isnull=True).count()
+    
+    # Solicitudes por pipeline
+    solicitudes_por_pipeline = Pipeline.objects.annotate(
+        total=Count('solicitud')
+    ).values('nombre', 'total')
+    
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    from datetime import timedelta
+    solicitudes_vencidas = 0
+    for solicitud in Solicitud.objects.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
+    
+    # Tiempo promedio por etapa - Calculamos usando Python para compatibilidad con SQLite
+    tiempos_promedio = []
+    historiales = HistorialSolicitud.objects.filter(
+        fecha_fin__isnull=False
+    ).select_related('etapa')
+    
+    etapas_tiempos = {}
+    for historial in historiales:
+        etapa_nombre = historial.etapa.nombre
+        if etapa_nombre not in etapas_tiempos:
+            etapas_tiempos[etapa_nombre] = []
+        
+        tiempo_horas = (historial.fecha_fin - historial.fecha_inicio).total_seconds() / 3600
+        etapas_tiempos[etapa_nombre].append(tiempo_horas)
+    
+    for etapa_nombre, tiempos in etapas_tiempos.items():
+        tiempo_promedio = sum(tiempos) / len(tiempos) if tiempos else 0
+        tiempos_promedio.append({
+            'etapa__nombre': etapa_nombre,
+            'tiempo_promedio': tiempo_promedio
+        })
+    
+    context = {
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_activas': solicitudes_activas,
+        'solicitudes_completadas': solicitudes_completadas,
+        'solicitudes_vencidas': solicitudes_vencidas,
+        'solicitudes_por_pipeline': solicitudes_por_pipeline,
+        'tiempos_promedio': tiempos_promedio,
+    }
+    
+    return render(request, 'workflow/reportes.html', context)
+
+
+# ==========================================
+# VISTAS DE CANALES ALTERNOS
+# ==========================================
+
+@login_required
+def canal_digital(request):
+    """Vista principal del Canal Digital"""
+    
+    # Importar el modelo aquí para evitar problemas de importación circular
+    from .models import FormularioWeb
+    from .modelsWorkflow import Pipeline, ConfiguracionCanalDigital
+    from django.core.paginator import Paginator
+    
+    # Estadísticas específicas del canal digital
+    solicitudes_canal_digital = FormularioWeb.objects.count()
+    solicitudes_procesadas = FormularioWeb.objects.filter(procesado=True).count()
+    solicitudes_pendientes = FormularioWeb.objects.filter(procesado=False).count()
+    
+    # Obtener todas las solicitudes para la tabla (ordenadas por fecha más reciente)
+    formularios_queryset = FormularioWeb.objects.order_by('-fecha_creacion')
+    
+    # Paginación
+    paginator = Paginator(formularios_queryset, 25)  # 25 formularios por página
+    page_number = request.GET.get('page')
+    formularios_page = paginator.get_page(page_number)
+    
+    # Preparar datos para la tabla
+    formularios_tabla = []
+    for formulario in formularios_page:
+        formularios_tabla.append({
+            'id': formulario.id,
+            'nombre_completo': formulario.get_nombre_completo(),
+            'cedula': formulario.cedulaCliente,
+            'celular': formulario.celular,
+            'correo': formulario.correo_electronico,
+            'producto_interesado': formulario.producto_interesado or 'No especificado',
+            'monto_solicitar': f"${formulario.dinero_a_solicitar:,.2f}" if formulario.dinero_a_solicitar else 'N/A',
+            'fecha_creacion': formulario.fecha_creacion,
+            'procesado': formulario.procesado,
+            'ip_address': formulario.ip_address,
+        })
+    
+    # Obtener configuración del Canal Digital
+    configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
+    pipeline_por_defecto = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+    etapa_por_defecto = ConfiguracionCanalDigital.get_etapa_por_defecto()
+    
+    # Obtener todos los pipelines disponibles
+    pipelines_disponibles = Pipeline.objects.all()
+    
+    # KPIs del canal digital
+    context = {
+        'solicitudes_canal_digital': solicitudes_canal_digital,
+        'solicitudes_procesadas': solicitudes_procesadas,
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'formularios_tabla': formularios_tabla,
+        'formularios_page': formularios_page,
+        'titulo': 'Canal Digital',
+        'subtitulo': 'Gestión de solicitudes del canal digital',
+        'configuracion': configuracion,
+        'pipeline_por_defecto': pipeline_por_defecto,
+        'etapa_por_defecto': etapa_por_defecto,
+        'pipelines_disponibles': pipelines_disponibles,
+    }
+    
+    return render(request, 'workflow/canal_digital.html', context)
+
+
+@csrf_exempt
+@login_required
+def convertir_formulario_a_solicitud(request):
+    """Convierte un FormularioWeb en una Solicitud del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_id = data.get('formulario_id')
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not formulario_id:
+            return JsonResponse({'success': False, 'error': 'ID de formulario requerido'})
+        
+        # Obtener el formulario
+        formulario = get_object_or_404(FormularioWeb, id=formulario_id)
+        
+        if formulario.procesado:
+            return JsonResponse({'success': False, 'error': 'Este formulario ya ha sido procesado'})
+        
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
+        
+        # Buscar o crear cliente basado en la cédula
+        cliente = None
+        if formulario.cedulaCliente:
+            try:
+                cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+            except:
+                pass
+        
+        # Crear la solicitud
+        import uuid
+        codigo = f"{pipeline.nombre[:3].upper()}-{uuid.uuid4().hex[:8].upper()}"
+        
+        solicitud = Solicitud()
+        solicitud.codigo = codigo
+        solicitud.pipeline = pipeline
+        solicitud.etapa_actual = etapa
+        # Asignar datos del formulario directamente a los campos del modelo
+        solicitud.cliente_nombre = formulario.get_nombre_completo()
+        solicitud.cliente_cedula = formulario.cedulaCliente
+        solicitud.cliente_telefono = formulario.celular
+        solicitud.cliente_email = formulario.correo_electronico
+        solicitud.producto_solicitado = formulario.producto_interesado
+        solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
+        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+        solicitud.propietario = None
+        solicitud.creada_por = request.user
+        solicitud.cliente = cliente
+        solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
+        solicitud.observaciones = f"Solicitud creada desde Canal Digital - IP: {formulario.ip_address}"
+        solicitud.save()
+        
+        # Crear historial inicial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=etapa,
+            usuario_responsable=request.user
+        )
+        
+        # Marcar formulario como procesado
+        formulario.procesado = True
+        formulario.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'mensaje': f'Solicitud {solicitud.codigo} creada exitosamente en {pipeline.nombre} - {etapa.nombre}',
+            'solicitud_id': solicitud.id,
+            'solicitud_codigo': solicitud.codigo,
+            'pipeline_nombre': pipeline.nombre,
+            'etapa_nombre': etapa.nombre
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def procesar_formularios_masivo(request):
+    """Convierte múltiples FormularioWeb en Solicitudes del workflow"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        from .models import FormularioWeb
+        from .modelsWorkflow import Pipeline, Etapa, Solicitud, HistorialSolicitud, ConfiguracionCanalDigital
+        from pacifico.models import Cliente
+        import json
+        
+        data = json.loads(request.body)
+        formulario_ids = data.get('formulario_ids', [])
+        pipeline_id = data.get('pipeline_id')
+        etapa_id = data.get('etapa_id')
+        
+        if not formulario_ids:
+            return JsonResponse({'success': False, 'error': 'No se seleccionaron formularios'})
+        
+        # Determinar pipeline y etapa
+        if pipeline_id:
+            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+        else:
+            # Usar configuración por defecto
+            pipeline = ConfiguracionCanalDigital.get_pipeline_por_defecto()
+            if not pipeline:
+                return JsonResponse({'success': False, 'error': 'No hay pipeline configurado por defecto'})
+        
+        if etapa_id:
+            etapa = get_object_or_404(Etapa, id=etapa_id, pipeline=pipeline)
+        else:
+            # Usar configuración por defecto
+            etapa = ConfiguracionCanalDigital.get_etapa_por_defecto()
+            if not etapa or etapa.pipeline != pipeline:
+                # Buscar primera etapa del pipeline
+                etapa = pipeline.etapas.first()
+                if not etapa:
+                    return JsonResponse({'success': False, 'error': f'No hay etapas configuradas en el pipeline {pipeline.nombre}'})
+        
+        formularios = FormularioWeb.objects.filter(id__in=formulario_ids, procesado=False)
+        solicitudes_creadas = []
+        errores = []
+        
+        for formulario in formularios:
+            try:
+                # Buscar cliente
+                cliente = None
+                if formulario.cedulaCliente:
+                    try:
+                        cliente = Cliente.objects.filter(cedula=formulario.cedulaCliente).first()
+                    except:
+                        pass
+                
+                # Crear la solicitud
+                solicitud = Solicitud.objects.create(
+                    pipeline=pipeline,
+                    etapa_actual=etapa,
+                    cliente_nombre=formulario.get_nombre_completo(),
+                    cliente_cedula=formulario.cedulaCliente,
+                    cliente_telefono=formulario.celular,
+                    cliente_email=formulario.correo_electronico,
+                    producto_solicitado=formulario.producto_interesado,
+                    monto_solicitado=formulario.dinero_a_solicitar or 0,
+                    # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
+                    propietario=None,
+                    cliente=cliente,
+                    origen='Canal Digital',
+                    observaciones=f"Solicitud creada desde formulario web del Canal Digital (ID: {formulario.id})"
                 )
                 
                 # Crear historial inicial
@@ -4996,6 +7934,7 @@ def api_solicitud_brief(request, solicitud_id):
             ) if solicitud.propietario else (
                 solicitud.creada_por.get_full_name() or solicitud.creada_por.username
             ) if solicitud.creada_por else 'N/A',
+            'es_etapa_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False,
         }
 
         # Cliente info
@@ -5033,17 +7972,43 @@ def api_solicitud_brief(request, solicitud_id):
                 }
                 workflow.append(etapa_dict)
 
-        # Historial
-        historial = [
-            {
+        # Historial - Combine stage changes, comments, and other events
+        historial = []
+        
+        # Add stage changes from HistorialSolicitud
+        for h in solicitud.historial.all().order_by('fecha_inicio'):
+            historial.append({
                 'etapa': h.etapa.nombre if h.etapa else '-',
                 'subestado': h.subestado.nombre if h.subestado else '-',
                 'usuario': h.usuario_responsable.get_full_name() if h.usuario_responsable else '-',
-                'fecha_inicio': h.fecha_inicio.strftime('%d/%m/%Y %H:%M') if h.fecha_inicio else '-',
-                'fecha_fin': h.fecha_fin.strftime('%d/%m/%Y %H:%M') if h.fecha_fin else None,
-            }
-            for h in solicitud.historial.all().order_by('fecha_inicio')
-        ]
+                'fecha_inicio': h.fecha_inicio.isoformat() if h.fecha_inicio else None,
+                'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None,
+                'tipo': 'etapa'
+            })
+        
+        # Add comments
+        if hasattr(solicitud, 'comentarios'):
+            for c in solicitud.comentarios.all().order_by('-fecha_creacion'):
+                historial.append({
+                    'texto': c.comentario,
+                    'usuario': c.usuario.get_full_name() if c.usuario else '-',
+                    'fecha_creacion': c.fecha_creacion.isoformat() if c.fecha_creacion else None,
+                    'tipo': 'comentario'
+                })
+        
+        # Add document uploads from requisitos
+        for req in solicitud.requisitos.all():
+            if req.archivo and req.cumplido:
+                historial.append({
+                    'nombre': req.requisito.nombre,
+                    'archivo': req.archivo.url if req.archivo else None,
+                    'usuario': solicitud.asignada_a.get_full_name() if solicitud.asignada_a else '-',
+                    'fecha_creacion': solicitud.fecha_ultima_actualizacion.isoformat() if solicitud.fecha_ultima_actualizacion else None,
+                    'tipo': 'documento'
+                })
+        
+        # Sort all events by date (most recent first)
+        historial.sort(key=lambda x: x.get('fecha_inicio') or x.get('fecha_creacion') or '', reverse=True)
 
         # Comentarios
         comentarios = []
@@ -5099,12 +8064,35 @@ def api_solicitud_brief(request, solicitud_id):
         # Documentos (de requisitos)
         documentos = []
         for req in solicitud.requisitos.all():
-            documentos.append({
+            documento_info = {
+                'id': req.id,  # Add the RequisitoSolicitud ID
                 'nombre': req.requisito.nombre,
                 'url': req.archivo.url if req.archivo else '',
                 'cumplido': req.cumplido,
                 'observaciones': req.observaciones or ''
-            })
+            }
+            
+            # Special handling for APC requisito
+            if req.requisito.nombre.lower() == 'apc':
+                # Check if APC is being processed by Makito RPA
+                if solicitud.descargar_apc_makito and solicitud.apc_status in ['pending', 'in_progress']:
+                    documento_info['apc_status'] = solicitud.apc_status
+                    documento_info['apc_processing'] = True
+                    documento_info['apc_fecha_solicitud'] = solicitud.apc_fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_solicitud else None
+                    documento_info['apc_fecha_inicio'] = solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else None
+                    documento_info['apc_fecha_completado'] = solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_completado else None
+                    documento_info['apc_observaciones'] = solicitud.apc_observaciones
+                    
+                    # If APC is completed, mark the requisito as fulfilled
+                    if solicitud.apc_status == 'completed' and solicitud.apc_archivo:
+                        documento_info['cumplido'] = True
+                        documento_info['url'] = solicitud.apc_archivo.url if solicitud.apc_archivo else ''
+                        documento_info['apc_processing'] = False
+                        documento_info['apc_completed'] = True
+                else:
+                    documento_info['apc_processing'] = False
+            
+            documentos.append(documento_info)
 
         # Cotización info
         cotizacion_info = {}
@@ -8426,6 +11414,50 @@ def api_apc_detail(request, solicitud_codigo):
             'success': False,
             'error': f'Error al obtener detalles APC: {str(e)}'
         }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_check_apc_status(request, solicitud_id):
+    """
+    API para verificar el estado APC de una solicitud por ID
+    """
+    try:
+        # Buscar la solicitud por ID
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar si la solicitud tiene APC habilitado
+        if not solicitud.descargar_apc_makito:
+            return JsonResponse({
+                'success': False,
+                'error': 'APC no está habilitado para esta solicitud'
+            }, status=400)
+        
+        # Construir respuesta con información del estado APC
+        data = {
+            'solicitud_id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'apc_status': solicitud.apc_status,
+            'apc_status_display': solicitud.get_apc_status_display(),
+            'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.isoformat() if solicitud.apc_fecha_solicitud else None,
+            'apc_fecha_inicio': solicitud.apc_fecha_inicio.isoformat() if solicitud.apc_fecha_inicio else None,
+            'apc_fecha_completado': solicitud.apc_fecha_completado.isoformat() if solicitud.apc_fecha_completado else None,
+            'apc_observaciones': solicitud.apc_observaciones or '',
+            'apc_archivo_disponible': bool(solicitud.apc_archivo),
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'apc_status': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al verificar estado APC: {str(e)}'
+        }, status=500)
+
+
 # ==========================================
 # APIs PARA CANAL DIGITAL
 # ==========================================
