@@ -8981,23 +8981,60 @@ def buscar_entrevistas(request):
     """API para buscar entrevistas de clientes"""
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
-        
-        if not query or len(query) < 2:
-            return JsonResponse({
-                'success': True,
-                'entrevistas': []
-            })
+        cedula = request.GET.get('cedula', '').strip()
         
         try:
             from .models import ClienteEntrevista
             
-            # Buscar entrevistas por nombre, apellido o cédula
-            entrevistas = ClienteEntrevista.objects.filter(
-                Q(primer_nombre__icontains=query) |
-                Q(primer_apellido__icontains=query) |
-                Q(tomo_cedula__icontains=query) |
-                Q(partida_cedula__icontains=query)
-            ).order_by('-fecha_entrevista')[:20]
+            # Base queryset
+            queryset = ClienteEntrevista.objects.all()
+            
+            # Si tenemos una cédula específica para filtrar
+            if cedula:
+                # Intentar dividir la cédula en sus componentes
+                cedula_parts = cedula.split('-')
+                
+                # Extraer solo números para búsqueda flexible
+                numeros_cedula = ''.join(filter(str.isdigit, cedula))
+                
+                if len(cedula_parts) == 4:  # Formato completo: provincia-letra-tomo-partida
+                    provincia, letra, tomo, partida = cedula_parts
+                    
+                    # Usando Q objects para hacer búsqueda OR para ser más flexibles
+                    from django.db.models import Q
+                    
+                    # Intentar diferentes combinaciones de búsqueda
+                    # 1. Búsqueda exacta por todos los componentes
+                    # 2. Búsqueda por tomo y partida (los más identificativos)
+                    # 3. Búsqueda por los últimos dígitos en cualquier campo de cédula
+                    queryset = queryset.filter(
+                        Q(provincia_cedula=provincia, tipo_letra=letra, tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula=tomo, partida_cedula=partida)
+                    )
+                elif len(cedula_parts) >= 2:  # Formato parcial
+                    # Si tenemos al menos tomo y partida, filtramos por ellos
+                    tomo = cedula_parts[-2]
+                    partida = cedula_parts[-1]
+                    queryset = queryset.filter(
+                        Q(tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula__endswith=tomo, partida_cedula=partida)
+                    )
+                        
+            # Aplicar filtro de búsqueda si hay un query
+            if query and len(query) >= 2:
+                queryset = queryset.filter(
+                    Q(primer_nombre__icontains=query) |
+                    Q(primer_apellido__icontains=query) |
+                    Q(email__icontains=query)
+                )
+            elif not cedula:  # Si no hay cédula ni query, retornamos vacío
+                return JsonResponse({
+                    'success': True,
+                    'entrevistas': []
+                })
+                
+            # Limitar resultados y ordenar
+            entrevistas = queryset.order_by('-fecha_entrevista')[:20]
             
             # Serializar resultados
             resultados = []
@@ -9016,10 +9053,15 @@ def buscar_entrevistas(request):
                     'apellido': entrevista.primer_apellido or '',
                     'cedula': cedula_completa,
                     'celular': entrevista.telefono or 'Sin celular',
+                    'email': entrevista.email or 'Sin email',
+                    'telefono': entrevista.telefono or 'Sin teléfono',
+                    'fecha_entrevista': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
                     'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
+                    'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
                     'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
                     'salario': float(entrevista.salario) if entrevista.salario else 0,
-                    'empresa': entrevista.trabajo_lugar or 'Sin empresa'
+                    'empresa': entrevista.trabajo_lugar or 'Sin empresa',
+                    'completada': entrevista.completada_por_admin or False
                 })
             
             return JsonResponse({
