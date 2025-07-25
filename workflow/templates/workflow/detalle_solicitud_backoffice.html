@@ -17,6 +17,99 @@
   position: relative;
 }
 
+/* Estilos para modal de entrevistas */
+.modal-entrevistas {
+  max-width: 90%;
+  margin: 2rem auto;
+}
+
+/* Estilos para documentos pendientes de calificar */
+.documento-pendiente {
+    border: 2px solid #ff6b6b !important;
+    box-shadow: 0 0 10px rgba(255, 107, 107, 0.5) !important;
+    position: relative;
+    animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+.documento-pendiente::after {
+    content: "¡Pendiente de calificar!";
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #ff6b6b;
+    color: white;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    border-bottom-left-radius: 5px;
+    z-index: 10;
+}
+
+/* Estilos para botón pulsante de avanzar */
+.btn-pulsating {
+    animation: btn-pulse 1s infinite;
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+}
+
+@keyframes btn-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+#entrevistaSeleccionada {
+  transition: all 0.3s ease-in-out;
+}
+
+.modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+}
+
 .tab-modern.tab-blocked:hover {
   opacity: 0.6;
   background-color: #f8f9fa !important;
@@ -52,6 +145,26 @@
 .tab-modern.tab-available:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.tab-modern.tab-highlighted {
+  animation: tab-highlight-pulse 2s infinite;
+  box-shadow: 0 0 15px rgba(25, 135, 84, 0.6);
+  transform: translateY(-3px);
+  transition: all 0.5s ease;
+  border-color: #198754 !important;
+}
+
+@keyframes tab-highlight-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(25, 135, 84, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.6);
+  }
 }
 
 @keyframes pulse-available {
@@ -577,10 +690,10 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <button class="btn btn-primary me-2" onclick="refreshFiles({{ subestado.id }})">
-                    <i class="fas fa-sync me-1"></i>Actualizar Estado
+                  <button id="btn-control-calidad" class="btn btn-primary me-2" onclick="marcarControlCalidad()">
+                    <i class="fas fa-check-circle me-1"></i>Control de Calidad Realizado
                   </button>
-                  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa">
+                  <button id="btn-avanzar-etapa" type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa" disabled>
                     <i class="fas fa-arrow-right me-1"></i>
                     Avanzar Etapa
                   </button>
@@ -738,6 +851,47 @@
       location.reload();
     }, 2000);
   }
+  
+  function marcarControlCalidad() {
+    console.log('Marcando control de calidad como realizado');
+
+    // Mostrar spinner de carga
+    const button = document.getElementById('btn-control-calidad');
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    button.disabled = true;
+
+    // Simular proceso (en implementación real sería una validación de los documentos)
+    setTimeout(() => {
+      // Cambiar el estado del botón de control de calidad
+      button.innerHTML = '<i class="fas fa-check-circle me-1"></i>Control de Calidad Completado';
+      button.classList.remove('btn-primary');
+      button.classList.add('btn-success');
+      button.disabled = true;
+      
+      // Habilitar el botón de avanzar etapa
+      const botonAvanzar = document.getElementById('btn-avanzar-etapa');
+      botonAvanzar.removeAttribute('disabled');
+      botonAvanzar.classList.add('btn-pulsating');
+      
+      // Habilitar la navegación a la siguiente pestaña disponible
+      const tabDisponible = document.querySelector('.tab-modern.tab-available');
+      if (tabDisponible) {
+        // Habilitar la navegación con Bootstrap
+        tabDisponible.setAttribute('data-bs-toggle', 'tab');
+        tabDisponible.setAttribute('data-bs-target', `#content-${tabDisponible.getAttribute('data-subestado-id')}`);
+        tabDisponible.removeAttribute('aria-disabled');
+        tabDisponible.setAttribute('role', 'tab');
+        tabDisponible.removeEventListener('click', alertaControlCalidad);
+        tabDisponible.addEventListener('shown.bs.tab', manejarCambioTab);
+        tabDisponible.classList.add('tab-highlighted');
+        tabDisponible.setAttribute('title', 'Haga clic para navegar a esta etapa');
+      }
+      
+      // Mostrar notificación de éxito
+      showToast('Control de calidad completado correctamente. Ahora puede avanzar a la siguiente etapa o pestaña.', 'success');
+    }, 1500);
+  }
 
   function generateReport(subestadoId) {
     console.log('Generando reporte para subestado:', subestadoId);
@@ -804,12 +958,44 @@
 
     // Aplicar validación secuencial a las pestañas
     aplicarValidacionSecuencialTabs();
+    
+    // Inicialmente deshabilitar navegación a la siguiente pestaña hasta que se complete el control de calidad
+    const tabDisponible = document.querySelector('.tab-modern.tab-available');
+    if (tabDisponible) {
+      // Al inicio, la pestaña disponible solo muestra que es la siguiente, pero no se puede hacer clic hasta control de calidad
+      tabDisponible.removeAttribute('data-bs-toggle');
+      tabDisponible.removeAttribute('data-bs-target');
+      tabDisponible.setAttribute('aria-disabled', 'true');
+      tabDisponible.setAttribute('role', 'button');
+      tabDisponible.setAttribute('title', 'Complete el Control de Calidad primero');
+      tabDisponible.addEventListener('click', alertaControlCalidad);
+    }
 
     // Agregar tooltips a los botones de archivo
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Verificar estado de calificación de documentos
+    setTimeout(() => {
+      const verificacion = verificarDocumentosPendientes();
+      
+      // Resaltar documentos pendientes si los hay
+      if (!verificacion.todoCalificado) {
+        verificacion.pendientes.forEach(req => {
+          if (req.elemento) {
+            req.elemento.classList.add('documento-pendiente');
+          }
+        });
+        
+        // Mostrar mensaje informativo solo si hay subestados disponibles para avanzar
+        const btnAvanzar = document.querySelector('#subestados-container button:not([disabled])');
+        if (btnAvanzar && verificacion.pendientes.length > 0) {
+          mostrarMensaje(`Recuerde calificar todos los documentos antes de avanzar (${verificacion.pendientes.length} pendientes)`, 'info');
+        }
+      }
+    }, 1500);
 
     // Agregar hover effects a las cards de archivo
     const archivoCards = document.querySelectorAll('.archivo-card');
@@ -952,6 +1138,29 @@
     return false;
   }
 
+  // Función para alertar sobre completar control de calidad primero
+  function alertaControlCalidad(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Mostrar tooltip personalizado en la posición del click
+    mostrarTooltipBloqueo(e, 'Debe completar el Control de Calidad primero');
+    
+    // Resaltar el botón de control de calidad con un efecto visual
+    const botonControl = document.getElementById('btn-control-calidad');
+    botonControl.classList.add('btn-pulsating');
+    
+    // Quitar el efecto después de 3 segundos
+    setTimeout(() => {
+      botonControl.classList.remove('btn-pulsating');
+    }, 3000);
+    
+    // Mostrar toast con instrucciones
+    showToast('Debe completar el Control de Calidad antes de avanzar a la siguiente etapa', 'warning');
+    
+    return false;
+  }
+  
   // Función para mostrar tooltip de bloqueo
   function mostrarTooltipBloqueo(event, mensaje) {
     // Remover tooltip anterior si existe
@@ -1154,6 +1363,36 @@
           setTimeout(() => {
             console.log('Preservando estado después de calificación...');
             preservarEstadosBotones();
+            
+            // Verificar si todos los documentos están calificados y mostrar mensaje indicativo
+            const verificacion = verificarDocumentosPendientes();
+            
+            // Eliminar clase documento-pendiente de todos los elementos
+            document.querySelectorAll('.documento-pendiente').forEach(elem => {
+              elem.classList.remove('documento-pendiente');
+            });
+            
+            // Si hay documentos pendientes, resaltarlos
+            verificacion.pendientes.forEach(req => {
+              if (req.elemento) {
+                req.elemento.classList.add('documento-pendiente');
+              }
+            });
+            
+            // Si todos los documentos están calificados, mostrar mensaje informativo
+            if (verificacion.todoCalificado) {
+              const btnAvanzar = document.querySelector('#subestados-container button:not([disabled])');
+              if (btnAvanzar) {
+                // Hacer parpadear el botón de avanzar
+                btnAvanzar.classList.add('btn-pulsating');
+                setTimeout(() => {
+                  btnAvanzar.classList.remove('btn-pulsating');
+                }, 3000);
+                
+                // Mostrar mensaje informativo
+                mostrarMensaje('¡Todos los documentos han sido calificados! Ahora puede avanzar al siguiente estado.', 'info');
+              }
+            }
           }, 100);
           
           mostrarMensaje('Calificación guardada exitosamente', 'success');
@@ -1882,12 +2121,126 @@
     container.innerHTML = html;
   }
 
+  // Función para verificar si todos los documentos han sido calificados
+  function verificarDocumentosPendientes() {
+    const requisitos = document.querySelectorAll('[data-requisito-id]');
+    const totalRequisitos = requisitos.length;
+    let requisitosSinCalificar = [];
+
+    // Si no hay requisitos, consideramos que todo está calificado
+    if (totalRequisitos === 0) {
+      console.log('No hay requisitos para calificar');
+      return {
+        todoCalificado: true,
+        pendientes: []
+      };
+    }
+
+    // Verificar cada requisito
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      const requisitoNombre = requisito.querySelector('.card-title')?.textContent?.trim() || `Requisito ${requisitoId}`;
+      
+      // Verificar si tiene algún botón activo (calificado)
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn-backoffice.active');
+      
+      if (botonesCalificados.length === 0) {
+        // Este requisito no ha sido calificado
+        requisitosSinCalificar.push({
+          id: requisitoId,
+          nombre: requisitoNombre
+        });
+      }
+    });
+
+    return {
+      todoCalificado: requisitosSinCalificar.length === 0,
+      pendientes: requisitosSinCalificar
+    };
+  }
+
+  // Función para verificar si todos los documentos han sido calificados
+  function verificarDocumentosPendientes() {
+    const requisitos = document.querySelectorAll('.requisito-item');
+    const totalRequisitos = requisitos.length;
+    let requisitosSinCalificar = [];
+
+    // Si no hay requisitos, consideramos que todo está calificado
+    if (totalRequisitos === 0) {
+      console.log('No hay requisitos para calificar');
+      return {
+        todoCalificado: true,
+        pendientes: []
+      };
+    }
+
+    // Verificar cada requisito
+    requisitos.forEach(requisito => {
+      const requisitoId = requisito.getAttribute('data-requisito-id');
+      const requisitoNombre = requisito.querySelector('.card-title')?.textContent?.trim() || 
+                              requisito.querySelector('h5')?.textContent?.trim() || 
+                              `Requisito ${requisitoId}`;
+      
+      // Verificar si tiene algún botón activo (calificado)
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.active, .calificar-btn-backoffice.active');
+      
+      if (botonesCalificados.length === 0) {
+        // Este requisito no ha sido calificado
+        requisitosSinCalificar.push({
+          id: requisitoId,
+          nombre: requisitoNombre,
+          elemento: requisito
+        });
+      }
+    });
+
+    return {
+      todoCalificado: requisitosSinCalificar.length === 0,
+      pendientes: requisitosSinCalificar
+    };
+  }
+
   async function avanzarSubestado(subestadoId) {
     const solicitudId = {{ solicitud.id }};
     
     console.log(`Intentando avanzar subestado: solicitud=${solicitudId}, subestado=${subestadoId}`);
     
     try {
+      // Verificar si todos los documentos han sido calificados
+      const verificacion = verificarDocumentosPendientes();
+      
+      if (!verificacion.todoCalificado) {
+        // Si hay documentos sin calificar, mostrar un mensaje al usuario
+        let listaPendientes = '';
+        verificacion.pendientes.forEach(req => {
+          listaPendientes += `<li>${req.nombre}</li>`;
+          
+          // Resaltar visualmente los documentos pendientes
+          if (req.elemento) {
+            req.elemento.classList.add('documento-pendiente');
+            
+            // Hacer scroll al primer documento pendiente
+            if (listaPendientes.split('<li>').length - 1 === 1) {
+              req.elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+        
+        Swal.fire({
+          title: 'Documentos sin calificar',
+          html: `<div class="text-start">
+                  <p>No puede avanzar al siguiente estado hasta calificar todos los documentos:</p>
+                  <ul class="text-start">${listaPendientes}</ul>
+                 </div>`,
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#3085d6',
+          allowOutsideClick: false
+        });
+        
+        return; // Detener la ejecución y no permitir avanzar
+      }
+      
       // Deshabilitar todos los botones temporalmente
       const buttons = document.querySelectorAll('#subestados-container button');
       const targetButton = document.querySelector(`button[data-subestado-id="${subestadoId}"]`);
@@ -2039,6 +2392,7 @@
     // Actualizar el encabezado del modal con los datos del cliente
     document.getElementById('clienteNombreModal').textContent = clienteNombre;
     document.getElementById('clienteCedulaModal').textContent = clienteCedula;
+    document.getElementById('filteredByCedula').textContent = clienteCedula;
     
     // Mostrar el modal
     const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
@@ -2047,7 +2401,7 @@
     // Limpiar búsqueda anterior y configurarla con la cédula del cliente
     const inputBusqueda = document.getElementById('buscarEntrevista');
     inputBusqueda.value = '';
-    inputBusqueda.placeholder = `Buscando entrevistas para cédula: ${clienteCedula}`;
+    inputBusqueda.placeholder = `Buscar por nombre o email (ya filtrado por cédula)`;
     
     // Automáticamente buscar entrevistas con la misma cédula
     buscarEntrevistasPorCedula(clienteCedula);
@@ -2271,7 +2625,7 @@
     }
     
     let html = `
-      <div class="divide-y divide-gray-200">`;
+      <div class="divide-y divide-gray-200 max-h-[50vh] overflow-y-auto px-1 py-2 rounded-md shadow-inner bg-gray-50">`;
     
     entrevistas.forEach(entrevista => {
       const coincidencia = compararCedulas(entrevista.cedula, cedula);
@@ -2280,13 +2634,13 @@
       let cursorStyle, onclickAttr;
       
       if (coincidencia === 'exacta') {
-        rowClass = 'bg-green-50 border border-green-200';
+        rowClass = 'bg-green-50 border border-green-200 shadow-sm hover:shadow-md';
         badgeClass = 'bg-green-100 text-green-800';
         badgeText = '<i class="fas fa-check-circle mr-1"></i>Coincidencia exacta';
         cursorStyle = 'cursor-pointer';
         onclickAttr = `onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')"`;
       } else if (coincidencia === 'parcial') {
-        rowClass = 'bg-blue-50 border border-blue-200'; 
+        rowClass = 'bg-blue-50 border border-blue-200 shadow-sm hover:shadow-md'; 
         badgeClass = 'bg-blue-100 text-blue-800';
         badgeText = '<i class="fas fa-check mr-1"></i>Coincidencia parcial';
         cursorStyle = 'cursor-pointer';
@@ -2300,7 +2654,7 @@
       }
       
       html += `
-        <div class="p-4 hover:bg-gray-100 rounded-md ${cursorStyle} transition-colors ${rowClass}" 
+        <div class="p-4 hover:bg-gray-100 rounded-md ${cursorStyle} transition-all duration-300 ${rowClass} mb-2" 
              ${onclickAttr}>
           <div class="flex justify-between items-start">
             <div>
@@ -2497,23 +2851,43 @@
       return;
     }
     
+    
     entrevistaSeleccionadaId = id;
     
-    // Mostrar entrevista seleccionada
+    // Animar el scroll hacia la sección de entrevista seleccionada
+    const entrevistaSeleccionadaEl = document.getElementById('entrevistaSeleccionada');
+    
+    // Mostrar entrevista seleccionada con animación
     document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
     document.getElementById('cedulaEntrevistaSeleccionada').textContent = cedula;
-    document.getElementById('entrevistaSeleccionada').style.display = 'block';
+    
+    // Aplicar animación
+    entrevistaSeleccionadaEl.style.opacity = '0';
+    entrevistaSeleccionadaEl.style.transform = 'translateY(20px)';
+    entrevistaSeleccionadaEl.style.display = 'block';
+    
+    // Efecto de aparición
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.style.opacity = '1';
+      entrevistaSeleccionadaEl.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Scroll suave hasta la sección
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
     
     // Habilitar botón de confirmación
     document.getElementById('btnConfirmarAsociacion').disabled = false;
     
-    // Resaltar selección
-    document.querySelectorAll('.list-group-item').forEach(item => {
-      item.classList.remove('active');
+    // Resaltar selección con animación
+    document.querySelectorAll('.p-4[onclick]').forEach(item => {
+      item.classList.remove('ring-2', 'ring-green-500', 'bg-green-100');
     });
+    
     const selectedItem = event.target.closest('.p-4');
     if (selectedItem) {
-      selectedItem.classList.add('bg-green-100');
+      selectedItem.classList.add('ring-2', 'ring-green-500', 'bg-green-100');
     }
   }
 
@@ -2930,40 +3304,45 @@
 <div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header bg-white border-b p-4">
+      <div class="modal-header bg-white border-b p-4 sticky-top shadow-sm">
         <div>
           <h5 class="modal-title text-lg font-medium mb-2" id="modalAsociarEntrevistaLabel">
-            <i class="fas fa-user-edit me-2"></i>Asociar Entrevista de Cliente
+            <i class="fas fa-user-edit me-2 text-blue-600"></i>Asociar Entrevista de Cliente
           </h5>
-          <div class="flex flex-col bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+          <div class="flex flex-col bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-sm">
             <div class="text-gray-800 mb-1">
-              <i class="fas fa-user me-1 text-blue-500"></i>
+              <i class="fas fa-user me-1 text-blue-600"></i>
               <strong>Cliente:</strong> <span id="clienteNombreModal" class="font-semibold ml-1">Cargando...</span>
             </div>
             <div class="text-gray-800">
-              <i class="fas fa-id-card me-1 text-blue-500"></i>
+              <i class="fas fa-id-card me-1 text-blue-600"></i>
               <strong>Cédula:</strong> <span id="clienteCedulaModal" class="font-mono font-semibold ml-1">Cargando...</span>
             </div>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4">
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+      <div class="modal-body p-4" style="max-height: 60vh; overflow-y: auto;">
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 sticky top-0 z-10">
           <div class="flex">
             <div class="flex-shrink-0">
               <i class="fas fa-shield-alt text-yellow-400"></i>
             </div>
             <div class="ml-3">
-              <p class="text-sm text-yellow-700">
-                <strong>Seguridad:</strong> Solo se pueden asociar entrevistas con la misma cédula que el cliente de esta solicitud.
-              </p>
+              <div class="d-flex align-items-center">
+                <p class="text-sm text-yellow-700 mb-0">
+                  <strong>Seguridad:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-yellow-700 p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </p>
+              </div>
             </div>
           </div>
         </div>
         
-        <div class="mb-4">
-          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista (Filtrada por cédula)</label>
+        <div class="mb-4 sticky top-20 z-10 pt-2 pb-2 bg-white">
+          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <i class="fas fa-search text-gray-400"></i>
@@ -2972,13 +3351,16 @@
                    placeholder="Refinar búsqueda por nombre o email (opcional)..."
                    onkeyup="buscarEntrevistas()">
           </div>
+          <div class="text-xs text-gray-500 mt-1">
+            <i class="fas fa-filter me-1"></i>Ya filtrado por cédula: <span id="filteredByCedula" class="font-mono">Cargando...</span>
+          </div>
         </div>
         
-        <div id="resultadosEntrevistas" class="mt-4">
+        <div id="resultadosEntrevistas" class="mt-4 transition-all duration-300">
           <!-- Aquí se cargarán los resultados -->
         </div>
         
-        <div id="entrevistaSeleccionada" class="mt-4 p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm" style="display: none;">
+        <div id="entrevistaSeleccionada" class="mt-4 p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm transition-all duration-300" style="display: none;">
           <div class="flex items-center mb-2">
             <div class="flex-shrink-0">
               <i class="fas fa-check-circle text-green-500 text-xl"></i>
@@ -2999,14 +3381,14 @@
           </div>
           <div class="bg-white p-3 rounded-md border border-gray-200 mt-2 text-sm">
             <p class="text-gray-700 mb-0">
-              <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+              <i class="fas fa-info-circle text-blue-600 mr-1"></i>
               Esta acción vinculará los datos de la entrevista seleccionada con la solicitud actual.
               <br>Solo se asocian entrevistas del mismo cliente por motivos de seguridad.
             </p>
           </div>
         </div>
       </div>
-      <div class="modal-footer bg-gray-50 p-3">
+      <div class="modal-footer bg-gray-50 p-3 sticky-bottom shadow-sm">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
           <i class="fas fa-times me-1"></i> Cancelar
         </button>
