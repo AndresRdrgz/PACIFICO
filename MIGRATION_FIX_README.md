@@ -7,6 +7,7 @@ The migration issue has been **permanently fixed** in the repository. When you u
 ## 🚨 Original Problem
 
 Your Django migration was failing on the production server with this error:
+
 ```
 psycopg2.errors.DuplicateColumn: column "empresa" of relation "workflow_clienteentrevista" already exists
 ```
@@ -16,7 +17,7 @@ psycopg2.errors.DuplicateColumn: column "empresa" of relation "workflow_clientee
 I've modified the migration file `workflow/migrations/0031_auto_20250724_2158.py` to:
 
 1. **Check if the column exists** before trying to add it
-2. **Skip the operation** if the column already exists  
+2. **Skip the operation** if the column already exists
 3. **Add the column** only if it doesn't exist
 4. **Display helpful messages** during migration
 
@@ -42,6 +43,7 @@ cd /www/wwwroot/PACIFICO
 ## � **What Was Changed**
 
 ### Before (problematic):
+
 ```python
 operations = [
     migrations.AddField(
@@ -53,6 +55,7 @@ operations = [
 ```
 
 ### After (fixed):
+
 ```python
 operations = [
     migrations.RunPython(

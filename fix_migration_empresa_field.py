@@ -27,14 +27,11 @@ from django.db import connection
 from django.core.management import execute_from_command_line
 
 def check_column_exists(table_name, column_name):
-    """Check if a column exists in a table."""
+    """Check if a column exists in a table using SQLite-compatible syntax."""
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = %s AND column_name = %s
-        """, [table_name, column_name])
-        return cursor.fetchone() is not None
+        cursor.execute("PRAGMA table_info(%s)" % table_name)
+        columns = cursor.fetchall()
+        return any(column[1] == column_name for column in columns)
 
 def main():
     print("🔍 Checking if 'empresa' column exists in workflow_clienteentrevista table...")
