@@ -13,10 +13,22 @@ from django.contrib import messages
 from django.conf import settings
 import openpyxl
 from openpyxl.utils import get_column_letter
+from io import BytesIO
+import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 import datetime
 import csv
 import json
 import os
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from io import BytesIO
 
 # Main Views
 def entrevista_cliente_view(request):
@@ -391,6 +403,107 @@ def cliente_entrevista_detail(request, pk):
 def cliente_entrevista_list(request):
     clientes = ClienteEntrevista.objects.all()
     return render(request, 'workflow/cliente_entrevista_list.html', {'clientes': clientes})
+
+
+def descargar_entrevista_pdf(request, entrevista_id):
+    try:
+        # Obtener la entrevista completa
+        entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
+        
+        # Debug: verificar que tenemos la entrevista
+        print(f"Entrevista encontrada: {entrevista.primer_nombre} {entrevista.primer_apellido}")
+        
+        # Crear buffer de memoria
+        buffer = BytesIO()
+        
+        # Crear documento PDF simple para probar
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Agregar contenido básico
+        story.append(Paragraph("FINANCIERA PACÍFICO", styles['Title']))
+        story.append(Paragraph("FORMULARIO DE DATOS GENERALES", styles['Heading1']))
+        story.append(Spacer(1, 12))
+        
+        story.append(Paragraph(f"<b>Cliente:</b> {entrevista.primer_nombre} {entrevista.primer_apellido}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        story.append(Paragraph(f"<b>Cédula:</b> {entrevista.provincia_cedula or ''}-{entrevista.tipo_letra or ''}-{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        story.append(Paragraph(f"<b>Email:</b> {entrevista.email or ''}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        story.append(Paragraph(f"<b>Teléfono:</b> {entrevista.telefono or ''}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        story.append(Paragraph(f"<b>Producto:</b> {entrevista.tipo_producto or ''}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        story.append(Paragraph(f"<b>Oficial:</b> {entrevista.oficial or ''}", styles['Normal']))
+        story.append(Spacer(1, 6))
+        
+        if entrevista.fecha_entrevista:
+            story.append(Paragraph(f"<b>Fecha:</b> {entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        
+        # Información adicional disponible
+        if hasattr(entrevista, 'salario') and entrevista.salario:
+            story.append(Spacer(1, 6))
+            story.append(Paragraph(f"<b>Salario:</b> B/. {entrevista.salario:,.2f}", styles['Normal']))
+        
+        if hasattr(entrevista, 'titulo') and entrevista.titulo:
+            story.append(Spacer(1, 6))
+            story.append(Paragraph(f"<b>Cargo:</b> {entrevista.titulo}", styles['Normal']))
+        
+        if hasattr(entrevista, 'nacionalidad') and entrevista.nacionalidad:
+            story.append(Spacer(1, 6))
+            story.append(Paragraph(f"<b>Nacionalidad:</b> {entrevista.nacionalidad}", styles['Normal']))
+        
+        # Espacio para firmas
+        story.append(Spacer(1, 40))
+        story.append(Paragraph("FIRMAS:", styles['Heading2']))
+        story.append(Spacer(1, 30))
+        
+        # Tabla de firmas simple
+        firmas_data = [
+            ['_________________________', '', '_________________________'],
+            ['FIRMA DEL CLIENTE', '', 'FIRMA DEL OFICIAL'],
+            ['', '', ''],
+            [f"{entrevista.primer_nombre} {entrevista.primer_apellido}", '', entrevista.oficial or ''],
+            ['', '', ''],
+            [f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}", '', '']
+        ]
+        
+        firma_table = Table(firmas_data, colWidths=[2.5*inch, 1*inch, 2.5*inch])
+        firma_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+            ('FONTNAME', (0, 1), (0, 1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 1), (2, 1), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+        ]))
+        story.append(firma_table)
+        
+        # Generar PDF
+        doc.build(story)
+        
+        # Preparar respuesta
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        filename = f"formulario_{entrevista.primer_nombre}_{entrevista.primer_apellido}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        print("PDF generado exitosamente")
+        return response
+        
+    except Exception as e:
+        print(f"Error en descargar_entrevista_pdf: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error al generar PDF: {str(e)}", status=500)
 
 
 def api_entrevistas(request):

@@ -4,14 +4,17 @@ from . import api
 from . import views_workflow
 from . import dashboard_views
 from . import views_calificacion
+from . import views_formulario
 
 urlpatterns = [
     # URLs existentes del formulario de entrevista
-    path('entrevista/', views.entrevista_cliente_view, name='entrevista_cliente'),
-    path('gracias/', views.gracias, name='formulario_gracias'),
-    path('entrevistas/', views.lista_entrevistas, name='lista_entrevistas'),
-    path('descargar-entrevistas-excel/', views.descargar_entrevistas_excel, name='descargar_entrevistas_excel'),
-    path('entrevistas/descargar/<int:entrevista_id>/', views.descargar_entrevista_excel, name='descargar_entrevista_excel'),
+    path('entrevista/', views_formulario.entrevista_cliente_view, name='entrevista_cliente'),
+    path('entrevistas/admin/<int:entrevista_id>/', views_formulario.entrevista_admin_view, name='entrevista_admin'),
+    path('gracias/', views_formulario.gracias, name='formulario_gracias'),
+    path('entrevistas/', views_formulario.lista_entrevistas, name='lista_entrevistas'),
+    path('descargar-entrevistas-excel/', views_formulario.descargar_entrevistas_excel, name='descargar_entrevistas_excel'),
+    path('entrevistas/descargar/<int:entrevista_id>/', views_formulario.descargar_entrevista_excel, name='descargar_entrevista_excel'),
+    path('entrevistas/pdf/<int:entrevista_id>/', views_formulario.descargar_entrevista_pdf, name='descargar_entrevista_pdf'),
     path('entrevistas/json/', api.entrevistas_json, name='entrevistas_json'),
     
     # Workflow URLs

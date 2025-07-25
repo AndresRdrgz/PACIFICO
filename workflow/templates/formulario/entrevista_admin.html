@@ -1,0 +1,433 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modo Administrador - Completar Entrevista</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- FontAwesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+  <!-- CSS personalizado -->
+  <link href="{% static 'formulario/css/formulario.css' %}" rel="stylesheet" />
+
+  <style>
+    :root {
+      --naranja-admin: #ff6b35;
+      --naranja-claro: #fff4f0;
+      --naranja-oscuro: #e55a2b;
+      --gris-texto: #4a4a4a;
+      --gris-fondo: #f9f9f9;
+      --gris-borde: #ddd;
+      --verde-completado: #28a745;
+    }
+
+    body.form-bg {
+      background: linear-gradient(135deg, var(--naranja-admin) 0%, #d85324 100%);
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--gris-texto);
+    }
+
+    .form-container {
+      background: #ffffff;
+      max-width: 950px;
+      width: 100%;
+      padding: 2rem 3rem;
+      border-radius: 22px;
+      border: 2px solid var(--naranja-admin);
+      box-shadow: 0 8px 32px rgba(255, 107, 53, 0.15), 0 1.5px 8px rgba(0,0,0,0.06);
+      margin-bottom: 2rem;
+      position: relative;
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+
+    .form-container:hover {
+      box-shadow: 0 16px 40px rgba(255, 107, 53, 0.25), 0 2px 12px rgba(0,0,0,0.10);
+      border-color: var(--naranja-oscuro);
+    }
+
+    .form-container::before {
+      content: "";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 8px;
+      border-radius: 22px 22px 0 0;
+      background: linear-gradient(90deg, var(--naranja-admin) 0%, #ff8c42 100%);
+    }
+
+    /* Banner de Modo Administrador */
+    .admin-banner {
+      background: linear-gradient(135deg, var(--naranja-admin), var(--naranja-oscuro));
+      color: white;
+      padding: 1rem 2rem;
+      margin: -2rem -3rem 2rem -3rem;
+      border-radius: 20px 20px 0 0;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+
+    .admin-banner i {
+      margin-right: 0.5rem;
+      font-size: 1.4rem;
+    }
+
+    .form-header .logo {
+      max-width: 160px;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-header h2 {
+      color: var(--naranja-admin);
+      font-weight: 700;
+      font-size: 2.2rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.3rem;
+    }
+
+    .subtitulo {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--naranja-oscuro);
+      margin-bottom: 0.5rem;
+    }
+
+    .cliente-info {
+      background: var(--naranja-claro);
+      border: 2px solid var(--naranja-admin);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .cliente-info h4 {
+      color: var(--naranja-admin);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    .seccion {
+      border-top: 2px solid var(--naranja-admin);
+      padding-top: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .seccion h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--naranja-admin);
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .seccion h2 .section-icon {
+      color: var(--naranja-admin);
+      font-size: 1.5rem;
+    }
+
+    /* Campos completados por el cliente */
+    .campo-cliente {
+      background-color: #e8f5e9 !important;
+      border-left: 4px solid var(--verde-completado) !important;
+      position: relative;
+    }
+
+    .campo-cliente::after {
+      content: "✓ Cliente";
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: var(--verde-completado);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    /* Campos vacíos para completar */
+    .campo-vacio {
+      background-color: #fff3cd !important;
+      border-left: 4px solid #ffc107 !important;
+      position: relative;
+    }
+
+    .campo-vacio::after {
+      content: "⚠ Completar";
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: #ffc107;
+      color: #212529;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .form-control,
+    .form-select {
+      border-radius: 8px;
+      border: 1.5px solid var(--gris-borde);
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--naranja-admin);
+      box-shadow: 0 0 8px rgba(255, 107, 53, 0.3);
+      outline: none;
+    }
+
+    .btn-admin-save {
+      background: var(--naranja-admin);
+      border: none;
+      color: white;
+      font-weight: 700;
+      font-size: 1.3rem;
+      padding: 1rem 4rem;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .btn-admin-save:hover {
+      background: var(--naranja-oscuro);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(229, 90, 43, 0.6);
+      color: white;
+    }
+
+    .btn-admin-save i {
+      margin-right: 0.5rem;
+      font-size: 1.4rem;
+    }
+
+    .alert-danger {
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-color: var(--naranja-admin);
+    }
+
+    .alert-success {
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #155724;
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      padding: 2rem;
+    }
+
+    .control-calidad {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border: 1px solid var(--naranja-admin);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .control-calidad i {
+      color: var(--naranja-admin);
+      margin-right: 0.5rem;
+    }
+
+    @media (max-width: 576px) {
+      .form-container {
+        padding: 1rem 1.5rem;
+      }
+
+      .admin-banner {
+        margin: -1rem -1.5rem 1.5rem -1.5rem;
+        font-size: 1rem;
+      }
+
+      .form-header h2 {
+        font-size: 1.8rem;
+      }
+
+      .seccion h2 {
+        font-size: 1.2rem;
+      }
+
+      .btn-admin-save {
+        font-size: 1.1rem;
+        padding: 0.8rem 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="form-bg">
+  <div class="form-container">
+    <!-- Banner de Modo Administrador -->
+    <div class="admin-banner">
+      <i class="fas fa-user-shield"></i>
+      MODO ADMINISTRADOR - CONTROL DE CALIDAD
+    </div>
+
+    <div class="form-header text-center"> 
+      <img src="{% static 'logoColor.png' %}" alt="Logo Pacífico" class="logo mb-2" style="filter: hue-rotate(25deg) saturate(1.2);" /> 
+      <h2 class="fw-bold mb-0">Completar Entrevista de Cliente</h2>
+      <p class="mb-0 subtitulo">Revise, corrija y complete los datos faltantes</p>
+    </div>
+
+    <!-- Información del Cliente -->
+    <div class="cliente-info">
+      <h4>Cliente: {{ entrevista.primer_nombre|default:"[Sin nombre]" }} {{ entrevista.primer_apellido|default:"[Sin apellido]" }}</h4>
+      <p class="mb-0">
+        <strong>Email:</strong> {{ entrevista.email|default:"No especificado" }} | 
+        <strong>Teléfono:</strong> {{ entrevista.telefono|default:"No especificado" }} |
+        <strong>Fecha Entrevista:</strong> {% if entrevista.fecha_entrevista %}{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}{% else %}No especificada{% endif %}
+      </p>
+    </div>
+
+    <!-- Información de Control de Calidad -->
+    <div class="control-calidad">
+      <i class="fas fa-info-circle"></i>
+      <strong>Instrucciones:</strong> Los campos con fondo verde fueron completados por el cliente. 
+      Los campos con fondo amarillo necesitan ser completados o corregidos. 
+      En modo administrador, las validaciones son flexibles para facilitar el control de calidad.
+    </div>
+
+    <div class="form-body">
+      <form method="post" enctype="multipart/form-data" novalidate id="entrevista-admin-form">
+        {% csrf_token %}
+
+        {% if form.errors or referencias_formset.errors or referencias_comerciales_formset.errors or otros_ingresos_formset.errors %}
+          <div class="alert alert-danger">
+            <strong>Hay algunos campos que requieren atención:</strong>
+            <ul class="mb-0">
+              {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+              {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+            <small class="mt-2 d-block"><em>Nota: En modo administrador, puede guardar con algunos campos vacíos si es necesario.</em></small>
+          </div>
+        {% endif %}
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-check"></i></span> 1. Datos Generales</h2>
+          <div class="row g-4">
+            {% include 'formulario/componentes/datos_generales.html' with form=form modo_admin=True %}
+          </div>
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-map-marker-alt"></i></span> 2. Dirección Residencial</h2>
+          {% include 'formulario/componentes/direccion_residencial.html' with form=form modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-users"></i></span> 3. Datos del Cónyuge o Deudor Solidario</h2>
+          {% include 'formulario/componentes/conyuge.html' with form=form modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-briefcase"></i></span> 4. Información Laboral y Otros Ingresos</h2>
+          {% include 'formulario/componentes/informacion_laboral.html' with form=form otros_ingresos_formset=otros_ingresos_formset modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-shield"></i></span> 5. PEP - Persona Expuesta Políticamente</h2>
+          {% include 'formulario/componentes/pep.html' with form=form modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-user-friends"></i></span> 6. Referencias Personales</h2>
+          {% include 'formulario/componentes/referencias_personales.html' with referencias_formset=referencias_formset modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-briefcase"></i></span> 7. Referencias Comerciales</h2>
+          {% include 'formulario/componentes/referencias_comerciales.html' with referencias_comerciales_formset=referencias_comerciales_formset modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-university"></i></span> 8. Datos Bancarios</h2>
+          {% include 'formulario/componentes/datos_bancarios.html' with form=form modo_admin=True %}
+        </div>
+
+        <div class="seccion">
+          <h2><span class="section-icon"><i class="fas fa-check-circle"></i></span> 9. Autorizaciones</h2>
+          {% include 'formulario/componentes/autorizaciones.html' with form=form modo_admin=True %}
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-admin-save">
+            <i class="fas fa-save"></i>
+            Guardar y Finalizar
+          </button>
+        </div>
+      </form>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-success mt-4 text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- JavaScript para marcar campos -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Marcar campos completados vs vacíos
+      const formControls = document.querySelectorAll('.form-control, .form-select');
+      
+      formControls.forEach(function(field) {
+        const container = field.closest('.mb-3, .col-md-6, .col-md-4, .col-12');
+        if (container) {
+          if (field.value && field.value.trim() !== '') {
+            container.classList.add('campo-cliente');
+            container.classList.remove('campo-vacio');
+          } else {
+            container.classList.add('campo-vacio');
+            container.classList.remove('campo-cliente');
+          }
+        }
+      });
+
+      // Actualizar marcas cuando se cambian los valores
+      formControls.forEach(function(field) {
+        field.addEventListener('input', function() {
+          const container = this.closest('.mb-3, .col-md-6, .col-md-4, .col-12');
+          if (container) {
+            if (this.value && this.value.trim() !== '') {
+              container.classList.add('campo-cliente');
+              container.classList.remove('campo-vacio');
+            } else {
+              container.classList.add('campo-vacio');
+              container.classList.remove('campo-cliente');
+            }
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
