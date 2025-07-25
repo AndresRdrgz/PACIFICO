@@ -12,6 +12,8 @@ from .models import ClienteEntrevista
 from .modelsWorkflow import Solicitud, CalificacionCampo, HistorialSolicitud, PermisoEtapa
 from .views_workflow import notify_solicitud_change
 import json
+import logging
+import traceback
 
 def entrevistas_json(request):
     entrevistas = ClienteEntrevista.objects.all()
