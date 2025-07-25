@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevo Timeline Compacto - Demo</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --verde-pacifico: #009c3c;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+    }
+
+    h1 {
+      color: var(--verde-pacifico);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    /* === NEW COMPACT TIMELINE STYLES === */
+    .timeline-date-group {
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: slideInFromLeft 0.5s ease-out forwards;
+    }
+
+    .timeline-date-group:nth-child(even) {
+      animation-delay: 0.1s;
+    }
+
+    .timeline-date-group:nth-child(odd) {
+      animation-delay: 0.2s;
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .timeline-date-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f1f3f4;
+    }
+
+    .date-marker {
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .date-indicator {
+      background: linear-gradient(135deg, var(--verde-pacifico), #4ade80);
+      border-radius: 12px;
+      padding: 8px 12px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 156, 60, 0.2);
+      min-width: 60px;
+    }
+
+    .date-number {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .date-month {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .date-info {
+      flex: 1;
+    }
+
+    .date-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0 0 4px 0;
+    }
+
+    .events-count {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .timeline-events {
+      margin-left: 38px;
+      position: relative;
+    }
+
+    .timeline-events::before {
+      content: '';
+      position: absolute;
+      left: -19px;
+      top: 0;
+      bottom: 20px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--verde-pacifico) 0%, #e5e7eb 100%);
+      border-radius: 1px;
+    }
+
+    .timeline-event {
+      position: relative;
+      display: flex;
+      margin-bottom: 16px;
+      align-items: flex-start;
+      padding-bottom: 16px;
+    }
+
+    .timeline-event.last-event {
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .timeline-event.first-event .event-marker::before {
+      background: var(--verde-pacifico);
+    }
+
+    .event-marker {
+      position: relative;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .event-marker::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 6px;
+      width: 8px;
+      height: 8px;
+      background: #d1d5db;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .event-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease;
+    }
+
+    .timeline-event:hover .event-icon {
+      transform: scale(1.05);
+    }
+
+    .event-content {
+      flex: 1;
+      background: white;
+      border-radius: 8px;
+      padding: 12px 16px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .timeline-event:hover .event-content {
+      border-color: var(--verde-pacifico);
+      box-shadow: 0 4px 12px rgba(0, 156, 60, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .event-title {
+      flex: 1;
+      margin-right: 12px;
+    }
+
+    .event-user {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 14px;
+    }
+
+    .event-action {
+      color: #4b5563;
+      font-size: 14px;
+      margin-left: 4px;
+    }
+
+    .event-time {
+      font-size: 12px;
+      color: #9ca3af;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .event-details {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.4;
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+      border-left: 3px solid #e5e7eb;
+    }
+
+    .event-subtitle {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* === RESPONSIVE DESIGN FOR COMPACT TIMELINE === */
+    @media (max-width: 768px) {
+      .timeline-date-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .date-marker {
+        margin-right: 0;
+      }
+
+      .timeline-events {
+        margin-left: 20px;
+      }
+
+      .timeline-events::before {
+        left: -11px;
+      }
+
+      .event-marker::before {
+        left: -18px;
+      }
+
+      .event-header {
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .event-time {
+        align-self: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1><i class="fas fa-history"></i> Timeline Compacto - Nuevo Diseño</h1>
+
+    <div id="timeline-container">
+      <!-- Hoy -->
+      <div class="timeline-date-group">
+        <div class="timeline-date-header">
+          <div class="date-marker">
+            <div class="date-indicator">
+              <span class="date-number">25</span>
+              <span class="date-month">JUL</span>
+            </div>
+          </div>
+          <div class="date-info">
+            <h4 class="date-title">Hoy</h4>
+            <span class="events-count">3 eventos</span>
+          </div>
+        </div>
+        <div class="timeline-events">
+          <div class="timeline-event first-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #3b82f6">
+                <i class="fas fa-route"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">Ana García</span>
+                  <span class="event-action">cambió la etapa a "Revisión de Crédito"</span>
+                </div>
+                <div class="event-time">14:30</div>
+              </div>
+              <div class="event-details">SubEstado: En proceso de evaluación</div>
+            </div>
+          </div>
+
+          <div class="timeline-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #10b981">
+                <i class="fas fa-file-alt"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">Carlos Rodríguez</span>
+                  <span class="event-action">subió el documento "Estados Financieros"</span>
+                </div>
+                <div class="event-time">12:15</div>
+              </div>
+              <div class="event-details">Documento validado y procesado correctamente</div>
+            </div>
+          </div>
+
+          <div class="timeline-event last-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #f59e0b">
+                <i class="fas fa-comment"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">María López</span>
+                  <span class="event-action">agregó un comentario</span>
+                </div>
+                <div class="event-time">09:45</div>
+              </div>
+              <div class="event-details">Los documentos están completos y listos para la siguiente fase</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ayer -->
+      <div class="timeline-date-group">
+        <div class="timeline-date-header">
+          <div class="date-marker">
+            <div class="date-indicator">
+              <span class="date-number">24</span>
+              <span class="date-month">JUL</span>
+            </div>
+          </div>
+          <div class="date-info">
+            <h4 class="date-title">Ayer</h4>
+            <span class="events-count">2 eventos</span>
+          </div>
+        </div>
+        <div class="timeline-events">
+          <div class="timeline-event first-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #8b5cf6">
+                <i class="fas fa-user-plus"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">Sistema</span>
+                  <span class="event-action">asignó la solicitud a Carlos Rodríguez</span>
+                </div>
+                <div class="event-time">16:20</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-event last-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #ef4444">
+                <i class="fas fa-tasks"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">Pedro Martínez</span>
+                  <span class="event-action">marcó como cumplido el requisito "Verificación de identidad"</span>
+                </div>
+                <div class="event-time">10:30</div>
+              </div>
+              <div class="event-details">Documentación de identidad validada correctamente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hace 2 días -->
+      <div class="timeline-date-group">
+        <div class="timeline-date-header">
+          <div class="date-marker">
+            <div class="date-indicator">
+              <span class="date-number">23</span>
+              <span class="date-month">JUL</span>
+            </div>
+          </div>
+          <div class="date-info">
+            <h4 class="date-title">Martes, 23 de julio de 2025</h4>
+            <span class="events-count">1 evento</span>
+          </div>
+        </div>
+        <div class="timeline-events">
+          <div class="timeline-event first-event last-event">
+            <div class="event-marker">
+              <div class="event-icon" style="background-color: #06b6d4">
+                <i class="fas fa-play-circle"></i>
+              </div>
+            </div>
+            <div class="event-content">
+              <div class="event-header">
+                <div class="event-title">
+                  <span class="event-user">Sistema</span>
+                  <span class="event-action">realizó una actividad</span>
+                </div>
+                <div class="event-time">08:00</div>
+              </div>
+              <div class="event-details">Solicitud creada e iniciado el proceso de workflow</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

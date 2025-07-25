@@ -224,7 +224,7 @@
         <div class="space-y-4" id="solicitudesMovil">
             {% for s in solicitudes_tabla %}
             <div class="solicitud-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-                data-prioridad="{{ s.prioridad|lower }}" data-estado="{{ s.sla_color }}"
+                data-estado="{{ s.sla_color }}"
                 data-asignado="{% if s.asignado_a == 'Sin asignar' %}sin_asignar{% else %}asignado{% endif %}"
                 data-search="{{ s.codigo|lower }} {{ s.cliente|lower }} {{ s.cedula|lower }}">
 
@@ -242,16 +242,6 @@
                             <h3 class="text-lg font-bold text-gray-900">{{ s.codigo }}</h3>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <!-- Badge de prioridad -->
-                            {% if s.prioridad %}
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                    {% if s.prioridad == 'Alta' %}bg-red-100 text-red-800
-                                    {% elif s.prioridad == 'Media' %}bg-yellow-100 text-yellow-800
-                                    {% elif s.prioridad == 'Baja' %}bg-green-100 text-green-800
-                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ s.prioridad }}
-                            </span>
-                            {% endif %}
                             <!-- Menú de opciones -->
                             <div class="relative">
                                 <button class="p-1 rounded-full hover:bg-gray-100 transition-colors"
@@ -304,31 +294,38 @@
                         </div>
                         <div class="flex items-center justify-between text-sm">
                             <span class="text-gray-500">Producto:</span>
-                            <span class="text-gray-900 font-medium truncate ml-2">{{ s.producto_descripcion }}</span>
+                            <div class="text-gray-900 font-medium truncate ml-2">
+                                <div>{{ s.producto_descripcion }}</div>
+                                {% if s.producto_descripcion == "Auto" and s.cotizacion and s.cotizacion.marca and s.cotizacion.modelo %}
+                                <div class="text-xs text-gray-500">{{ s.cotizacion.marca }} {{ s.cotizacion.modelo }}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="flex items-center justify-between text-sm">
                             <span class="text-gray-500">Propietario:</span>
                             <div class="flex items-center space-x-1">
                                 {% if s.propietario_user %}
-                                    {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
-                                    <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
-                                        alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                        class="w-4 h-4 rounded-full object-cover border">
-                                    {% else %}
-                                    <div
-                                        class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                        {{
-                                        s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
-                                        }}
-                                    </div>
-                                    {% endif %}
-                                    <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
+                                {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture
+                                %}
+                                <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
+                                    alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                    class="w-4 h-4 rounded-full object-cover border">
                                 {% else %}
-                                    <div
-                                        class="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500">
-                                        <i class="fas fa-user-slash"></i>
-                                    </div>
-                                    <span class="text-gray-500 font-medium truncate text-xs">{{ s.propietario }}</span>
+                                <div
+                                    class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                    {{
+                                    s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
+                                    }}
+                                </div>
+                                {% endif %}
+                                <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
+                                {% else %}
+                                <div
+                                    class="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500">
+                                    <i class="fas fa-user-slash"></i>
+                                </div>
+                                <span class="text-gray-500 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -378,30 +375,13 @@
                         </div>
                     </div>
 
-                    <!-- Etiquetas -->
-                    {% if s.etiquetas_oficial %}
-                    <div class="mb-3">
-                        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Etiquetas</p>
-                        <span
-                            class="inline-block px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                            {{ s.etiquetas_oficial }}
-                        </span>
-                        {% if s.origen == 'Canal Digital' %}
-                        <span class="badge bg-info ms-1" style="font-size: 0.65rem;"
-                            title="Solicitud del Canal Digital">
-                            <i class="fas fa-mobile-alt me-1"></i>Digital
-                        </span>
-                        {% endif %}
-                    </div>
-                    {% else %}
                     {% if s.origen == 'Canal Digital' %}
                     <div class="mb-3">
-                        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Etiquetas</p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Origen</p>
                         <span class="badge bg-info" style="font-size: 0.65rem;" title="Solicitud del Canal Digital">
                             <i class="fas fa-mobile-alt me-1"></i>Digital
                         </span>
                     </div>
-                    {% endif %}
                     {% endif %}
                 </div>
 
@@ -411,7 +391,7 @@
                         <div class="flex items-center space-x-4">
                             <div>
                                 <span class="text-gray-500">Creado:</span>
-                                <span class="text-gray-900 font-medium">{{ s.fecha_inicio }}</span>
+                                <span class="text-gray-900 font-medium">{{ s.fecha_creacion|date:"d/m/Y H:i" }}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500">SLA:</span>
@@ -526,13 +506,6 @@
                             <option value="">Todos los asignados</option>
                         </select>
                     </div>
-                    <div class="filter-group" style="margin: 0;">
-                        <select id="filtroPrioridad" onchange="applyFilters()"
-                            style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 120px;"
-                            title="Filtrar por prioridad">
-                            <option value="">Todas las prioridades</option>
-                        </select>
-                    </div>
 
                     <!-- Action Buttons -->
                     <button class="refresh-btn" onclick="clearFilters()"
@@ -574,10 +547,8 @@
                             <th style="width: 150px;">Propietario</th>
                             <th style="width: 120px;">Etapa</th>
                             <th style="width: 100px;">Estado</th>
-                            <th style="width: 200px;">Fecha SLA</th>
+                            <th style="width: 200px;">Fecha creado</th>
                             <th style="width: 120px;">SLA</th>
-                            <th style="width: 120px;">Etiquetas</th>
-                            <th style="width: 100px;">Prioridad</th>
                             <th style="width: 120px;">Código</th>
                         </tr>
                     </thead>
@@ -600,29 +571,40 @@
                                     <small class="text-muted">{{ s.cliente_cedula }}</small>
                                 </div>
                             </td>
-                            <td class="text-dark">{{ s.producto_descripcion }}</td>
+                            <td class="text-dark">
+                                <div>
+                                    <div class="fw-semibold">{{ s.producto_descripcion }}</div>
+                                    {% if s.producto_descripcion == "Auto" and s.cotizacion and s.cotizacion.marca and
+                                    s.cotizacion.modelo %}
+                                    <small class="text-muted">{{ s.cotizacion.marca }} {{ s.cotizacion.modelo }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td><span class="fw-bold text-success">{{ s.monto_formateado }}</span></td>
                             <td class="text-dark">
                                 <div class="d-flex align-items-center">
                                     {% if s.propietario_user %}
-                                        {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
-                                        <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
-                                            alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                            class="me-2 rounded-circle object-cover border"
-                                            style="width: 24px; height: 24px; object-fit: cover;">
-                                        {% else %}
-                                        <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
-                                            {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
-                                        </div>
-                                        {% endif %}
-                                        <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
+                                    {% if s.propietario_user.userprofile and
+                                    s.propietario_user.userprofile.profile_picture %}
+                                    <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
+                                        alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                        class="me-2 rounded-circle object-cover border"
+                                        style="width: 24px; height: 24px; object-fit: cover;">
                                     {% else %}
-                                        <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
-                                            ?
-                                        </div>
-                                        <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
+                                    <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                        style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
+                                        {{
+                                        s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
+                                        }}
+                                    </div>
+                                    {% endif %}
+                                    <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
+                                    {% else %}
+                                    <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                        style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
+                                        ?
+                                    </div>
+                                    <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -654,7 +636,7 @@
                                     <option value="" selected>Sin etapa</option>
                                     {% endif %}
                                     {% for etapa in pipeline.etapas.all %}
-                                    <option value="{{ etapa.id }}" {% if s.etapa == etapa.nombre %}selected{% endif %}>
+                                    <option value="{{ etapa.id }}" {% if s.etapa==etapa.nombre %}selected{% endif %}>
                                         {{ etapa.nombre }}
                                     </option>
                                     {% endfor %}
@@ -674,13 +656,14 @@
                             <td class="text-dark" style="max-width: 200px;">
                                 <div style="line-height: 1.3;">
                                     <div class="d-flex align-items-center mb-1">
-                                        <small class="text-muted me-1" style="min-width: 25px;">Ini:</small>
-                                        <span style="font-size: 0.85rem;">{{ s.fecha_inicio|date:"d/m" }}</span>
+                                        <small class="text-muted me-1" style="min-width: 35px;">Fecha:</small>
+                                        <span style="font-size: 0.85rem; font-weight: 500;">{{
+                                            s.fecha_creacion|date:"d/m/Y" }}</span>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <small class="text-muted me-1" style="min-width: 25px;">Ven:</small>
-                                        <span style="font-size: 0.85rem;">{{ s.fecha_vencimiento|date:"d/m" }}</span>
-                                        <span class="text-muted" style="font-size: 0.75rem;">{% if s.vencimiento_sla %}{{ s.vencimiento_sla|date:"d/m" }}{% else %}N/A{% endif %}</span>
+                                        <small class="text-muted me-1" style="min-width: 35px;">Hora:</small>
+                                        <span style="font-size: 0.85rem; color: #6c757d;">{{ s.fecha_creacion|date:"H:i"
+                                            }}</span>
                                     </div>
                                 </div>
                             </td>
@@ -698,35 +681,6 @@
                                 </div>
                             </td>
                             <td>
-                                <select class="etiquetas-select form-control form-control-sm" data-id="{{ s.id }}"
-                                    style="min-width: 115px; width: 115px;">
-                                    <option value="">Seleccionar etiqueta</option>
-                                    <option value="no_responde" {% if s.etiquetas_oficial == 'no_responde' %}selected{% endif %}>📞 No responde</option>
-                                    <option value="cita_agendada" {% if s.etiquetas_oficial == 'cita_agendada' %}selected{% endif %}>🗓️ Cita agendada</option>
-                                    <option value="doc_completo" {% if s.etiquetas_oficial == 'doc_completo' %}selected{% endif %}>✅ Documentos completos</option>
-                                    <option value="falta_carta" {% if s.etiquetas_oficial == 'falta_carta' %}selected{% endif %}>📎 Falta carta trabajo</option>
-                                    <option value="seguimiento_48h" {% if s.etiquetas_oficial == 'seguimiento_48h' %}selected{% endif %}>🔄 Seguimiento en 48h</option>
-                                    <option value="whatsapp_activo" {% if s.etiquetas_oficial == 'whatsapp_activo' %}selected{% endif %}>💬 WhatsApp activo</option>
-                                    <option value="cliente_indeciso" {% if s.etiquetas_oficial == 'cliente_indeciso' %}selected{% endif %}>⚠️ Cliente indeciso</option>
-                                    <option value="cliente_caliente" {% if s.etiquetas_oficial == 'cliente_caliente' %}selected{% endif %}>🚀 Cliente caliente</option>
-                                    <option value="esperando_confirm" {% if s.etiquetas_oficial == 'esperando_confirm' %}selected{% endif %}>🕐 Esperando confirmación</option>
-                                    <option value="enviado_credito" {% if s.etiquetas_oficial == 'enviado_credito' %}selected{% endif %}>🧾 Enviado a crédito</option>
-                                    <option value="en_validacion" {% if s.etiquetas_oficial == 'en_validacion' %}selected{% endif %}>🔒 En validación</option>
-                                    <option value="caso_descartado" {% if s.etiquetas_oficial == 'caso_descartado' %}selected{% endif %}>❌ Caso descartado</option>
-                                </select>
-                            </td>
-                            <td>
-                                <select class="prioridad-select border rounded px-2 py-1 text-xs w-full"
-                                    data-id="{{ s.id }}"
-                                    style="background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %}; color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
-                                    <option value="">-</option>
-                                    {% for prioridad in prioridades_posibles %}
-                                    <option value="{{ prioridad }}" {% if s.prioridad == prioridad %}selected{% endif %}>
-                                        {{ prioridad }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td>
                                 <div class="text-center">
                                     <span class="badge bg-secondary text-white fw-bold" style="font-size: 0.75rem;">
                                         {{ s.codigo|default:"N/A" }}
@@ -736,7 +690,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                 <p class="text-muted">No hay solicitudes para mostrar</p>
                             </td>
@@ -826,7 +780,7 @@
                             data-sla="{% if s.sla_color == 'text-danger' %}vencido{% elif s.sla_color == 'text-warning' %}por vencer{% elif s.sla_color == 'text-success' %}en tiempo{% else %}sin sla{% endif %}"
                             data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}" data-codigo="{{ s.codigo }}"
                             data-monto="{{ s.monto_formateado }}"
-                            data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
+                            data-fecha-creacion="{{ s.fecha_creacion|date:'d/m/Y H:i' }}"
                             data-sla-texto="{{ s.sla_restante }}" style="cursor: grab;">
 
                             <div class="card shadow-sm border-0"
@@ -876,7 +830,8 @@
 
                                             {% if s.asignado_a != 'Sin asignar' and s.asignado_a_user %}
                                             <div class="d-flex align-items-center">
-                                                {% if s.asignado_a_user.userprofile and s.asignado_a_user.userprofile.profile_picture %}
+                                                {% if s.asignado_a_user.userprofile and
+                                                s.asignado_a_user.userprofile.profile_picture %}
                                                 <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}"
                                                     alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
                                                     class="w-4 h-4 rounded-full object-cover me-1">
@@ -891,7 +846,7 @@
                                                 <span style="font-size: 0.7rem; color: #6c757d;">{{
                                                     s.asignado_a|truncatechars:10 }}</span>
                                             </div>
-                                            {% endif %}
+                                            {% endfor %}
                                         </div>
 
                                         <!-- Columna derecha -->
@@ -903,14 +858,8 @@
                                                     <i class="fas fa-mobile-alt"></i>
                                                 </span>
                                                 {% endif %}
-                                                {% if s.prioridad %}
-                                                <span class="badge me-1"
-                                                    style="font-size: 0.55rem; padding: 1px 4px; background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %}; color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
-                                                    {{ s.prioridad }}
-                                                </span>
-                                                {% endif %}
-                                                <small class="text-muted" style="font-size: 0.65rem;">{{ s.fecha_inicio
-                                                    }}</small>
+                                                <small class="text-muted" style="font-size: 0.65rem;">{{
+                                                    s.fecha_creacion|date:"d/m/Y H:i" }}</small>
                                             </div>
                                         </div>
                                     </div>
@@ -932,7 +881,7 @@
                     </div>
                 </div>
             </div>
-            {% endfor %}
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -1178,7 +1127,6 @@
         </div>
     </div>
 </div>
-{% endif %}
 
 {% endblock %}
 
@@ -1286,7 +1234,7 @@
         // Configurar event listeners para filtros
         const filterElements = [
             'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad'
+            'filtroAsignado', 'filtroSLA'
         ];
 
         filterElements.forEach(filterId => {
@@ -1310,8 +1258,7 @@
             { id: 'filtroProducto', field: 'producto' },
             { id: 'filtroEstado', field: 'estado' },
             { id: 'filtroAsignado', field: 'propietario' },
-            { id: 'filtroSLA', field: 'sla' },
-            { id: 'filtroPrioridad', field: 'prioridad' }
+            { id: 'filtroSLA', field: 'sla' }
         ];
 
         filterConfigs.forEach(config => {
@@ -1496,8 +1443,7 @@
             producto: document.getElementById('filtroProducto'),
             estado: document.getElementById('filtroEstado'),
             asignado: document.getElementById('filtroAsignado'),
-            sla: document.getElementById('filtroSLA'),
-            prioridad: document.getElementById('filtroPrioridad')
+            sla: document.getElementById('filtroSLA')
         };
 
         Object.keys(filterElements).forEach(key => {
@@ -1515,13 +1461,12 @@
             if (currentFilters.estado && solicitud.estado !== currentFilters.estado) return false;
             if (currentFilters.asignado && solicitud.propietario !== currentFilters.asignado) return false;
             if (currentFilters.sla && solicitud.sla !== currentFilters.sla) return false;
-            if (currentFilters.prioridad && solicitud.prioridad !== currentFilters.prioridad) return false;
 
             // Búsqueda global
             if (currentFilters.search) {
                 const searchTerms = [
                     solicitud.cliente, solicitud.producto, solicitud.propietario,
-                    solicitud.etapa, solicitud.estado, solicitud.etiquetas
+                    solicitud.etapa, solicitud.estado
                 ].join(' ').toLowerCase();
 
                 if (!searchTerms.includes(currentFilters.search)) return false;
@@ -1544,7 +1489,7 @@
     function clearFilters() {
         const filterElements = [
             'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'busquedaGlobal'
+            'filtroAsignado', 'filtroSLA', 'busquedaGlobal'
         ];
 
         filterElements.forEach(id => {
@@ -2443,81 +2388,6 @@
                 }
             });
         }
-
-        // Manejar edición de etiquetas con select
-        document.querySelectorAll('.etiquetas-select').forEach(function (select) {
-            select.addEventListener('change', function (e) {
-                const solicitudId = e.target.dataset.id;
-                const nuevaEtiqueta = e.target.value;
-
-                e.target.disabled = true;
-
-                fetch(`/workflow/api/solicitudes/${solicitudId}/actualizar-etiquetas/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ etiquetas_oficial: nuevaEtiqueta })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            e.target.style.borderColor = '#22c55e';
-                            setTimeout(() => {
-                                e.target.style.borderColor = '';
-                            }, 1000);
-                        } else {
-                            e.target.style.borderColor = '#ef4444';
-                            alert(data.error || 'Error al guardar etiqueta');
-                        }
-                    })
-                    .catch(error => {
-                        e.target.style.borderColor = '#ef4444';
-                        alert('Error de conexión');
-                    })
-                    .finally(() => {
-                        e.target.disabled = false;
-                    });
-            });
-        });
-
-        // Manejar edición de prioridad
-        document.querySelectorAll('.prioridad-select').forEach(function (select) {
-            select.addEventListener('change', function (e) {
-                const solicitudId = e.target.dataset.id;
-                const nuevaPrioridad = e.target.value;
-                fetch(`/workflow/api/solicitudes/${solicitudId}/actualizar-prioridad/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ prioridad: nuevaPrioridad })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Cambia color del fondo según la prioridad seleccionada
-                            if (nuevaPrioridad === 'Alta') {
-                                e.target.style.backgroundColor = '#fee2e2';
-                                e.target.style.color = '#b91c1c';
-                            } else if (nuevaPrioridad === 'Media') {
-                                e.target.style.backgroundColor = '#fef9c3';
-                                e.target.style.color = '#b45309';
-                            } else if (nuevaPrioridad === 'Baja') {
-                                e.target.style.backgroundColor = '#dcfce7';
-                                e.target.style.color = '#166534';
-                            } else {
-                                e.target.style.backgroundColor = 'white';
-                                e.target.style.color = '#333';
-                            }
-                        } else {
-                            alert(data.error || 'Error al guardar prioridad');
-                        }
-                    });
-            });
-        });
     });
     function getCookie(name) {
         let cookieValue = null;
