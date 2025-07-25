@@ -1,0 +1,21 @@
+# QUICK MANUAL FIX FOR PRODUCTION SERVER
+# ======================================
+
+# 1. Navigate to your project directory and activate virtual environment
+cd /www/wwwroot/PACIFICO
+source /PACIFICO/02e43b188e8420e8b9cceda13a53170f_venv/bin/activate
+
+# 2. Use the full path to Python and fake apply the problematic migration
+/PACIFICO/02e43b188e8420e8b9cceda13a53170f_venv/bin/python3 /www/wwwroot/PACIFICO/manage.py migrate workflow 0031_auto_20250724_2158 --fake
+
+# 3. Run remaining migrations
+/PACIFICO/02e43b188e8420e8b9cceda13a53170f_venv/bin/python3 /www/wwwroot/PACIFICO/manage.py migrate
+
+# Alternative one-liner command (if the above works):
+# /PACIFICO/02e43b188e8420e8b9cceda13a53170f_venv/bin/python3 /www/wwwroot/PACIFICO/manage.py migrate workflow 0031_auto_20250724_2158 --fake && /PACIFICO/02e43b188e8420e8b9cceda13a53170f_venv/bin/python3 /www/wwwroot/PACIFICO/manage.py migrate
+
+# EXPLANATION:
+# ------------
+# The --fake flag tells Django to mark the migration as applied without actually running it.
+# This is safe because the 'empresa' column already exists in the database.
+# After fake-applying this migration, Django can proceed with subsequent migrations normally.
