@@ -45,7 +45,7 @@
               <div class="mb-2"><span class="font-semibold"><i class="fa-solid fa-calendar-days"></i> Fecha Entrevista:</span> <span>{{ entrevista.fecha_entrevista|date:"d/m/Y H:i" }}</span></div>
               {% if entrevista.completada_por_admin %}
               <div class="mb-2">
-                <span class="badge bg-warning text-dark rounded-pill">
+                <span class="badge bg-primary text-white rounded-pill">
                   <i class="fa-solid fa-user-gear"></i> Completada por Admin
                 </span>
                 <br><small class="text-muted">{{ entrevista.fecha_completada_admin|date:"d/m/Y H:i" }}</small>
@@ -55,9 +55,12 @@
                 <a href="{% url 'descargar_entrevista_excel' entrevista.id %}" class="btn btn-outline-success btn-sm border border-green-600 text-green-700 rounded-full px-4 py-1 hover:bg-green-50 transition me-2">
                   <i class="fa-solid fa-file-excel"></i> Excel
                 </a>
-                <a href="{% url 'entrevista_admin' entrevista.id %}" class="btn btn-outline-warning btn-sm border border-orange-600 text-orange-700 rounded-full px-4 py-1 hover:bg-orange-50 transition me-2" target="_blank" title="Modo Administrador - Control de Calidad">
+                <a href="{% url 'entrevista_admin' entrevista.id %}" class="btn btn-outline-primary btn-sm border border-blue-600 text-blue-700 rounded-full px-4 py-1 hover:bg-blue-50 transition me-2" target="_blank" title="Modo Administrador - Control de Calidad">
                   <i class="fa-solid fa-user-gear"></i> Admin
                 </a>
+                <button onclick="enviarAAAPX({{ entrevista.id }}, '{{ entrevista.primer_nombre }} {{ entrevista.primer_apellido }}')" class="btn btn-outline-warning btn-sm border border-yellow-600 text-yellow-700 rounded-full px-4 py-1 hover:bg-yellow-50 transition me-2" title="Enviar al Sistema Core APPX">
+                  <i class="fa-solid fa-paper-plane"></i> APPX
+                </button>
                 <a href="{% url 'descargar_entrevista_pdf' entrevista.id %}" class="btn btn-outline-danger btn-sm border border-red-600 text-red-700 rounded-full px-4 py-1 hover:bg-red-50 transition">
                   <i class="fa-solid fa-file-pdf"></i> PDF
                 </a>
@@ -88,6 +91,80 @@
       }
     });
   });
+
+  // --- Función para enviar entrevista a APPX ---
+  function enviarAAAPX(entrevistaId, nombreCliente) {
+    // Confirmar antes de enviar
+    if (confirm(`¿Está seguro que desea enviar la entrevista de ${nombreCliente} al sistema APPX Core?\n\nEsta acción enviará todos los datos de la entrevista al sistema central.`)) {
+      
+      // Deshabilitar el botón mientras se procesa
+      const boton = event.target.closest('button');
+      const textoOriginal = boton.innerHTML;
+      boton.disabled = true;
+      boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+      
+      // Obtener el token CSRF
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                       getCookie('csrftoken');
+      
+      // Hacer la petición AJAX
+      fetch(`/workflow/api/entrevistas/${entrevistaId}/enviar-appx/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Éxito
+          alert(`✅ ÉXITO: ${data.message}\n\nTimestamp: ${data.timestamp}`);
+          
+          // Opcional: Marcar visualmente la entrevista como enviada
+          const card = boton.closest('.entrevista-card');
+          if (card) {
+            const header = card.querySelector('.bg-gradient-to-r');
+            if (header) {
+              header.style.background = 'linear-gradient(to right, #10b981, #059669)';
+              header.innerHTML += ' <span class="badge bg-success ms-2"><i class="fa-solid fa-paper-plane"></i> ENVIADO</span>';
+            }
+          }
+          
+        } else {
+          // Error
+          alert(`❌ ERROR: ${data.message}\n\nDetalles: ${data.error_details || 'No disponible'}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert(`❌ ERROR DE CONEXIÓN: No se pudo enviar la entrevista.\n\nError técnico: ${error.message}`);
+      })
+      .finally(() => {
+        // Restaurar el botón
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+      });
+    }
+  }
+
+  // Función auxiliar para obtener el CSRF token de las cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
 </script>
 {% endblock %}
 
