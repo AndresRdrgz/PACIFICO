@@ -29,11 +29,19 @@
               </p>
             </div>
             <div class="col-lg-4 col-md-5 col-sm-12 text-md-end text-center mt-2 mt-md-0">
-              {% if solicitud.prioridad %}
-              <span class="badge bg-warning text-dark px-3 py-2">
-                <i class="fas fa-star"></i> {{ solicitud.prioridad }}
-              </span>
-              {% endif %}
+              <div class="d-flex align-items-center justify-content-md-end justify-content-center flex-wrap gap-2">
+                <!-- Botón Avanzar Etapa -->
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa">
+                  <i class="fas fa-arrow-right me-1"></i>
+                  Avanzar Etapa
+                </button>
+                
+                {% if solicitud.prioridad %}
+                <span class="badge bg-warning text-dark px-3 py-2">
+                  <i class="fas fa-star"></i> {{ solicitud.prioridad }}
+                </span>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>
@@ -979,6 +987,14 @@
         }
       });
     }
+
+    // Modal Avanzar Etapa
+    const modalAvanzarEtapa = document.getElementById('modalAvanzarEtapa');
+    if (modalAvanzarEtapa) {
+      modalAvanzarEtapa.addEventListener('show.bs.modal', function (event) {
+        cargarSubestadosYTransiciones();
+      });
+    }
   });
 
   // =======================================================
@@ -1075,6 +1091,169 @@
     mostrarMensaje(`Documento calificado como malo: ${opcionNombre}`, 'success');
   }
 
+  // =====================================================
+  // FUNCIONES PARA AVANZAR ETAPA
+  // =====================================================
+
+  async function cargarOpcionesAvance() {
+    const solicitudId = {{ solicitud.id }};
+    
+    try {
+      // Cargar subestados disponibles
+      const responseSubestados = await fetch(`/workflow/api/subestados-disponibles/${solicitudId}/`);
+      const dataSubestados = await responseSubestados.json();
+      
+      // Cargar transiciones disponibles
+      const responseTransiciones = await fetch(`/workflow/api/transiciones-disponibles/${solicitudId}/`);
+      const dataTransiciones = await responseTransiciones.json();
+      
+      // Renderizar opciones
+      renderizarSubestados(dataSubestados);
+      renderizarTransiciones(dataTransiciones);
+      
+    } catch (error) {
+      console.error('Error cargando opciones de avance:', error);
+      mostrarMensaje('Error al cargar las opciones de avance', 'error');
+    }
+  }
+
+  function renderizarSubestados(data) {
+    const container = document.getElementById('subestados-container');
+    
+    if (!data.subestados || data.subestados.length === 0) {
+      container.innerHTML = '<p class="text-muted">No hay subestados disponibles para avanzar.</p>';
+      return;
+    }
+    
+    let html = '';
+    data.subestados.forEach(subestado => {
+      const isActual = subestado.id === data.subestado_actual_id;
+      const btnClass = isActual ? 'btn-outline-secondary' : 'btn-outline-primary';
+      const btnText = isActual ? 'Actual' : 'Avanzar';
+      const disabled = isActual ? 'disabled' : '';
+      
+      html += `
+        <div class="card mb-2">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">${subestado.nombre}</h6>
+                <small class="text-muted">Orden: ${subestado.orden}</small>
+              </div>
+              <button class="btn btn-sm ${btnClass}" ${disabled} 
+                      onclick="avanzarSubestado(${subestado.id})">
+                <i class="fas fa-arrow-right me-1"></i>${btnText}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  function renderizarTransiciones(data) {
+    const container = document.getElementById('transiciones-container');
+    
+    if (!data.transiciones || data.transiciones.length === 0) {
+      container.innerHTML = '<p class="text-muted">No hay transiciones disponibles.</p>';
+      return;
+    }
+    
+    let html = '';
+    data.transiciones.forEach(transicion => {
+      html += `
+        <div class="card mb-2">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1">${transicion.nombre}</h6>
+                <small class="text-muted">
+                  ${transicion.etapa_origen} → ${transicion.etapa_destino}
+                </small>
+              </div>
+              <button class="btn btn-sm btn-outline-success" 
+                      onclick="ejecutarTransicion(${transicion.id})">
+                <i class="fas fa-exchange-alt me-1"></i>Ejecutar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  async function avanzarSubestado(subestadoId) {
+    const solicitudId = {{ solicitud.id }};
+    
+    try {
+      const response = await fetch(`/workflow/api/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          subestado_id: subestadoId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        mostrarMensaje('Subestado avanzado correctamente', 'success');
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        modal.hide();
+        // Recargar página
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        mostrarMensaje(data.message || 'Error al avanzar subestado', 'error');
+      }
+    } catch (error) {
+      console.error('Error avanzando subestado:', error);
+      mostrarMensaje('Error al avanzar subestado', 'error');
+    }
+  }
+
+  async function ejecutarTransicion(transicionId) {
+    const solicitudId = {{ solicitud.id }};
+    
+    try {
+      const response = await fetch(`/workflow/api/ejecutar-transicion/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          transicion_id: transicionId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        mostrarMensaje('Transición ejecutada correctamente', 'success');
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        modal.hide();
+        // Redirigir a la nueva etapa
+        setTimeout(() => window.location.href = data.redirect_url || window.location.href, 1000);
+      } else {
+        mostrarMensaje(data.message || 'Error al ejecutar transición', 'error');
+      }
+    } catch (error) {
+      console.error('Error ejecutando transición:', error);
+      mostrarMensaje('Error al ejecutar transición', 'error');
+    }
+  }
+
 </script>
 
 <!-- Modal para Comentarios -->
@@ -1134,6 +1313,50 @@
         </div>
         <div id="opciones-container">
           <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Avanzar Etapa -->
+<div class="modal fade" id="modalAvanzarEtapa" tabindex="-1" aria-labelledby="modalAvanzarEtapaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAvanzarEtapaLabel">
+          <i class="fas fa-arrow-right me-2"></i>Avanzar Etapa
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <!-- Columna de Subestados -->
+          <div class="col-md-6">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-list-ol me-2"></i>Avanzar Subestado
+            </h6>
+            <p class="text-muted small">Avanza al siguiente subestado dentro de la etapa actual:</p>
+            
+            <div id="subestados-container">
+              <!-- Los subestados se cargan dinámicamente aquí -->
+            </div>
+          </div>
+          
+          <!-- Columna de Transiciones -->
+          <div class="col-md-6">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-exchange-alt me-2"></i>Cambiar Etapa
+            </h6>
+            <p class="text-muted small">Cambia a una etapa diferente según las transiciones configuradas:</p>
+            
+            <div id="transiciones-container">
+              <!-- Las transiciones se cargan dinámicamente aquí -->
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

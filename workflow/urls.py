@@ -20,6 +20,7 @@ urlpatterns = [
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
+    path('solicitudes/<int:solicitud_id>/backoffice/', views_workflow.detalle_solicitud, name='detalle_solicitud_backoffice'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
@@ -66,6 +67,12 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/comentarios/crear/', views_workflow.api_crear_comentario, name='api_crear_comentario'),
     path('api/comentarios/<int:comentario_id>/editar/', views_workflow.api_editar_comentario, name='api_editar_comentario'),
     path('api/comentarios/<int:comentario_id>/eliminar/', views_workflow.api_eliminar_comentario, name='api_eliminar_comentario'),
+    
+    # Subestados and Transiciones API URLs
+    path('api/subestados-disponibles/<int:solicitud_id>/', views_workflow.api_subestados_disponibles, name='api_subestados_disponibles'),
+    path('api/transiciones-disponibles/<int:solicitud_id>/', views_workflow.api_transiciones_disponibles, name='api_transiciones_disponibles'),
+    path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
+    path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
     
     # PDF Download API URLs
     path('api/solicitudes/<int:solicitud_id>/download-merged-pdf/', views_workflow.api_download_merged_pdf, name='api_download_merged_pdf'),

@@ -8365,3 +8365,253 @@ def api_obtener_configuracion_canal_digital(request):
             'success': False,
             'error': str(e)
         })
+
+
+# =====================================================
+# APIS PARA AVANZAR SUBESTADOS Y TRANSICIONES
+# =====================================================
+
+@login_required
+def api_subestados_disponibles(request, solicitud_id):
+    """API para obtener los subestados disponibles para una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            })
+        
+        # Obtener todos los subestados de la etapa actual
+        if not solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud no tiene etapa actual asignada.'
+            })
+        
+        subestados = solicitud.etapa_actual.subestados.all().order_by('orden')
+        
+        subestados_data = []
+        for subestado in subestados:
+            subestados_data.append({
+                'id': subestado.id,
+                'nombre': subestado.nombre,
+                'orden': subestado.orden
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'subestados': subestados_data,
+            'subestado_actual_id': solicitud.subestado_actual.id if solicitud.subestado_actual else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener subestados: {str(e)}'
+        })
+
+
+@login_required
+def api_transiciones_disponibles(request, solicitud_id):
+    """API para obtener las transiciones disponibles para una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            })
+        
+        # Obtener todas las transiciones desde la etapa actual
+        if not solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud no tiene etapa actual asignada.'
+            })
+        
+        transiciones = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=solicitud.etapa_actual
+        )
+        
+        transiciones_data = []
+        for transicion in transiciones:
+            transiciones_data.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_origen': transicion.etapa_origen.nombre,
+                'etapa_destino': transicion.etapa_destino.nombre,
+                'requiere_permiso': transicion.requiere_permiso
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones': transiciones_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener transiciones: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avanzar_subestado(request):
+    """API para avanzar al siguiente subestado"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        subestado_id = data.get('subestado_id')
+        
+        if not solicitud_id or not subestado_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        subestado = get_object_or_404(SubEstado, id=subestado_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para modificar esta solicitud.'
+            })
+        
+        # Verificar que el subestado pertenece a la etapa actual
+        if subestado.etapa != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'El subestado no pertenece a la etapa actual.'
+            })
+        
+        # Actualizar el subestado actual
+        solicitud.subestado_actual = subestado
+        solicitud.save()
+        
+        # Actualizar el historial si existe una entrada activa
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.subestado = subestado
+            historial_actual.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Subestado actualizado a: {subestado.nombre}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al avanzar subestado: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_ejecutar_transicion(request):
+    """API para ejecutar una transición a otra etapa"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        transicion_id = data.get('transicion_id')
+        
+        if not solicitud_id or not transicion_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para modificar esta solicitud.'
+            })
+        
+        # Verificar que la transición es válida
+        if transicion.etapa_origen != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'La transición no es válida para la etapa actual.'
+            })
+        
+        # Verificar permisos de transición si es requerido
+        if transicion.requiere_permiso:
+            # Aquí podrías agregar lógica adicional de permisos
+            pass
+        
+        # Cerrar el historial actual
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.fecha_fin = timezone.now()
+            historial_actual.save()
+        
+        # Actualizar la solicitud
+        solicitud.etapa_actual = transicion.etapa_destino
+        # Resetear subestado al primer subestado de la nueva etapa
+        primer_subestado = transicion.etapa_destino.subestados.order_by('orden').first()
+        solicitud.subestado_actual = primer_subestado
+        solicitud.save()
+        
+        # Crear nuevo historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=transicion.etapa_destino,
+            subestado=primer_subestado,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Determinar URL de redirección
+        if transicion.etapa_destino.nombre == 'Back Office' and transicion.etapa_destino.es_bandeja_grupal:
+            redirect_url = f'/workflow/solicitudes/{solicitud.id}/backoffice/'
+        else:
+            redirect_url = f'/workflow/solicitudes/{solicitud.id}/detalle/'
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Transición ejecutada: {transicion.nombre}',
+            'redirect_url': redirect_url
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al ejecutar transición: {str(e)}'
+        })
