@@ -376,7 +376,7 @@
                 <div class="process-details">
                   {% for archivo_info in archivos %}
                   <div class="detail-card archivo-card-mejorada-backoffice"
-                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{% endif %}">
+                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
                     <!-- Header del archivo -->
                     <div class="archivo-header-backoffice">
                       <!-- IZQUIERDA: Información del documento -->
@@ -476,7 +476,7 @@
                         <!-- Opciones -->
                         <div class="seccion-opciones">
                           <button class="btn opciones-dropdown-btn-backoffice" type="button"
-                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
+                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
                             title="Opciones adicionales">
                             <i class="fas fa-ellipsis-v"></i>
                             <span>Opciones</span>
@@ -1064,8 +1064,42 @@
   // Variables globales
   let currentRequisitoId = null;
 
+  // Función para verificar y preservar estados de botones
+  function preservarEstadosBotones() {
+    console.log('🔄 Preservando estados de botones...');
+    
+    // Recorrer todas las cards de requisitos
+    const cards = document.querySelectorAll('.card[data-requisito-id]');
+    console.log(`📋 Encontradas ${cards.length} cards para preservar estados`);
+    
+    cards.forEach(card => {
+      const requisitoId = card.getAttribute('data-requisito-id');
+      console.log(`🔍 Verificando estado para requisito ${requisitoId}`);
+      
+      // Buscar todos los botones de calificación en esta card
+      const botonesBueno = card.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"]');
+      const botonesMalo = card.querySelectorAll('.calificar-btn-backoffice[data-estado="malo"]');
+      
+      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos`);
+      
+      // Verificar si debe estar marcado como bueno o malo basado en el estado guardado
+      // Esta función se ejecutará después de que actualizarEstadoCalificacion haya hecho su trabajo
+      setTimeout(() => {
+        const botonesActivos = card.querySelectorAll('.calificar-btn-backoffice.activo');
+        console.log(`✨ Requisito ${requisitoId}: ${botonesActivos.length} botones con clase activo después de delay`);
+        
+        botonesActivos.forEach(btn => {
+          const estado = btn.dataset.estado;
+          console.log(`🎯 Botón ${estado} mantiene clase activo para requisito ${requisitoId}`);
+        });
+      }, 50);
+    });
+  }
+
   // Función para calificar documento
   function calificarDocumento(requisitoId, estado, opcionId = null) {
+    console.log(`Calificando documento: requisitoId=${requisitoId}, estado=${estado}, opcionId=${opcionId}`);
+    
     const data = {
       requisito_solicitud_id: requisitoId,
       estado: estado,
@@ -1080,18 +1114,30 @@
       },
       body: JSON.stringify(data)
     })
-      .then(response => response.json())
+      .then(response => {
+        console.log('Respuesta del servidor calificar:', response.status);
+        return response.json();
+      })
       .then(data => {
+        console.log('Datos recibidos de calificación:', data);
         if (data.success) {
           // Actualizar interfaz
-          actualizarEstadoCalificacion(requisitoId, estado, data.data || {});
+          console.log('Llamando a actualizarEstadoCalificacion...');
+          actualizarEstadoCalificacion(requisitoId, estado, data.data || { usuario: 'Usuario actual' });
+          
+          // Preservar estado después de un breve delay
+          setTimeout(() => {
+            console.log('Preservando estado después de calificación...');
+            preservarEstadosBotones();
+          }, 100);
+          
           mostrarMensaje('Calificación guardada exitosamente', 'success');
         } else {
           mostrarMensaje('Error al guardar calificación: ' + data.error, 'error');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
+        console.error('Error en calificarDocumento:', error);
         mostrarMensaje('Error de conexión', 'error');
       });
   }
@@ -1142,66 +1188,72 @@
 
   // Función para actualizar estado de calificación en la interfaz
   function actualizarEstadoCalificacion(requisitoId, estado, data) {
+    console.log(`🎯 Actualizando estado: requisito=${requisitoId}, estado=${estado}`);
+    
     if (!requisitoId) {
-      console.warn('requisitoId es null o undefined');
+      console.warn('⚠️ requisitoId es null o undefined');
       return;
     }
 
     const card = document.querySelector(`[data-requisito-id="${requisitoId}"]`);
     if (!card) {
-      console.warn(`No se encontró la tarjeta para el requisito ${requisitoId}`);
+      console.warn(`⚠️ No se encontró la card para el requisito ${requisitoId}`);
       return;
     }
 
-    console.log(`Actualizando estado de calificación: requisito=${requisitoId}, estado=${estado}`);
+    console.log(`✅ Card encontrada para requisito ${requisitoId}`);
 
     // Actualizar botones de calificación
     const botones = card.querySelectorAll('.calificar-btn-backoffice');
-    console.log(`Encontrados ${botones.length} botones de calificación`);
+    console.log(`🔘 Encontrados ${botones.length} botones de calificación`);
 
-    botones.forEach(btn => {
+    botones.forEach((btn, index) => {
       const btnEstado = btn.dataset.estado;
-      console.log(`Botón: estado=${btnEstado}, debe ser activo: ${btnEstado === estado}`);
-
-      // Remover clase activo de todos los botones
+      const esteEsElBotonActivo = btnEstado === estado;
+      
+      console.log(`🔘 Botón ${index + 1}: estado="${btnEstado}", debe estar activo: ${esteEsElBotonActivo}`);
+      
+      // Limpiar estado anterior
       btn.classList.remove('activo');
-
-      // Agregar clase activo solo al botón correspondiente
-      if (btnEstado === estado) {
+      
+      // Activar solo el botón correspondiente
+      if (esteEsElBotonActivo) {
         btn.classList.add('activo');
-        console.log(`Botón ${btnEstado} marcado como activo`);
-
-        // Animación de feedback
-        btn.classList.add(estado === 'bueno' ? 'feedback-success' : 'feedback-danger');
+        console.log(`✨ Clase 'activo' agregada al botón ${btnEstado}`);
+        
+        // Forzar estilo inline para asegurar que se vea - MÁS FUERTE
+        if (estado === 'bueno') {
+          btn.style.backgroundColor = '#198754 !important';
+          btn.style.borderColor = '#198754 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(25, 135, 84, 0.5)';
+        } else {
+          btn.style.backgroundColor = '#dc3545 !important';
+          btn.style.borderColor = '#dc3545 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        }
+        
+        // FORZAR que se mantenga así para siempre
+        btn.setAttribute('data-calificado', estado);
+        
+        // Verificar que la clase se agregó correctamente
         setTimeout(() => {
-          btn.classList.remove('feedback-success', 'feedback-danger');
-        }, 600);
+          const tieneActivo = btn.classList.contains('activo');
+          console.log(`🔍 Verificación: botón ${btnEstado} tiene clase activo: ${tieneActivo}`);
+          console.log(`📝 Clases finales del botón: ${btn.className}`);
+        }, 10);
+      } else {
+        // Resetear estilo para botones no activos
+        btn.style.backgroundColor = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
       }
     });
 
-    // Actualizar estado de calificación en el header
-    let estadoDiv = card.querySelector('.calificacion-estado');
-    if (!estadoDiv) {
-      estadoDiv = document.createElement('div');
-      estadoDiv.className = 'calificacion-estado';
-      const headerElement = card.querySelector('.archivo-header-backoffice');
-      if (headerElement) {
-        headerElement.appendChild(estadoDiv);
-      }
-    }
-
-    const badgeClass = estado === 'bueno' ? 'bg-success' : 'bg-danger';
-    const iconClass = estado === 'bueno' ? 'fa-thumbs-up' : 'fa-thumbs-down';
-
-    estadoDiv.innerHTML = `
-        <span class="badge ${badgeClass}">
-            <i class="fas ${iconClass} me-1"></i>
-            ${estado.toUpperCase()}
-        </span>
-        <small class="text-muted d-block mt-1">
-            por ${data.usuario}
-        </small>
-    `;
+    console.log(`🏁 Estado visual actualizado para requisito ${requisitoId}`);
   }
 
   // Función para actualizar modal de comentarios
@@ -1385,6 +1437,12 @@
         console.warn(`RequisitoId inválido o vacío: ${requisitoId}`);
       }
     });
+    
+    // Preservar estados después de cargar todos los requisitos
+    setTimeout(() => {
+      console.log('Preservando estados después de cargar todos los requisitos...');
+      preservarEstadosBotones();
+    }, 500);
   }
 
   // Función para obtener CSRF token
@@ -1445,6 +1503,31 @@
   document.addEventListener('DOMContentLoaded', function () {
     // Cargar estados iniciales de calificaciones
     cargarEstadosInicialesCalificaciones();
+
+    // VERIFICAR Y MARCAR BOTONES QUE YA ESTÁN CALIFICADOS
+    setTimeout(() => {
+      const todosBotones = document.querySelectorAll('.calificar-btn-backoffice[data-calificado]');
+      console.log(`🔍 Encontrados ${todosBotones.length} botones que deberían estar marcados`);
+      
+      todosBotones.forEach(btn => {
+        const estado = btn.getAttribute('data-calificado');
+        console.log(`🎯 Forzando estilo para botón ${estado}`);
+        
+        if (estado === 'bueno') {
+          btn.style.backgroundColor = '#198754 !important';
+          btn.style.borderColor = '#198754 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(25, 135, 84, 0.5)';
+        } else if (estado === 'malo') {
+          btn.style.backgroundColor = '#dc3545 !important';
+          btn.style.borderColor = '#dc3545 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        }
+      });
+    }, 1000);
 
     // Botones de calificación
     document.addEventListener('click', function (e) {
@@ -1917,6 +2000,76 @@
     }
   }
 
+  // Función para devolver solicitud a bandeja grupal
+  async function devolverABandejaGrupal() {
+    const solicitudId = {{ solicitud.id }};
+    
+    console.log('Devolviendo solicitud a bandeja grupal:', solicitudId);
+    
+    // Confirmar acción con el usuario
+    if (!confirm('¿Estás seguro de que deseas devolver esta solicitud a la bandeja grupal?\n\nOtros usuarios podrán tomarla y continuar con el proceso.')) {
+      return;
+    }
+    
+    try {
+      // Deshabilitar botón mientras se procesa
+      const btn = document.getElementById('btn-devolver-bandeja');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Devolviendo...';
+      
+      const response = await fetch(`/workflow/api/devolver-bandeja-grupal/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId
+        })
+      });
+      
+      console.log('Respuesta devolver bandeja:', response.status);
+      const data = await response.json();
+      console.log('Data devolver bandeja:', data);
+      
+      if (data.success) {
+        mostrarMensaje('Solicitud devuelta a bandeja grupal exitosamente', 'success');
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
+        if (modal) {
+          modal.hide();
+        }
+        
+        // Mostrar mensaje informativo
+        mostrarMensaje('Redirigiendo a la bandeja grupal...', 'info');
+        
+        // Redirigir a la bandeja grupal después de un breve delay
+        setTimeout(() => {
+          // Redirigir a la vista de bandeja grupal o dashboard
+          window.location.href = data.redirect_url || '/workflow/bandeja-grupal/';
+        }, 2000);
+        
+      } else {
+        mostrarMensaje(data.message || 'Error al devolver solicitud a bandeja grupal', 'error');
+        
+        // Rehabilitar botón
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+      
+    } catch (error) {
+      console.error('Error devolviendo a bandeja grupal:', error);
+      mostrarMensaje('Error de conexión al devolver solicitud', 'error');
+      
+      // Rehabilitar botón en caso de error
+      const btn = document.getElementById('btn-devolver-bandeja');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-share me-1"></i>Devolver a Bandeja Grupal';
+    }
+  }
+
 </script>
 
 <!-- Modal para Comentarios -->
@@ -1987,7 +2140,7 @@
 
 <!-- Modal Avanzar Etapa -->
 <div class="modal fade" id="modalAvanzarEtapa" tabindex="-1" aria-labelledby="modalAvanzarEtapaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalAvanzarEtapaLabel">
@@ -1998,7 +2151,7 @@
       <div class="modal-body">
         <div class="row">
           <!-- Columna de Subestados -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <h6 class="border-bottom pb-2 mb-3">
               <i class="fas fa-list-ol me-2"></i>Avanzar Subestado
             </h6>
@@ -2010,7 +2163,7 @@
           </div>
           
           <!-- Columna de Transiciones -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <h6 class="border-bottom pb-2 mb-3">
               <i class="fas fa-exchange-alt me-2"></i>Cambiar Etapa
             </h6>
@@ -2018,6 +2171,54 @@
             
             <div id="transiciones-container">
               <!-- Las transiciones se cargan dinámicamente aquí -->
+            </div>
+          </div>
+          
+          <!-- Columna de Bandeja Grupal -->
+          <div class="col-md-4">
+            <h6 class="border-bottom pb-2 mb-3">
+              <i class="fas fa-users me-2"></i>Bandeja Grupal
+            </h6>
+            <p class="text-muted small">Devuelve la solicitud a la bandeja grupal para que otros usuarios la puedan tomar:</p>
+            
+            <div id="bandeja-grupal-container">
+              <div class="card border-info">
+                <div class="card-body p-3">
+                  <div class="text-center">
+                    <div class="mb-3">
+                      <i class="fas fa-inbox fa-2x text-info mb-2"></i>
+                      <h6 class="mb-1">Devolver a Bandeja Grupal</h6>
+                      <small class="text-muted">
+                        Permite que otros usuarios continúen con el siguiente subestado
+                      </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="badge bg-info mb-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Subestado Actual: <span id="subestado-actual-nombre">{{ solicitud.subestado_actual.nombre|default:"Sin subestado" }}</span>
+                      </div>
+                      <br>
+                      <small class="text-muted d-block">
+                        Al devolver a bandeja grupal, la solicitud estará disponible para que cualquier usuario autorizado la tome y continúe con el flujo.
+                      </small>
+                    </div>
+                    
+                    <button class="btn btn-info btn-sm w-100" 
+                            onclick="devolverABandejaGrupal()"
+                            id="btn-devolver-bandeja">
+                      <i class="fas fa-share me-1"></i>Devolver a Bandeja Grupal
+                    </button>
+                    
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        Útil cuando has completado tu parte del proceso y quieres que otro usuario continúe.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -8728,3 +8728,84 @@ def api_ejecutar_transicion(request):
             'success': False,
             'message': f'Error al ejecutar transición: {str(e)}'
         })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_devolver_bandeja_grupal(request):
+    """API para devolver una solicitud a la bandeja grupal"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        
+        if not solicitud_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'ID de solicitud requerido.'
+            })
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos - solo el usuario asignado o con permisos especiales puede devolver
+        if not (solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo puedes devolver solicitudes que están asignadas a ti.'
+            })
+        
+        # Verificar que la solicitud está en una etapa que permite devolución a bandeja grupal
+        if not solicitud.etapa_actual or not solicitud.etapa_actual.es_bandeja_grupal:
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta etapa no permite devolución a bandeja grupal.'
+            })
+        
+        # Verificar que la solicitud está actualmente asignada (no en bandeja grupal)
+        if not solicitud.asignada_a:
+            return JsonResponse({
+                'success': False,
+                'message': 'La solicitud ya está en bandeja grupal.'
+            })
+        
+        # Crear registro en el historial antes de cambiar la asignación
+        comentario_devolucion = f"Solicitud devuelta a bandeja grupal por {request.user.get_full_name() or request.user.username}"
+        
+        # Actualizar la solicitud - remover asignación para que vuelva a bandeja grupal
+        usuario_anterior = solicitud.asignada_a
+        solicitud.asignada_a = None  # Esto la devuelve a bandeja grupal
+        solicitud.save()
+        
+        # Crear comentario de sistema
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"📤 Solicitud devuelta a bandeja grupal. Ahora está disponible para que otros usuarios la tomen y continúen con el subestado: {solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado'}",
+            es_sistema=True,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual
+        )
+        
+        # Determinar URL de redirección
+        redirect_url = '/workflow/bandeja-grupal/'
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud devuelta a bandeja grupal exitosamente. Ahora otros usuarios pueden tomarla y continuar con el proceso.',
+            'redirect_url': redirect_url,
+            'data': {
+                'usuario_anterior': usuario_anterior.get_full_name() if usuario_anterior else None,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+                'fecha_devolucion': timezone.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al devolver solicitud a bandeja grupal: {str(e)}'
+        })
