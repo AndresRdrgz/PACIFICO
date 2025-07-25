@@ -2086,7 +2086,12 @@
                 </p>
                 <p class="text-sm text-blue-700 mt-1">
                   <i class="fas fa-shield-alt text-blue-600 me-1"></i>
+                <div class="d-flex align-items-center">
                   <strong>Nota:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-info p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </div>
                 </p>
               </div>
             </div>
@@ -2136,24 +2141,113 @@
     
     // Función para comparar similitud entre cédulas
     function compararCedulas(cedula1, cedula2) {
-      // Extraer solo números para comparación
-      const numeros1 = cedula1.replace(/[^0-9]/g, '');
-      const numeros2 = cedula2.replace(/[^0-9]/g, '');
+      // 1. Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
       
-      // Verificar si los números significativos coinciden (últimos 6-8 dígitos)
-      const digitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
-      const digitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
       
-      // Coincidencia exacta de dígitos
-      if (digitos1 === digitos2 && digitos1.length > 0) return 'exacta';
+      // 2. Extraer números y letras por separado
+      const numerosYLetras1 = normalizada1.match(/[0-9A-Z]/g) || [];
+      const numerosYLetras2 = normalizada2.match(/[0-9A-Z]/g) || [];
       
-      // Coincidencia parcial (últimos 4-6 dígitos)
-      const ultimosDigitos1 = numeros1.length > 4 ? numeros1.slice(-6) : numeros1;
-      const ultimosDigitos2 = numeros2.length > 4 ? numeros2.slice(-6) : numeros2;
-      if (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length > 0) return 'parcial';
+      // Verificar si las versiones sin caracteres especiales coinciden
+      if (numerosYLetras1.join('') === numerosYLetras2.join('')) return 'exacta';
       
-      // Sin coincidencia
+      // 3. Extraer solo números para comparación numérica
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      // Si ambas tienen números
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // 4. Comparar primeros dígitos (entre 3-4 dígitos iniciales)
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        
+        // 5. Comparar últimos dígitos (6-8 dígitos finales)
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        // Si coinciden los primeros o últimos dígitos significativos
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+        
+        // 6. Calcular distancia de Levenshtein para detectar errores de tipografía
+        // Solo si las longitudes son similares (diferencia máxima de 2 caracteres)
+        if (Math.abs(numeros1.length - numeros2.length) <= 2) {
+          const distancia = levenshteinDistance(numeros1, numeros2);
+          // Si la distancia es pequeña en relación al tamaño de la cédula (máximo 2 caracteres diferentes)
+          if (distancia <= 2) {
+            return 'parcial';
+          }
+        }
+        
+        // 7. Verificar si al menos la mitad de los caracteres coinciden (para cédulas de longitud similar)
+        if (Math.abs(normalizada1.length - normalizada2.length) <= 3) {
+          let coincidencias = 0;
+          const minLength = Math.min(normalizada1.length, normalizada2.length);
+          
+          // Contar caracteres coincidentes en las mismas posiciones
+          for (let i = 0; i < minLength; i++) {
+            if (normalizada1[i] === normalizada2[i]) {
+              coincidencias++;
+            }
+          }
+          
+          // Si coinciden más del 70% de los caracteres
+          if (coincidencias >= 0.7 * minLength) {
+            return 'parcial';
+          }
+        }
+      }
+      
+      // 8. Comparar letras (importante para extranjeros)
+      const letras1 = normalizada1.replace(/[^A-Z]/g, '');
+      const letras2 = normalizada2.replace(/[^A-Z]/g, '');
+      
+      // Si ambas tienen la misma letra de extranjero y algunos dígitos coinciden
+      if (letras1 && letras2 && letras1 === letras2) {
+        // Verificar si al menos algunos dígitos coinciden
+        if (numeros1 && numeros2 && 
+            (numeros1.includes(numeros2.slice(-4)) || numeros2.includes(numeros1.slice(-4)))) {
+          return 'parcial';
+        }
+      }
+      
       return 'ninguna';
+    }
+    
+    // Función para calcular distancia de Levenshtein (para comparación fuzzy)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      
+      const matrix = [];
+      
+      // Inicializar matriz
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      
+      // Rellenar matriz
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const costo = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,      // eliminación
+            matrix[i][j - 1] + 1,      // inserción
+            matrix[i - 1][j - 1] + costo  // sustitución
+          );
+        }
+      }
+      
+      return matrix[b.length][a.length];
     }
     
     if (entrevistas.length === 0) {
@@ -2234,6 +2328,43 @@
     
     container.innerHTML = html;
   }
+  
+  // Función para mostrar detalles sobre las coincidencias
+  function mostrarInfoCoincidencias() {
+    Swal.fire({
+      title: 'Criterios de Coincidencia de Cédulas',
+      html: `
+        <div class="text-left">
+          <h5 class="font-weight-bold mb-3">Coincidencia Exacta:</h5>
+          <ul class="pl-4">
+            <li>Cédulas idénticas después de normalizar (eliminar guiones y espacios)</li>
+            <li>Mismos caracteres alfanuméricos en el mismo orden</li>
+          </ul>
+          
+          <h5 class="font-weight-bold mb-3 mt-4">Coincidencia Parcial:</h5>
+          <ul class="pl-4">
+            <li>Coinciden los primeros 3-4 dígitos <strong>o</strong> los últimos 4-8 dígitos</li>
+            <li>Cédulas que difieren en máximo 2 caracteres (errores tipográficos)</li>
+            <li>Más del 70% de caracteres coinciden en las mismas posiciones</li>
+            <li>Misma letra para extranjeros con algunos dígitos coincidentes</li>
+          </ul>
+          
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-lightbulb mr-2"></i>
+            <strong>Ejemplos de coincidencia parcial:</strong>
+            <ul class="mb-0 mt-1">
+              <li>"8-123-456" y "8123456" (mismos dígitos, formato diferente)</li>
+              <li>"1-E-234-567" y "E234567" (letra de extranjero igual)</li>
+              <li>"9-876-5432" y "9-876-5431" (error tipográfico en un dígito)</li>
+              <li>"10-123-456" y "123-456" (últimos 6 dígitos iguales)</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Entendido'
+    });
+  }
 
   function seleccionarEntrevista(id, nombre, cedula) {
     const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
@@ -2242,24 +2373,113 @@
     function compararCedulas(cedula1, cedula2) {
       if (!cedula1 || !cedula2 || cedula1 === 'No disponible' || cedula2 === 'No disponible') return 'ninguna';
       
-      // Extraer solo números para comparación
-      const numeros1 = cedula1.replace(/[^0-9]/g, '');
-      const numeros2 = cedula2.replace(/[^0-9]/g, '');
+      // 1. Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
       
-      // Verificar si los números significativos coinciden (últimos 6-8 dígitos)
-      const digitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
-      const digitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
       
-      // Coincidencia exacta de dígitos
-      if (digitos1 === digitos2 && digitos1.length > 0) return 'exacta';
+      // 2. Extraer números y letras por separado
+      const numerosYLetras1 = normalizada1.match(/[0-9A-Z]/g) || [];
+      const numerosYLetras2 = normalizada2.match(/[0-9A-Z]/g) || [];
       
-      // Coincidencia parcial (últimos 4-6 dígitos)
-      const ultimosDigitos1 = numeros1.length > 4 ? numeros1.slice(-6) : numeros1;
-      const ultimosDigitos2 = numeros2.length > 4 ? numeros2.slice(-6) : numeros2;
-      if (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length > 0) return 'parcial';
+      // Verificar si las versiones sin caracteres especiales coinciden
+      if (numerosYLetras1.join('') === numerosYLetras2.join('')) return 'exacta';
       
-      // Sin coincidencia
+      // 3. Extraer solo números para comparación numérica
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      // Si ambas tienen números
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // 4. Comparar primeros dígitos (entre 3-4 dígitos iniciales)
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        
+        // 5. Comparar últimos dígitos (6-8 dígitos finales)
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        // Si coinciden los primeros o últimos dígitos significativos
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+        
+        // 6. Calcular distancia de Levenshtein para detectar errores de tipografía
+        // Solo si las longitudes son similares (diferencia máxima de 2 caracteres)
+        if (Math.abs(numeros1.length - numeros2.length) <= 2) {
+          const distancia = levenshteinDistance(numeros1, numeros2);
+          // Si la distancia es pequeña en relación al tamaño de la cédula (máximo 2 caracteres diferentes)
+          if (distancia <= 2) {
+            return 'parcial';
+          }
+        }
+        
+        // 7. Verificar si al menos la mitad de los caracteres coinciden (para cédulas de longitud similar)
+        if (Math.abs(normalizada1.length - normalizada2.length) <= 3) {
+          let coincidencias = 0;
+          const minLength = Math.min(normalizada1.length, normalizada2.length);
+          
+          // Contar caracteres coincidentes en las mismas posiciones
+          for (let i = 0; i < minLength; i++) {
+            if (normalizada1[i] === normalizada2[i]) {
+              coincidencias++;
+            }
+          }
+          
+          // Si coinciden más del 70% de los caracteres
+          if (coincidencias >= 0.7 * minLength) {
+            return 'parcial';
+          }
+        }
+      }
+      
+      // 8. Comparar letras (importante para extranjeros)
+      const letras1 = normalizada1.replace(/[^A-Z]/g, '');
+      const letras2 = normalizada2.replace(/[^A-Z]/g, '');
+      
+      // Si ambas tienen la misma letra de extranjero y algunos dígitos coinciden
+      if (letras1 && letras2 && letras1 === letras2) {
+        // Verificar si al menos algunos dígitos coinciden
+        if (numeros1 && numeros2 && 
+            (numeros1.includes(numeros2.slice(-4)) || numeros2.includes(numeros1.slice(-4)))) {
+          return 'parcial';
+        }
+      }
+      
       return 'ninguna';
+    }
+    
+    // Función para calcular distancia de Levenshtein (para comparación fuzzy)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      
+      const matrix = [];
+      
+      // Inicializar matriz
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      
+      // Rellenar matriz
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const costo = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,      // eliminación
+            matrix[i][j - 1] + 1,      // inserción
+            matrix[i - 1][j - 1] + costo  // sustitución
+          );
+        }
+      }
+      
+      return matrix[b.length][a.length];
     }
     
     // Verificar el tipo de coincidencia entre cédulas
