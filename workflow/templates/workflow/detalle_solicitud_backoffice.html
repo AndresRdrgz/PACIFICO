@@ -2032,8 +2032,18 @@
   let entrevistaSeleccionadaId = null;
 
   function mostrarModalEntrevista() {
+    // Obtener datos del cliente de la solicitud actual
+    const clienteNombre = "{{ solicitud.cliente_nombre_completo|default:'Cliente' }}";
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    // Actualizar el encabezado del modal con los datos del cliente
+    document.getElementById('clienteNombreModal').textContent = clienteNombre;
+    document.getElementById('clienteCedulaModal').textContent = clienteCedula;
+    
+    // Mostrar el modal
     const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
     modal.show();
+    
     // Limpiar búsqueda anterior
     document.getElementById('buscarEntrevista').value = '';
     document.getElementById('resultadosEntrevistas').innerHTML = '';
@@ -2072,24 +2082,30 @@
     const container = document.getElementById('resultadosEntrevistas');
     
     if (entrevistas.length === 0) {
-      container.innerHTML = '<div class="text-muted">No se encontraron entrevistas</div>';
+      container.innerHTML = '<div class="text-gray-500 text-center py-4">No se encontraron entrevistas</div>';
       return;
     }
     
-    let html = '<div class="list-group">';
+    let html = '<div class="divide-y divide-gray-200">';
     entrevistas.forEach(entrevista => {
       html += `
-        <div class="list-group-item list-group-item-action" onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}')">
-          <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1">${entrevista.nombre_completo}</h6>
-            <small>${entrevista.fecha_entrevista}</small>
+        <div class="p-4 hover:bg-gray-50 rounded-md cursor-pointer transition-colors" onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')">
+          <div class="flex justify-between items-start">
+            <div>
+              <h6 class="font-medium text-gray-900 mb-1">${entrevista.nombre_completo}</h6>
+              <p class="text-gray-800 font-mono mb-1">
+                <strong class="text-gray-600">Cédula:</strong> ${entrevista.cedula}
+              </p>
+              <p class="text-gray-600 text-sm">
+                <strong>Email:</strong> ${entrevista.email} | 
+                <strong>Teléfono:</strong> ${entrevista.telefono}
+              </p>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${entrevista.tipo_producto}</span>
+              <small class="text-gray-500 mt-2">${entrevista.fecha_entrevista}</small>
+            </div>
           </div>
-          <p class="mb-1">
-            <strong>Cédula:</strong> ${entrevista.cedula} | 
-            <strong>Email:</strong> ${entrevista.email} | 
-            <strong>Teléfono:</strong> ${entrevista.telefono}
-          </p>
-          <small><strong>Producto:</strong> ${entrevista.tipo_producto}</small>
         </div>
       `;
     });
@@ -2098,11 +2114,12 @@
     container.innerHTML = html;
   }
 
-  function seleccionarEntrevista(id, nombre) {
+  function seleccionarEntrevista(id, nombre, cedula) {
     entrevistaSeleccionadaId = id;
     
     // Mostrar entrevista seleccionada
     document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
+    document.getElementById('cedulaEntrevistaSeleccionada').textContent = cedula;
     document.getElementById('entrevistaSeleccionada').style.display = 'block';
     
     // Habilitar botón de confirmación
@@ -2517,35 +2534,60 @@
 <div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalAsociarEntrevistaLabel">
-          <i class="fas fa-user-edit me-2"></i>Asociar Entrevista de Cliente
-        </h5>
+      <div class="modal-header bg-white border-b p-4">
+        <div>
+          <h5 class="modal-title text-lg font-medium mb-2" id="modalAsociarEntrevistaLabel">
+            <i class="fas fa-user-edit me-2"></i>Asociar Entrevista de Cliente
+          </h5>
+          <div class="flex flex-col bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+            <div class="text-gray-800 mb-1">
+              <i class="fas fa-user me-1 text-blue-500"></i>
+              <strong>Cliente:</strong> <span id="clienteNombreModal" class="font-semibold ml-1">Cargando...</span>
+            </div>
+            <div class="text-gray-800">
+              <i class="fas fa-id-card me-1 text-blue-500"></i>
+              <strong>Cédula:</strong> <span id="clienteCedulaModal" class="font-mono font-semibold ml-1">Cargando...</span>
+            </div>
+          </div>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="row">
-          <div class="col-md-12 mb-3">
-            <label for="buscarEntrevista" class="form-label">Buscar Entrevista</label>
-            <input type="text" class="form-control" id="buscarEntrevista" 
+      <div class="modal-body p-4">
+        <div class="mb-4">
+          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="form-control pl-10" id="buscarEntrevista" 
                    placeholder="Escriba nombre, apellido, cédula o email del cliente..."
                    onkeyup="buscarEntrevistas()">
           </div>
         </div>
         
-        <div id="resultadosEntrevistas" class="mt-3">
+        <div id="resultadosEntrevistas" class="mt-4">
           <!-- Aquí se cargarán los resultados -->
         </div>
         
-        <div id="entrevistaSeleccionada" class="mt-3" style="display: none;">
-          <div class="alert alert-success">
-            <i class="fas fa-check me-2"></i>
-            <strong>Entrevista seleccionada:</strong>
-            <span id="nombreEntrevistaSeleccionada"></span>
+        <div id="entrevistaSeleccionada" class="mt-4 p-3 border border-green-500 rounded-md bg-green-50" style="display: none;">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <div class="mb-1">
+                <strong class="text-gray-700">Entrevista seleccionada:</strong>
+                <span id="nombreEntrevistaSeleccionada" class="font-medium"></span>
+              </div>
+              <div class="text-sm">
+                <strong class="text-gray-700">Cédula:</strong>
+                <span id="cedulaEntrevistaSeleccionada" class="font-mono font-medium"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer bg-gray-50 p-3">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
           <i class="fas fa-link me-1"></i> Confirmar Asociación
