@@ -8381,7 +8381,7 @@ def api_obtener_configuracion_canal_digital(request):
 
 @login_required
 def api_subestados_disponibles(request, solicitud_id):
-    """API para obtener los subestados disponibles para una solicitud"""
+    """API para obtener los subestados disponibles para una solicitud (secuencial)"""
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
@@ -8407,25 +8407,62 @@ def api_subestados_disponibles(request, solicitud_id):
                 'message': 'La solicitud no tiene etapa actual asignada.'
             })
         
-        subestados = solicitud.etapa_actual.subestados.all().order_by('orden')
+        # Asegurar que la solicitud tenga un subestado_actual asignado
+        if not solicitud.subestado_actual:
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            if primer_subestado:
+                solicitud.subestado_actual = primer_subestado
+                solicitud.save()
+                print(f"DEBUG: Auto-asignado primer subestado: {primer_subestado.nombre}")
+        
+        todos_subestados = solicitud.etapa_actual.subestados.all().order_by('orden')
+        subestado_actual_orden = solicitud.subestado_actual.orden if solicitud.subestado_actual else 0
+        
+        print(f"DEBUG: Subestado actual orden: {subestado_actual_orden}")
         
         subestados_data = []
-        for subestado in subestados:
+        for subestado in todos_subestados:
+            # Determinar disponibilidad basada en nueva lógica unidireccional
+            es_actual = subestado.id == (solicitud.subestado_actual.id if solicitud.subestado_actual else None)
+            
+            # NUEVA LÓGICA:
+            # - Subestados anteriores (completados): siempre disponibles para navegación
+            # - Subestado siguiente: disponible para avance
+            # - Subestados más lejanos: bloqueados
+            es_completado = subestado.orden < subestado_actual_orden  # Navegación libre hacia atrás
+            puede_avanzar = subestado.orden == subestado_actual_orden + 1  # Solo el siguiente para avanzar
+            esta_bloqueado = subestado.orden > subestado_actual_orden + 1  # Saltos hacia adelante bloqueados
+            
+            print(f"DEBUG: Subestado {subestado.nombre} - orden: {subestado.orden}, es_actual: {es_actual}, es_completado: {es_completado}, puede_avanzar: {puede_avanzar}, esta_bloqueado: {esta_bloqueado}")
+            
+            # Determinar el motivo de bloqueo
+            razon_bloqueado = None
+            if esta_bloqueado:
+                razon_bloqueado = f'No puede avanzar más allá del siguiente subestado (orden {subestado_actual_orden + 1})'
+            
             subestados_data.append({
                 'id': subestado.id,
                 'nombre': subestado.nombre,
-                'orden': subestado.orden
+                'orden': subestado.orden,
+                'es_actual': es_actual,
+                'es_completado': es_completado,
+                'puede_avanzar': puede_avanzar,
+                'esta_bloqueado': esta_bloqueado,
+                'razon_bloqueado': razon_bloqueado
             })
         
         subestado_actual_id = solicitud.subestado_actual.id if solicitud.subestado_actual else None
         
-        print(f"DEBUG: Subestados encontrados: {len(subestados_data)}")
+        print(f"DEBUG: Subestados procesados: {len(subestados_data)}")
         print(f"DEBUG: Subestado actual ID: {subestado_actual_id}")
         
         return JsonResponse({
             'success': True,
             'subestados': subestados_data,
-            'subestado_actual_id': subestado_actual_id
+            'subestado_actual_id': subestado_actual_id,
+            'validacion_secuencial': True,
+            'navegacion_libre_atras': True,  # Nueva propiedad para indicar navegación libre hacia atrás
+            'bloqueo_solo_avance': True      # Nueva propiedad para indicar que solo se bloquea avance
         })
         
     except Exception as e:
@@ -8489,7 +8526,7 @@ def api_transiciones_disponibles(request, solicitud_id):
 @login_required
 @require_http_methods(["POST"])
 def api_avanzar_subestado(request):
-    """API para avanzar al siguiente subestado"""
+    """API para avanzar al siguiente subestado con validación secuencial"""
     import json
     
     try:
@@ -8506,10 +8543,10 @@ def api_avanzar_subestado(request):
             })
         
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
-        subestado = get_object_or_404(SubEstado, id=subestado_id)
+        subestado_destino = get_object_or_404(SubEstado, id=subestado_id)
         
         print(f"DEBUG: Solicitud encontrada: {solicitud.codigo}")
-        print(f"DEBUG: Subestado encontrado: {subestado.nombre}")
+        print(f"DEBUG: Subestado destino: {subestado_destino.nombre}")
         print(f"DEBUG: Subestado actual antes del cambio: {solicitud.subestado_actual}")
         
         # Verificar permisos
@@ -8523,17 +8560,58 @@ def api_avanzar_subestado(request):
             })
         
         # Verificar que el subestado pertenece a la etapa actual
-        if subestado.etapa != solicitud.etapa_actual:
+        if subestado_destino.etapa != solicitud.etapa_actual:
             return JsonResponse({
                 'success': False,
                 'message': 'El subestado no pertenece a la etapa actual.'
             })
         
+        # Asegurar que la solicitud tenga un subestado_actual asignado
+        if not solicitud.subestado_actual:
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            if primer_subestado:
+                solicitud.subestado_actual = primer_subestado
+                solicitud.save()
+                print(f"DEBUG: Auto-asignado primer subestado: {primer_subestado.nombre}")
+        
+        # VALIDACIÓN SECUENCIAL UNIDIRECCIONAL: 
+        # - Permitir retroceder a cualquier subestado anterior (completado)
+        # - Solo permitir avanzar al siguiente subestado en orden
+        subestado_actual_orden = solicitud.subestado_actual.orden if solicitud.subestado_actual else 0
+        subestado_destino_orden = subestado_destino.orden
+        
+        print(f"DEBUG: Orden actual: {subestado_actual_orden}, Orden destino: {subestado_destino_orden}")
+        
+        # Permitir permanecer en el mismo subestado (refresh)
+        if subestado_destino_orden == subestado_actual_orden:
+            return JsonResponse({
+                'success': False,
+                'message': 'Ya te encuentras en este subestado.'
+            })
+        
+        # NAVEGACIÓN HACIA ATRÁS: Permitir retroceder a subestados anteriores (completados)
+        elif subestado_destino_orden < subestado_actual_orden:
+            print(f"DEBUG: Navegación hacia atrás permitida - de orden {subestado_actual_orden} a orden {subestado_destino_orden}")
+            # No hay validación adicional para retrocesos - siempre permitidos
+        
+        # NAVEGACIÓN HACIA ADELANTE: Solo permitir avanzar al siguiente subestado
+        elif subestado_destino_orden > subestado_actual_orden:
+            if subestado_destino_orden != subestado_actual_orden + 1:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'No puede avanzar más allá del siguiente subestado. Solo puede avanzar al subestado de orden {subestado_actual_orden + 1}.'
+                })
+            print(f"DEBUG: Avance secuencial permitido - de orden {subestado_actual_orden} a orden {subestado_destino_orden}")
+        
+        # Si llegamos aquí, la validación es correcta (avance secuencial o retroceso permitido)
+        action_type = "retrocediendo" if subestado_destino_orden < subestado_actual_orden else "avanzando"
+        print(f"DEBUG: Validación aprobada. {action_type} de orden {subestado_actual_orden} a {subestado_destino_orden}")
+        
         # Actualizar el subestado actual
-        solicitud.subestado_actual = subestado
+        solicitud.subestado_actual = subestado_destino
         solicitud.save()
         
-        print(f"DEBUG: Subestado actualizado exitosamente a: {subestado.nombre}")
+        print(f"DEBUG: Subestado actualizado exitosamente a: {subestado_destino.nombre}")
         
         # Actualizar el historial si existe una entrada activa
         historial_actual = HistorialSolicitud.objects.filter(
@@ -8542,13 +8620,19 @@ def api_avanzar_subestado(request):
         ).first()
         
         if historial_actual:
-            historial_actual.subestado = subestado
+            historial_actual.subestado = subestado_destino
             historial_actual.save()
             print(f"DEBUG: Historial actualizado también")
         
         return JsonResponse({
             'success': True,
-            'message': f'Subestado actualizado a: {subestado.nombre}'
+            'message': f'Navegación exitosa a: {subestado_destino.nombre}',
+            'nuevo_subestado': {
+                'id': subestado_destino.id,
+                'nombre': subestado_destino.nombre,
+                'orden': subestado_destino.orden
+            },
+            'accion': action_type
         })
         
     except Exception as e:

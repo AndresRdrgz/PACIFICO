@@ -7,6 +7,189 @@
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
 {% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos para pestañas con validación secuencial */
+.tab-modern.tab-blocked {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: auto; /* Permitir eventos para mostrar mensaje */
+  filter: grayscale(0.8);
+  position: relative;
+}
+
+.tab-modern.tab-blocked:hover {
+  opacity: 0.6;
+  background-color: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper {
+  position: relative;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper::after {
+  content: '\f023'; /* Icono de candado */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+.tab-modern.tab-blocked .tab-status {
+  color: #6c757d !important;
+}
+
+.tab-modern.tab-available {
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  animation: pulse-available 2s infinite;
+  border-color: #0d6efd !important;
+}
+
+.tab-modern.tab-available:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+@keyframes pulse-available {
+  0% {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  }
+}
+
+.tab-modern.tab-completed {
+  background: linear-gradient(135deg, #d1edff 0%, #e8f7ff 100%);
+  border-color: #198754 !important;
+  position: relative;
+}
+
+.tab-modern.tab-completed .tab-number {
+  background: #198754;
+  color: white;
+  position: relative;
+}
+
+.tab-modern.tab-completed .tab-number::before {
+  content: '\f00c'; /* Icono de check */
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7em;
+}
+
+.tab-modern.tab-completed .tab-status {
+  color: #198754 !important;
+  font-weight: 500;
+}
+
+/* Efecto de bloqueo visual más fuerte */
+.tab-modern.tab-blocked::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(108, 117, 125, 0.1) 2px,
+    rgba(108, 117, 125, 0.1) 4px
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tab-modern.tab-blocked .tab-content-wrapper {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tooltip personalizado para pestañas bloqueadas */
+.tab-blocked-tooltip {
+  position: absolute;
+  background: #dc3545;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.tab-blocked-tooltip.show {
+  opacity: 1;
+}
+
+.tab-blocked-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #dc3545 transparent transparent transparent;
+}
+
+/* Mejora visual para pestaña actual */
+.tab-modern.active {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Transiciones suaves */
+.tab-modern {
+  transition: all 0.3s ease;
+}
+
+/* Indicador de proceso secuencial */
+.sequential-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ffc107;
+  color: #000;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -131,7 +314,9 @@
                 <button class="nav-link tab-modern {% if subestado.id == solicitud.subestado_actual.id %}active{% endif %}" id="tab-{{ subestado.id }}"
                   data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
                   aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}">
+                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}"
+                  data-subestado-orden="{{ subestado.orden }}"
+                  data-subestado-id="{{ subestado.id }}">
                   <div class="tab-content-wrapper">
                     <div class="tab-number">{{ forloop.counter }}</div>
                     <div class="tab-text">
@@ -589,6 +774,9 @@
   document.addEventListener('DOMContentLoaded', function () {
     console.log('🔧 Backoffice con visualización de archivos inicializado');
 
+    // Aplicar validación secuencial a las pestañas
+    aplicarValidacionSecuencialTabs();
+
     // Agregar tooltips a los botones de archivo
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -609,6 +797,262 @@
       });
     });
   });
+
+  // =======================================================
+  // VALIDACIÓN SECUENCIAL PARA PESTAÑAS
+  // =======================================================
+
+  function aplicarValidacionSecuencialTabs() {
+    const subestadoActualId = {{ solicitud.subestado_actual.id|default:"null" }};
+    const subestadoActualOrden = {{ solicitud.subestado_actual.orden|default:"1" }};
+    
+    console.log('Aplicando validación secuencial a pestañas');
+    console.log('Subestado actual ID:', subestadoActualId);
+    console.log('Subestado actual orden:', subestadoActualOrden);
+
+    const tabs = document.querySelectorAll('#backoffice-tabs .nav-link.tab-modern');
+    
+    tabs.forEach(tab => {
+      const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+      const subestadoOrden = parseInt(tab.getAttribute('data-subestado-orden'));
+      
+      if (!subestadoId || !subestadoOrden) return;
+      
+      console.log(`Procesando tab: ID=${subestadoId}, Orden=${subestadoOrden}`);
+      
+      // Determinar el estado de la pestaña
+      const esActual = subestadoId === subestadoActualId;
+      const esCompletado = subestadoOrden < subestadoActualOrden;
+      const esDisponible = subestadoOrden === subestadoActualOrden + 1;
+      const esBloqueado = subestadoOrden > subestadoActualOrden + 1;
+      
+      console.log(`Tab ${subestadoOrden}: actual=${esActual}, completado=${esCompletado}, disponible=${esDisponible}, bloqueado=${esBloqueado}`);
+      
+      // Limpiar clases previas
+      tab.classList.remove('tab-blocked', 'tab-available', 'tab-completed');
+      
+      // Remover listeners previos para evitar duplicados
+      tab.removeEventListener('click', bloquearClickInvalido);
+      tab.removeEventListener('shown.bs.tab', manejarCambioTab);
+      tab.removeEventListener('shown.bs.tab', manejarRetrocesoTab);
+      
+      // Aplicar estilos según el estado
+      if (esActual) {
+        // Pestaña actual - mantener estilo activo
+        console.log(`Tab ${subestadoOrden}: Configurado como ACTUAL`);
+        tab.setAttribute('data-tab-state', 'actual');
+      } else if (esCompletado) {
+        // Pestañas completadas - permitir acceso COMPLETO (navegación libre)
+        tab.classList.add('tab-completed');
+        tab.setAttribute('data-tab-state', 'completado');
+        
+        // Mantener funcionalidad de Bootstrap para pestañas completadas (NAVEGACIÓN LIBRE)
+        tab.setAttribute('data-bs-toggle', 'tab');
+        tab.setAttribute('data-bs-target', `#content-${subestadoId}`);
+        tab.removeAttribute('tabindex');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Completado';
+        }
+        
+        // Agregar listener para manejar retrocesos automáticos
+        tab.addEventListener('shown.bs.tab', manejarRetrocesoTab);
+        console.log(`Tab ${subestadoOrden}: Configurado como COMPLETADO (navegación libre)`);
+      } else if (esDisponible) {
+        // Siguiente pestaña disponible - destacar y permitir avance
+        tab.classList.add('tab-available');
+        tab.setAttribute('data-tab-state', 'disponible');
+        
+        // Mantener funcionalidad de Bootstrap pero agregar handler personalizado
+        tab.setAttribute('data-bs-toggle', 'tab');
+        tab.setAttribute('data-bs-target', `#content-${subestadoId}`);
+        tab.removeAttribute('tabindex');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Disponible';
+        }
+        
+        // Agregar listener para manejar el avance automático
+        tab.addEventListener('shown.bs.tab', manejarCambioTab);
+        console.log(`Tab ${subestadoOrden}: Configurado como DISPONIBLE`);
+      } else if (esBloqueado) {
+        // Pestañas bloqueadas - SOLO para avanzar más allá de lo permitido
+        tab.classList.add('tab-blocked');
+        tab.setAttribute('aria-disabled', 'true');
+        tab.setAttribute('title', 'No puede avanzar más allá del siguiente subestado disponible');
+        tab.setAttribute('data-tab-state', 'bloqueado');
+        
+        // Deshabilitar funcionalidad de Bootstrap
+        tab.removeAttribute('data-bs-toggle');
+        tab.removeAttribute('data-bs-target');
+        tab.setAttribute('tabindex', '-1');
+        tab.setAttribute('role', 'button');
+        
+        const statusSpan = tab.querySelector('.tab-status');
+        if (statusSpan) {
+          statusSpan.textContent = 'Bloqueado';
+        }
+        
+        // Agregar evento para bloquear clicks inválidos
+        tab.addEventListener('click', bloquearClickInvalido);
+        
+        console.log(`Tab ${subestadoOrden}: Configurado como BLOQUEADO`);
+      }
+    });
+  }
+
+  // Función para bloquear clicks en pestañas no disponibles
+  function bloquearClickInvalido(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    
+    const tab = e.currentTarget;
+    const tabState = tab.getAttribute('data-tab-state');
+    const subestadoOrden = tab.getAttribute('data-subestado-orden');
+    
+    if (tabState === 'bloqueado') {
+      // Mostrar tooltip personalizado en la posición del click
+      mostrarTooltipBloqueo(e, `Etapa ${subestadoOrden} bloqueada. No puede avanzar más allá del siguiente subestado disponible.`);
+      
+      // También mostrar mensaje general
+      mostrarMensaje('No puede avanzar más allá del siguiente subestado disponible. Complete primero la etapa actual.', 'warning');
+    }
+    
+    return false;
+  }
+
+  // Función para mostrar tooltip de bloqueo
+  function mostrarTooltipBloqueo(event, mensaje) {
+    // Remover tooltip anterior si existe
+    const tooltipAnterior = document.querySelector('.tab-blocked-tooltip');
+    if (tooltipAnterior) {
+      tooltipAnterior.remove();
+    }
+    
+    // Crear nuevo tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tab-blocked-tooltip';
+    tooltip.textContent = mensaje;
+    
+    // Posicionar tooltip
+    tooltip.style.position = 'fixed';
+    tooltip.style.left = event.clientX + 'px';
+    tooltip.style.top = (event.clientY - 40) + 'px';
+    tooltip.style.zIndex = '9999';
+    
+    document.body.appendChild(tooltip);
+    
+    // Mostrar tooltip con animación
+    setTimeout(() => {
+      tooltip.classList.add('show');
+    }, 10);
+    
+    // Remover tooltip después de 3 segundos
+    setTimeout(() => {
+      if (tooltip.parentNode) {
+        tooltip.classList.remove('show');
+        setTimeout(() => {
+          if (tooltip.parentNode) {
+            tooltip.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
+  }
+
+  // Función para manejar cambio de pestaña disponible
+  function manejarCambioTab(e) {
+    const tab = e.target;
+    const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+    const tabState = tab.getAttribute('data-tab-state');
+    
+    console.log(`Cambio de tab detectado: ID=${subestadoId}, Estado=${tabState}`);
+    
+    if (tabState === 'disponible' && subestadoId) {
+      // Avanzar automáticamente al subestado cuando se hace clic en pestaña disponible
+      console.log(`Avanzando automáticamente al subestado ${subestadoId}`);
+      avanzarSubestadoAutomatico(subestadoId);
+    }
+  }
+
+  // Función para manejar clicks en pestañas completadas (retrocesos)
+  function manejarRetrocesoTab(e) {
+    const tab = e.target;
+    const subestadoId = parseInt(tab.getAttribute('data-subestado-id'));
+    const tabState = tab.getAttribute('data-tab-state');
+    
+    console.log(`Retroceso de tab detectado: ID=${subestadoId}, Estado=${tabState}`);
+    
+    if (tabState === 'completado' && subestadoId) {
+      // Retroceder automáticamente al subestado cuando se hace clic en pestaña completada
+      console.log(`Retrocediendo automáticamente al subestado ${subestadoId}`);
+      avanzarSubestadoAutomatico(subestadoId, 'retroceso');
+    }
+  }
+
+  // Función para avanzar subestado automáticamente desde pestaña
+  async function avanzarSubestadoAutomatico(subestadoId, accion = 'avance') {
+    const solicitudId = {{ solicitud.id }};
+    
+    console.log(`Navegación automática (${accion}): solicitud=${solicitudId}, subestado=${subestadoId}`);
+    
+    try {
+      const response = await fetch(`/workflow/api/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          solicitud_id: solicitudId,
+          subestado_id: subestadoId
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`${accion} automático exitoso`);
+        const mensajeAccion = accion === 'retroceso' ? 'Retrocediendo a subestado anterior...' : 'Avanzando al siguiente subestado...';
+        mostrarMensaje(data.message || mensajeAccion, 'success');
+        
+        // Actualizar pestañas y recargar después de un breve delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        console.error(`Error en ${accion} automático:`, data.message);
+        mostrarMensaje(data.message || `Error al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
+        
+        // Volver a la pestaña anterior
+        const pestañaActual = document.querySelector('#backoffice-tabs .nav-link.active');
+        if (pestañaActual) {
+          const tab = new bootstrap.Tab(pestañaActual);
+          tab.show();
+        }
+      }
+    } catch (error) {
+      console.error(`Error de conexión en ${accion} automático:`, error);
+      mostrarMensaje(`Error de conexión al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
+      
+      // Volver a la pestaña anterior
+      const pestañaActual = document.querySelector('#backoffice-tabs .nav-link.active');
+      if (pestañaActual) {
+        const tab = new bootstrap.Tab(pestañaActual);
+        tab.show();
+      }
+    }
+  }
+
+  // Función para actualizar las pestañas después de avanzar subestado
+  function actualizarPestanasSecuenciales() {
+    setTimeout(() => {
+      aplicarValidacionSecuencialTabs();
+    }, 100);
+  }
 
   // =======================================================
   // FUNCIONALIDAD DE CALIFICACIÓN DE DOCUMENTOS
@@ -926,24 +1370,49 @@
   function mostrarMensaje(mensaje, tipo) {
     // Crear elemento de alerta
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    let alertClass = 'alert alert-dismissible fade show';
+    let iconClass = '';
+    
+    switch(tipo) {
+      case 'success':
+        alertClass += ' alert-success';
+        iconClass = 'fas fa-check-circle';
+        break;
+      case 'warning':
+        alertClass += ' alert-warning';
+        iconClass = 'fas fa-exclamation-triangle';
+        break;
+      case 'info':
+        alertClass += ' alert-info';
+        iconClass = 'fas fa-info-circle';
+        break;
+      case 'error':
+      default:
+        alertClass += ' alert-danger';
+        iconClass = 'fas fa-exclamation-circle';
+        break;
+    }
+    
+    alertDiv.className = alertClass;
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
     alertDiv.style.zIndex = '9999';
+    alertDiv.style.maxWidth = '400px';
     alertDiv.innerHTML = `
-        ${mensaje}
+        <i class="${iconClass} me-2"></i>${mensaje}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
     document.body.appendChild(alertDiv);
 
-    // Auto-remover después de 3 segundos
+    // Auto-remover después de 5 segundos para warnings, 3 para otros
+    const timeout = tipo === 'warning' ? 5000 : 3000;
     setTimeout(() => {
       if (alertDiv.parentNode) {
         alertDiv.remove();
       }
-    }, 3000);
+    }, timeout);
   }
 
   // Event listeners cuando el DOM esté listo
@@ -1129,7 +1598,7 @@
   }
 
   function renderizarSubestados(data) {
-    console.log('Renderizando subestados:', data);
+    console.log('Renderizando subestados con validación secuencial:', data);
     const container = document.getElementById('subestados-container');
     
     if (!data.success) {
@@ -1143,42 +1612,90 @@
     }
     
     let html = '';
+    
+    // Agregar información sobre validación secuencial
+    if (data.validacion_secuencial) {
+      if (data.navegacion_libre_atras && data.bloqueo_solo_avance) {
+        html += `
+          <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Navegación Flexible:</strong> Puedes retroceder a etapas completadas o avanzar al siguiente subestado disponible.
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Navegación Secuencial:</strong> Solo puedes avanzar al siguiente subestado en orden.
+          </div>
+        `;
+      }
+    }
+    
     data.subestados.forEach(subestado => {
-      const isActual = subestado.id === data.subestado_actual_id;
+      const isActual = subestado.es_actual || subestado.id === data.subestado_actual_id;
+      const esCompletado = subestado.es_completado;
+      const puedeAvanzar = subestado.puede_avanzar;
+      const estaBloqueado = subestado.esta_bloqueado;
       
       let cardClass = 'card mb-2';
       let btnClass = 'btn btn-sm';
       let btnText = '';
       let disabled = '';
       let statusBadge = '';
+      let reasonMessage = '';
       
       if (isActual) {
-        cardClass += ' border-success';
+        cardClass += ' border-success bg-light';
         btnClass += ' btn-outline-secondary';
         btnText = 'Actual';
         disabled = 'disabled';
         statusBadge = '<span class="badge bg-success ms-2">Actual</span>';
-      } else {
-        btnClass += ' btn-outline-primary';
+      } else if (esCompletado) {
+        // Subestados completados - navegación libre permitida
+        cardClass += ' border-warning bg-light';
+        btnClass += ' btn-warning';
+        btnText = 'Regresar';
+        statusBadge = '<span class="badge bg-warning ms-2">Completado</span>';
+      } else if (puedeAvanzar) {
+        // Siguiente subestado disponible
+        cardClass += ' border-primary';
+        btnClass += ' btn-primary';
         btnText = 'Avanzar';
+        statusBadge = '<span class="badge bg-primary ms-2">Disponible</span>';
+      } else if (estaBloqueado) {
+        // Subestados bloqueados (saltos hacia adelante)
+        cardClass += ' border-secondary';
+        btnClass += ' btn-outline-secondary';
+        btnText = 'Bloqueado';
+        disabled = 'disabled';
+        statusBadge = '<span class="badge bg-secondary ms-2">Bloqueado</span>';
+        if (subestado.razon_bloqueado) {
+          reasonMessage = `<small class="text-muted d-block mt-1"><i class="fas fa-lock me-1"></i>${subestado.razon_bloqueado}</small>`;
+        }
       }
       
       html += `
         <div class="${cardClass}">
           <div class="card-body p-3">
             <div class="d-flex justify-content-between align-items-center">
-              <div>
+              <div class="flex-grow-1">
                 <h6 class="mb-1">
+                  <span class="badge bg-dark me-2">${subestado.orden}</span>
                   ${subestado.nombre}
                   ${statusBadge}
                 </h6>
-                <small class="text-muted">Orden: ${subestado.orden}</small>
-                ${isActual ? '<br><small class="text-success"><i class="fas fa-check-circle me-1"></i>Subestado activo</small>' : ''}
+                ${isActual ? '<small class="text-success"><i class="fas fa-check-circle me-1"></i>Subestado activo actualmente</small>' : ''}
+                ${esCompletado ? '<small class="text-warning"><i class="fas fa-undo me-1"></i>Puedes regresar a esta etapa completada</small>' : ''}
+                ${puedeAvanzar && !isActual ? '<small class="text-primary"><i class="fas fa-arrow-right me-1"></i>Siguiente subestado disponible</small>' : ''}
+                ${estaBloqueado ? '<small class="text-muted"><i class="fas fa-ban me-1"></i>No puede saltar a esta etapa</small>' : ''}
+                ${reasonMessage}
               </div>
               <button class="${btnClass}" ${disabled} 
                       onclick="avanzarSubestado(${subestado.id})"
-                      data-subestado-id="${subestado.id}">
-                <i class="fas fa-${isActual ? 'check' : 'arrow-right'} me-1"></i>${btnText}
+                      data-subestado-id="${subestado.id}"
+                      title="${isActual ? 'Subestado actual' : esCompletado ? 'Regresar a esta etapa completada' : puedeAvanzar ? 'Avanzar a este subestado' : subestado.razon_bloqueado || 'No disponible'}">
+                <i class="fas fa-${isActual ? 'check' : esCompletado ? 'undo' : puedeAvanzar ? 'arrow-right' : 'lock'} me-1"></i>${btnText}
               </button>
             </div>
           </div>
@@ -1236,12 +1753,15 @@
     try {
       // Deshabilitar todos los botones temporalmente
       const buttons = document.querySelectorAll('#subestados-container button');
+      const targetButton = document.querySelector(`button[data-subestado-id="${subestadoId}"]`);
+      
       buttons.forEach(btn => {
         btn.disabled = true;
-        if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
-        }
       });
+
+      if (targetButton) {
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+      }
 
       const response = await fetch(`/workflow/api/avanzar-subestado/`, {
         method: 'POST',
@@ -1262,6 +1782,9 @@
       if (data.success) {
         mostrarMensaje(data.message || 'Subestado avanzado correctamente', 'success');
         
+        // Actualizar pestañas secuenciales
+        actualizarPestanasSecuenciales();
+        
         // Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
         if (modal) {
@@ -1277,15 +1800,40 @@
           window.location.reload();
         }, 2000);
       } else {
-        mostrarMensaje(data.message || 'Error al avanzar subestado', 'error');
+        // Manejar diferentes tipos de errores
+        let tipoMensaje = 'error';
+        
+        // Si es un error de validación secuencial, usar tipo 'warning'
+        if (data.message && (
+          data.message.includes('secuencialmente') || 
+          data.message.includes('siguiente subestado') ||
+          data.message.includes('retroceder') ||
+          data.message.includes('mismo subestado')
+        )) {
+          tipoMensaje = 'warning';
+        }
+        
+        mostrarMensaje(data.message || 'Error al avanzar subestado', tipoMensaje);
+        
         // Rehabilitar botones
         buttons.forEach(btn => {
-          btn.disabled = false;
-          // Restaurar texto original del botón
-          if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
-            btn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+          // Solo rehabilitar botones que no están marcados como "actual"
+          if (!btn.innerHTML.includes('Actual')) {
+            btn.disabled = false;
           }
         });
+        
+        // Restaurar texto original del botón específico
+        if (targetButton && !targetButton.innerHTML.includes('Actual')) {
+          const isBlocked = targetButton.innerHTML.includes('Bloqueado');
+          if (isBlocked) {
+            targetButton.innerHTML = '<i class="fas fa-lock me-1"></i>Bloqueado';
+            targetButton.disabled = true;
+          } else {
+            targetButton.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+            targetButton.disabled = false;
+          }
+        }
       }
     } catch (error) {
       console.error('Error avanzando subestado:', error);
@@ -1294,11 +1842,15 @@
       // Rehabilitar botones en caso de error
       const buttons = document.querySelectorAll('#subestados-container button');
       buttons.forEach(btn => {
-        btn.disabled = false;
-        if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
-          btn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+        if (!btn.innerHTML.includes('Actual')) {
+          btn.disabled = false;
         }
       });
+      
+      if (targetButton && !targetButton.innerHTML.includes('Actual')) {
+        targetButton.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+        targetButton.disabled = false;
+      }
     }
   }
 
