@@ -310,26 +310,25 @@
                             <span class="text-gray-500">Propietario:</span>
                             <div class="flex items-center space-x-1">
                                 {% if s.propietario_user %}
-                                {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture
-                                %}
-                                <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
-                                    alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                    class="w-4 h-4 rounded-full object-cover border">
+                                    {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
+                                    <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
+                                        alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                        class="w-4 h-4 rounded-full object-cover border">
+                                    {% else %}
+                                    <div
+                                        class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                        {{
+                                        s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
+                                        }}
+                                    </div>
+                                    {% endif %}
+                                    <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 {% else %}
-                                <div
-                                    class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                    {{
-                                    s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
-                                    }}
-                                </div>
-                                {% endif %}
-                                <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
-                                {% else %}
-                                <div
-                                    class="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500">
-                                    <i class="fas fa-user-slash"></i>
-                                </div>
-                                <span class="text-gray-500 font-medium truncate text-xs">{{ s.propietario }}</span>
+                                    <div
+                                        class="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <span class="text-gray-500 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -606,27 +605,25 @@
                             <td class="text-dark">
                                 <div class="d-flex align-items-center">
                                     {% if s.propietario_user %}
-                                    {% if s.propietario_user.userprofile and
-                                    s.propietario_user.userprofile.profile_picture %}
-                                    <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
-                                        alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
-                                        class="me-2 rounded-circle object-cover border"
-                                        style="width: 24px; height: 24px; object-fit: cover;">
+                                        {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
+                                        <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
+                                            alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                            class="me-2 rounded-circle object-cover border"
+                                            style="width: 24px; height: 24px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
+                                            {{ s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper }}
+                                        </div>
+                                        {% endif %}
+                                        <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
                                     {% else %}
-                                    <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                        style="width: 24px; height: 24px; background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); font-size: 0.7rem;">
-                                        {{
-                                        s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
-                                        }}
-                                    </div>
+                                        <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
+                                            ?
+                                        </div>
+                                        <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
                                     {% endif %}
-                                    {% else %}
-                                    <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                        style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
-                                        ?
-                                    </div>
-                                    {% endif %}
-                                    <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
                                 </div>
                             </td>
                             <td>
@@ -657,7 +654,7 @@
                                     <option value="" selected>Sin etapa</option>
                                     {% endif %}
                                     {% for etapa in pipeline.etapas.all %}
-                                    <option value="{{ etapa.id }}" {% if s.etapa==etapa.nombre %}selected{% endif %}>
+                                    <option value="{{ etapa.id }}" {% if s.etapa == etapa.nombre %}selected{% endif %}>
                                         {{ etapa.nombre }}
                                     </option>
                                     {% endfor %}
@@ -682,8 +679,8 @@
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <small class="text-muted me-1" style="min-width: 25px;">Ven:</small>
-                                        <span style="font-size: 0.85rem;">{% if s.vencimiento_sla %}{{
-                                            s.vencimiento_sla|date:"d/m" }}{% else %}N/A{% endif %}</span>
+                                        <span style="font-size: 0.85rem;">{{ s.fecha_vencimiento|date:"d/m" }}</span>
+                                        <span class="text-muted" style="font-size: 0.75rem;">{% if s.vencimiento_sla %}{{ s.vencimiento_sla|date:"d/m" }}{% else %}N/A{% endif %}</span>
                                     </div>
                                 </div>
                             </td>
@@ -704,30 +701,18 @@
                                 <select class="etiquetas-select form-control form-control-sm" data-id="{{ s.id }}"
                                     style="min-width: 115px; width: 115px;">
                                     <option value="">Seleccionar etiqueta</option>
-                                    <option value="no_responde" {% if s.etiquetas_oficial=='no_responde' %}selected{%
-                                        endif %}>📞 No responde</option>
-                                    <option value="cita_agendada" {% if s.etiquetas_oficial=='cita_agendada'
-                                        %}selected{% endif %}>🗓️ Cita agendada</option>
-                                    <option value="doc_completo" {% if s.etiquetas_oficial=='doc_completo' %}selected{%
-                                        endif %}>✅ Documentos completos</option>
-                                    <option value="falta_carta" {% if s.etiquetas_oficial=='falta_carta' %}selected{%
-                                        endif %}>📎 Falta carta trabajo</option>
-                                    <option value="seguimiento_48h" {% if s.etiquetas_oficial=='seguimiento_48h'
-                                        %}selected{% endif %}>🔄 Seguimiento en 48h</option>
-                                    <option value="whatsapp_activo" {% if s.etiquetas_oficial=='whatsapp_activo'
-                                        %}selected{% endif %}>💬 WhatsApp activo</option>
-                                    <option value="cliente_indeciso" {% if s.etiquetas_oficial=='cliente_indeciso'
-                                        %}selected{% endif %}>⚠️ Cliente indeciso</option>
-                                    <option value="cliente_caliente" {% if s.etiquetas_oficial=='cliente_caliente'
-                                        %}selected{% endif %}>🚀 Cliente caliente</option>
-                                    <option value="esperando_confirm" {% if s.etiquetas_oficial=='esperando_confirm'
-                                        %}selected{% endif %}>🕐 Esperando confirmación</option>
-                                    <option value="enviado_credito" {% if s.etiquetas_oficial=='enviado_credito'
-                                        %}selected{% endif %}>🧾 Enviado a crédito</option>
-                                    <option value="en_validacion" {% if s.etiquetas_oficial=='en_validacion'
-                                        %}selected{% endif %}>🔒 En validación</option>
-                                    <option value="caso_descartado" {% if s.etiquetas_oficial=='caso_descartado'
-                                        %}selected{% endif %}>❌ Caso descartado</option>
+                                    <option value="no_responde" {% if s.etiquetas_oficial == 'no_responde' %}selected{% endif %}>📞 No responde</option>
+                                    <option value="cita_agendada" {% if s.etiquetas_oficial == 'cita_agendada' %}selected{% endif %}>🗓️ Cita agendada</option>
+                                    <option value="doc_completo" {% if s.etiquetas_oficial == 'doc_completo' %}selected{% endif %}>✅ Documentos completos</option>
+                                    <option value="falta_carta" {% if s.etiquetas_oficial == 'falta_carta' %}selected{% endif %}>📎 Falta carta trabajo</option>
+                                    <option value="seguimiento_48h" {% if s.etiquetas_oficial == 'seguimiento_48h' %}selected{% endif %}>🔄 Seguimiento en 48h</option>
+                                    <option value="whatsapp_activo" {% if s.etiquetas_oficial == 'whatsapp_activo' %}selected{% endif %}>💬 WhatsApp activo</option>
+                                    <option value="cliente_indeciso" {% if s.etiquetas_oficial == 'cliente_indeciso' %}selected{% endif %}>⚠️ Cliente indeciso</option>
+                                    <option value="cliente_caliente" {% if s.etiquetas_oficial == 'cliente_caliente' %}selected{% endif %}>🚀 Cliente caliente</option>
+                                    <option value="esperando_confirm" {% if s.etiquetas_oficial == 'esperando_confirm' %}selected{% endif %}>🕐 Esperando confirmación</option>
+                                    <option value="enviado_credito" {% if s.etiquetas_oficial == 'enviado_credito' %}selected{% endif %}>🧾 Enviado a crédito</option>
+                                    <option value="en_validacion" {% if s.etiquetas_oficial == 'en_validacion' %}selected{% endif %}>🔒 En validación</option>
+                                    <option value="caso_descartado" {% if s.etiquetas_oficial == 'caso_descartado' %}selected{% endif %}>❌ Caso descartado</option>
                                 </select>
                             </td>
                             <td>
@@ -736,7 +721,7 @@
                                     style="background-color: {% if s.prioridad == 'Alta' %}#fee2e2{% elif s.prioridad == 'Media' %}#fef9c3{% elif s.prioridad == 'Baja' %}#dcfce7{% else %}white{% endif %}; color: {% if s.prioridad == 'Alta' %}#b91c1c{% elif s.prioridad == 'Media' %}#b45309{% elif s.prioridad == 'Baja' %}#166534{% else %}#333{% endif %};">
                                     <option value="">-</option>
                                     {% for prioridad in prioridades_posibles %}
-                                    <option value="{{ prioridad }}" {% if s.prioridad==prioridad %}selected{% endif %}>
+                                    <option value="{{ prioridad }}" {% if s.prioridad == prioridad %}selected{% endif %}>
                                         {{ prioridad }}</option>
                                     {% endfor %}
                                 </select>
@@ -891,8 +876,7 @@
 
                                             {% if s.asignado_a != 'Sin asignar' and s.asignado_a_user %}
                                             <div class="d-flex align-items-center">
-                                                {% if s.asignado_a_user.userprofile and
-                                                s.asignado_a_user.userprofile.profile_picture %}
+                                                {% if s.asignado_a_user.userprofile and s.asignado_a_user.userprofile.profile_picture %}
                                                 <img src="{{ s.asignado_a_user.userprofile.profile_picture.url }}"
                                                     alt="{{ s.asignado_a_user.get_full_name|default:s.asignado_a_user.username }}"
                                                     class="w-4 h-4 rounded-full object-cover me-1">
