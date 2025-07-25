@@ -413,20 +413,124 @@ def descargar_entrevistas_excel(request):
 
 
 def descargar_entrevista_excel(request, entrevista_id):
-    """Descarga una entrevista específica en formato CSV"""
-    entrevista = ClienteEntrevista.objects.get(pk=entrevista_id)
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="entrevista_{entrevista_id}.csv"'
-    writer = csv.writer(response)
-    writer.writerow(['Campo', 'Valor'])
+    """Descarga una entrevista específica en formato Excel (.xlsx)"""
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill
+    import datetime
+    
+    try:
+        entrevista = ClienteEntrevista.objects.get(pk=entrevista_id)
+        
+        # Crear un nuevo libro de trabajo Excel
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Datos de Entrevista"
+        
+        # Estilo para encabezados
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="22A650", end_color="22A650", fill_type="solid")
+        header_alignment = Alignment(horizontal="center")
+        
+        # Añadir encabezados
+        ws.append(['Campo', 'Valor'])
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Establecer ancho de columnas
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 50
+        
+        # Añadir datos de la entrevista
+        row_num = 2
+        for field in entrevista._meta.fields:
+            field_name = field.verbose_name
+            field_value = getattr(entrevista, field.name)
+            
+            # Dar formato especial a fechas y valores nulos
+            if isinstance(field_value, datetime.datetime):
+                field_value = field_value.strftime('%d/%m/%Y %H:%M')
+            elif field_value is None:
+                field_value = "No especificado"
+                
+            ws.append([field_name, field_value])
+            row_num += 1
+        
+        # Añadir sección de referencias personales
+        ws.append([])
+        row_num += 1
+        
+        # Encabezado para referencias
+        referencias_cell = ws.cell(row=row_num, column=1, value="Referencias Personales")
+        referencias_cell.font = Font(bold=True)
+        row_num += 1
+        
+        # Intentar obtener referencias personales si existen
+        try:
+            referencias = ReferenciaPersonal.objects.filter(cliente_entrevista=entrevista)
+            
+            if referencias.exists():
+                # Cabecera de referencias
+                ref_headers = ['Nombre', 'Dirección', 'Relación', 'Teléfono']
+                ws.append(ref_headers)
+                for cell in ws[row_num]:
+                    cell.font = Font(bold=True)
+                row_num += 1
+                
+                # Datos de referencias
+                for ref in referencias:
+                    ws.append([
+                        ref.nombre if hasattr(ref, 'nombre') else "N/A",
+                        ref.direccion if hasattr(ref, 'direccion') else "N/A",
+                        ref.relacion if hasattr(ref, 'relacion') else "N/A", 
+                        ref.telefono if hasattr(ref, 'telefono') else "N/A"
+                    ])
+                    row_num += 1
+            else:
+                ws.cell(row=row_num, column=1, value="No hay referencias personales registradas")
+                row_num += 1
+        except:
+            ws.cell(row=row_num, column=1, value="No se pudieron cargar las referencias personales")
+            row_num += 1
+        
+        # Configurar respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="entrevista_{entrevista_id}.xlsx"'
+        
+        # Guardar el libro en la respuesta
+        wb.save(response)
+        return response
+    except Exception as e:
+        # En caso de error, regresamos al formato CSV como fallback
+        print(f"Error al generar Excel: {str(e)}")
+        entrevista = ClienteEntrevista.objects.get(pk=entrevista_id)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="entrevista_{entrevista_id}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Campo', 'Valor'])
 
-    for field in entrevista._meta.fields:
-        writer.writerow([field.verbose_name, getattr(entrevista, field.name)])
+        for field in entrevista._meta.fields:
+            writer.writerow([field.verbose_name, getattr(entrevista, field.name)])
 
-    writer.writerow([])
-    writer.writerow(['Referencias Personales'])
-    for ref in entrevista.referencias_personales.all():
-        writer.writerow([ref.nombre, ref.direccion, ref.relacion, '', '', '', ''])
+        writer.writerow([])
+        writer.writerow(['Referencias Personales'])
+        
+        try:
+            referencias = ReferenciaPersonal.objects.filter(cliente_entrevista=entrevista)
+            for ref in referencias:
+                writer.writerow([
+                    getattr(ref, 'nombre', 'N/A'),
+                    getattr(ref, 'direccion', 'N/A'),
+                    getattr(ref, 'relacion', 'N/A'),
+                    getattr(ref, 'telefono', 'N/A')
+                ])
+        except:
+            writer.writerow(['No se pudieron cargar las referencias personales'])
+            
+        return response
 
     writer.writerow([])
     writer.writerow(['Referencias Comerciales'])
