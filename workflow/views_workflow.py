@@ -1075,6 +1075,14 @@ def detalle_solicitud(request, solicitud_id):
     if (solicitud.etapa_actual and 
         solicitud.etapa_actual.nombre == "Back Office" and 
         solicitud.etapa_actual.es_bandeja_grupal):
+        
+        # Asegurar que hay un subestado actual asignado
+        if not solicitud.subestado_actual and solicitud.etapa_actual.subestados.exists():
+            primer_subestado = solicitud.etapa_actual.subestados.order_by('orden').first()
+            solicitud.subestado_actual = primer_subestado
+            solicitud.save()
+            print(f"DEBUG: Asignado primer subestado por defecto: {primer_subestado.nombre}")
+        
         return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
     
     return render(request, 'workflow/detalle_solicitud.html', context)
@@ -8377,6 +8385,11 @@ def api_subestados_disponibles(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
+        # Debug logging
+        print(f"DEBUG: Obteniendo subestados para solicitud {solicitud_id}")
+        print(f"DEBUG: Solicitud subestado_actual: {solicitud.subestado_actual}")
+        print(f"DEBUG: Solicitud etapa_actual: {solicitud.etapa_actual}")
+        
         # Verificar permisos
         if not (solicitud.creada_por == request.user or 
                 solicitud.asignada_a == request.user or 
@@ -8404,13 +8417,19 @@ def api_subestados_disponibles(request, solicitud_id):
                 'orden': subestado.orden
             })
         
+        subestado_actual_id = solicitud.subestado_actual.id if solicitud.subestado_actual else None
+        
+        print(f"DEBUG: Subestados encontrados: {len(subestados_data)}")
+        print(f"DEBUG: Subestado actual ID: {subestado_actual_id}")
+        
         return JsonResponse({
             'success': True,
             'subestados': subestados_data,
-            'subestado_actual_id': solicitud.subestado_actual.id if solicitud.subestado_actual else None
+            'subestado_actual_id': subestado_actual_id
         })
         
     except Exception as e:
+        print(f"DEBUG ERROR: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Error al obtener subestados: {str(e)}'
@@ -8478,6 +8497,8 @@ def api_avanzar_subestado(request):
         solicitud_id = data.get('solicitud_id')
         subestado_id = data.get('subestado_id')
         
+        print(f"DEBUG: Avanzando subestado - solicitud_id: {solicitud_id}, subestado_id: {subestado_id}")
+        
         if not solicitud_id or not subestado_id:
             return JsonResponse({
                 'success': False,
@@ -8486,6 +8507,10 @@ def api_avanzar_subestado(request):
         
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         subestado = get_object_or_404(SubEstado, id=subestado_id)
+        
+        print(f"DEBUG: Solicitud encontrada: {solicitud.codigo}")
+        print(f"DEBUG: Subestado encontrado: {subestado.nombre}")
+        print(f"DEBUG: Subestado actual antes del cambio: {solicitud.subestado_actual}")
         
         # Verificar permisos
         if not (solicitud.creada_por == request.user or 
@@ -8508,6 +8533,8 @@ def api_avanzar_subestado(request):
         solicitud.subestado_actual = subestado
         solicitud.save()
         
+        print(f"DEBUG: Subestado actualizado exitosamente a: {subestado.nombre}")
+        
         # Actualizar el historial si existe una entrada activa
         historial_actual = HistorialSolicitud.objects.filter(
             solicitud=solicitud,
@@ -8517,6 +8544,7 @@ def api_avanzar_subestado(request):
         if historial_actual:
             historial_actual.subestado = subestado
             historial_actual.save()
+            print(f"DEBUG: Historial actualizado también")
         
         return JsonResponse({
             'success': True,
@@ -8524,6 +8552,7 @@ def api_avanzar_subestado(request):
         })
         
     except Exception as e:
+        print(f"DEBUG ERROR en api_avanzar_subestado: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Error al avanzar subestado: {str(e)}'

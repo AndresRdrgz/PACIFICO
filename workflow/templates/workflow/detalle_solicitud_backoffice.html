@@ -128,15 +128,15 @@
             <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern {% if forloop.first %}active{% endif %}" id="tab-{{ subestado.id }}"
+                <button class="nav-link tab-modern {% if subestado.id == solicitud.subestado_actual.id %}active{% endif %}" id="tab-{{ subestado.id }}"
                   data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
                   aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}">
                   <div class="tab-content-wrapper">
                     <div class="tab-number">{{ forloop.counter }}</div>
                     <div class="tab-text">
                       <span class="tab-title">{{ subestado.nombre }}</span>
-                      <span class="tab-status">En proceso</span>
+                      <span class="tab-status">{% if subestado.id == solicitud.subestado_actual.id %}Activo{% else %}En proceso{% endif %}</span>
                     </div>
                     <div class="tab-arrow">
                       <i class="fas fa-chevron-right"></i>
@@ -163,7 +163,7 @@
           <!-- Contenido de las Pestañas -->
           <div class="tab-content" id="backoffice-content">
             {% for subestado in solicitud.etapa_actual.subestados.all %}
-            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ subestado.id }}"
+            <div class="tab-pane fade {% if subestado.id == solicitud.subestado_actual.id %}show active{% endif %}" id="content-{{ subestado.id }}"
               role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
               <div class="subestado-content-modern">
                 <div class="process-step-header">
@@ -389,23 +389,27 @@
             <div class="progress-info mb-3">
               <div class="d-flex justify-content-between">
                 <span class="fw-bold">Progreso Actual</span>
-                <span class="text-muted">1 de {{ solicitud.etapa_actual.subestados.count }}
+                <span class="text-muted">{{ solicitud.subestado_actual.orden|default:1 }} de {{ solicitud.etapa_actual.subestados.count }}
                   procesos</span>
               </div>
             </div>
             <div class="progress progress-custom mb-3">
               <div class="progress-bar bg-success" role="progressbar"
-                style="width: {% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}%"
-                aria-valuenow="{% widthratio 1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
+                style="width: {% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}%"
+                aria-valuenow="{% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
                 aria-valuemax="100"></div>
             </div>
             <div class="progress-steps">
               {% for subestado in solicitud.etapa_actual.subestados.all %}
-              <div class="step-item {% if forloop.first %}active{% endif %}">
+              <div class="step-item {% if subestado.id == solicitud.subestado_actual.id %}active{% elif subestado.orden < solicitud.subestado_actual.orden %}completed{% endif %}">
                 <div class="step-circle">
-                  {% if forloop.first %}
+                  {% if subestado.id == solicitud.subestado_actual.id %}
                   <i class="fas fa-check"></i>
-                  {% else %} {{ forloop.counter }} {% endif %}
+                  {% elif subestado.orden < solicitud.subestado_actual.orden %}
+                  <i class="fas fa-check"></i>
+                  {% else %} 
+                  {{ forloop.counter }} 
+                  {% endif %}
                 </div>
                 <div class="step-label">
                   {{ subestado.nombre|truncatechars:20 }}
@@ -992,7 +996,7 @@
     const modalAvanzarEtapa = document.getElementById('modalAvanzarEtapa');
     if (modalAvanzarEtapa) {
       modalAvanzarEtapa.addEventListener('show.bs.modal', function (event) {
-        cargarSubestadosYTransiciones();
+        cargarOpcionesAvance();
       });
     }
   });
@@ -1097,15 +1101,22 @@
 
   async function cargarOpcionesAvance() {
     const solicitudId = {{ solicitud.id }};
+    console.log('Cargando opciones de avance para solicitud:', solicitudId);
     
     try {
       // Cargar subestados disponibles
+      console.log('Llamando a API de subestados...');
       const responseSubestados = await fetch(`/workflow/api/subestados-disponibles/${solicitudId}/`);
+      console.log('Respuesta subestados status:', responseSubestados.status);
       const dataSubestados = await responseSubestados.json();
+      console.log('Data subestados:', dataSubestados);
       
       // Cargar transiciones disponibles
+      console.log('Llamando a API de transiciones...');
       const responseTransiciones = await fetch(`/workflow/api/transiciones-disponibles/${solicitudId}/`);
+      console.log('Respuesta transiciones status:', responseTransiciones.status);
       const dataTransiciones = await responseTransiciones.json();
+      console.log('Data transiciones:', dataTransiciones);
       
       // Renderizar opciones
       renderizarSubestados(dataSubestados);
@@ -1118,7 +1129,13 @@
   }
 
   function renderizarSubestados(data) {
+    console.log('Renderizando subestados:', data);
     const container = document.getElementById('subestados-container');
+    
+    if (!data.success) {
+      container.innerHTML = `<div class="alert alert-warning">${data.message || 'Error al cargar subestados'}</div>`;
+      return;
+    }
     
     if (!data.subestados || data.subestados.length === 0) {
       container.innerHTML = '<p class="text-muted">No hay subestados disponibles para avanzar.</p>';
@@ -1128,21 +1145,40 @@
     let html = '';
     data.subestados.forEach(subestado => {
       const isActual = subestado.id === data.subestado_actual_id;
-      const btnClass = isActual ? 'btn-outline-secondary' : 'btn-outline-primary';
-      const btnText = isActual ? 'Actual' : 'Avanzar';
-      const disabled = isActual ? 'disabled' : '';
+      
+      let cardClass = 'card mb-2';
+      let btnClass = 'btn btn-sm';
+      let btnText = '';
+      let disabled = '';
+      let statusBadge = '';
+      
+      if (isActual) {
+        cardClass += ' border-success';
+        btnClass += ' btn-outline-secondary';
+        btnText = 'Actual';
+        disabled = 'disabled';
+        statusBadge = '<span class="badge bg-success ms-2">Actual</span>';
+      } else {
+        btnClass += ' btn-outline-primary';
+        btnText = 'Avanzar';
+      }
       
       html += `
-        <div class="card mb-2">
+        <div class="${cardClass}">
           <div class="card-body p-3">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="mb-1">${subestado.nombre}</h6>
+                <h6 class="mb-1">
+                  ${subestado.nombre}
+                  ${statusBadge}
+                </h6>
                 <small class="text-muted">Orden: ${subestado.orden}</small>
+                ${isActual ? '<br><small class="text-success"><i class="fas fa-check-circle me-1"></i>Subestado activo</small>' : ''}
               </div>
-              <button class="btn btn-sm ${btnClass}" ${disabled} 
-                      onclick="avanzarSubestado(${subestado.id})">
-                <i class="fas fa-arrow-right me-1"></i>${btnText}
+              <button class="${btnClass}" ${disabled} 
+                      onclick="avanzarSubestado(${subestado.id})"
+                      data-subestado-id="${subestado.id}">
+                <i class="fas fa-${isActual ? 'check' : 'arrow-right'} me-1"></i>${btnText}
               </button>
             </div>
           </div>
@@ -1154,7 +1190,13 @@
   }
 
   function renderizarTransiciones(data) {
+    console.log('Renderizando transiciones:', data);
     const container = document.getElementById('transiciones-container');
+    
+    if (!data.success) {
+      container.innerHTML = `<div class="alert alert-warning">${data.message || 'Error al cargar transiciones'}</div>`;
+      return;
+    }
     
     if (!data.transiciones || data.transiciones.length === 0) {
       container.innerHTML = '<p class="text-muted">No hay transiciones disponibles.</p>';
@@ -1189,7 +1231,18 @@
   async function avanzarSubestado(subestadoId) {
     const solicitudId = {{ solicitud.id }};
     
+    console.log(`Intentando avanzar subestado: solicitud=${solicitudId}, subestado=${subestadoId}`);
+    
     try {
+      // Deshabilitar todos los botones temporalmente
+      const buttons = document.querySelectorAll('#subestados-container button');
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        }
+      });
+
       const response = await fetch(`/workflow/api/avanzar-subestado/`, {
         method: 'POST',
         headers: {
@@ -1202,21 +1255,50 @@
         })
       });
       
+      console.log('Respuesta del servidor:', response.status);
       const data = await response.json();
+      console.log('Data recibida:', data);
       
       if (data.success) {
-        mostrarMensaje('Subestado avanzado correctamente', 'success');
+        mostrarMensaje(data.message || 'Subestado avanzado correctamente', 'success');
+        
         // Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarEtapa'));
-        modal.hide();
-        // Recargar página
-        setTimeout(() => window.location.reload(), 1000);
+        if (modal) {
+          modal.hide();
+        }
+        
+        // Mostrar mensaje de recarga
+        mostrarMensaje('Recargando página para reflejar los cambios...', 'info');
+        
+        // Recargar página después de un breve delay
+        setTimeout(() => {
+          console.log('Recargando página...');
+          window.location.reload();
+        }, 2000);
       } else {
         mostrarMensaje(data.message || 'Error al avanzar subestado', 'error');
+        // Rehabilitar botones
+        buttons.forEach(btn => {
+          btn.disabled = false;
+          // Restaurar texto original del botón
+          if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
+            btn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+          }
+        });
       }
     } catch (error) {
       console.error('Error avanzando subestado:', error);
-      mostrarMensaje('Error al avanzar subestado', 'error');
+      mostrarMensaje('Error de conexión al avanzar subestado', 'error');
+      
+      // Rehabilitar botones en caso de error
+      const buttons = document.querySelectorAll('#subestados-container button');
+      buttons.forEach(btn => {
+        btn.disabled = false;
+        if (btn.onclick && btn.onclick.toString().includes(subestadoId)) {
+          btn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Avanzar';
+        }
+      });
     }
   }
 
