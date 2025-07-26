@@ -6667,15 +6667,23 @@ def api_cambiar_etapa(request, solicitud_id):
         # Obtener la nueva etapa
         nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
         
-        # Obtener el nuevo subestado si se especifica
+        # Obtener el nuevo subestado si se especifica, o automáticamente el primero si hay subestados disponibles
         nuevo_subestado = None
         if nuevo_subestado_id:
             try:
                 nuevo_subestado = get_object_or_404(SubEstado, id=nuevo_subestado_id, etapa=nueva_etapa)
-                print(f"🔍 DEBUG: Nuevo subestado found: {nuevo_subestado.nombre}")
+                print(f"🔍 DEBUG: Nuevo subestado especificado: {nuevo_subestado.nombre}")
             except Exception as e:
                 print(f"❌ ERROR: Invalid subestado ID: {e}")
                 return JsonResponse({'error': 'ID de subestado inválido'}, status=400)
+        else:
+            # Si no se especificó subestado, seleccionar automáticamente el primero disponible
+            primer_subestado = SubEstado.objects.filter(etapa=nueva_etapa).order_by('orden', 'id').first()
+            if primer_subestado:
+                nuevo_subestado = primer_subestado
+                print(f"🔍 DEBUG: Subestado asignado automáticamente: {nuevo_subestado.nombre}")
+            else:
+                print(f"🔍 DEBUG: No hay subestados para la etapa {nueva_etapa.nombre}")
         
         # Verificar que la etapa sea diferente a la actual
         if solicitud.etapa_actual == nueva_etapa:

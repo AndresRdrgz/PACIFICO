@@ -1139,22 +1139,24 @@
                         </div>
                     </div>
 
-                    <!-- Selector de subestado (mostrar solo si la etapa tiene subestados) -->
-                    <div id="selectorSubestado" class="mb-4" style="display: none;">
+                    <!-- Información del estado (se selecciona automáticamente el primer subestado) -->
+                    <div id="informacionSubestado" class="mb-4" style="display: none;">
                         <h6 class="fw-bold mb-3 text-dark" style="font-size: 1rem;">
                             <i class="fas fa-list-ul text-primary me-2"></i>
-                            Seleccionar estado específico:
+                            Estado asignado automáticamente:
                         </h6>
                         <div class="bg-white border border-success border-opacity-25 rounded-3 p-3">
-                            <select id="subestadoSelect" class="form-select form-select-lg"
-                                style="border: 2px solid #e9ecef; border-radius: 8px; font-weight: 600;">
-                                <option value="">Seleccionar estado...</option>
-                            </select>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span id="subestadoAsignado" class="fw-bold text-success" style="font-size: 1rem;">-</span>
+                            </div>
                             <small class="text-muted mt-2 d-block">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Este campo es requerido para esta etapa
+                                Se asignará automáticamente el primer estado disponible
                             </small>
                         </div>
+                        <!-- Campo oculto para enviar el ID del subestado -->
+                        <input type="hidden" id="subestadoSeleccionado" value="">
                     </div>
                 </div>
 
@@ -1810,9 +1812,9 @@
                 if (nombreEtapaDestino) {
                     nombreEtapaDestino.innerHTML = '<span class="text-danger fw-bold">Esta acción es permanente</span>';
                 }
-                // Ocultar selector de subestado para eliminación
-                const selectorSubestado = document.getElementById('selectorSubestado');
-                if (selectorSubestado) selectorSubestado.style.display = 'none';
+                // Ocultar información de subestado para eliminación
+                const informacionSubestado = document.getElementById('informacionSubestado');
+                if (informacionSubestado) informacionSubestado.style.display = 'none';
             } else {
                 // Para cambio de etapa normal
                 const nombreEtapaDestino = document.getElementById('nombreEtapaDestino');
@@ -1824,8 +1826,8 @@
                 if (currentEtapaId) {
                     cargarSubestados(currentEtapaId);
                 } else {
-                    const selectorSubestado = document.getElementById('selectorSubestado');
-                    if (selectorSubestado) selectorSubestado.style.display = 'none';
+                    const informacionSubestado = document.getElementById('informacionSubestado');
+                    if (informacionSubestado) informacionSubestado.style.display = 'none';
                 }
             }
 
@@ -1888,41 +1890,47 @@
                     if (data.success && data.subestados && data.subestados.length > 0) {
                         console.log('✅ Subestados cargados:', data.subestados);
                         currentSubestados = data.subestados;
-                        mostrarSelectorSubestado(data.subestados);
+                        mostrarInformacionSubestado(data.subestados);
                     } else {
                         console.log('ℹ️ No hay subestados para esta etapa');
-                        const selectorSubestado = document.getElementById('selectorSubestado');
-                        if (selectorSubestado) selectorSubestado.style.display = 'none';
+                        const informacionSubestado = document.getElementById('informacionSubestado');
+                        if (informacionSubestado) informacionSubestado.style.display = 'none';
                         currentSubestados = [];
                     }
                 })
                 .catch(error => {
                     console.error('❌ Error cargando subestados:', error);
-                    const selectorSubestado = document.getElementById('selectorSubestado');
-                    if (selectorSubestado) selectorSubestado.style.display = 'none';
+                    const informacionSubestado = document.getElementById('informacionSubestado');
+                    if (informacionSubestado) informacionSubestado.style.display = 'none';
                     currentSubestados = [];
                 });
         }
 
-        // Función para mostrar el selector de subestados
-        function mostrarSelectorSubestado(subestados) {
-            const select = document.getElementById('subestadoSelect');
-            if (!select) return;
+        // Función para mostrar información del subestado (automáticamente selecciona el primero)
+        function mostrarInformacionSubestado(subestados) {
+            if (!subestados || subestados.length === 0) {
+                const informacionSubestado = document.getElementById('informacionSubestado');
+                if (informacionSubestado) informacionSubestado.style.display = 'none';
+                return;
+            }
 
-            select.innerHTML = '';
-            select.appendChild(new Option('Seleccionar estado...', ''));
+            // Seleccionar automáticamente el primer subestado
+            const primerSubestado = subestados[0];
+            const subestadoAsignado = document.getElementById('subestadoAsignado');
+            const subestadoSeleccionado = document.getElementById('subestadoSeleccionado');
+            
+            if (subestadoAsignado) {
+                subestadoAsignado.textContent = primerSubestado.nombre;
+            }
+            
+            if (subestadoSeleccionado) {
+                subestadoSeleccionado.value = primerSubestado.id;
+            }
 
-            subestados.forEach(subestado => {
-                select.appendChild(new Option(subestado.nombre, subestado.id));
-            });
+            const informacionSubestado = document.getElementById('informacionSubestado');
+            if (informacionSubestado) informacionSubestado.style.display = 'block';
 
-            const selectorSubestado = document.getElementById('selectorSubestado');
-            if (selectorSubestado) selectorSubestado.style.display = 'block';
-
-            // Validar selección al cambiar
-            select.addEventListener('change', function () {
-                validarFormularioModal();
-            });
+            console.log('✅ Subestado asignado automáticamente:', primerSubestado);
         }
 
         // Función para validar el formulario del modal
@@ -1930,26 +1938,10 @@
             const btnAceptar = document.getElementById('btnAceptarModal');
             if (!btnAceptar) return false;
 
-            // Si hay subestados disponibles, debe seleccionar uno
-            if (currentSubestados.length > 0) {
-                const subestadoSelect = document.getElementById('subestadoSelect');
-                const subestadoSeleccionado = subestadoSelect ? subestadoSelect.value : '';
-
-                if (!subestadoSeleccionado) {
-                    btnAceptar.disabled = true;
-                    btnAceptar.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Seleccionar Estado';
-                    return false;
-                } else {
-                    btnAceptar.disabled = false;
-                    btnAceptar.innerHTML = '<i class="fas fa-check me-2"></i>Aceptar';
-                    return true;
-                }
-            } else {
-                // No hay subestados, siempre válido
-                btnAceptar.disabled = false;
-                btnAceptar.innerHTML = '<i class="fas fa-check me-2"></i>Aceptar';
-                return true;
-            }
+            // Siempre válido ya que el subestado se selecciona automáticamente si existe
+            btnAceptar.disabled = false;
+            btnAceptar.innerHTML = '<i class="fas fa-check me-2"></i>Aceptar';
+            return true;
         }
 
         // Event listeners para los botones del modal
@@ -1968,9 +1960,9 @@
 
                 // Ejecutar callback de confirmación con datos de subestado
                 if (modalConfirmCallback) {
-                    const subestadoSelect = document.getElementById('subestadoSelect');
-                    const subestadoSeleccionado = subestadoSelect ? subestadoSelect.value : '';
-                    modalConfirmCallback(subestadoSeleccionado);
+                    const subestadoSeleccionado = document.getElementById('subestadoSeleccionado');
+                    const subestadoId = subestadoSeleccionado ? subestadoSeleccionado.value : '';
+                    modalConfirmCallback(subestadoId);
                 }
             });
         }
