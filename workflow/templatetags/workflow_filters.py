@@ -189,3 +189,125 @@ def sla_to_hours(sla):
         return f"{total_hours}h"
     else:
         return str(sla) 
+
+@register.filter
+def sla_color_class(sla_color):
+    """Convierte el color de SLA texto a clase CSS"""
+    color_map = {
+        'text-danger': 'bg-red-500',
+        'text-warning': 'bg-yellow-500', 
+        'text-success': 'bg-green-500',
+    }
+    return color_map.get(sla_color, 'bg-gray-400')
+
+@register.filter
+def priority_class(priority):
+    """Retorna las clases CSS para la prioridad"""
+    if not priority:
+        return 'bg-gray-100 text-gray-800'
+    
+    priority_classes = {
+        'Alta': 'bg-red-100 text-red-800',
+        'Media': 'bg-yellow-100 text-yellow-800', 
+        'Baja': 'bg-green-100 text-green-800'
+    }
+    return priority_classes.get(priority, 'bg-gray-100 text-gray-800')
+
+@register.filter
+def user_avatar_or_initial(user):
+    """Retorna el avatar del usuario o sus iniciales"""
+    if not user:
+        return {
+            'type': 'icon',
+            'content': 'fas fa-user-slash',
+            'class': 'w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500'
+        }
+    
+    # Verificar si tiene foto de perfil
+    if hasattr(user, 'userprofile') and user.userprofile and hasattr(user.userprofile, 'profile_picture') and user.userprofile.profile_picture:
+        return {
+            'type': 'image',
+            'src': user.userprofile.profile_picture.url,
+            'alt': user.get_full_name() or user.username,
+            'class': 'w-4 h-4 rounded-full object-cover border'
+        }
+    
+    # Retornar iniciales
+    initial = ''
+    if user.first_name:
+        initial = user.first_name[0].upper()
+    elif user.username:
+        initial = user.username[0].upper()
+    
+    return {
+        'type': 'initial',
+        'content': initial,
+        'class': 'w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'
+    }
+
+@register.filter
+def is_unassigned(asignado_a):
+    """Verifica si una solicitud no está asignada"""
+    return asignado_a == 'Sin asignar' or not asignado_a
+
+@register.filter
+def digital_badge_needed(etiquetas, origen):
+    """Determina si se necesita mostrar el badge digital"""
+    return origen == 'Canal Digital' and not etiquetas
+
+@register.filter
+def priority_background_color(priority):
+    """Retorna el color de fondo para la prioridad"""
+    colors = {
+        'Alta': '#fee2e2',
+        'Media': '#fef9c3',
+        'Baja': '#dcfce7'
+    }
+    return colors.get(priority, 'white')
+
+@register.filter
+def sla_border_color(sla_color):
+    """Retorna el color del borde basado en el SLA"""
+    colors = {
+        'text-danger': '#dc3545',
+        'text-warning': '#ffc107', 
+        'text-success': '#198754'
+    }
+    return colors.get(sla_color, '#6c757d')
+
+@register.filter
+def priority_text_color(priority):
+    """Retorna el color del texto para la prioridad"""
+    colors = {
+        'Alta': '#dc3545',
+        'Media': '#ffc107',
+        'Baja': '#198754'
+    }
+    return colors.get(priority, '#6c757d')
+
+@register.filter
+def sla_status_text(sla_color):
+    """Convierte el color SLA a texto descriptivo"""
+    status_map = {
+        'text-success': 'En tiempo',
+        'text-warning': 'Por vencer', 
+        'text-danger': 'Vencido'
+    }
+    return status_map.get(sla_color, 'N/A')
+
+@register.filter
+def sla_data_attribute(sla_color):
+    """Convierte el color SLA a atributo data"""
+    data_map = {
+        'text-danger': 'vencido',
+        'text-warning': 'por vencer',
+        'text-success': 'en tiempo'
+    }
+    return data_map.get(sla_color, 'sin sla')
+
+@register.filter
+def sla_bg_class(sla_color):
+    """Retorna clase de fondo para filas según SLA"""
+    if sla_color == 'text-danger':
+        return 'bg-danger bg-opacity-10'
+    return ''

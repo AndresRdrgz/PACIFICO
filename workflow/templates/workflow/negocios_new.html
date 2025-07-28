@@ -1,0 +1,696 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Negocios - Pacífico{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
+<style>
+  :root {
+    --verde-pacifico: #2a5f35;
+    --verde-claro: #3d7c47;
+    --gris-claro: #f8f9fa;
+    --border-radius: 8px;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-claro) 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius);
+  }
+
+  .stats-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--verde-pacifico);
+    transition: transform 0.2s ease;
+  }
+
+  .stats-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .stats-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--verde-pacifico);
+  }
+
+  .stats-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+
+  .table-container {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .table-header {
+    background: var(--gris-claro);
+    padding: 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .btn-nueva-solicitud {
+    background: var(--verde-pacifico);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .btn-nueva-solicitud:hover {
+    background: var(--verde-claro);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  .btn-nueva-solicitud i {
+    margin-right: 0.5rem;
+  }
+
+  .table {
+    margin-bottom: 0;
+  }
+
+  .table thead th {
+    background: var(--gris-claro);
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    padding: 1rem 0.75rem;
+  }
+
+  .table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .table tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+
+  .badge-sla {
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-sla.verde {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .badge-sla.amarillo {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  .badge-sla.rojo {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .badge-estado {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-etapa {
+    background: #e3f2fd;
+    color: #1565c0;
+  }
+
+  .badge-subestado {
+    background: #f3e5f5;
+    color: #7b1fa2;
+  }
+
+  .monto-financiado {
+    font-weight: 600;
+    color: var(--verde-pacifico);
+  }
+
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--verde-pacifico);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* DataTables customization */
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter,
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate {
+    margin-top: 1rem;
+  }
+
+  .dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #ced4da;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+  }
+
+  .dataTables_wrapper .dataTables_length select {
+    border: 1px solid #ced4da;
+    border-radius: var(--border-radius);
+    padding: 0.25rem;
+  }
+
+  .page-link {
+    color: var(--verde-pacifico);
+  }
+
+  .page-link:hover {
+    color: var(--verde-claro);
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+  }
+
+  .page-item.active .page-link {
+    background-color: var(--verde-pacifico);
+    border-color: var(--verde-pacifico);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .page-header {
+      text-align: center;
+    }
+
+    .btn-nueva-solicitud {
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .stats-card {
+      margin-bottom: 1rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="mb-0">
+            <i class="fas fa-briefcase me-3"></i>
+            Gestión de Negocios
+          </h1>
+          <p class="mb-0 mt-2 opacity-75">
+            {% if is_superuser %}
+            Vista completa de todas las solicitudes del sistema
+            {% else %}
+            Mis solicitudes asignadas y creadas
+            {% endif %}
+          </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <button type="button" class="btn btn-nueva-solicitud" onclick="openDrawer()">
+            <i class="fas fa-plus"></i>
+            Nueva Solicitud
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-lg-3 col-md-6">
+      <div class="stats-card">
+        <div class="stats-number" id="total-solicitudes">{{ total_solicitudes }}</div>
+        <div class="stats-label">Total Solicitudes</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stats-card">
+        <div class="stats-number" id="solicitudes-pendientes">{{ solicitudes_pendientes }}</div>
+        <div class="stats-label">Pendientes</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stats-card">
+        <div class="stats-number" id="solicitudes-aprobadas">0</div>
+        <div class="stats-label">Aprobadas</div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="stats-card">
+        <div class="stats-number" id="solicitudes-rechazadas">0</div>
+        <div class="stats-label">Rechazadas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <div class="table-container position-relative">
+    <div class="loading-overlay" id="table-loading">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <div class="table-header">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h5 class="mb-0">
+            <i class="fas fa-table me-2"></i>
+            Solicitudes
+          </h5>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <small class="text-muted">
+            Haga clic en una fila para ver los detalles
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table id="solicitudesTable" class="table table-hover">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Cédula</th>
+            <th>Producto</th>
+            <th>Monto</th>
+            <th>Propietario</th>
+            <th>Etapa</th>
+            <th>Estado</th>
+            <th>SLA</th>
+            <th>Actualizado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Data will be loaded via DataTables AJAX -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Include drawer partial -->
+{% include 'workflow/partials/drawer.html' %}
+
+<!-- Include modal partial -->
+{% include 'workflow/partials/modalSolicitud.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+<script>
+  $(document).ready(function () {
+    // Initialize DataTable
+    const table = $('#solicitudesTable').DataTable({
+      processing: true,
+      serverSide: true,
+      responsive: true,
+      ajax: {
+        url: '{% url "workflow:api_solicitudes_tabla" %}',
+        type: 'GET',
+        beforeSend: function () {
+          $('#table-loading').show();
+        },
+        complete: function () {
+          $('#table-loading').hide();
+        },
+        error: function (xhr, error, code) {
+          console.error('Error loading data:', error);
+          showNotification('Error al cargar las solicitudes', 'error');
+        }
+      },
+      columns: [
+        {
+          data: 'codigo',
+          render: function (data, type, row) {
+            return `<span class="fw-bold text-primary">${data}</span>`;
+          }
+        },
+        {
+          data: 'cliente_nombre',
+          render: function (data, type, row) {
+            return data || 'N/A';
+          }
+        },
+        {
+          data: 'cliente_cedula',
+          render: function (data, type, row) {
+            return data || 'N/A';
+          }
+        },
+        {
+          data: 'producto',
+          render: function (data, type, row) {
+            return data || 'N/A';
+          }
+        },
+        {
+          data: 'monto_financiado',
+          render: function (data, type, row) {
+            if (data && data > 0) {
+              return `<span class="monto-financiado">$${parseFloat(data).toLocaleString('es-CO', { minimumFractionDigits: 0 })}</span>`;
+            }
+            return 'N/A';
+          }
+        },
+        {
+          data: 'propietario',
+          render: function (data, type, row) {
+            return data || '<span class="text-muted">Sin asignar</span>';
+          }
+        },
+        {
+          data: 'etapa',
+          render: function (data, type, row) {
+            return `<span class="badge badge-estado badge-etapa">${data}</span>`;
+          }
+        },
+        {
+          data: 'estado',
+          render: function (data, type, row) {
+            return `<span class="badge badge-estado badge-subestado">${data}</span>`;
+          }
+        },
+        {
+          data: 'sla_status',
+          render: function (data, type, row) {
+            return `<span class="badge-sla ${data}">${row.sla_text}</span>`;
+          }
+        },
+        {
+          data: 'fecha_actualizacion',
+          render: function (data, type, row) {
+            const fecha = new Date(data);
+            return fecha.toLocaleDateString('es-CO') + '<br><small class="text-muted">' + fecha.toLocaleTimeString('es-CO') + '</small>';
+          }
+        }
+      ],
+      order: [[9, 'desc']], // Order by fecha_actualizacion desc
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+      language: {
+        "sProcessing": "Procesando...",
+        "sLengthMenu": "Mostrar _MENU_ registros",
+        "sZeroRecords": "No se encontraron resultados",
+        "sEmptyTable": "Ningún dato disponible en esta tabla",
+        "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+        "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+        "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+        "sInfoPostFix": "",
+        "sSearch": "Buscar:",
+        "sUrl": "",
+        "sInfoThousands": ",",
+        "sLoadingRecords": "Cargando...",
+        "oPaginate": {
+          "sFirst": "Primero",
+          "sLast": "Último",
+          "sNext": "Siguiente",
+          "sPrevious": "Anterior"
+        },
+        "oAria": {
+          "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+          "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+        }
+      }
+    });
+
+    // Handle row click to open modal
+    $('#solicitudesTable tbody').on('click', 'tr', function () {
+      const data = table.row(this).data();
+      if (data && data.id) {
+        openSolicitudModal(data.id);
+      }
+    });
+
+    // Load statistics
+    loadStatistics();
+  });
+
+  // Function to open the drawer for new solicitud
+  function openDrawer() {
+    // This function should be available from the drawer partial
+    if (typeof openSolicitudDrawer === 'function') {
+      openSolicitudDrawer();
+    } else {
+      console.log('Opening drawer...');
+      $('#solicitudDrawer').addClass('active');
+    }
+  }
+
+  // Function to open solicitud modal
+  function openSolicitudModal(solicitudId) {
+    console.log('Opening modal for solicitud:', solicitudId);
+
+    // Show loading state
+    $('#modalSolicitud').modal('show');
+    $('#modalSolicitud .modal-body').html(`
+        <div class="text-center p-4">
+            <div class="loading-spinner mx-auto mb-3"></div>
+            <p>Cargando detalles de la solicitud...</p>
+        </div>
+    `);
+
+    // Load solicitud details
+    $.ajax({
+      url: `/workflow/api/solicitudes/${solicitudId}/detalle-modal/`,
+      method: 'GET',
+      success: function (response) {
+        if (response.success) {
+          renderSolicitudModal(response);
+        } else {
+          showError('Error al cargar los detalles: ' + response.error);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error('Error loading solicitud details:', error);
+        showError('Error de conexión al cargar los detalles');
+      }
+    });
+  }
+
+  // Function to render the solicitud modal content
+  function renderSolicitudModal(data) {
+    const solicitud = data.solicitud;
+    const historial = data.historial;
+    const requisitos = data.requisitos;
+
+    // Render modal content - this should integrate with existing modal template logic
+    const modalContent = `
+        <div class="modal-header-modern">
+            <div class="header-content">
+                <div class="solicitud-header">
+                    <span class="solicitud-code-badge">
+                        <span class="code-text">${solicitud.codigo}</span>
+                    </span>
+                    <span class="status-badge">${solicitud.etapa_actual ? solicitud.etapa_actual.nombre : 'Sin etapa'}</span>
+                </div>
+                <div class="solicitud-type">
+                    ${solicitud.pipeline ? solicitud.pipeline.nombre : 'Sin pipeline'}
+                </div>
+            </div>
+            <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body-modern">
+            <!-- Tab navigation -->
+            <ul class="nav nav-tabs modal-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#info-tab" type="button" role="tab">
+                        <i class="fas fa-info-circle me-2"></i>Información
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documentos-tab" type="button" role="tab">
+                        <i class="fas fa-file-alt me-2"></i>Documentos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#historial-tab" type="button" role="tab">
+                        <i class="fas fa-history me-2"></i>Historial
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- Tab content -->
+            <div class="tab-content modal-tab-content">
+                <!-- Info Tab -->
+                <div class="tab-pane fade show active" id="info-tab" role="tabpanel">
+                    <div class="info-cards-grid">
+                        <div class="info-card">
+                            <h6><i class="fas fa-user me-2"></i>Cliente</h6>
+                            <p><strong>${solicitud.cliente ? solicitud.cliente.nombre : 'N/A'}</strong></p>
+                            <small>Cédula: ${solicitud.cliente ? solicitud.cliente.cedula : 'N/A'}</small>
+                        </div>
+                        <div class="info-card">
+                            <h6><i class="fas fa-shopping-cart me-2"></i>Producto</h6>
+                            <p><strong>${solicitud.cotizacion ? solicitud.cotizacion.producto : 'N/A'}</strong></p>
+                            <small>Monto: $${solicitud.cotizacion && solicitud.cotizacion.monto_financiado ? parseFloat(solicitud.cotizacion.monto_financiado).toLocaleString('es-CO') : '0'}</small>
+                        </div>
+                        <div class="info-card">
+                            <h6><i class="fas fa-user-tie me-2"></i>Propietario</h6>
+                            <p><strong>${solicitud.asignada_a ? solicitud.asignada_a.nombre : 'Sin asignar'}</strong></p>
+                            <small>Creado por: ${solicitud.creada_por.nombre}</small>
+                        </div>
+                        <div class="info-card">
+                            <h6><i class="fas fa-calendar me-2"></i>Fechas</h6>
+                            <p><strong>Creación:</strong><br>${new Date(solicitud.fecha_creacion).toLocaleDateString('es-CO')}</p>
+                            <small>Última actualización: ${new Date(solicitud.fecha_ultima_actualizacion).toLocaleDateString('es-CO')}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Documentos Tab -->
+                <div class="tab-pane fade" id="documentos-tab" role="tabpanel">
+                    <div class="documentos-section">
+                        <div class="documentos-container">
+                            ${requisitos.map(req => `
+                                <div class="documento-item ${req.estado.toLowerCase()}">
+                                    <div class="documento-header">
+                                        <div class="documento-nombre">${req.requisito.nombre}</div>
+                                        <div class="documento-status ${req.estado.toLowerCase()}">${req.estado}</div>
+                                    </div>
+                                    ${req.requisito.descripcion ? `<p class="documento-observaciones">${req.requisito.descripcion}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Historial Tab -->
+                <div class="tab-pane fade" id="historial-tab" role="tabpanel">
+                    <div class="historial-section">
+                        <div class="timeline">
+                            ${historial.map(item => `
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <div class="timeline-header">
+                                            <div class="timeline-title">${item.accion}</div>
+                                            <div class="timeline-date">${new Date(item.fecha_cambio).toLocaleString('es-CO')}</div>
+                                        </div>
+                                        <div class="timeline-details">
+                                            <p>${item.descripcion}</p>
+                                            <small>Por: ${item.usuario}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    $('#modalSolicitud .modal-dialog').html(`
+        <div class="modal-content modern-modal">
+            ${modalContent}
+        </div>
+    `);
+  }
+
+  // Function to load statistics
+  function loadStatistics() {
+    $.ajax({
+      url: '{% url "workflow:api_estadisticas_negocios" %}',
+      method: 'GET',
+      success: function (response) {
+        if (response.success) {
+          const stats = response.estadisticas;
+          $('#total-solicitudes').text(stats.total_solicitudes);
+          $('#solicitudes-pendientes').text(stats.solicitudes_pendientes);
+          $('#solicitudes-aprobadas').text(stats.solicitudes_aprobadas);
+          $('#solicitudes-rechazadas').text(stats.solicitudes_rechazadas);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error('Error loading statistics:', error);
+      }
+    });
+  }
+
+  // Utility functions
+  function showNotification(message, type = 'info') {
+    // Create a simple notification
+    const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+
+    $('body').append(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      notification.alert('close');
+    }, 5000);
+  }
+
+  function showError(message) {
+    showNotification(message, 'error');
+  }
+
+  // Refresh table data
+  function refreshTable() {
+    $('#solicitudesTable').DataTable().ajax.reload();
+    loadStatistics();
+  }
+
+  // Auto refresh every 30 seconds
+  setInterval(refreshTable, 30000);
+</script>
+{% endblock %}

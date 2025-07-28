@@ -10,11 +10,11 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
+
         <div class="drawer-content">
             <form id="solicitudForm" method="post">
                 {% csrf_token %}
-                
+
                 <!-- Pipeline Selection -->
                 <div class="form-section">
                     <h6 class="form-section-title">
@@ -44,8 +44,8 @@
                     </h6>
                     <div class="form-group">
                         <div class="search-container">
-                            <input type="text" id="cotizacionSearch" class="form-control" 
-                                   placeholder="Buscar cotización de auto por nombre, cédula o ID...">
+                            <input type="text" id="cotizacionSearch" class="form-control"
+                                placeholder="Buscar cotización de auto por nombre, cédula o ID...">
                             <div id="cotizacionResults" class="search-results"></div>
                         </div>
                         <input type="hidden" id="cotizacionId" name="cotizacion">
@@ -93,11 +93,9 @@
                         Motivo de la consulta
                     </h6>
                     <div class="form-group">
-                        <textarea id="motivoConsulta" name="motivo_consulta" 
-                                  class="form-control" 
-                                  rows="4" 
-                                  placeholder="Describe el motivo de la consulta o las observaciones del cliente..."
-                                  style="resize: vertical; min-height: 100px;"></textarea>
+                        <textarea id="motivoConsulta" name="motivo_consulta" class="form-control" rows="4"
+                            placeholder="Describe el motivo de la consulta o las observaciones del cliente..."
+                            style="resize: vertical; min-height: 100px;"></textarea>
                         <small class="text-muted mt-2 d-block">
                             <i class="fas fa-info-circle me-1"></i>
                             Esta información se utilizará para documentar el propósito de la solicitud
@@ -137,7 +135,8 @@
                     </h6>
                     <div class="form-group">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="descargarApcMakito" name="descargar_apc_makito" value="1">
+                            <input class="form-check-input" type="checkbox" id="descargarApcMakito"
+                                name="descargar_apc_makito" value="1">
                             <label class="form-check-label" for="descargarApcMakito">
                                 Solicitar descarga de APC
                             </label>
@@ -147,7 +146,7 @@
                             Al activar esta opción, se enviará una solicitud automática para descargar el APC
                         </small>
                     </div>
-                    
+
                     <!-- Campos adicionales para APC (ocultos por defecto) -->
                     <div id="apcCamposAdicionales" style="display: none;">
                         <div class="form-group mt-3">
@@ -160,7 +159,12 @@
                         </div>
                         <div class="form-group mt-3">
                             <label for="apcNoCedula" class="form-label">Número de documento</label>
-                            <input type="text" id="apcNoCedula" name="apc_no_cedula" class="form-control" placeholder="Ingrese el número de cédula o pasaporte">
+                            <input type="text" id="apcNoCedula" name="apc_no_cedula" class="form-control"
+                                placeholder="Ingrese el número de cédula o pasaporte">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente con la cédula del cliente seleccionado
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -195,7 +199,7 @@
 
             </form>
         </div>
-        
+
         <div class="drawer-footer">
             <button type="button" class="btn btn-secondary" onclick="closeSolicitudDrawer()">
                 Cancelar
@@ -209,589 +213,606 @@
 </div>
 
 <style>
-/* Drawer Styles */
-.drawer-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 10000; /* Higher z-index to ensure it's on top */
-    display: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.drawer-overlay.active {
-    display: flex;
-    opacity: 1;
-}
-
-.drawer-container {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 500px;
-    height: 100vh;
-    background: white;
-    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
-    display: flex;
-    flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.drawer-overlay.active .drawer-container {
-    transform: translateX(0);
-}
-
-/* Improve header styling */
-.drawer-header {
-    padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: var(--verde-pacifico);
-    color: white;
-    min-height: 70px;
-}
-
-.drawer-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-}
-
-.btn-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.2s;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transform: scale(1.1);
-}
-
-/* Improve content area */
-.drawer-content {
-    flex: 1;
-    padding: 25px;
-    overflow-y: auto;
-    background: #fafafa;
-}
-
-.drawer-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.drawer-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-.drawer-content::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.drawer-content::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
-}
-
-/* Improve footer */
-.drawer-footer {
-    padding: 20px;
-    border-top: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    background: white;
-}
-
-.drawer-footer .btn {
-    padding: 10px 20px;
-    font-weight: 500;
-    border-radius: 6px;
-    transition: all 0.2s;
-}
-
-.drawer-footer .btn-primary {
-    background: var(--verde-pacifico);
-    border-color: var(--verde-pacifico);
-}
-
-.drawer-footer .btn-primary:hover {
-    background: #1e5f2a;
-    border-color: #1e5f2a;
-    transform: translateY(-1px);
-}
-
-.drawer-footer .btn-secondary {
-    background: #6c757d;
-    border-color: #6c757d;
-}
-
-.drawer-footer .btn-secondary:hover {
-    background: #5a6268;
-    border-color: #545b62;
-    transform: translateY(-1px);
-}
-
-/* Loading state */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid var(--verde-pacifico);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Form Sections */
-.form-section {
-    margin-bottom: 25px;
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.form-section-title {
-    color: var(--verde-pacifico);
-    font-weight: 600;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-/* Pipeline Locked Info */
-.locked-info {
-    background: #e8f5e8;
-    border: 1px solid #c3e6c3;
-    border-radius: 6px;
-    padding: 12px;
-    color: #2d5a2d;
-    font-weight: 500;
-}
-
-.locked-info i {
-    color: #28a745;
-}
-
-/* Search Components */
-.search-container {
-    position: relative;
-}
-
-.search-results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ddd;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 1000;
-    display: none;
-}
-
-.search-results.show {
-    display: block;
-}
-
-.search-result-item {
-    padding: 12px 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background-color 0.2s;
-}
-
-.search-result-item:hover {
-    background-color: #f8f9fa;
-}
-
-.search-result-item:last-child {
-    border-bottom: none;
-}
-
-.search-result-name {
-    font-weight: 600;
-    color: #333;
-}
-
-.search-result-details {
-    font-size: 0.875rem;
-    color: #666;
-    margin-top: 2px;
-}
-
-/* Selected Items */
-.selected-item {
-    margin-top: 10px;
-    background: #e8f5e8;
-    border: 1px solid #c3e6c3;
-    border-radius: 6px;
-    padding: 12px;
-}
-
-.selected-item-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-.selected-item-info {
-    flex: 1;
-}
-
-.selected-name {
-    display: block;
-    color: #2d5a2d;
-    font-weight: 600;
-}
-
-.selected-details {
-    display: block;
-    color: #5a7a5a;
-    font-size: 0.875rem;
-    margin-top: 2px;
-}
-
-.btn-remove {
-    background: none;
-    border: none;
-    color: #dc3545;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.btn-remove:hover {
-    background-color: rgba(220, 53, 69, 0.1);
-}
-
-/* Dynamic Fields */
-.campo-dinamico {
-    margin-bottom: 15px;
-}
-
-.campo-label {
-    display: block;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 6px;
-}
-
-.campo-required {
-    color: #dc3545;
-    margin-left: 3px;
-}
-
-/* Requisitos */
-.requisito-item {
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    padding: 15px;
-    transition: border-color 0.2s;
-}
-
-.requisito-item:hover {
-    border-color: var(--verde-pacifico);
-}
-
-.requisito-header {
-    margin-bottom: 12px;
-}
-
-.requisito-info {
-    flex: 1;
-}
-
-.requisito-nombre {
-    font-weight: 600;
-    color: #333;
-}
-
-.requisito-obligatorio {
-    color: #dc3545;
-    font-size: 0.875rem;
-    font-weight: normal;
-}
-
-.requisito-descripcion {
-    color: #666;
-    font-size: 0.875rem;
-    margin-top: 4px;
-}
-
-/* File Upload Components */
-.requisito-upload {
-    margin-top: 12px;
-}
-
-.file-upload-label {
-    display: inline-block;
-    padding: 8px 16px;
-    background: #f8f9fa;
-    border: 2px dashed #dee2e6;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #6c757d;
-    font-size: 0.875rem;
-    width: 100%;
-    text-align: center;
-}
-
-.file-upload-label:hover {
-    background: #e9ecef;
-    border-color: var(--verde-pacifico);
-    color: var(--verde-pacifico);
-}
-
-.file-upload-input {
-    display: none;
-}
-
-.file-upload-info {
-    margin-top: 6px;
-    text-align: center;
-}
-
-.file-selected {
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: #e8f5e8;
-    border: 1px solid #c3e6c3;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.file-selected .file-name {
-    flex: 1;
-    color: #2d5a2d;
-    font-size: 0.875rem;
-    margin-left: 8px;
-}
-
-.btn-remove-file {
-    background: none;
-    border: none;
-    color: #dc3545;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.btn-remove-file:hover {
-    background-color: rgba(220, 53, 69, 0.1);
-}
-
-/* Toast Notifications */
-.toast-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #28a745;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 10001;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    font-size: 0.875rem;
-    min-width: 300px;
-}
-
-.toast-notification.success {
-    background: #28a745;
-}
-
-.toast-notification.error {
-    background: #dc3545;
-}
-
-.toast-notification.warning {
-    background: #ffc107;
-    color: #212529;
-}
-
-.toast-notification.show {
-    transform: translateX(0);
-}
-
-/* Session Warning Banner */
-.session-warning-banner {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: #ffc107;
-    color: #212529;
-    padding: 10px 20px;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-/* Ensure motivo consulta section is hidden by default */
-#motivoConsultaSection {
-    display: none !important;
-}
-
-#motivoConsultaSection.show {
-    display: block !important;
-}
-
-/* Ensure como se entero section is hidden by default */
-#comoSeEnteroSection {
-    display: none !important;
-}
-
-#comoSeEnteroSection.show {
-    display: block !important;
-}
-
-.session-warning-content {
-    display: flex;
-    align-items: center;
-}
-
-.session-warning-content .btn {
-    padding: 4px 10px;
-    font-size: 0.875rem;
-}
-
+    /* Drawer Styles */
+    .drawer-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        /* Higher z-index to ensure it's on top */
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .drawer-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .drawer-container {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 500px;
+        height: 100vh;
+        background: white;
+        box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .drawer-overlay.active .drawer-container {
+        transform: translateX(0);
+    }
+
+    /* Improve header styling */
+    .drawer-header {
+        padding: 20px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--verde-pacifico);
+        color: white;
+        min-height: 70px;
+    }
+
+    .drawer-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-close:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        transform: scale(1.1);
+    }
+
+    /* Improve content area */
+    .drawer-content {
+        flex: 1;
+        padding: 25px;
+        overflow-y: auto;
+        background: #fafafa;
+    }
+
+    .drawer-content::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .drawer-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .drawer-content::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .drawer-content::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
+    }
+
+    /* Improve footer */
+    .drawer-footer {
+        padding: 20px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: white;
+    }
+
+    .drawer-footer .btn {
+        padding: 10px 20px;
+        font-weight: 500;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    .drawer-footer .btn-primary {
+        background: var(--verde-pacifico);
+        border-color: var(--verde-pacifico);
+    }
+
+    .drawer-footer .btn-primary:hover {
+        background: #1e5f2a;
+        border-color: #1e5f2a;
+        transform: translateY(-1px);
+    }
+
+    .drawer-footer .btn-secondary {
+        background: #6c757d;
+        border-color: #6c757d;
+    }
+
+    .drawer-footer .btn-secondary:hover {
+        background: #5a6268;
+        border-color: #545b62;
+        transform: translateY(-1px);
+    }
+
+    /* Loading state */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--verde-pacifico);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Form Sections */
+    .form-section {
+        margin-bottom: 25px;
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-section-title {
+        color: var(--verde-pacifico);
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    /* Pipeline Locked Info */
+    .locked-info {
+        background: #e8f5e8;
+        border: 1px solid #c3e6c3;
+        border-radius: 6px;
+        padding: 12px;
+        color: #2d5a2d;
+        font-weight: 500;
+    }
+
+    .locked-info i {
+        color: #28a745;
+    }
+
+    /* Search Components */
+    .search-container {
+        position: relative;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    .search-results.show {
+        display: block;
+    }
+
+    .search-result-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-result-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .search-result-details {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 2px;
+    }
+
+    /* Selected Items */
+    .selected-item {
+        margin-top: 10px;
+        background: #e8f5e8;
+        border: 1px solid #c3e6c3;
+        border-radius: 6px;
+        padding: 12px;
+    }
+
+    .selected-item-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .selected-item-info {
+        flex: 1;
+    }
+
+    .selected-name {
+        display: block;
+        color: #2d5a2d;
+        font-weight: 600;
+    }
+
+    .selected-details {
+        display: block;
+        color: #5a7a5a;
+        font-size: 0.875rem;
+        margin-top: 2px;
+    }
+
+    .btn-remove {
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+    .btn-remove:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    /* Dynamic Fields */
+    .campo-dinamico {
+        margin-bottom: 15px;
+    }
+
+    .campo-label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 6px;
+    }
+
+    .campo-required {
+        color: #dc3545;
+        margin-left: 3px;
+    }
+
+    /* Requisitos */
+    .requisito-item {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 15px;
+        transition: border-color 0.2s;
+    }
+
+    .requisito-item:hover {
+        border-color: var(--verde-pacifico);
+    }
+
+    .requisito-header {
+        margin-bottom: 12px;
+    }
+
+    .requisito-info {
+        flex: 1;
+    }
+
+    .requisito-nombre {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .requisito-obligatorio {
+        color: #dc3545;
+        font-size: 0.875rem;
+        font-weight: normal;
+    }
+
+    .requisito-descripcion {
+        color: #666;
+        font-size: 0.875rem;
+        margin-top: 4px;
+    }
+
+    /* File Upload Components */
+    .requisito-upload {
+        margin-top: 12px;
+    }
+
+    .file-upload-label {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #6c757d;
+        font-size: 0.875rem;
+        width: 100%;
+        text-align: center;
+    }
+
+    .file-upload-label:hover {
+        background: #e9ecef;
+        border-color: var(--verde-pacifico);
+        color: var(--verde-pacifico);
+    }
+
+    .file-upload-input {
+        display: none;
+    }
+
+    .file-upload-info {
+        margin-top: 6px;
+        text-align: center;
+    }
+
+    .file-selected {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #e8f5e8;
+        border: 1px solid #c3e6c3;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .file-selected .file-name {
+        flex: 1;
+        color: #2d5a2d;
+        font-size: 0.875rem;
+        margin-left: 8px;
+    }
+
+    .btn-remove-file {
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+
+    .btn-remove-file:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    /* Toast Notifications */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        font-size: 0.875rem;
+        min-width: 300px;
+    }
+
+    .toast-notification.success {
+        background: #28a745;
+    }
+
+    .toast-notification.error {
+        background: #dc3545;
+    }
+
+    .toast-notification.warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .toast-notification.show {
+        transform: translateX(0);
+    }
+
+    /* Session Warning Banner */
+    .session-warning-banner {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #ffc107;
+        color: #212529;
+        padding: 10px 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    /* Ensure motivo consulta section is hidden by default */
+    #motivoConsultaSection {
+        display: none !important;
+    }
+
+    #motivoConsultaSection.show {
+        display: block !important;
+    }
+
+    /* Ensure como se entero section is hidden by default */
+    #comoSeEnteroSection {
+        display: none !important;
+    }
+
+    #comoSeEnteroSection.show {
+        display: block !important;
+    }
+
+    /* Auto-populated field styling */
+    .auto-populated-field {
+        background-color: #f0f9f0 !important;
+        border-color: #c3e6c3 !important;
+    }
+
+    .auto-populated-field:focus {
+        background-color: #ffffff !important;
+        border-color: var(--verde-pacifico) !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
+
+    .session-warning-content {
+        display: flex;
+        align-items: center;
+    }
+
+    .session-warning-content .btn {
+        padding: 4px 10px;
+        font-size: 0.875rem;
+    }
 </style>
 
 <script>
-// Drawer Management - Functions defined in negocios.html to avoid conflicts
+    // Drawer Management - Functions defined in negocios.html to avoid conflicts
 
-// Search functionality - Functions defined in negocios.html to avoid conflicts
+    // Search functionality - Functions defined in negocios.html to avoid conflicts
 
-// Selection and clear functions defined in negocios.html to avoid conflicts
+    // Selection and clear functions defined in negocios.html to avoid conflicts
 
-// hideSearchResults function defined in negocios.html to avoid conflicts
+    // hideSearchResults function defined in negocios.html to avoid conflicts
 
-// Load form data based on pipeline - Function defined in negocios.html to avoid conflicts
+    // Load form data based on pipeline - Function defined in negocios.html to avoid conflicts
 
-// Render functions defined in negocios.html to avoid conflicts
+    // Render functions defined in negocios.html to avoid conflicts
 
-// Submit form and showSuccessMessage functions defined in negocios.html to avoid conflicts
+    // Submit form and showSuccessMessage functions defined in negocios.html to avoid conflicts
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    setupSearch();
-    setupSessionMonitoring();
-    
-    // Close drawer when clicking outside
-    document.getElementById('solicitudDrawer').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeSolicitudDrawer();
-        }
-    });
-});
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        setupSearch();
+        setupSessionMonitoring();
 
-// Session monitoring for drawer
-function setupSessionMonitoring() {
-    // Check session every 5 minutes
-    setInterval(checkDrawerSession, 5 * 60 * 1000);
-    
-    // Check session when drawer opens
-    document.addEventListener('drawerOpened', checkDrawerSession);
-}
-
-function checkDrawerSession() {
-    // Only check if drawer is open
-    const drawer = document.getElementById('solicitudDrawer');
-    if (!drawer || !drawer.classList.contains('active')) {
-        return;
-    }
-    
-    fetch('/workflow/api/debug-session/', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                throw new Error('Session expired');
+        // Close drawer when clicking outside
+        document.getElementById('solicitudDrawer').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeSolicitudDrawer();
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON - session timeout');
-        }
-        
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            console.log('✅ Session check passed for drawer');
-        } else {
-            throw new Error('Session check failed');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Session check failed for drawer:', error);
-        
-        // Show session warning in drawer
-        showSessionWarning();
+        });
     });
-}
 
-function showSessionWarning() {
-    // Create warning banner
-    const warningBanner = document.createElement('div');
-    warningBanner.className = 'session-warning-banner';
-    warningBanner.innerHTML = `
+    // Session monitoring for drawer
+    function setupSessionMonitoring() {
+        // Check session every 5 minutes
+        setInterval(checkDrawerSession, 5 * 60 * 1000);
+
+        // Check session when drawer opens
+        document.addEventListener('drawerOpened', checkDrawerSession);
+    }
+
+    function checkDrawerSession() {
+        // Only check if drawer is open
+        const drawer = document.getElementById('solicitudDrawer');
+        if (!drawer || !drawer.classList.contains('active')) {
+            return;
+        }
+
+        fetch('/workflow/api/debug-session/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Session expired');
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response is not JSON - session timeout');
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Session check passed for drawer');
+                } else {
+                    throw new Error('Session check failed');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Session check failed for drawer:', error);
+
+                // Show session warning in drawer
+                showSessionWarning();
+            });
+    }
+
+    function showSessionWarning() {
+        // Create warning banner
+        const warningBanner = document.createElement('div');
+        warningBanner.className = 'session-warning-banner';
+        warningBanner.innerHTML = `
         <div class="session-warning-content">
             <i class="fas fa-exclamation-triangle me-2"></i>
             <span>Tu sesión está por expirar. Guarda tu trabajo.</span>
@@ -800,49 +821,97 @@ function showSessionWarning() {
             </button>
         </div>
     `;
-    
-    // Add to drawer
-    const drawerContent = document.querySelector('.drawer-content');
-    drawerContent.insertBefore(warningBanner, drawerContent.firstChild);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (warningBanner.parentNode) {
-            warningBanner.remove();
-        }
-    }, 10000);
-}
 
-function extendSession() {
-    // Make a request to extend the session
-    fetch('/workflow/api/debug-session/', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            // Remove warning banner
-            const warningBanner = document.querySelector('.session-warning-banner');
-            if (warningBanner) {
+        // Add to drawer
+        const drawerContent = document.querySelector('.drawer-content');
+        drawerContent.insertBefore(warningBanner, drawerContent.firstChild);
+
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (warningBanner.parentNode) {
                 warningBanner.remove();
             }
-            
-            // Show success message
-            showSuccessMessage('Sesión extendida exitosamente');
-        } else {
-            throw new Error('Failed to extend session');
-        }
-    })
-    .catch(error => {
-        console.error('Error extending session:', error);
-        showSuccessMessage('Error al extender sesión. Guarda tu trabajo.');
-    });
-}
+        }, 10000);
+    }
 
-// Global function to open drawer with context - defined in negocios.html to avoid conflicts
+    function extendSession() {
+        // Make a request to extend the session
+        fetch('/workflow/api/debug-session/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Remove warning banner
+                    const warningBanner = document.querySelector('.session-warning-banner');
+                    if (warningBanner) {
+                        warningBanner.remove();
+                    }
+
+                    // Show success message
+                    showSuccessMessage('Sesión extendida exitosamente');
+                } else {
+                    throw new Error('Failed to extend session');
+                }
+            })
+            .catch(error => {
+                console.error('Error extending session:', error);
+                showSuccessMessage('Error al extender sesión. Guarda tu trabajo.');
+            });
+    }
+
+    // Function to auto-populate APC fields when client is selected
+    function autoPopulateApcFields(clienteData) {
+        console.log('🔧 autoPopulateApcFields called with:', clienteData);
+
+        const apcTipoDocumento = document.getElementById('apcTipoDocumento');
+        const apcNoCedula = document.getElementById('apcNoCedula');
+
+        if (clienteData && clienteData.cedulaCliente && apcNoCedula) {
+            // Auto-populate the document number with the client's cedula
+            apcNoCedula.value = clienteData.cedulaCliente;
+
+            // Add visual indicator for auto-populated field
+            apcNoCedula.classList.add('auto-populated-field');
+            apcNoCedula.setAttribute('data-auto-populated', 'true');
+            apcNoCedula.placeholder = 'Auto-completado desde cliente seleccionado';
+
+            // Auto-select "Cédula" as document type if not already selected
+            if (apcTipoDocumento && !apcTipoDocumento.value) {
+                apcTipoDocumento.value = 'cedula';
+            }
+
+            console.log('✅ APC fields auto-populated:', {
+                tipo: apcTipoDocumento?.value,
+                numero: apcNoCedula.value
+            });
+        } else {
+            console.log('⚠️ No client data available for APC auto-population');
+        }
+    }
+
+    // Function to clear APC fields when client is cleared
+    function clearApcFields() {
+        console.log('🔧 clearApcFields called');
+
+        const apcTipoDocumento = document.getElementById('apcTipoDocumento');
+        const apcNoCedula = document.getElementById('apcNoCedula');
+
+        if (apcTipoDocumento) apcTipoDocumento.value = '';
+        if (apcNoCedula) {
+            apcNoCedula.value = '';
+            apcNoCedula.classList.remove('auto-populated-field');
+            apcNoCedula.removeAttribute('data-auto-populated');
+            apcNoCedula.placeholder = 'Ingrese el número de cédula o pasaporte';
+        }
+
+        console.log('✅ APC fields cleared');
+    }
+
+    // Global function to open drawer with context - defined in negocios.html to avoid conflicts
 
 </script>
