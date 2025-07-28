@@ -156,6 +156,17 @@ urlpatterns = [
     path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),
     path('asociar-entrevista/', views_workflow.asociar_entrevista, name='asociar_entrevista'),
     
+    # Debida Diligencia API URLs
+    path('api/debida-diligencia/status/<int:solicitud_id>/', views_workflow.api_debida_diligencia_status, name='api_debida_diligencia_status'),
+    path('api/debida-diligencia/solicitar/<int:solicitud_id>/', views_workflow.api_debida_diligencia_solicitar, name='api_debida_diligencia_solicitar'),
+    path('api/debida-diligencia/solicitar-makito/<int:solicitud_id>/', views_workflow.api_debida_diligencia_solicitar_makito, name='api_debida_diligencia_solicitar_makito'),
+    path('api/debida-diligencia/upload/<int:solicitud_id>/', views_workflow.api_debida_diligencia_upload, name='api_debida_diligencia_upload'),
+    path('api/debida-diligencia-tracking/', views_workflow.api_debida_diligencia_tracking, name='api_debida_diligencia_tracking'),
+    
+    # Makito RPA API URLs for Debida Diligencia
+    path('api/makito/debida-diligencia/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_debida_diligencia_update_status, name='api_makito_debida_diligencia_update_status'),
+    path('api/makito/debida-diligencia/upload/<str:solicitud_codigo>/', views_workflow.api_makito_debida_diligencia_upload, name='api_makito_debida_diligencia_upload'),
+    
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
 ]

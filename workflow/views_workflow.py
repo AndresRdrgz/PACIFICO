@@ -267,6 +267,14 @@ def nueva_solicitud(request):
             apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
             apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
             
+            # SURA Makito fields
+            cotizar_sura_makito = request.POST.get('cotizar_sura_makito') == '1'
+            sura_primer_nombre = request.POST.get('sura_primer_nombre', '') if cotizar_sura_makito else None
+            sura_segundo_nombre = request.POST.get('sura_segundo_nombre', '') if cotizar_sura_makito else None
+            sura_primer_apellido = request.POST.get('sura_primer_apellido', '') if cotizar_sura_makito else None
+            sura_segundo_apellido = request.POST.get('sura_segundo_apellido', '') if cotizar_sura_makito else None
+            sura_no_documento = request.POST.get('sura_no_documento', '') if cotizar_sura_makito else None
+            
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
                 pipeline=pipeline,
@@ -279,7 +287,13 @@ def nueva_solicitud(request):
                 como_se_entero=como_se_entero if como_se_entero else None,
                 descargar_apc_makito=descargar_apc_makito,
                 apc_no_cedula=apc_no_cedula,
-                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None
+                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None,
+                cotizar_sura_makito=cotizar_sura_makito,
+                sura_primer_nombre=sura_primer_nombre,
+                sura_segundo_nombre=sura_segundo_nombre,
+                sura_primer_apellido=sura_primer_apellido,
+                sura_segundo_apellido=sura_segundo_apellido,
+                sura_no_documento=sura_no_documento
             )
             
             # Crear historial inicial
@@ -337,6 +351,10 @@ def nueva_solicitud(request):
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
                 enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+            
+            # Send SURA email if requested
+            if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
+                enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request)
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2689,6 +2707,14 @@ def nueva_solicitud(request):
             apc_no_cedula = request.POST.get('apc_no_cedula', '') if descargar_apc_makito else None
             apc_tipo_documento = request.POST.get('apc_tipo_documento', '') if descargar_apc_makito else None
             
+            # SURA Makito fields
+            cotizar_sura_makito = request.POST.get('cotizar_sura_makito') == '1'
+            sura_primer_nombre = request.POST.get('sura_primer_nombre', '') if cotizar_sura_makito else None
+            sura_segundo_nombre = request.POST.get('sura_segundo_nombre', '') if cotizar_sura_makito else None
+            sura_primer_apellido = request.POST.get('sura_primer_apellido', '') if cotizar_sura_makito else None
+            sura_segundo_apellido = request.POST.get('sura_segundo_apellido', '') if cotizar_sura_makito else None
+            sura_no_documento = request.POST.get('sura_no_documento', '') if cotizar_sura_makito else None
+            
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
                 pipeline=pipeline,
@@ -2701,7 +2727,13 @@ def nueva_solicitud(request):
                 como_se_entero=como_se_entero if como_se_entero else None,
                 descargar_apc_makito=descargar_apc_makito,
                 apc_no_cedula=apc_no_cedula,
-                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None
+                apc_tipo_documento=apc_tipo_documento if apc_tipo_documento else None,
+                cotizar_sura_makito=cotizar_sura_makito,
+                sura_primer_nombre=sura_primer_nombre,
+                sura_segundo_nombre=sura_segundo_nombre,
+                sura_primer_apellido=sura_primer_apellido,
+                sura_segundo_apellido=sura_segundo_apellido,
+                sura_no_documento=sura_no_documento
             )
             
             # Crear historial inicial
@@ -2759,6 +2791,10 @@ def nueva_solicitud(request):
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
                 enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+            
+            # Send SURA email if requested
+            if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
+                enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request)
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -5510,7 +5546,7 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         ]
         
         # Obtener nombre del cliente usando las propiedades del modelo
-        cliente_nombre = solicitud.cliente_nombre or "Cliente no asignado"
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
         
         # Obtener correo del solicitante
         correo_solicitante = solicitud.creada_por.email or "No especificado"
@@ -5645,6 +5681,829 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo APC para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request=None):
+    """
+    Función para enviar correo automático cuando se solicita cotización SURA con Makito.
+    """
+    try:
+        # Destinatarios específicos para SURA
+        destinatarios = [
+            "makito@fpacifico.com",
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Obtener correo del solicitante
+        correo_solicitante = solicitud.creada_por.email or "No especificado"
+        
+        # Crear el asunto específico para SURA
+        subject = f"workflowCotSURA - {cliente_nombre} - {sura_no_documento}"
+        
+        # Obtener la URL base dinámicamente
+        base_url = get_site_url(request)
+        print(f"🔍 DEBUG: Base URL: {base_url}")
+        
+        # Mensaje de texto plano
+        text_content = f"""
+        Solicitud de Cotización SURA con Makito
+        
+        Hola,
+        
+        Se ha solicitado la cotización SURA para la siguiente solicitud:
+        
+        • Código de Solicitud: {solicitud.codigo}
+        • Cliente: {cliente_nombre}
+        • Primer Nombre: {sura_primer_nombre}
+        • Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+        • Primer Apellido: {sura_primer_apellido}
+        • Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+        • Número de Documento: {sura_no_documento}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Correo Solicitante: {correo_solicitante}
+        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        ==========================================
+        DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
+        ==========================================
+        <codigoSolicitudvar>{solicitud.codigo}</codigoSolicitudvar>
+        <numeroDocumentovar>{sura_no_documento}</numeroDocumentovar>
+        <primerNombrevar>{sura_primer_nombre}</primerNombrevar>
+        <segundoNombrevar>{solicitud.sura_segundo_nombre or ''}</segundoNombrevar>
+        <primerApellidovar>{sura_primer_apellido}</primerApellidovar>
+        <segundoApellidovar>{solicitud.sura_segundo_apellido or ''}</segundoApellidovar>
+        <clientevar>{cliente_nombre}</clientevar>
+        
+        Información para SURA:
+        Primer Nombre: {sura_primer_nombre}
+        Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+        Primer Apellido: {sura_primer_apellido}
+        Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+        Número de Documento: {sura_no_documento}
+        
+        ==========================================
+        INSTRUCCIONES PARA MAKITO RPA
+        ==========================================
+        
+        Para actualizar el estado de esta solicitud, utiliza las siguientes APIs:
+        
+        1. MARCAR COMO "EN PROGRESO":
+           URL: {base_url}/workflow/api/sura/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "in_progress",
+               "observaciones": "Iniciando procesamiento de cotización SURA"
+           }}
+        
+        2. MARCAR COMO "COMPLETADO" Y SUBIR ARCHIVO:
+           URL: {base_url}/workflow/api/sura/upload-file/{solicitud.codigo}/
+           Método: POST
+           Content-Type: multipart/form-data
+           Form Data:
+           - sura_file: [archivo PDF de la cotización]
+           - observaciones: "Cotización SURA generada exitosamente"
+        
+        3. MARCAR COMO "ERROR" (si es necesario):
+           URL: {base_url}/workflow/api/sura/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "error",
+               "observaciones": "Descripción del error encontrado"
+           }}
+        
+        ==========================================
+        FLUJO RECOMENDADO:
+        ==========================================
+        1. Al iniciar el procesamiento → Usar API #1 con status "in_progress"
+        2. Al completar exitosamente → Usar API #2 para subir el archivo
+        3. En caso de error → Usar API #3 con status "error"
+        
+        ==========================================
+        NOTAS IMPORTANTES:
+        ==========================================
+        • El archivo debe ser un PDF válido
+        • Tamaño máximo del archivo: 10MB
+        • El sistema automáticamente marcará la solicitud como completada
+        • Se enviará una notificación al solicitante cuando se complete
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        # Actualizar el estado SURA después de enviar el correo exitosamente
+        from django.utils import timezone
+        solicitud.sura_status = 'pending'
+        solicitud.sura_fecha_solicitud = timezone.now()
+        solicitud.save(update_fields=['sura_status', 'sura_fecha_solicitud'])
+        
+        print(f"✅ Correo SURA enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"✅ Estado SURA actualizado a 'pending'")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo SURA para solicitud {solicitud.codigo}: {str(e)}")
+
+# ==========================================
+# DEBIDA DILIGENCIA API VIEWS
+# ==========================================
+
+@login_required
+def api_debida_diligencia_status(request, solicitud_id):
+    """
+    API para obtener el estado de debida diligencia de una solicitud
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            # Verificar si el usuario tiene permisos para ver esta solicitud
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para ver esta solicitud'
+                }, status=403)
+        
+        # Preparar datos de respuesta
+        data = {
+            'success': True,
+            'estado': solicitud.debida_diligencia_status,
+            'fecha_solicitud': solicitud.diligencia_fecha_solicitud.isoformat() if solicitud.diligencia_fecha_solicitud else None,
+            'fecha_completado': solicitud.diligencia_fecha_completado.isoformat() if solicitud.diligencia_fecha_completado else None,
+            'comentarios': solicitud.diligencia_observaciones or '',
+            'busqueda_google': {
+                'archivo': solicitud.diligencia_busqueda_google.url if solicitud.diligencia_busqueda_google else None,
+                'fecha_subida': solicitud.diligencia_google_fecha_subida.isoformat() if solicitud.diligencia_google_fecha_subida else None
+            },
+            'busqueda_registro_publico': {
+                'archivo': solicitud.diligencia_busqueda_registro_publico.url if solicitud.diligencia_busqueda_registro_publico else None,
+                'fecha_subida': solicitud.diligencia_registro_publico_fecha_subida.isoformat() if solicitud.diligencia_registro_publico_fecha_subida else None
+            }
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_status: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+@login_required
+def api_debida_diligencia_solicitar(request, solicitud_id):
+    """
+    API para solicitar debida diligencia para una solicitud
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        # Verificar que no esté ya en proceso
+        if solicitud.debida_diligencia_status in ['makito_processing', 'completado']:
+            return JsonResponse({
+                'success': False,
+                'error': 'La debida diligencia ya está en proceso o completada'
+            }, status=400)
+        
+        # Actualizar el estado
+        solicitud.debida_diligencia_status = 'pendiente'
+        solicitud.diligencia_fecha_solicitud = timezone.now()
+        solicitud.save(update_fields=['debida_diligencia_status', 'diligencia_fecha_solicitud'])
+        
+        # Crear entrada en el historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            accion='debida_diligencia_solicitada',
+            detalles='Debida diligencia solicitada',
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Debida diligencia solicitada exitosamente'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_solicitar: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+@login_required
+def api_debida_diligencia_solicitar_makito(request, solicitud_id):
+    """
+    API para solicitar a Makito RPA generar documentos de debida diligencia
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        tipo_documento = data.get('tipo_documento')
+        
+        if not tipo_documento or tipo_documento not in ['busqueda_google', 'busqueda_registro_publico']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de documento inválido'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        # Actualizar el estado a processing si no está ya completado
+        if solicitud.debida_diligencia_status not in ['completado']:
+            solicitud.debida_diligencia_status = 'makito_processing'
+            if not solicitud.diligencia_fecha_solicitud:
+                solicitud.diligencia_fecha_solicitud = timezone.now()
+            solicitud.diligencia_fecha_inicio = timezone.now()
+            solicitud.save(update_fields=['debida_diligencia_status', 'diligencia_fecha_solicitud', 'diligencia_fecha_inicio'])
+        
+        # Enviar correo a Makito RPA
+        enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request)
+        
+        # Crear entrada en el historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            accion='debida_diligencia_makito_solicitada',
+            detalles=f'Solicitado a Makito RPA: {tipo_documento.replace("_", " ").title()}',
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud enviada a Makito RPA para {tipo_documento.replace("_", " ")}'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_solicitar_makito: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+@login_required
+def api_debida_diligencia_upload(request, solicitud_id):
+    """
+    API para subir archivos de debida diligencia manualmente o por Makito
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        archivo = request.FILES.get('archivo')
+        tipo_documento = request.POST.get('tipo_documento')
+        observaciones = request.POST.get('observaciones', '')
+        
+        if not archivo:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionó archivo'
+            }, status=400)
+        
+        if not tipo_documento or tipo_documento not in ['busqueda_google', 'busqueda_registro_publico']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de documento inválido'
+            }, status=400)
+        
+        # Validar que sea PDF
+        if not archivo.name.lower().endswith('.pdf'):
+            return JsonResponse({
+                'success': False,
+                'error': 'Solo se permiten archivos PDF'
+            }, status=400)
+        
+        # Validar tamaño (10MB máximo)
+        if archivo.size > 10 * 1024 * 1024:
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo no puede ser mayor a 10MB'
+            }, status=400)
+        
+        # Guardar el archivo según el tipo
+        if tipo_documento == 'busqueda_google':
+            solicitud.diligencia_busqueda_google = archivo
+            solicitud.diligencia_google_fecha_subida = timezone.now()
+        elif tipo_documento == 'busqueda_registro_publico':
+            solicitud.diligencia_busqueda_registro_publico = archivo
+            solicitud.diligencia_registro_publico_fecha_subida = timezone.now()
+        
+        # Actualizar observaciones si se proporcionan
+        if observaciones:
+            solicitud.diligencia_observaciones = observaciones
+        
+        # Verificar si ambos archivos están subidos para marcar como completado
+        if (solicitud.diligencia_busqueda_google and 
+            solicitud.diligencia_busqueda_registro_publico):
+            solicitud.debida_diligencia_status = 'completado'
+            solicitud.diligencia_fecha_completado = timezone.now()
+        
+        solicitud.save()
+        
+        # Crear entrada en el historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            accion='debida_diligencia_archivo_subido',
+            detalles=f'Archivo subido: {tipo_documento.replace("_", " ").title()}',
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Archivo de {tipo_documento.replace("_", " ")} subido exitosamente'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_upload: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+# Makito RPA API endpoints for debida diligencia
+@csrf_exempt
+def api_makito_debida_diligencia_update_status(request, solicitud_codigo):
+    """
+    API para que Makito RPA actualice el estado de debida diligencia
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        status = data.get('status')
+        observaciones = data.get('observaciones', '')
+        
+        if not status or status not in ['in_progress', 'completed', 'error']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Estado inválido'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, codigo=solicitud_codigo)
+        
+        # Mapear estados
+        status_mapping = {
+            'in_progress': 'makito_processing',
+            'completed': 'completado',
+            'error': 'error'
+        }
+        
+        solicitud.debida_diligencia_status = status_mapping[status]
+        solicitud.diligencia_observaciones = observaciones
+        
+        if status == 'in_progress':
+            solicitud.diligencia_fecha_inicio = timezone.now()
+        elif status == 'completed':
+            solicitud.diligencia_fecha_completado = timezone.now()
+        
+        solicitud.save()
+        
+        # Crear entrada en el historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            accion='debida_diligencia_makito_status_update',
+            detalles=f'Makito RPA actualizó estado a: {status}. Observaciones: {observaciones}',
+            usuario=None  # Sistema automático
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Estado actualizado correctamente',
+            'new_status': solicitud.debida_diligencia_status
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_makito_debida_diligencia_update_status: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+@csrf_exempt
+def api_makito_debida_diligencia_upload(request, solicitud_codigo):
+    """
+    API para que Makito RPA suba archivos de debida diligencia
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, codigo=solicitud_codigo)
+        
+        busqueda_google = request.FILES.get('busqueda_google')
+        busqueda_registro_publico = request.FILES.get('busqueda_registro_publico')
+        observaciones = request.POST.get('observaciones', '')
+        
+        if not busqueda_google and not busqueda_registro_publico:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se proporcionaron archivos'
+            }, status=400)
+        
+        # Validar y guardar archivos
+        if busqueda_google:
+            if not busqueda_google.name.lower().endswith('.pdf'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Búsqueda Google debe ser un archivo PDF'
+                }, status=400)
+            solicitud.diligencia_busqueda_google = busqueda_google
+            solicitud.diligencia_google_fecha_subida = timezone.now()
+        
+        if busqueda_registro_publico:
+            if not busqueda_registro_publico.name.lower().endswith('.pdf'):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Búsqueda Registro Público debe ser un archivo PDF'
+                }, status=400)
+            solicitud.diligencia_busqueda_registro_publico = busqueda_registro_publico
+            solicitud.diligencia_registro_publico_fecha_subida = timezone.now()
+        
+        # Actualizar observaciones
+        if observaciones:
+            solicitud.diligencia_observaciones = observaciones
+        
+        # Marcar como completado si ambos archivos están presentes
+        if (solicitud.diligencia_busqueda_google and 
+            solicitud.diligencia_busqueda_registro_publico):
+            solicitud.debida_diligencia_status = 'completado'
+            solicitud.diligencia_fecha_completado = timezone.now()
+        
+        solicitud.save()
+        
+        # Crear entrada en el historial
+        archivos_subidos = []
+        if busqueda_google:
+            archivos_subidos.append('Búsqueda Google')
+        if busqueda_registro_publico:
+            archivos_subidos.append('Búsqueda Registro Público')
+        
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            accion='debida_diligencia_makito_upload',
+            detalles=f'Makito RPA subió archivos: {", ".join(archivos_subidos)}. Observaciones: {observaciones}',
+            usuario=None  # Sistema automático
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Archivos subidos correctamente',
+            'status': solicitud.debida_diligencia_status
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_makito_debida_diligencia_upload: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
+def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=None):
+    """
+    Función para enviar correo automático a Makito RPA para debida diligencia
+    """
+    try:
+        import ssl
+        
+        # Destinatarios específicos para Debida Diligencia
+        destinatarios = [
+            "makito@fpacifico.com",
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
+        
+        # Obtener nombre del cliente
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Obtener número de documento del cliente
+        no_documento = ""
+        if solicitud.cliente:
+            no_documento = solicitud.cliente.numeroDocumento or solicitud.cliente_cedula or ""
+        elif solicitud.cliente_cedula:
+            no_documento = solicitud.cliente_cedula
+        
+        # Obtener correo del solicitante
+        correo_solicitante = solicitud.creada_por.email or "No especificado"
+        
+        # Crear el asunto específico para Debida Diligencia
+        tipo_legible = tipo_documento.replace('_', ' ').title()
+        subject = f"workflowDiligencia - {cliente_nombre} - {tipo_legible}"
+        
+        # Obtener la URL base dinámicamente
+        base_url = get_site_url(request)
+        
+        # Mensaje de texto plano
+        text_content = f"""
+        Solicitud de Debida Diligencia con Makito RPA
+        
+        Hola,
+        
+        Se ha solicitado generar documentos de debida diligencia para la siguiente solicitud:
+        
+        • Código de Solicitud: {solicitud.codigo}
+        • Cliente: {cliente_nombre}
+        • Número de Documento: {no_documento}
+        • Tipo de Documento Solicitado: {tipo_legible}
+        • Pipeline: {solicitud.pipeline.nombre}
+        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        • Correo Solicitante: {correo_solicitante}
+        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        ==========================================
+        DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
+        ==========================================
+        codigo solicitud: <codVariable{solicitud.codigo}cod>
+        tipo documento: <tipodocVariable{tipo_documento}tipodoc>
+        numero documento: <nodocVariable{no_documento}nodoc>
+        cliente: <nombreVariable{cliente_nombre}nombre>
+        
+        Información para Debida Diligencia:
+        Tipo de documento a generar: {tipo_legible}
+        Número de documento del cliente: {no_documento}
+        
+        ==========================================
+        INSTRUCCIONES PARA MAKITO RPA
+        ==========================================
+        
+        Para actualizar el estado de esta solicitud, utiliza las siguientes APIs:
+        
+        1. MARCAR COMO "EN PROGRESO":
+           URL: {base_url}/workflow/api/makito/debida-diligencia/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "in_progress",
+               "observaciones": "Iniciando procesamiento de debida diligencia"
+           }}
+        
+        2. SUBIR ARCHIVOS COMPLETADOS:
+           URL: {base_url}/workflow/api/makito/debida-diligencia/upload/{solicitud.codigo}/
+           Método: POST
+           Content-Type: multipart/form-data
+           Form Data:
+           - busqueda_google: [archivo PDF de búsqueda en Google] (opcional)
+           - busqueda_registro_publico: [archivo PDF de búsqueda en Registro Público] (opcional)
+           - observaciones: "Archivos generados exitosamente"
+        
+        3. MARCAR COMO "ERROR" (si es necesario):
+           URL: {base_url}/workflow/api/makito/debida-diligencia/update-status/{solicitud.codigo}/
+           Método: POST
+           Content-Type: application/json
+           Body:
+           {{
+               "status": "error",
+               "observaciones": "Descripción del error encontrado"
+           }}
+        
+        ==========================================
+        FLUJO RECOMENDADO:
+        ==========================================
+        1. Al iniciar el procesamiento → Usar API #1 con status "in_progress"
+        2. Al completar exitosamente → Usar API #2 para subir archivos
+        3. En caso de error → Usar API #3 con status "error"
+        
+        ==========================================
+        NOTAS IMPORTANTES:
+        ==========================================
+        • Los archivos deben ser PDF válidos
+        • Tamaño máximo por archivo: 10MB
+        • Se pueden subir uno o ambos archivos según disponibilidad
+        • El sistema marcará automáticamente como completado cuando ambos archivos estén presentes
+        • Se enviará una notificación al solicitante cuando se complete
+        
+        Saludos,
+        Sistema de Workflow - Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        print(f"✅ Correo de debida diligencia enviado correctamente para solicitud {solicitud.codigo}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de debida diligencia para solicitud {solicitud.codigo}: {str(e)}")
+
+@login_required
+def api_debida_diligencia_tracking(request):
+    """
+    API para obtener datos de tracking de debida diligencia
+    """
+    try:
+        # Obtener parámetros de filtrado
+        status_filter = request.GET.get('status', '')
+        fecha_desde = request.GET.get('fecha_desde', '')
+        fecha_hasta = request.GET.get('fecha_hasta', '')
+        
+        # Construir queryset base - solo solicitudes con debida diligencia iniciada
+        solicitudes = Solicitud.objects.exclude(
+            debida_diligencia_status='no_iniciado'
+        ).select_related(
+            'pipeline', 'etapa_actual', 'creada_por', 'asignada_a', 'cliente'
+        ).order_by('-diligencia_fecha_solicitud')
+        
+        # Aplicar filtros
+        if status_filter:
+            solicitudes = solicitudes.filter(debida_diligencia_status=status_filter)
+        
+        if fecha_desde:
+            try:
+                fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+                solicitudes = solicitudes.filter(diligencia_fecha_solicitud__date__gte=fecha_desde_obj)
+            except ValueError:
+                pass
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+                solicitudes = solicitudes.filter(diligencia_fecha_solicitud__date__lte=fecha_hasta_obj)
+            except ValueError:
+                pass
+        
+        # Serializar datos
+        solicitudes_data = []
+        for solicitud in solicitudes:
+            # Obtener nombre del cliente
+            cliente_nombre = ""
+            if solicitud.cliente:
+                cliente_nombre = f"{solicitud.cliente.nombreCliente or ''}"
+            elif solicitud.cliente_nombre:
+                cliente_nombre = solicitud.cliente_nombre
+            else:
+                cliente_nombre = "Cliente no asignado"
+            
+            # Obtener nombre del usuario que creó la solicitud
+            creada_por_nombre = ""
+            if solicitud.creada_por:
+                creada_por_nombre = solicitud.creada_por.get_full_name() or solicitud.creada_por.username
+            
+            solicitud_data = {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente_nombre,
+                'pipeline_nombre': solicitud.pipeline.nombre if solicitud.pipeline else 'N/A',
+                'etapa_actual_nombre': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'N/A',
+                'debida_diligencia_status': solicitud.debida_diligencia_status,
+                'diligencia_fecha_solicitud': solicitud.diligencia_fecha_solicitud.isoformat() if solicitud.diligencia_fecha_solicitud else None,
+                'diligencia_fecha_inicio': solicitud.diligencia_fecha_inicio.isoformat() if solicitud.diligencia_fecha_inicio else None,
+                'diligencia_fecha_completado': solicitud.diligencia_fecha_completado.isoformat() if solicitud.diligencia_fecha_completado else None,
+                'diligencia_observaciones': solicitud.diligencia_observaciones or '',
+                'diligencia_busqueda_google': solicitud.diligencia_busqueda_google.url if solicitud.diligencia_busqueda_google else None,
+                'diligencia_busqueda_registro_publico': solicitud.diligencia_busqueda_registro_publico.url if solicitud.diligencia_busqueda_registro_publico else None,
+                'diligencia_google_fecha_subida': solicitud.diligencia_google_fecha_subida.isoformat() if solicitud.diligencia_google_fecha_subida else None,
+                'diligencia_registro_publico_fecha_subida': solicitud.diligencia_registro_publico_fecha_subida.isoformat() if solicitud.diligencia_registro_publico_fecha_subida else None,
+                'creada_por_nombre': creada_por_nombre,
+                'fecha_creacion': solicitud.fecha_creacion.isoformat() if solicitud.fecha_creacion else None
+            }
+            solicitudes_data.append(solicitud_data)
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes': solicitudes_data,
+            'total': len(solicitudes_data)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_tracking: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
 
 
 @login_required
@@ -9713,24 +10572,69 @@ def apc_tracking_view(request):
     """
     Vista para mostrar el tracking de solicitudes APC pendientes con Makito
     """
-    try:
-        # Obtener todas las solicitudes que tienen APC habilitado
-        solicitudes_apc = Solicitud.objects.filter(
-            descargar_apc_makito=True
-        ).select_related(
-            'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-        ).order_by('-apc_fecha_solicitud')
-        
-        context = {
-            'solicitudes_apc': solicitudes_apc,
-            'title': 'Tracking APC Makito',
-        }
-        
-        return render(request, 'workflow/apc_tracking.html', context)
-        
-    except Exception as e:
-        messages.error(request, f'Error al cargar el tracking de APC: {str(e)}')
-        return redirect('workflow:bandeja_general')
+    # Obtener todas las solicitudes que tienen APC habilitado
+    solicitudes_apc = Solicitud.objects.filter(
+        descargar_apc_makito=True
+    ).select_related(
+        'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+    ).order_by('-apc_fecha_solicitud')
+    
+    context = {
+        'solicitudes_apc': solicitudes_apc,
+        'title': 'Tracking APC Makito',
+        'tracking_type': 'apc',
+    }
+    
+    return render(request, 'workflow/makito_tracking.html', context)
+
+
+@login_required
+def makito_tracking_view(request):
+    """
+    Vista unificada para mostrar el tracking de solicitudes APC y SURA con Makito
+    """
+    # Obtener todas las solicitudes que tienen APC o SURA habilitado
+    solicitudes_apc = Solicitud.objects.filter(
+        descargar_apc_makito=True
+    ).select_related(
+        'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+    ).order_by('-apc_fecha_solicitud')
+    
+    solicitudes_sura = Solicitud.objects.filter(
+        cotizar_sura_makito=True
+    ).select_related(
+        'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+    ).order_by('-sura_fecha_solicitud')
+    
+    context = {
+        'solicitudes_apc': solicitudes_apc,
+        'solicitudes_sura': solicitudes_sura,
+        'title': 'Tracking Solicitudes Makito',
+        'tracking_type': 'unified',
+    }
+    
+    return render(request, 'workflow/makito_tracking.html', context)
+
+
+@login_required
+def sura_tracking_view(request):
+    """
+    Vista para mostrar el tracking de cotizaciones SURA con Makito
+    """
+    # Obtener todas las solicitudes que tienen SURA habilitado
+    solicitudes_sura = Solicitud.objects.filter(
+        cotizar_sura_makito=True
+    ).select_related(
+        'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+    ).order_by('-sura_fecha_solicitud')
+    
+    context = {
+        'solicitudes_sura': solicitudes_sura,
+        'title': 'Tracking SURA Makito',
+        'tracking_type': 'sura',
+    }
+    
+    return render(request, 'workflow/makito_tracking.html', context)
 
 
 @csrf_exempt

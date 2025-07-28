@@ -169,6 +169,60 @@
                     </div>
                 </div>
 
+                <!-- Cotización SURA con Makito -->
+                <div id="suraMakitoSection" class="form-section" style="display: none;">
+                    <h6 class="form-section-title">
+                        <i class="fas fa-file-contract me-2"></i>
+                        Cotización SURA con Makito
+                    </h6>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="cotizarSuraMakito"
+                                name="cotizar_sura_makito" value="1">
+                            <label class="form-check-label" for="cotizarSuraMakito">
+                                Solicitar cotización póliza SURA
+                            </label>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Al activar esta opción, se enviará una solicitud automática para cotizar póliza SURA
+                        </small>
+                    </div>
+
+                    <!-- Campos adicionales para SURA (ocultos por defecto) -->
+                    <div id="suraCamposAdicionales" style="display: none;">
+                        <div class="form-group mt-3">
+                            <label for="suraPrimerNombre" class="form-label">Primer nombre</label>
+                            <input type="text" id="suraPrimerNombre" name="sura_primer_nombre" class="form-control"
+                                placeholder="Ingrese el primer nombre del cliente">
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="suraSegundoNombre" class="form-label">Segundo nombre</label>
+                            <input type="text" id="suraSegundoNombre" name="sura_segundo_nombre" class="form-control"
+                                placeholder="Ingrese el segundo nombre del cliente (opcional)">
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="suraPrimerApellido" class="form-label">Primer apellido</label>
+                            <input type="text" id="suraPrimerApellido" name="sura_primer_apellido" class="form-control"
+                                placeholder="Ingrese el primer apellido del cliente">
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="suraSegundoApellido" class="form-label">Segundo apellido</label>
+                            <input type="text" id="suraSegundoApellido" name="sura_segundo_apellido" class="form-control"
+                                placeholder="Ingrese el segundo apellido del cliente (opcional)">
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="suraNoDocumento" class="form-label">Número de documento</label>
+                            <input type="text" id="suraNoDocumento" name="sura_no_documento" class="form-control"
+                                placeholder="Ingrese el número de documento">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente con el documento del cliente seleccionado
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Campos Personalizados -->
                 <div id="camposPersonalizados" class="form-section">
                     <h6 class="form-section-title">
@@ -910,6 +964,57 @@
         }
 
         console.log('✅ APC fields cleared');
+    }
+
+    // Function to auto-populate SURA fields when client is selected
+    function autoPopulateSuraFields(clienteData) {
+        console.log('🔧 autoPopulateSuraFields called with:', clienteData);
+
+        const suraPrimerNombre = document.getElementById('suraPrimerNombre');
+        const suraSegundoNombre = document.getElementById('suraSegundoNombre');
+        const suraPrimerApellido = document.getElementById('suraPrimerApellido');
+        const suraSegundoApellido = document.getElementById('suraSegundoApellido');
+        const suraNoDocumento = document.getElementById('suraNoDocumento');
+
+        if (clienteData && clienteData.cedulaCliente && suraNoDocumento) {
+            // Auto-populate the document number with the client's cedula
+            suraNoDocumento.value = clienteData.cedulaCliente;
+
+            // Add visual indicator for auto-populated field
+            suraNoDocumento.classList.add('auto-populated-field');
+            suraNoDocumento.setAttribute('data-auto-populated', 'true');
+            suraNoDocumento.placeholder = 'Auto-completado desde cliente seleccionado';
+
+            console.log('✅ SURA fields auto-populated:', {
+                documento: suraNoDocumento.value
+            });
+        } else {
+            console.log('⚠️ No client data available for SURA auto-population');
+        }
+    }
+
+    // Function to clear SURA fields when client is cleared
+    function clearSuraFields() {
+        console.log('🔧 clearSuraFields called');
+
+        const suraPrimerNombre = document.getElementById('suraPrimerNombre');
+        const suraSegundoNombre = document.getElementById('suraSegundoNombre');
+        const suraPrimerApellido = document.getElementById('suraPrimerApellido');
+        const suraSegundoApellido = document.getElementById('suraSegundoApellido');
+        const suraNoDocumento = document.getElementById('suraNoDocumento');
+
+        if (suraPrimerNombre) suraPrimerNombre.value = '';
+        if (suraSegundoNombre) suraSegundoNombre.value = '';
+        if (suraPrimerApellido) suraPrimerApellido.value = '';
+        if (suraSegundoApellido) suraSegundoApellido.value = '';
+        if (suraNoDocumento) {
+            suraNoDocumento.value = '';
+            suraNoDocumento.classList.remove('auto-populated-field');
+            suraNoDocumento.removeAttribute('data-auto-populated');
+            suraNoDocumento.placeholder = 'Ingrese el número de documento';
+        }
+
+        console.log('✅ SURA fields cleared');
     }
 
     // Global function to open drawer with context - defined in negocios.html to avoid conflicts

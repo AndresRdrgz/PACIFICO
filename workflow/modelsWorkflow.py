@@ -145,6 +145,28 @@ class Solicitud(models.Model):
     apc_fecha_completado = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se completó el proceso APC")
     apc_observaciones = models.TextField(blank=True, null=True, help_text="Observaciones del proceso APC")
     apc_archivo = models.FileField(upload_to='apc_files/', null=True, blank=True, help_text="Archivo APC generado por Makito")
+    
+    # Cotización SURA con Makito fields
+    SURA_STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('in_progress', 'En Proceso'),
+        ('completed', 'Completado'),
+        ('error', 'Error'),
+    ]
+    
+    cotizar_sura_makito = models.BooleanField(default=False, help_text="Indica si se debe cotizar póliza SURA con Makito")
+    sura_primer_nombre = models.CharField(max_length=50, null=True, blank=True, help_text="Primer nombre del cliente para SURA")
+    sura_segundo_nombre = models.CharField(max_length=50, null=True, blank=True, help_text="Segundo nombre del cliente para SURA")
+    sura_primer_apellido = models.CharField(max_length=50, null=True, blank=True, help_text="Primer apellido del cliente para SURA")
+    sura_segundo_apellido = models.CharField(max_length=50, null=True, blank=True, help_text="Segundo apellido del cliente para SURA")
+    sura_no_documento = models.CharField(max_length=50, null=True, blank=True, help_text="Número de documento para SURA")
+    sura_status = models.CharField(max_length=20, choices=SURA_STATUS_CHOICES, default='pending', help_text="Estado del proceso SURA con Makito")
+    sura_fecha_solicitud = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se solicitó la cotización SURA")
+    sura_fecha_inicio = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando Makito inició el proceso SURA")
+    sura_fecha_completado = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se completó el proceso SURA")
+    sura_observaciones = models.TextField(blank=True, null=True, help_text="Observaciones del proceso SURA")
+    sura_archivo = models.FileField(upload_to='sura_files/', null=True, blank=True, help_text="Archivo cotización SURA generado por Makito")
+    
     # Origen de la solicitud (para etiquetas distintivas)
     origen = models.CharField(max_length=100, blank=True, null=True, help_text="Origen de la solicitud (ej: Canal Digital, Presencial, etc.)")
     
@@ -160,6 +182,66 @@ class Solicitud(models.Model):
     
     # Relación con entrevista de cliente
     entrevista_cliente = models.ForeignKey('workflow.ClienteEntrevista', on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes', help_text="Entrevista de cliente asociada a esta solicitud")
+
+    # Debida Diligencia con Makito fields
+    DILIGENCIA_STATUS_CHOICES = [
+        ('no_iniciado', 'No Iniciado'),
+        ('pendiente', 'Pendiente'),
+        ('makito_processing', 'Makito Procesando'),
+        ('completado', 'Completado'),
+        ('error', 'Error'),
+    ]
+    
+    debida_diligencia_status = models.CharField(
+        max_length=20, 
+        choices=DILIGENCIA_STATUS_CHOICES, 
+        default='no_iniciado', 
+        help_text="Estado del proceso de debida diligencia"
+    )
+    diligencia_fecha_solicitud = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha cuando se solicitó la debida diligencia"
+    )
+    diligencia_fecha_inicio = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha cuando Makito inició el proceso de debida diligencia"
+    )
+    diligencia_fecha_completado = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha cuando se completó la debida diligencia"
+    )
+    diligencia_observaciones = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Observaciones del proceso de debida diligencia"
+    )
+    
+    # Archivos de Debida Diligencia
+    diligencia_busqueda_google = models.FileField(
+        upload_to='debida_diligencia/google/', 
+        null=True, 
+        blank=True, 
+        help_text="Archivo PDF de búsqueda en Google"
+    )
+    diligencia_busqueda_registro_publico = models.FileField(
+        upload_to='debida_diligencia/registro_publico/', 
+        null=True, 
+        blank=True, 
+        help_text="Archivo PDF de búsqueda en Registro Público"
+    )
+    diligencia_google_fecha_subida = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha cuando se subió el archivo de Google"
+    )
+    diligencia_registro_publico_fecha_subida = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha cuando se subió el archivo de Registro Público"
+    )
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"

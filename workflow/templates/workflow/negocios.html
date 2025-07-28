@@ -57,11 +57,11 @@
                             </button>
                         </div>
 
-                        <!-- Botón APC Tracking -->
-                        <a href="{% url 'workflow:apc_tracking' %}" class="btn btn-info btn-sm"
-                            title="Tracking APC Makito">
+                        <!-- Botón Solicitudes Makito -->
+                        <a href="{% url 'workflow:makito_tracking' %}" class="btn btn-primary btn-sm"
+                            title="Tracking de Solicitudes Makito (APC y SURA)">
                             <i class="fas fa-robot me-1"></i>
-                            APC Tracking
+                            Solicitudes Makito
                         </a>
 
                         {% if pipeline %}
@@ -4509,6 +4509,14 @@
         display: block !important;
     }
 
+    #suraMakitoSection {
+        display: none !important;
+    }
+
+    #suraMakitoSection.show {
+        display: block !important;
+    }
+
     .toast-notification.success {
         background: linear-gradient(135deg, #10b981, #059669);
     }
@@ -4938,6 +4946,7 @@
             const motivoSection = document.getElementById('motivoConsultaSection');
             const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
             const apcMakitoSection = document.getElementById('apcMakitoSection');
+            const suraMakitoSection = document.getElementById('suraMakitoSection');
 
             if (motivoSection) {
                 motivoSection.classList.remove('show');
@@ -4957,6 +4966,25 @@
                 if (apcCamposAdicionales) apcCamposAdicionales.style.display = 'none';
                 if (apcTipoDocumento) apcTipoDocumento.value = '';
                 if (apcNoCedula) apcNoCedula.value = '';
+            }
+            if (suraMakitoSection) {
+                suraMakitoSection.classList.remove('show');
+                // Reset SURA specific fields
+                const suraCheckbox = document.getElementById('cotizarSuraMakito');
+                const suraCamposAdicionales = document.getElementById('suraCamposAdicionales');
+                const suraPrimerNombre = document.getElementById('suraPrimerNombre');
+                const suraSegundoNombre = document.getElementById('suraSegundoNombre');
+                const suraPrimerApellido = document.getElementById('suraPrimerApellido');
+                const suraSegundoApellido = document.getElementById('suraSegundoApellido');
+                const suraNoDocumento = document.getElementById('suraNoDocumento');
+
+                if (suraCheckbox) suraCheckbox.checked = false;
+                if (suraCamposAdicionales) suraCamposAdicionales.style.display = 'none';
+                if (suraPrimerNombre) suraPrimerNombre.value = '';
+                if (suraSegundoNombre) suraSegundoNombre.value = '';
+                if (suraPrimerApellido) suraPrimerApellido.value = '';
+                if (suraSegundoApellido) suraSegundoApellido.value = '';
+                if (suraNoDocumento) suraNoDocumento.value = '';
             }
 
             hideSearchResults();
@@ -5017,6 +5045,10 @@
             // Setup APC Makito functionality
             setupApcMakitoToggle();
             console.log('✅ APC Makito functionality initialized');
+
+            // Setup SURA Makito functionality
+            setupSuraMakitoToggle();
+            console.log('✅ SURA Makito functionality initialized');
 
             console.log('✅ Drawer functionality initialized successfully');
         });
@@ -5215,6 +5247,68 @@
             }
         };
 
+        // Setup SURA Makito toggle functionality
+        window.setupSuraMakitoToggle = function () {
+            console.log('🔧 setupSuraMakitoToggle called');
+
+            const suraCheckbox = document.getElementById('cotizarSuraMakito');
+            const suraCamposAdicionales = document.getElementById('suraCamposAdicionales');
+
+            if (suraCheckbox && suraCamposAdicionales) {
+                suraCheckbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        suraCamposAdicionales.style.display = 'block';
+                        console.log('✅ SURA campos adicionales shown');
+
+                        // Auto-populate SURA fields if a client is already selected
+                        const clienteId = document.getElementById('clienteId')?.value;
+                        if (clienteId) {
+                            // Get client data from the selected client display
+                            const clienteSelected = document.getElementById('clienteSelected');
+                            if (clienteSelected && clienteSelected.style.display !== 'none') {
+                                const clienteDetails = clienteSelected.querySelector('.selected-details')?.textContent;
+                                if (clienteDetails) {
+                                    // Extract cedula from the details text (format: "cedula • other info")
+                                    const cedulaMatch = clienteDetails.match(/^([^•]+)/);
+                                    if (cedulaMatch) {
+                                        const cedula = cedulaMatch[1].trim();
+                                        if (cedula && cedula !== 'Sin cédula') {
+                                            const clienteData = { cedulaCliente: cedula };
+                                            if (typeof autoPopulateSuraFields === 'function') {
+                                                autoPopulateSuraFields(clienteData);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        suraCamposAdicionales.style.display = 'none';
+                        // Clear the fields when hiding
+                        if (typeof clearSuraFields === 'function') {
+                            clearSuraFields();
+                        } else {
+                            // Fallback to direct clearing
+                            const primerNombre = document.getElementById('suraPrimerNombre');
+                            const segundoNombre = document.getElementById('suraSegundoNombre');
+                            const primerApellido = document.getElementById('suraPrimerApellido');
+                            const segundoApellido = document.getElementById('suraSegundoApellido');
+                            const noDocumento = document.getElementById('suraNoDocumento');
+                            if (primerNombre) primerNombre.value = '';
+                            if (segundoNombre) segundoNombre.value = '';
+                            if (primerApellido) primerApellido.value = '';
+                            if (segundoApellido) segundoApellido.value = '';
+                            if (noDocumento) noDocumento.value = '';
+                        }
+                        console.log('✅ SURA campos adicionales hidden and cleared');
+                    }
+                });
+                console.log('✅ SURA checkbox event listener added');
+            } else {
+                console.log('⚠️ SURA elements not found');
+            }
+        };
+
         window.setupSearch = function () {
             console.log('🔧 setupSearch called');
 
@@ -5406,6 +5500,12 @@
                         const apcMakitoSection = document.getElementById('apcMakitoSection');
                         if (apcMakitoSection) {
                             apcMakitoSection.classList.add('show');
+                        }
+
+                        // Show SURA Makito section
+                        const suraMakitoSection = document.getElementById('suraMakitoSection');
+                        if (suraMakitoSection) {
+                            suraMakitoSection.classList.add('show');
                         }
 
                         // Auto-populate cliente from cotización

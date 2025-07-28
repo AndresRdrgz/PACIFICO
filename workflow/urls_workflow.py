@@ -6,6 +6,7 @@ from . import views_negocios
 from . import views
 from . import api
 from . import api_apc
+from . import api_sura
 from . import api_upload
 from . import api_documentos
 from . import views_comite
@@ -217,13 +218,26 @@ urlpatterns += [
     path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),
     path('api/solicitudes/<int:solicitud_id>/asignar-usuario/', api.api_asignar_usuario, name='api_asignar_usuario'),
     
-    # APC Makito Tracking URLs
+    # Unified Makito Tracking URL
+    path('makito-tracking/', views_workflow.makito_tracking_view, name='makito_tracking'),
+    
+    # APC Makito Tracking URLs (legacy)
     path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
     path('api/apc/list/', views_workflow.api_apc_list, name='api_apc_list'),
     path('api/apc/detail/<str:solicitud_codigo>/', views_workflow.api_apc_detail, name='api_apc_detail'),
     path('api/apc/reenviar/<str:codigo>/', api_apc.api_reenviar_apc_makito, name='api_reenviar_apc_makito'),
     path('api/makito/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_update_status, name='api_makito_update_status'),
     path('api/makito/upload-apc/<str:solicitud_codigo>/', views_workflow.api_makito_upload_apc, name='api_makito_upload_apc'),
+    
+    # SURA Makito URLs
+    path('sura-tracking/', views_workflow.sura_tracking_view, name='sura_tracking'),
+    path('api/sura/list/', api_sura.api_sura_list, name='api_sura_list'),
+    path('api/sura/detail/<str:codigo>/', api_sura.api_sura_detail, name='api_sura_detail'),
+    path('api/sura/reenviar/<str:codigo>/', api_sura.api_reenviar_sura_makito, name='api_reenviar_sura_makito'),
+    
+    # SURA Makito Webhooks for RPA
+    path('api/makito/sura/status/', api_sura.api_sura_webhook_status, name='api_sura_webhook_status'),
+    path('api/makito/sura/upload/', api_sura.api_sura_webhook_upload, name='api_sura_webhook_upload'),
     
     # Testing URLs (remove in production)
     path('test/apc-upload-email/', views_workflow.test_apc_upload_email, name='test_apc_upload_email'),

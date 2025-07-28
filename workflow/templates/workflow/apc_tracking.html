@@ -1,7 +1,7 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
 
-{% block title %}Tracking APC Makito{% endblock %}
+{% block title %}Tracking Makito RPA{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -1030,6 +1030,155 @@
             min-width: 1000px; /* Slightly smaller minimum width for very small screens */
         }
     }
+
+    /* === TAB STYLES === */
+    .makito-tabs {
+        display: flex;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 4px;
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .makito-tab {
+        background: transparent;
+        border: none;
+        padding: 12px 20px;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+
+    .makito-tab:hover {
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--text-primary);
+    }
+
+    .makito-tab.active {
+        background: var(--card-background);
+        color: var(--primary-color);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .makito-tab i {
+        font-size: 0.875rem;
+    }
+
+    /* Tab Content */
+    .tab-content-container {
+        margin-top: 24px;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { 
+            opacity: 0; 
+            transform: translateY(10px); 
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
+    }
+
+    /* Modal Styles for Debida Diligencia */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        max-width: 800px;
+        width: 100%;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, var(--primary-color) 0%, #22a650 100%);
+        color: white;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    /* Responsive Tabs */
+    @media (max-width: 768px) {
+        .makito-tabs {
+            flex-wrap: wrap;
+        }
+        
+        .makito-tab {
+            flex: 1;
+            justify-content: center;
+            min-width: 150px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -1040,41 +1189,57 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
                 <h2 class="header-title">
-                    <i class="fas fa-robot"></i>APC Makito
+                    <i class="fas fa-robot"></i>Makito RPA
                 </h2>
                 <p class="header-subtitle">
-                    Seguimiento de solicitudes de APC procesadas por Makito RPA
+                    Seguimiento de procesos automatizados con Makito RPA
                 </p>
             </div>
             <button class="refresh-btn" onclick="refreshData()">
                 <i class="fas fa-sync-alt"></i> Actualizar
             </button>
         </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="makito-tabs" style="margin-top: 24px;">
+            <button class="makito-tab active" data-tab="apc" onclick="switchTab('apc')">
+                <i class="fas fa-file-pdf"></i>
+                APC
+            </button>
+            <button class="makito-tab" data-tab="diligencia" onclick="switchTab('diligencia')">
+                <i class="fas fa-shield-check"></i>
+                Debida Diligencia
+            </button>
+        </div>
     </div>
     
-    <!-- Estadísticas -->
-    <div class="stats-row" id="statsContainer">
-        <div class="stat-card">
-            <div class="stat-number" id="totalCount">-</div>
-            <div class="stat-label">Total APC</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number" id="pendingCount">-</div>
-            <div class="stat-label">Pendientes</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number" id="inProgressCount">-</div>
-            <div class="stat-label">En Proceso</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number" id="completedCount">-</div>
-            <div class="stat-label">Completados</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number" id="avgTimeCount">-</div>
-            <div class="stat-label">Tiempo Promedio de Descarga (min)</div>
-        </div>
-    </div>
+    <!-- Tab Content Container -->
+    <div class="tab-content-container">
+        <!-- APC Tab Content -->
+        <div id="apc-tab-content" class="tab-content active">
+            <!-- Estadísticas APC -->
+            <div class="stats-row" id="apcStatsContainer">
+                <div class="stat-card">
+                    <div class="stat-number" id="apcTotalCount">-</div>
+                    <div class="stat-label">Total APC</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="apcPendingCount">-</div>
+                    <div class="stat-label">Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="apcInProgressCount">-</div>
+                    <div class="stat-label">En Proceso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="apcCompletedCount">-</div>
+                    <div class="stat-label">Completados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="apcAvgTimeCount">-</div>
+                    <div class="stat-label">Tiempo Promedio (min)</div>
+                </div>
+            </div>
     
     <!-- Tabla de solicitudes -->
     <div class="apc-table-container">
@@ -1276,6 +1441,130 @@
                 </div>
             </div>
         </div>
+        <!-- End APC Tab Content -->
+        
+        <!-- Debida Diligencia Tab Content -->
+        <div id="diligencia-tab-content" class="tab-content">
+            <!-- Estadísticas Debida Diligencia -->
+            <div class="stats-row" id="diligenciaStatsContainer">
+                <div class="stat-card">
+                    <div class="stat-number" id="diligenciaTotalCount">-</div>
+                    <div class="stat-label">Total Diligencias</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="diligenciaPendingCount">-</div>
+                    <div class="stat-label">Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="diligenciaInProgressCount">-</div>
+                    <div class="stat-label">En Proceso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="diligenciaCompletedCount">-</div>
+                    <div class="stat-label">Completadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="diligenciaAvgTimeCount">-</div>
+                    <div class="stat-label">Tiempo Promedio (min)</div>
+                </div>
+            </div>
+            
+            <!-- Tabla de Debida Diligencia -->
+            <div class="apc-table-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                    <h4 class="section-title" style="margin: 0;">
+                        <i class="fas fa-shield-check"></i> Solicitudes de Debida Diligencia
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <!-- Buscador para Debida Diligencia -->
+                        <div class="search-container" style="position: relative; min-width: 300px;">
+                            <input 
+                                type="text" 
+                                id="diligenciaQuickSearch" 
+                                placeholder="Buscar en debida diligencia..."
+                                style="width: 100%; padding: 12px 16px 12px 45px; border: 2px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.875rem; transition: all 0.2s ease; background: var(--card-background); color: var(--text-primary);"
+                                oninput="handleDiligenciaQuickSearch()"
+                            >
+                            <i class="fas fa-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+                            <button 
+                                id="diligenciaClearSearch" 
+                                onclick="handleDiligenciaClearSearch()"
+                                style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease; display: none;"
+                                title="Limpiar búsqueda"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <!-- Filtros para Debida Diligencia -->
+                        <div class="filter-group" style="margin: 0;">
+                            <select id="diligenciaStatusFilter" onchange="applyDiligenciaFilters()" style="padding: 8px 12px; border: 2px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 0.875rem; background: var(--card-background); color: var(--text-primary); min-width: 140px;" title="Filtrar por estado">
+                                <option value="">Todos los estados</option>
+                                <option value="no_iniciado">No Iniciado</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="makito_processing">Makito Procesando</option>
+                                <option value="completado">Completado</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabla de resultados -->
+                <div class="table-responsive">
+                    <table class="apc-table" id="diligenciaTable">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Cliente</th>
+                                <th>Pipeline</th>
+                                <th>Estado</th>
+                                <th>Google</th>
+                                <th>Registro Público</th>
+                                <th>Solicitado por</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Fecha Completado</th>
+                                <th>Observaciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="diligenciaTableBody">
+                            <!-- Content will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Loading state -->
+                <div id="diligenciaLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Cargando solicitudes de debida diligencia...</p>
+                </div>
+                
+                <!-- No data state -->
+                <div id="diligenciaNoData" class="no-data" style="display: none;">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>No hay solicitudes de debida diligencia para mostrar</p>
+                </div>
+            </div>
+        </div>
+        <!-- End Debida Diligencia Tab Content -->
+    </div>
+    <!-- End Tab Content Container -->
+
+    <!-- Modal para detalles de Debida Diligencia -->
+    <div id="diligenciaDetailModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="diligenciaModalTitle">Detalles de Debida Diligencia</h3>
+                <button class="modal-close" onclick="closeDiligenciaModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="diligenciaModalContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -1283,14 +1572,464 @@
 {% block extra_js %}
 <script>
 let currentData = [];
+let currentDiligenciaData = [];
+let currentTab = 'apc';
 const isUserSuperuser = {{ user.is_superuser|yesno:"true,false" }};
 
 // Función para cargar datos iniciales
 document.addEventListener('DOMContentLoaded', function() {
-    loadApcData();
+    // Initialize with APC tab
+    switchTab('apc');
 });
 
+// ==========================================
+// TAB FUNCTIONALITY
+// ==========================================
+
+function switchTab(tabName) {
+    console.log('Switching to tab:', tabName);
+    
+    // Update tab buttons
+    document.querySelectorAll('.makito-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`${tabName}-tab-content`).classList.add('active');
+    
+    // Store current tab
+    currentTab = tabName;
+    
+    // Load corresponding data
+    if (tabName === 'apc') {
+        loadApcData();
+    } else if (tabName === 'diligencia') {
+        loadDiligenciaData();
+    }
+}
+
+// ==========================================
+// APC FUNCTIONALITY (Updated)
+// ==========================================
+
 // Función para cargar datos de APC
+async function loadApcData() {
+    if (currentTab !== 'apc') return;
+    
+    showLoading(true, 'apc');
+    
+    try {
+        const params = new URLSearchParams();
+        
+        // Aplicar filtros
+        const statusFilter = document.getElementById('statusFilter')?.value;
+        if (statusFilter) {
+            params.append('status', statusFilter);
+        }
+        
+        const response = await fetch(`/api/apc-tracking/?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('APC Data loaded:', data);
+        
+        currentData = data.solicitudes || [];
+        updateStats(data.solicitudes || [], 'apc');
+        renderTable(data.solicitudes || [], '', 'apc');
+        
+    } catch (error) {
+        console.error('Error loading APC data:', error);
+        showError('Error al cargar datos de APC: ' + error.message);
+    } finally {
+        showLoading(false, 'apc');
+    }
+}
+
+// ==========================================
+// DEBIDA DILIGENCIA FUNCTIONALITY
+// ==========================================
+
+// Función para cargar datos de Debida Diligencia
+async function loadDiligenciaData() {
+    if (currentTab !== 'diligencia') return;
+    
+    showLoading(true, 'diligencia');
+    
+    try {
+        const params = new URLSearchParams();
+        
+        // Aplicar filtros
+        const statusFilter = document.getElementById('diligenciaStatusFilter')?.value;
+        if (statusFilter) {
+            params.append('status', statusFilter);
+        }
+        
+        const response = await fetch(`/api/debida-diligencia-tracking/?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Diligencia Data loaded:', data);
+        
+        currentDiligenciaData = data.solicitudes || [];
+        updateStats(data.solicitudes || [], 'diligencia');
+        renderTable(data.solicitudes || [], '', 'diligencia');
+        
+    } catch (error) {
+        console.error('Error loading Diligencia data:', error);
+        showError('Error al cargar datos de Debida Diligencia: ' + error.message);
+    } finally {
+        showLoading(false, 'diligencia');
+    }
+}
+
+// Función para manejar búsqueda en Debida Diligencia
+let diligenciaSearchTimeout;
+
+const handleDiligenciaQuickSearch = () => {
+    clearTimeout(diligenciaSearchTimeout);
+    diligenciaSearchTimeout = setTimeout(() => {
+        const searchTerm = document.getElementById('diligenciaQuickSearch').value.toLowerCase();
+        const clearButton = document.getElementById('diligenciaClearSearch');
+        
+        if (searchTerm.length > 0) {
+            clearButton.style.display = 'block';
+        } else {
+            clearButton.style.display = 'none';
+        }
+        
+        filterAndRenderDiligenciaData(searchTerm);
+    }, 300);
+};
+
+const handleDiligenciaClearSearch = () => {
+    document.getElementById('diligenciaQuickSearch').value = '';
+    document.getElementById('diligenciaClearSearch').style.display = 'none';
+    filterAndRenderDiligenciaData('');
+};
+
+const filterAndRenderDiligenciaData = (searchTerm) => {
+    let filteredData = currentDiligenciaData;
+    
+    if (searchTerm) {
+        filteredData = currentDiligenciaData.filter(solicitud => {
+            return (
+                solicitud.codigo.toLowerCase().includes(searchTerm) ||
+                solicitud.cliente_nombre.toLowerCase().includes(searchTerm) ||
+                solicitud.pipeline_nombre.toLowerCase().includes(searchTerm) ||
+                solicitud.creada_por_nombre.toLowerCase().includes(searchTerm) ||
+                (solicitud.diligencia_observaciones && solicitud.diligencia_observaciones.toLowerCase().includes(searchTerm))
+            );
+        });
+    }
+    
+    renderTable(filteredData, searchTerm, 'diligencia');
+};
+
+// Función para aplicar filtros de Debida Diligencia
+function applyDiligenciaFilters() {
+    const statusFilter = document.getElementById('diligenciaStatusFilter').value;
+    let filteredData = currentDiligenciaData;
+    
+    if (statusFilter) {
+        filteredData = filteredData.filter(solicitud => 
+            solicitud.debida_diligencia_status === statusFilter
+        );
+    }
+    
+    const searchTerm = document.getElementById('diligenciaQuickSearch').value.toLowerCase();
+    if (searchTerm) {
+        filteredData = filteredData.filter(solicitud => {
+            return (
+                solicitud.codigo.toLowerCase().includes(searchTerm) ||
+                solicitud.cliente_nombre.toLowerCase().includes(searchTerm) ||
+                solicitud.pipeline_nombre.toLowerCase().includes(searchTerm) ||
+                solicitud.creada_por_nombre.toLowerCase().includes(searchTerm) ||
+                (solicitud.diligencia_observaciones && solicitud.diligencia_observaciones.toLowerCase().includes(searchTerm))
+            );
+        });
+    }
+    
+    renderTable(filteredData, searchTerm, 'diligencia');
+}
+
+// Función para abrir modal de detalles de Debida Diligencia
+async function openDiligenciaModal(codigo) {
+    try {
+        // Simulated for now - you would implement the actual API call
+        const solicitud = currentDiligenciaData.find(s => s.codigo === codigo);
+        if (!solicitud) {
+            throw new Error('Solicitud no encontrada');
+        }
+        
+        populateDiligenciaModal(solicitud);
+        document.getElementById('diligenciaDetailModal').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error opening diligencia modal:', error);
+        showError('Error al cargar detalles: ' + error.message);
+    }
+}
+
+function populateDiligenciaModal(solicitud) {
+    const modalTitle = document.getElementById('diligenciaModalTitle');
+    const modalContent = document.getElementById('diligenciaModalContent');
+    
+    modalTitle.textContent = `Debida Diligencia - ${solicitud.codigo}`;
+    
+    const statusIcon = getDiligenciaStatusIcon(solicitud.debida_diligencia_status);
+    const statusText = getDiligenciaStatusText(solicitud.debida_diligencia_status);
+    
+    modalContent.innerHTML = `
+        <div class="modal-section">
+            <h4 class="section-subtitle">
+                <i class="fas fa-info-circle"></i> Información General
+            </h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Cliente:</strong> ${solicitud.cliente_nombre || 'N/A'}
+                </div>
+                <div class="info-item">
+                    <strong>Pipeline:</strong> ${solicitud.pipeline_nombre || 'N/A'}
+                </div>
+                <div class="info-item">
+                    <strong>Estado:</strong> 
+                    <span class="status-badge status-${solicitud.debida_diligencia_status}">
+                        ${statusIcon} ${statusText}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <strong>Solicitado por:</strong> ${solicitud.creada_por_nombre || 'N/A'}
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-section">
+            <h4 class="section-subtitle">
+                <i class="fas fa-file-pdf"></i> Archivos de Debida Diligencia
+            </h4>
+            <div class="files-grid">
+                <div class="file-item">
+                    <h5>Búsqueda Google</h5>
+                    ${solicitud.diligencia_busqueda_google ? 
+                        `<a href="${solicitud.diligencia_busqueda_google}" target="_blank" class="btn-file">
+                            <i class="fas fa-download"></i> Descargar
+                        </a>` : 
+                        '<span class="file-status pending">Pendiente</span>'
+                    }
+                </div>
+                <div class="file-item">
+                    <h5>Búsqueda Registro Público</h5>
+                    ${solicitud.diligencia_busqueda_registro_publico ? 
+                        `<a href="${solicitud.diligencia_busqueda_registro_publico}" target="_blank" class="btn-file">
+                            <i class="fas fa-download"></i> Descargar
+                        </a>` : 
+                        '<span class="file-status pending">Pendiente</span>'
+                    }
+                </div>
+            </div>
+        </div>
+        
+        ${solicitud.diligencia_observaciones ? `
+            <div class="modal-section">
+                <h4 class="section-subtitle">
+                    <i class="fas fa-comment"></i> Observaciones
+                </h4>
+                <div class="observaciones-content">
+                    ${solicitud.diligencia_observaciones}
+                </div>
+            </div>
+        ` : ''}
+    `;
+}
+
+function closeDiligenciaModal() {
+    document.getElementById('diligenciaDetailModal').style.display = 'none';
+}
+
+function getDiligenciaStatusIcon(status) {
+    const icons = {
+        'no_iniciado': '<i class="fas fa-shield-alt"></i>',
+        'pendiente': '<i class="fas fa-hourglass-half"></i>',
+        'makito_processing': '<i class="fas fa-robot"></i>',
+        'completado': '<i class="fas fa-shield-check"></i>',
+        'error': '<i class="fas fa-exclamation-triangle"></i>'
+    };
+    return icons[status] || '<i class="fas fa-question"></i>';
+}
+
+function getDiligenciaStatusText(status) {
+    const texts = {
+        'no_iniciado': 'No Iniciado',
+        'pendiente': 'Pendiente',
+        'makito_processing': 'Makito Procesando',
+        'completado': 'Completado',
+        'error': 'Error'
+    };
+    return texts[status] || 'Desconocido';
+}
+
+// ==========================================
+// UPDATED COMMON FUNCTIONS
+// ==========================================
+
+// Función para mostrar/ocultar loading (Updated)
+function showLoading(show, tabType = null) {
+    if (tabType === 'apc' || (!tabType && currentTab === 'apc')) {
+        const loading = document.getElementById('loading');
+        const noData = document.getElementById('noData');
+        const tableContainer = document.querySelector('.apc-table-container .table-responsive');
+        
+        if (loading) loading.style.display = show ? 'flex' : 'none';
+        if (noData) noData.style.display = 'none';
+        if (tableContainer) tableContainer.style.display = show ? 'none' : 'block';
+    } else if (tabType === 'diligencia' || (!tabType && currentTab === 'diligencia')) {
+        const loading = document.getElementById('diligenciaLoading');
+        const noData = document.getElementById('diligenciaNoData');
+        const tableContainer = document.querySelector('#diligencia-tab-content .table-responsive');
+        
+        if (loading) loading.style.display = show ? 'flex' : 'none';
+        if (noData) noData.style.display = 'none';
+        if (tableContainer) tableContainer.style.display = show ? 'none' : 'block';
+    }
+}
+
+// Función para actualizar estadísticas (Updated)
+function updateStats(solicitudes, tabType = null) {
+    const type = tabType || currentTab;
+    const prefix = type === 'apc' ? 'apc' : 'diligencia';
+    
+    const total = solicitudes.length;
+    let pending = 0, inProgress = 0, completed = 0;
+    let totalTime = 0, completedCount = 0;
+    
+    solicitudes.forEach(solicitud => {
+        const status = type === 'apc' ? solicitud.apc_status : solicitud.debida_diligencia_status;
+        
+        if (status === 'pending' || status === 'pendiente') {
+            pending++;
+        } else if (status === 'in_progress' || status === 'makito_processing') {
+            inProgress++;
+        } else if (status === 'completed' || status === 'completado') {
+            completed++;
+            
+            // Calculate time for completed items
+            const startField = type === 'apc' ? 'apc_fecha_solicitud' : 'diligencia_fecha_solicitud';
+            const endField = type === 'apc' ? 'apc_fecha_completado' : 'diligencia_fecha_completado';
+            
+            if (solicitud[startField] && solicitud[endField]) {
+                const start = new Date(solicitud[startField]);
+                const end = new Date(solicitud[endField]);
+                const diffMinutes = (end - start) / (1000 * 60);
+                totalTime += diffMinutes;
+                completedCount++;
+            }
+        }
+    });
+    
+    const avgTime = completedCount > 0 ? Math.round(totalTime / completedCount) : 0;
+    
+    document.getElementById(`${prefix}TotalCount`).textContent = total;
+    document.getElementById(`${prefix}PendingCount`).textContent = pending;
+    document.getElementById(`${prefix}InProgressCount`).textContent = inProgress;
+    document.getElementById(`${prefix}CompletedCount`).textContent = completed;
+    document.getElementById(`${prefix}AvgTimeCount`).textContent = avgTime;
+}
+
+// Función para renderizar la tabla (Updated)
+function renderTable(solicitudes, searchTerm = '', tabType = null) {
+    const type = tabType || currentTab;
+    const tableBodyId = type === 'apc' ? 'tableBody' : 'diligenciaTableBody';
+    const noDataId = type === 'apc' ? 'noData' : 'diligenciaNoData';
+    
+    const tableBody = document.getElementById(tableBodyId);
+    const noData = document.getElementById(noDataId);
+    
+    if (!tableBody) {
+        console.error(`Table body not found: ${tableBodyId}`);
+        return;
+    }
+    
+    if (solicitudes.length === 0) {
+        tableBody.innerHTML = '';
+        if (noData) noData.style.display = 'flex';
+        return;
+    }
+    
+    if (noData) noData.style.display = 'none';
+    
+    if (type === 'apc') {
+        renderApcTable(solicitudes, searchTerm, tableBody);
+    } else {
+        renderDiligenciaTable(solicitudes, searchTerm, tableBody);
+    }
+}
+
+function renderDiligenciaTable(solicitudes, searchTerm, tableBody) {
+    tableBody.innerHTML = solicitudes.map(solicitud => {
+        const statusIcon = getDiligenciaStatusIcon(solicitud.debida_diligencia_status);
+        const statusText = getDiligenciaStatusText(solicitud.debida_diligencia_status);
+        
+        // Format dates
+        const fechaSolicitud = solicitud.diligencia_fecha_solicitud ? 
+            formatDate(solicitud.diligencia_fecha_solicitud) : 'N/A';
+        const fechaCompletado = solicitud.diligencia_fecha_completado ? 
+            formatDate(solicitud.diligencia_fecha_completado) : 'N/A';
+        
+        // File status
+        const googleStatus = solicitud.diligencia_busqueda_google ? 
+            '<span class="file-available"><i class="fas fa-check-circle text-success"></i></span>' : 
+            '<span class="file-missing"><i class="fas fa-times-circle text-muted"></i></span>';
+        
+        const registroStatus = solicitud.diligencia_busqueda_registro_publico ? 
+            '<span class="file-available"><i class="fas fa-check-circle text-success"></i></span>' : 
+            '<span class="file-missing"><i class="fas fa-times-circle text-muted"></i></span>';
+        
+        return `
+            <tr onclick="openDiligenciaModal('${solicitud.codigo}')" style="cursor: pointer;">
+                <td>${highlightSearchTerm(solicitud.codigo, searchTerm)}</td>
+                <td>${highlightSearchTerm(solicitud.cliente_nombre || 'N/A', searchTerm)}</td>
+                <td>${highlightSearchTerm(solicitud.pipeline_nombre || 'N/A', searchTerm)}</td>
+                <td>
+                    <span class="status-badge status-${solicitud.debida_diligencia_status}">
+                        ${statusIcon} ${statusText}
+                    </span>
+                </td>
+                <td class="text-center">${googleStatus}</td>
+                <td class="text-center">${registroStatus}</td>
+                <td>${solicitud.creada_por_nombre || 'N/A'}</td>
+                <td>${fechaSolicitud}</td>
+                <td>${fechaCompletado}</td>
+                <td class="text-truncate" style="max-width: 200px;" title="${solicitud.diligencia_observaciones || 'N/A'}">
+                    ${solicitud.diligencia_observaciones || 'N/A'}
+                </td>
+                <td>
+                    <button class="btn-action" onclick="event.stopPropagation(); openDiligenciaModal('${solicitud.codigo}')" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Updated refresh function
+function refreshData() {
+    if (currentTab === 'apc') {
+        loadApcData();
+    } else if (currentTab === 'diligencia') {
+        loadDiligenciaData();
+    }
+}
+
+// Función para cargar datos de APC (original function with updated IDs)
 async function loadApcData() {
     showLoading(true);
     
