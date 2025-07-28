@@ -75,18 +75,32 @@
         border: 1px solid var(--border-color);
     }
     
+    /* Debugging and visibility fixes */
     .table-modern {
         background: var(--card-background);
         border-radius: var(--border-radius);
-        overflow: hidden;
+        overflow: visible;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .table-modern .table-responsive {
+        border-radius: var(--border-radius);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
     }
     
     .table-modern table {
         width: 100%;
         margin-bottom: 0;
-        min-width: 800px; /* Reducido para menos dead space */
+        min-width: 800px;
+        table-layout: auto;
+        border-collapse: separate;
+        border-spacing: 0;
     }
     
     .table-modern thead {
@@ -104,10 +118,13 @@
         background: transparent !important;
         border-bottom: none !important;
         white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
     
     .table-modern tbody {
-        display: table-row-group;
+        background: var(--card-background);
     }
     
     .table-modern tbody tr {
@@ -571,19 +588,10 @@
         box-shadow: var(--shadow-md);
     }
     
-    /* Force hide table when no solicitudes */
-    .table-modern.d-none,
-    .mobile-cards.d-none {
+    /* Force hide table when explicitly marked as empty - remove conflicting rules */
+    .table-modern.force-hidden,
+    .mobile-cards.force-hidden {
         display: none !important;
-    }
-    
-    .table-modern[style*="display: none"],
-    .mobile-cards[style*="display: none"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        height: 0 !important;
-        overflow: hidden !important;
     }
     
     /* Vehicle/Marca Styling - Using the same blue as etapa badge */
@@ -827,7 +835,42 @@
             </div>
         </div>
     </div>
-
+      <!-- Vista de Escritorio: Tabla -->
+        <div class="table-modern d-none d-lg-block" id="tableDesktop">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Monto</th>
+                            <th>Producto</th>
+                            <th>Analista Revisor</th>
+                            <th>Creado por</th>
+                            <th>Fecha</th>
+                            <th>Código</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaComiteBody">
+                        <!-- Las filas se cargarán dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Paginación -->
+            <div class="border-top p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="text-muted mb-0" id="rowCount">
+                            <!-- Se actualizará dinámicamente -->
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <nav class="pagination-modern" id="pagination">
+                            <!-- La paginación se generará dinámicamente -->
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
     <!-- Sección de Búsqueda y Filtros -->
     <div class="container-fluid">
         <div class="search-section">
@@ -845,29 +888,7 @@
             </div>
         </div>
 
-        <!-- Vista de Escritorio: Tabla -->
-        <div class="table-modern d-none d-lg-block" id="tableDesktop">
-            <div class="table-container" style="height: 70vh; overflow: auto; border: none;">
-                <div class="table-responsive" style="height: 100%; border: none;">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Monto</th>
-                                <th>Producto</th>
-                                <th>Analista Revisor</th>
-                                <th>Creado por</th>
-                                <th>Fecha</th>
-                                <th>Código</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaComiteBody">
-                            <!-- Las filas se cargarán dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+      
 
         <!-- Vista Móvil: Cards -->
         <div class="mobile-cards d-block d-lg-none" id="cardsMobile">
@@ -898,23 +919,6 @@
                     <i class="fas fa-sync-alt me-1"></i>
                     Refrescar
                 </button>
-            </div>
-        </div>
-
-            <!-- Paginación -->
-            <div class="border-top p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <p class="text-muted mb-0" id="rowCount">
-                            <!-- Se actualizará dinámicamente -->
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <nav class="pagination-modern" id="pagination">
-                            <!-- La paginación se generará dinámicamente -->
-                        </nav>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1052,8 +1056,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Simular carga y recargar datos del comité
             setTimeout(() => {
-                if (typeof cargarSolicitudesComite === 'function') {
-                    cargarSolicitudesComite();
+                if (typeof cargarSolicitudes === 'function') {
+                    cargarSolicitudes();
                 } else {
                     // Fallback: recargar la página
                     window.location.reload();
@@ -1076,8 +1080,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Simular carga y recargar datos del comité
             setTimeout(() => {
                 // Aquí se llamaría a la función de carga de datos del comité
-                if (typeof cargarSolicitudesComite === 'function') {
-                    cargarSolicitudesComite();
+                if (typeof cargarSolicitudes === 'function') {
+                    cargarSolicitudes();
                 } else {
                     // Fallback: recargar la página
                     window.location.reload();
@@ -1102,12 +1106,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tieneSolicitudes && solicitudes.length > 0) {
             // Hay solicitudes - mostrar tabla/cards, search section y ocultar estado vacío
             if (tableDesktop) {
-                tableDesktop.style.display = 'block';
                 tableDesktop.className = 'table-modern d-none d-lg-block';
+                tableDesktop.style.display = '';
             }
             if (cardsMobile) {
-                cardsMobile.style.display = 'block';
                 cardsMobile.className = 'mobile-cards d-block d-lg-none';
+                cardsMobile.style.display = '';
             }
             if (searchSection) searchSection.style.display = 'block';
             if (emptyState) emptyState.style.display = 'none';
@@ -1117,14 +1121,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (totalSolicitudes) totalSolicitudes.textContent = solicitudes.length;
         } else {
             // No hay solicitudes - ocultar tabla/cards/search section y mostrar estado vacío
-            if (tableDesktop) {
-                tableDesktop.style.display = 'none !important';
-                tableDesktop.className = 'table-modern d-none';
-            }
-            if (cardsMobile) {
-                cardsMobile.style.display = 'none !important';
-                cardsMobile.className = 'mobile-cards d-none';
-            }
+            if (tableDesktop) tableDesktop.style.display = 'none';
+            if (cardsMobile) cardsMobile.style.display = 'none';
             if (searchSection) searchSection.style.display = 'none';
             if (emptyState) emptyState.style.display = 'block';
             if (paginationContainer) paginationContainer.style.display = 'none';
@@ -1144,26 +1142,45 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchSection = document.querySelector('.search-section');
         
         // Ocultar todo y mostrar carga
-        if (tableDesktop) {
-            tableDesktop.style.display = 'none !important';
-            tableDesktop.className = 'table-modern d-none';
-        }
-        if (cardsMobile) {
-            cardsMobile.style.display = 'none !important';
-            cardsMobile.className = 'mobile-cards d-none';
-        }
+        if (tableDesktop) tableDesktop.style.display = 'none';
+        if (cardsMobile) cardsMobile.style.display = 'none';
         if (searchSection) searchSection.style.display = 'none';
         if (emptyState) emptyState.style.display = 'none';
         if (paginationContainer) paginationContainer.style.display = 'none';
         if (loadingState) loadingState.style.display = 'block';
     };
     
-    // Inicializar estado vacío por defecto si no hay solicitudes
+    // Inicializar estado y cargar datos
     const totalSolicitudesElement = document.getElementById('totalSolicitudes');
     if (totalSolicitudesElement) {
         const count = parseInt(totalSolicitudesElement.textContent) || 0;
-        if (count === 0) {
-            mostrarEstadoSolicitudes(false, []);
+        console.log('Total solicitudes inicial:', count);
+        
+        // Inicializar estado y cargar datos
+        if (typeof cargarSolicitudes === 'function') {
+            console.log('Función cargarSolicitudes encontrada, iniciando carga...');
+            cargarSolicitudes();
+        } else {
+            console.warn('Función cargarSolicitudes no encontrada, esperando a que se cargue...');
+            // Intentar nuevamente después de un breve delay para dar tiempo a que se cargue el script
+            setTimeout(() => {
+                if (typeof cargarSolicitudes === 'function') {
+                    console.log('Función cargarSolicitudes encontrada después del delay, iniciando carga...');
+                    cargarSolicitudes();
+                } else {
+                    console.error('Función cargarSolicitudes aún no encontrada');
+                    // Si no hay función de carga y no hay count, mostrar estado vacío
+                    if (count === 0) {
+                        mostrarEstadoSolicitudes(false, []);
+                    }
+                }
+            }, 1000);
+        }
+    } else {
+        console.warn('Elemento totalSolicitudes no encontrado');
+        // Intentar cargar datos de todas formas
+        if (typeof cargarSolicitudes === 'function') {
+            cargarSolicitudes();
         }
     }
 });

@@ -934,6 +934,7 @@ def canal_digital(request):
     from .models import FormularioWeb
     from .modelsWorkflow import Pipeline, ConfiguracionCanalDigital
     from django.core.paginator import Paginator
+    from django.contrib.auth.models import User
     
     # Estadísticas específicas del canal digital
     solicitudes_canal_digital = FormularioWeb.objects.count()
@@ -962,6 +963,8 @@ def canal_digital(request):
             'fecha_creacion': formulario.fecha_creacion,
             'procesado': formulario.procesado,
             'ip_address': formulario.ip_address,
+            'propietario': getattr(formulario, 'propietario', None),
+            'propietario_nombre': formulario.propietario.get_full_name() if getattr(formulario, 'propietario', None) else None,
         })
     
     # Obtener configuración del Canal Digital
@@ -972,6 +975,53 @@ def canal_digital(request):
     # Obtener todos los pipelines disponibles
     pipelines_disponibles = Pipeline.objects.all()
     
+    # Obtener usuarios del grupo "Canal Digital" para el selector de propietarios
+    from django.contrib.auth.models import Group
+    try:
+        grupo_canal_digital = Group.objects.get(name="Canal Digital")
+        usuarios_canal_digital = grupo_canal_digital.user_set.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+    except Group.DoesNotExist:
+        usuarios_canal_digital = User.objects.none()
+    
+    # Para superusers: obtener información para la gestión de usuarios
+    gestion_usuarios = None
+    
+    if request.user.is_superuser:
+        # Obtener o crear el grupo "Canal Digital"
+        grupo_canal_digital, created = Group.objects.get_or_create(name="Canal Digital")
+        
+        # Usuarios que están en el grupo
+        usuarios_en_grupo = grupo_canal_digital.user_set.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+        
+        # Usuarios que NO están en el grupo (candidatos para agregar)
+        usuarios_disponibles_para_agregar = User.objects.filter(
+            is_active=True
+        ).exclude(
+            groups=grupo_canal_digital
+        ).order_by('first_name', 'last_name', 'username')
+        
+        # Estadísticas del grupo
+        total_usuarios_grupo = usuarios_en_grupo.count()
+        total_usuarios_disponibles = usuarios_disponibles_para_agregar.count()
+        
+        gestion_usuarios = {
+            'grupo': grupo_canal_digital,
+            'usuarios_en_grupo': usuarios_en_grupo,
+            'usuarios_disponibles_para_agregar': usuarios_disponibles_para_agregar,
+            'total_usuarios_grupo': total_usuarios_grupo,
+            'total_usuarios_disponibles': total_usuarios_disponibles,
+        }
+        
+        # Asegurar que usuarios_canal_digital use los usuarios del grupo para superusers
+        usuarios_canal_digital = usuarios_en_grupo
+    else:
+        # Para usuarios no-superuser, seguir usando el filtro del grupo
+        try:
+            grupo_canal_digital = Group.objects.get(name="Canal Digital")
+            usuarios_canal_digital = grupo_canal_digital.user_set.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+        except Group.DoesNotExist:
+            usuarios_canal_digital = User.objects.none()
+    
     # KPIs del canal digital
     context = {
         'solicitudes_canal_digital': solicitudes_canal_digital,
@@ -979,6 +1029,8 @@ def canal_digital(request):
         'solicitudes_pendientes': solicitudes_pendientes,
         'formularios_tabla': formularios_tabla,
         'formularios_page': formularios_page,
+        'usuarios_disponibles': usuarios_canal_digital,  # Solo usuarios del grupo "Canal Digital"
+        'gestion_usuarios': gestion_usuarios,  # Información para gestión de usuarios (solo superusers)
         'titulo': 'Canal Digital',
         'subtitulo': 'Gestión de solicitudes del canal digital',
         'configuracion': configuracion,
@@ -3357,70 +3409,6 @@ def reportes_workflow(request):
 # ==========================================
 # VISTAS DE CANALES ALTERNOS
 # ==========================================
-
-@login_required
-def canal_digital(request):
-    """Vista principal del Canal Digital"""
-    
-    # Importar el modelo aquí para evitar problemas de importación circular
-    from .models import FormularioWeb
-    from .modelsWorkflow import Pipeline, ConfiguracionCanalDigital
-    from django.core.paginator import Paginator
-    
-    # Estadísticas específicas del canal digital
-    solicitudes_canal_digital = FormularioWeb.objects.count()
-    solicitudes_procesadas = FormularioWeb.objects.filter(procesado=True).count()
-    solicitudes_pendientes = FormularioWeb.objects.filter(procesado=False).count()
-    
-    # Obtener todas las solicitudes para la tabla (ordenadas por fecha más reciente)
-    formularios_queryset = FormularioWeb.objects.order_by('-fecha_creacion')
-    
-    # Paginación
-    paginator = Paginator(formularios_queryset, 25)  # 25 formularios por página
-    page_number = request.GET.get('page')
-    formularios_page = paginator.get_page(page_number)
-    
-    # Preparar datos para la tabla
-    formularios_tabla = []
-    for formulario in formularios_page:
-        formularios_tabla.append({
-            'id': formulario.id,
-            'nombre_completo': formulario.get_nombre_completo(),
-            'cedula': formulario.cedulaCliente,
-            'celular': formulario.celular,
-            'correo': formulario.correo_electronico,
-            'producto_interesado': formulario.producto_interesado or 'No especificado',
-            'monto_solicitar': f"${formulario.dinero_a_solicitar:,.2f}" if formulario.dinero_a_solicitar else 'N/A',
-            'fecha_creacion': formulario.fecha_creacion,
-            'procesado': formulario.procesado,
-            'ip_address': formulario.ip_address,
-        })
-    
-    # Obtener configuración del Canal Digital
-    configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
-    pipeline_por_defecto = ConfiguracionCanalDigital.get_pipeline_por_defecto()
-    etapa_por_defecto = ConfiguracionCanalDigital.get_etapa_por_defecto()
-    
-    # Obtener todos los pipelines disponibles
-    pipelines_disponibles = Pipeline.objects.all()
-    
-    # KPIs del canal digital
-    context = {
-        'solicitudes_canal_digital': solicitudes_canal_digital,
-        'solicitudes_procesadas': solicitudes_procesadas,
-        'solicitudes_pendientes': solicitudes_pendientes,
-        'formularios_tabla': formularios_tabla,
-        'formularios_page': formularios_page,
-        'titulo': 'Canal Digital',
-        'subtitulo': 'Gestión de solicitudes del canal digital',
-        'configuracion': configuracion,
-        'pipeline_por_defecto': pipeline_por_defecto,
-        'etapa_por_defecto': etapa_por_defecto,
-        'pipelines_disponibles': pipelines_disponibles,
-    }
-    
-    return render(request, 'workflow/canal_digital.html', context)
-
 
 @csrf_exempt
 @login_required
@@ -11541,6 +11529,68 @@ def api_obtener_configuracion_canal_digital(request):
         })
 
 
+@login_required
+@csrf_exempt
+def api_asignar_propietario_formulario(request):
+    """API para asignar propietario a un formulario del canal digital"""
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        })
+    
+    try:
+        import json
+        from .models import FormularioWeb
+        from django.contrib.auth.models import User, Group
+        
+        data = json.loads(request.body)
+        formulario_id = data.get('formulario_id')
+        propietario_id = data.get('propietario_id')
+        
+        # Validar formulario
+        formulario = get_object_or_404(FormularioWeb, id=formulario_id)
+        
+        # Si propietario_id es None o vacío, desasignar
+        if not propietario_id:
+            formulario.propietario = None
+            propietario_nombre = "Sin asignar"
+        else:
+            # Validar propietario
+            propietario = get_object_or_404(User, id=propietario_id, is_active=True)
+            
+            # Verificar que el propietario esté en el grupo "Canal Digital"
+            try:
+                grupo_canal_digital = Group.objects.get(name="Canal Digital")
+                if not propietario.groups.filter(id=grupo_canal_digital.id).exists():
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'El usuario {propietario.get_full_name() or propietario.username} no pertenece al grupo "Canal Digital"'
+                    })
+            except Group.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'El grupo "Canal Digital" no existe. Contacte al administrador.'
+                })
+            
+            formulario.propietario = propietario
+            propietario_nombre = propietario.get_full_name() or propietario.username
+        
+        formulario.save()
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Propietario {"asignado" if propietario_id else "removido"} correctamente',
+            'propietario_nombre': propietario_nombre
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
 # =====================================================
 # APIS PARA AVANZAR SUBESTADOS Y TRANSICIONES
 # =====================================================
@@ -12360,3 +12410,139 @@ def asociar_entrevista(request):
         'success': False,
         'error': 'Método no permitido'
     }, status=405)
+
+
+# ==========================================
+# APIS DE GESTIÓN DE USUARIOS DEL CANAL DIGITAL
+# ==========================================
+
+@login_required
+@csrf_exempt
+def api_agregar_usuario_canal_digital(request):
+    """API para agregar un usuario al grupo Canal Digital"""
+    if not request.user.is_superuser:
+        return JsonResponse({
+            'success': False,
+            'error': 'Permisos insuficientes'
+        }, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        import json
+        from django.contrib.auth.models import User, Group
+        
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'ID de usuario requerido'
+            })
+        
+        # Obtener usuario
+        usuario = get_object_or_404(User, id=user_id, is_active=True)
+        
+        # Obtener o crear grupo "Canal Digital"
+        grupo_canal_digital, created = Group.objects.get_or_create(name="Canal Digital")
+        
+        # Verificar si ya está en el grupo
+        if usuario.groups.filter(name="Canal Digital").exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'El usuario {usuario.get_full_name() or usuario.username} ya pertenece al grupo "Canal Digital"'
+            })
+        
+        # Agregar al grupo
+        usuario.groups.add(grupo_canal_digital)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Usuario {usuario.get_full_name() or usuario.username} agregado al grupo "Canal Digital" exitosamente',
+            'usuario': {
+                'id': usuario.id,
+                'username': usuario.username,
+                'full_name': usuario.get_full_name(),
+                'email': usuario.email
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+@csrf_exempt
+def api_remover_usuario_canal_digital(request):
+    """API para remover un usuario del grupo Canal Digital"""
+    if not request.user.is_superuser:
+        return JsonResponse({
+            'success': False,
+            'error': 'Permisos insuficientes'
+        }, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        import json
+        from django.contrib.auth.models import User, Group
+        
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'ID de usuario requerido'
+            })
+        
+        # Obtener usuario
+        usuario = get_object_or_404(User, id=user_id, is_active=True)
+        
+        # Obtener grupo "Canal Digital"
+        try:
+            grupo_canal_digital = Group.objects.get(name="Canal Digital")
+        except Group.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'El grupo "Canal Digital" no existe'
+            })
+        
+        # Verificar si está en el grupo
+        if not usuario.groups.filter(name="Canal Digital").exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'El usuario {usuario.get_full_name() or usuario.username} no pertenece al grupo "Canal Digital"'
+            })
+        
+        # Remover del grupo
+        usuario.groups.remove(grupo_canal_digital)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Usuario {usuario.get_full_name() or usuario.username} removido del grupo "Canal Digital" exitosamente',
+            'usuario': {
+                'id': usuario.id,
+                'username': usuario.username,
+                'full_name': usuario.get_full_name(),
+                'email': usuario.email
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

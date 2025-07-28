@@ -134,6 +134,7 @@ urlpatterns = [
     
     # Comité View URLs (add these to resolve 404 error)
     path('comite/', views_comite.bandeja_comite_view, name='bandeja_comite'),
+    path('comite/debug/', views_comite.debug_bandeja_comite_view, name='debug_bandeja_comite'),
     path('comite/solicitud/<int:solicitud_id>/', views_comite.detalle_solicitud_comite, name='detalle_solicitud_comite'),
     
     # Additional Comité API URLs (from apicomite)

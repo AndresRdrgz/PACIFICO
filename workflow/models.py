@@ -372,6 +372,16 @@ class FormularioWeb(models.Model):
         verbose_name="Procesado"
     )
     
+    # Campo para asignar propietario del lead
+    propietario = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Propietario del Lead",
+        help_text="Usuario asignado para gestionar este lead"
+    )
+    
     class Meta:
         db_table = 'workflow_formulario_web'
         verbose_name = 'Formulario Web'

@@ -119,6 +119,9 @@ urlpatterns += [
     path('api/canal-digital/pipelines/<int:pipeline_id>/etapas/', views_workflow.api_obtener_etapas_pipeline, name='api_obtener_etapas_pipeline'),
     path('api/canal-digital/configuracion/', views_workflow.api_obtener_configuracion_canal_digital, name='api_obtener_configuracion_canal_digital'),
     path('api/canal-digital/configuracion/guardar/', views_workflow.api_guardar_configuracion_canal_digital, name='api_guardar_configuracion_canal_digital'),
+    path('api/canal-digital/propietario/asignar/', views_workflow.api_asignar_propietario_formulario, name='api_asignar_propietario_formulario'),
+    path('api/canal-digital/usuarios/agregar/', views_workflow.api_agregar_usuario_canal_digital, name='api_agregar_usuario_canal_digital'),
+    path('api/canal-digital/usuarios/remover/', views_workflow.api_remover_usuario_canal_digital, name='api_remover_usuario_canal_digital'),
     
     # APIs
     path('api/solicitudes/', views_negocios.api_solicitudes, name='api_solicitudes'),

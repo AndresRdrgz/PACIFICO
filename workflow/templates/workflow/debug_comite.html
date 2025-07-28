@@ -1,0 +1,129 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}DEBUG - Bandeja del Comité de Crédito{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>DEBUG - Bandeja del Comité de Crédito</h1>
+    
+    <div class="alert alert-info">
+        <h4>Debug Information</h4>
+        <p><strong>Total Solicitudes (from context):</strong> {{ total_solicitudes }}</p>
+        <p><strong>Etapa Comité:</strong> {{ etapa_comite }}</p>
+        <p><strong>User:</strong> {{ user.username }} (Superuser: {{ user.is_superuser }})</p>
+        <p><strong>API URL:</strong> {% url 'workflow:api_solicitudes_comite' %}</p>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Manual API Test</h3>
+            <button id="testApi" class="btn btn-primary">Test API</button>
+            <div id="apiResult" class="mt-3"></div>
+        </div>
+        <div class="col-md-6">
+            <h3>Console Output</h3>
+            <div id="consoleOutput" style="background: #f0f0f0; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace;"></div>
+        </div>
+    </div>
+    
+    <hr>
+    
+    <h3>Table Test</h3>
+    <div id="tableDebug" class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Cliente</th>
+                    <th>Producto</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody id="debugTableBody">
+                <tr>
+                    <td colspan="5" class="text-center">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Redirect console.log to our debug div
+const consoleDiv = document.getElementById('consoleOutput');
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+function addToConsole(message, type = 'log') {
+    const timestamp = new Date().toLocaleTimeString();
+    const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+    consoleDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+}
+
+console.log = function(...args) {
+    originalLog.apply(console, args);
+    addToConsole(args.join(' '), 'log');
+};
+
+console.error = function(...args) {
+    originalError.apply(console, args);
+    addToConsole(args.join(' '), 'error');
+};
+
+console.warn = function(...args) {
+    originalWarn.apply(console, args);
+    addToConsole(args.join(' '), 'warn');
+};
+
+// Test API function
+document.getElementById('testApi').addEventListener('click', function() {
+    const apiUrl = "{% url 'workflow:api_solicitudes_comite' %}";
+    console.log('Testing API:', apiUrl);
+    
+    fetch(apiUrl)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API Response:', JSON.stringify(data, null, 2));
+            
+            // Update debug table
+            const tbody = document.getElementById('debugTableBody');
+            tbody.innerHTML = '';
+            
+            if (data.success && data.solicitudes && data.solicitudes.length > 0) {
+                data.solicitudes.forEach(sol => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${sol.id}</td>
+                        <td>${sol.codigo}</td>
+                        <td>${sol.cliente_nombre} (${sol.cliente_cedula})</td>
+                        <td>${sol.producto_descripcion}</td>
+                        <td>${sol.monto_formateado}</td>
+                    `;
+                });
+                console.log('Table updated with', data.solicitudes.length, 'rows');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">No data found</td></tr>';
+                console.log('No solicitudes found in response');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching API:', error);
+            document.getElementById('apiResult').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+        });
+});
+
+// Run initial test
+console.log('Page loaded, running initial API test...');
+document.getElementById('testApi').click();
+</script>
+{% endblock %}

@@ -47,21 +47,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function mostrarEstadoCarga() {
-        if (tablaBody) tablaBody.style.display = 'none';
-        if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
+        const tableDesktop = document.getElementById('tableDesktop');
+        const cardsMobile = document.getElementById('cardsMobile');
+        
+        if (tableDesktop) tableDesktop.style.display = 'none';
+        if (cardsMobile) cardsMobile.style.display = 'none';
         if (emptyState) emptyState.style.display = 'none';
         if (loadingState) loadingState.style.display = 'block';
     }
 
     function ocultarEstadoCarga() {
+        const tableDesktop = document.getElementById('tableDesktop');
+        const cardsMobile = document.getElementById('cardsMobile');
+        
         if (loadingState) loadingState.style.display = 'none';
-        if (tablaBody) tablaBody.style.display = 'table-row-group';
-        if (mobileCardsContainer) mobileCardsContainer.style.display = 'block';
+        
+        // Restore proper responsive classes and show the containers
+        if (tableDesktop) {
+            tableDesktop.className = 'table-modern d-none d-lg-block';
+            tableDesktop.style.display = '';
+            tableDesktop.style.visibility = 'visible';
+            console.log('Table desktop mostrada');
+        }
+        if (cardsMobile) {
+            cardsMobile.className = 'mobile-cards d-block d-lg-none';
+            cardsMobile.style.display = '';
+            cardsMobile.style.visibility = 'visible';
+            console.log('Cards móviles mostradas');
+        }
     }
 
     function mostrarEstadoVacio() {
-        if (tablaBody) tablaBody.style.display = 'none';
-        if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
+        const tableDesktop = document.getElementById('tableDesktop');
+        const cardsMobile = document.getElementById('cardsMobile');
+        
+        if (tableDesktop) tableDesktop.style.display = 'none';
+        if (cardsMobile) cardsMobile.style.display = 'none';
         if (loadingState) loadingState.style.display = 'none';
         if (emptyState) emptyState.style.display = 'block';
     }
@@ -107,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (data.success && data.solicitudes && data.solicitudes.length > 0) {
+                    console.log(`Procesando ${data.solicitudes.length} solicitudes`);
                     // Crear fragmentos para insertar todas las filas y cards de una vez
                     const tableFragment = document.createDocumentFragment();
                     const cardsFragment = document.createDocumentFragment();
@@ -205,9 +227,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Insertar todas las filas y cards de una vez
                     if (tablaBody) {
                         tablaBody.appendChild(tableFragment);
+                        console.log(`${tableFragment.children.length} filas agregadas a la tabla`);
                         
                         // Agregar event listeners para las filas de tabla
                         const tableRows = tablaBody.querySelectorAll('tr[data-solicitud-id]');
+                        console.log(`${tableRows.length} filas con event listeners`);
                         tableRows.forEach(row => {
                             row.addEventListener('click', function() {
                                 const solicitudId = this.getAttribute('data-solicitud-id');
@@ -219,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     if (mobileCardsContainer) {
                         mobileCardsContainer.appendChild(cardsFragment);
+                        console.log(`${cardsFragment.children.length} cards agregadas`);
                         
                         // Agregar event listeners para las cards móviles
                         const cards = mobileCardsContainer.querySelectorAll('.solicitud-card');
@@ -232,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                     
+                    console.log('Llamando ocultarEstadoCarga()');
                     ocultarEstadoCarga();
                     
                     // Actualizar información de paginación
@@ -315,6 +341,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar solicitudes al inicializar
     console.log('Inicializando carga de solicitudes...');
     cargarSolicitudes();
+    
+    // Exponer función globalmente para que pueda ser llamada desde otros scripts
+    window.cargarSolicitudes = cargarSolicitudes;
 });
 
 // Función global para abrir modal de participación
