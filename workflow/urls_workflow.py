@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.static import serve
 from django.conf import settings
 from . import views_workflow
+from . import views_negocios
 from . import views
 from . import api
 from . import api_apc
@@ -37,7 +38,7 @@ urlpatterns += [
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),
-    path('negocios/', views_workflow.negocios_view, name='negocios'),
+    path('negocios/', views_negocios.negocios_view, name='negocios'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/v2/', views_workflow.detalle_solicitud_v2, name='detalle_solicitud_v2'),
     path('solicitud/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
@@ -117,9 +118,9 @@ urlpatterns += [
     path('api/canal-digital/configuracion/guardar/', views_workflow.api_guardar_configuracion_canal_digital, name='api_guardar_configuracion_canal_digital'),
     
     # APIs
-    path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
+    path('api/solicitudes/', views_negocios.api_solicitudes, name='api_solicitudes'),
     path('api/solicitudes/<int:solicitud_id>/detalle/', views_workflow.api_solicitud_detalle, name='api_solicitud_detalle'),
-    path('api/estadisticas/', views_workflow.api_estadisticas, name='api_estadisticas'),
+    path('api/estadisticas/', views_negocios.api_estadisticas, name='api_estadisticas'),
     
     # Páginas especiales
     path('construccion/', views_workflow.sitio_construccion, name='sitio_construccion'),

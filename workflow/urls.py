@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import api
 from . import views_workflow
+from . import views_negocios
 from . import dashboard_views
 from . import views_calificacion
 from . import views_formulario
@@ -24,7 +25,7 @@ urlpatterns = [
     
     # Workflow URLs
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
-    path('negocios/', views_workflow.negocios_view, name='negocios'),
+    path('negocios/', views_negocios.negocios_view, name='negocios'),
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
@@ -53,8 +54,11 @@ urlpatterns = [
     path('api/pipelines/<int:pipeline_id>/requisitos/asignar/', views_workflow.api_asignar_requisito_pipeline, name='api_asignar_requisito_pipeline'),
     path('api/pipelines/<int:pipeline_id>/campos-personalizados/crear/', views_workflow.api_crear_campo_personalizado, name='api_crear_campo_personalizado'),
     path('api/pipelines/<int:pipeline_id>/datos/', views_workflow.api_obtener_datos_pipeline, name='api_obtener_datos_pipeline'),
-    path('api/solicitudes/', views_workflow.api_solicitudes, name='api_solicitudes'),
-    path('api/estadisticas/', views_workflow.api_estadisticas, name='api_estadisticas'),
+    path('api/solicitudes/', views_negocios.api_solicitudes, name='api_solicitudes'),
+    path('api/estadisticas/', views_negocios.api_estadisticas, name='api_estadisticas'),
+    path('api/solicitudes-tabla/', views_negocios.api_solicitudes_tabla, name='api_solicitudes_tabla'),
+    path('api/solicitudes/<int:solicitud_id>/detalle-modal/', views_negocios.api_detalle_solicitud_modal, name='api_detalle_solicitud_modal'),
+    path('api/estadisticas-negocios/', views_negocios.api_estadisticas_negocios, name='api_estadisticas_negocios'),
     path('api/solicitudes/<int:solicitud_id>/prioridad/', views_workflow.api_actualizar_prioridad, name='api_actualizar_prioridad'),
     path('api/solicitudes/<int:solicitud_id>/etiquetas/', views_workflow.api_actualizar_etiquetas, name='api_actualizar_etiquetas'),
     path('api/buscar-clientes/', views_workflow.api_buscar_clientes, name='api_buscar_clientes'),

@@ -199,7 +199,7 @@ def negocios_view(request):
         'is_superuser': request.user.is_superuser,
         'user': request.user,
     }
-    
+    print(f"Rendering negocios view with {len(solicitudes_enriched)} solicitudes")
     return render(request, 'workflow/negocios.html', context)
 
 
@@ -498,3 +498,99 @@ def api_estadisticas_negocios(request):
             'success': False,
             'error': f'Error al obtener estadísticas: {str(e)}'
         }, status=500)
+
+
+@login_required
+def api_solicitudes(request):
+    """API para obtener solicitudes según permisos del usuario"""
+    
+    # Obtener solicitudes según permisos del usuario
+    if request.user.is_superuser:
+        solicitudes = Solicitud.objects.all().select_related(
+            'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
+        )
+    else:
+        solicitudes = Solicitud.objects.filter(
+            Q(asignada_a=request.user) | Q(creada_por=request.user)
+        ).select_related(
+            'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
+        )
+    
+    # Filtros
+    pipeline_id = request.GET.get('pipeline')
+    if pipeline_id:
+        solicitudes = solicitudes.filter(pipeline_id=pipeline_id)
+    
+    estado = request.GET.get('estado')
+    if estado == 'activas':
+        solicitudes = solicitudes.filter(etapa_actual__isnull=False)
+    elif estado == 'completadas':
+        solicitudes = solicitudes.filter(etapa_actual__isnull=True)
+    
+    # Serializar datos
+    datos = []
+    for solicitud in solicitudes:
+        datos.append({
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'pipeline': solicitud.pipeline.nombre,
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+            'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+            'creada_por': solicitud.creada_por.username,
+            'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
+            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+            'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+        })
+    
+    return JsonResponse({'solicitudes': datos})
+
+
+@login_required  
+def api_estadisticas(request):
+    """API para obtener estadísticas globales"""
+    
+    # Obtener solicitudes según permisos del usuario
+    if request.user.is_superuser:
+        solicitudes_base = Solicitud.objects.all()
+    else:
+        solicitudes_base = Solicitud.objects.filter(
+            Q(asignada_a=request.user) | Q(creada_por=request.user)
+        )
+    
+    # Estadísticas básicas
+    total_solicitudes = solicitudes_base.count()
+    solicitudes_activas = solicitudes_base.filter(etapa_actual__isnull=False).count()
+    solicitudes_completadas = solicitudes_base.filter(etapa_actual__isnull=True).count()
+    
+    # Solicitudes por pipeline
+    if request.user.is_superuser:
+        pipelines = Pipeline.objects.all()
+    else:
+        pipelines = Pipeline.objects.filter(
+            Q(permisopipeline__usuario=request.user) |
+            Q(etapas__permisos__grupo__user=request.user)
+        ).distinct()
+    
+    solicitudes_por_pipeline = []
+    for pipeline in pipelines:
+        total = solicitudes_base.filter(pipeline=pipeline).count()
+        solicitudes_por_pipeline.append({
+            'nombre': pipeline.nombre,
+            'total': total
+        })
+    
+    # Solicitudes vencidas - Calculamos usando Python para compatibilidad con SQLite
+    solicitudes_vencidas = 0
+    for solicitud in solicitudes_base.filter(etapa_actual__isnull=False).select_related('etapa_actual'):
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            fecha_limite = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
+            if timezone.now() > fecha_limite:
+                solicitudes_vencidas += 1
+    
+    return JsonResponse({
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_activas': solicitudes_activas,
+        'solicitudes_completadas': solicitudes_completadas,
+        'solicitudes_vencidas': solicitudes_vencidas,
+        'solicitudes_por_pipeline': solicitudes_por_pipeline,
+    })
