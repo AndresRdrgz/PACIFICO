@@ -5911,23 +5911,24 @@ def api_debida_diligencia_solicitar(request, solicitud_id):
                 }, status=403)
         
         # Verificar que no esté ya en proceso
-        if solicitud.debida_diligencia_status in ['makito_processing', 'completado']:
+        if solicitud.debida_diligencia_status in ['en_progreso', 'completado']:
             return JsonResponse({
                 'success': False,
                 'error': 'La debida diligencia ya está en proceso o completada'
             }, status=400)
         
         # Actualizar el estado
-        solicitud.debida_diligencia_status = 'pendiente'
+        solicitud.debida_diligencia_status = 'solicitado'
         solicitud.diligencia_fecha_solicitud = timezone.now()
         solicitud.save(update_fields=['debida_diligencia_status', 'diligencia_fecha_solicitud'])
         
         # Crear entrada en el historial
-        HistorialSolicitud.objects.create(
+        historial_entry = HistorialSolicitud.objects.create(
             solicitud=solicitud,
-            accion='debida_diligencia_solicitada',
-            detalles='Debida diligencia solicitada',
-            usuario=request.user
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
         )
         
         return JsonResponse({
@@ -5982,7 +5983,7 @@ def api_debida_diligencia_solicitar_makito(request, solicitud_id):
         
         # Actualizar el estado a processing si no está ya completado
         if solicitud.debida_diligencia_status not in ['completado']:
-            solicitud.debida_diligencia_status = 'makito_processing'
+            solicitud.debida_diligencia_status = 'en_progreso'
             if not solicitud.diligencia_fecha_solicitud:
                 solicitud.diligencia_fecha_solicitud = timezone.now()
             solicitud.diligencia_fecha_inicio = timezone.now()
@@ -5992,11 +5993,12 @@ def api_debida_diligencia_solicitar_makito(request, solicitud_id):
         enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request)
         
         # Crear entrada en el historial
-        HistorialSolicitud.objects.create(
+        historial_entry = HistorialSolicitud.objects.create(
             solicitud=solicitud,
-            accion='debida_diligencia_makito_solicitada',
-            detalles=f'Solicitado a Makito RPA: {tipo_documento.replace("_", " ").title()}',
-            usuario=request.user
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
         )
         
         return JsonResponse({

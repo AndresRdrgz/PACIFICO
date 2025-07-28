@@ -186,8 +186,8 @@ class Solicitud(models.Model):
     # Debida Diligencia con Makito fields
     DILIGENCIA_STATUS_CHOICES = [
         ('no_iniciado', 'No Iniciado'),
-        ('pendiente', 'Pendiente'),
-        ('makito_processing', 'Makito Procesando'),
+        ('solicitado', 'Solicitado'),
+        ('en_progreso', 'En Progreso'),
         ('completado', 'Completado'),
         ('error', 'Error'),
     ]

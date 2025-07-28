@@ -4013,6 +4013,42 @@
         return cookieValue;
     }
 
+    // Show notification function
+    function showNotification(message, type = 'info') {
+        // Remove any existing notifications
+        const existingNotifications = document.querySelectorAll('.toast-notification');
+        existingNotifications.forEach(notification => notification.remove());
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `toast-notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                </div>
+                <div class="notification-message">${message}</div>
+                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Add to document
+        document.body.appendChild(notification);
+
+        // Show notification
+        setTimeout(() => notification.classList.add('show'), 100);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
+    }
+
     // Update mock document status for testing
     function updateMockDocumentStatus(documentId, fileUrl) {
         // Find the document in mock data and update it
@@ -4318,12 +4354,12 @@
             statusBadge = 'completed';
             statusTitle = 'Debida Diligencia Completada';
             statusSubtitle = `Completado el ${formatDate(fecha_completado)}`;
-        } else if (estado === 'pendiente') {
+        } else if (estado === 'solicitado') {
             statusIcon = '<i class="fas fa-hourglass-half text-white"></i>';
             statusBadge = 'pending';
-            statusTitle = 'Debida Diligencia Pendiente';
+            statusTitle = 'Debida Diligencia Solicitada';
             statusSubtitle = `Solicitado el ${formatDate(fecha_solicitud)}`;
-        } else if (estado === 'makito_processing') {
+        } else if (estado === 'en_progreso') {
             statusIcon = '<i class="fas fa-robot text-white"></i>';
             statusBadge = 'makito-processing';
             statusTitle = 'Makito RPA Procesando';
@@ -4405,7 +4441,7 @@
                     Ver
                 </button>
             `;
-        } else if (estado === 'makito_processing') {
+        } else if (estado === 'en_progreso') {
             cardClass = 'makito-processing';
             statusText = 'Procesando...';
             statusClass = 'makito-processing';
