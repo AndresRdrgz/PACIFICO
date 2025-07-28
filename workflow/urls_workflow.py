@@ -57,6 +57,8 @@ urlpatterns += [
     path('api/comite/solicitudes/<int:solicitud_id>/escalar/', apicomite.api_escalar_comite, name='api_escalar_comite'),
     path('api/comite/niveles-usuario/', apicomite.api_niveles_usuario_comite, name='api_niveles_usuario_comite'),
     path('api/comite/solicitudes/<int:solicitud_id>/historial/', apicomite.api_historial_participaciones, name='api_historial_participaciones'),
+    path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
     # APIs para gestión de niveles de comité
     path('api/comite/niveles/', views_workflow.api_obtener_niveles_comite, name='api_obtener_niveles_comite'),

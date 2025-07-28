@@ -102,7 +102,11 @@ def api_solicitudes_comite(request):
         solicitudes_qs = solicitudes_qs.filter(
             Q(codigo__icontains=search_query) |
             Q(cliente__nombreCliente__icontains=search_query) |
-            Q(cliente__cedulaCliente__icontains=search_query)
+            Q(cliente__cedulaCliente__icontains=search_query) |
+            Q(cotizacion__cliente__nombreCliente__icontains=search_query) |
+            Q(cotizacion__cliente__cedulaCliente__icontains=search_query) |
+            Q(cliente_nombre__icontains=search_query) |
+            Q(cliente_cedula__icontains=search_query)
         )
 
     # Ordenamiento
@@ -121,11 +125,41 @@ def api_solicitudes_comite(request):
         # Obtener información del analista que revisó el préstamo
         analista_info = obtener_analista_revisor(sol)
         
+        # Obtener información del cliente
+        cliente_nombre = ""
+        cliente_cedula = ""
+        marca_modelo = ""
+        
+        try:
+            if sol.cliente:
+                cliente_nombre = sol.cliente.nombreCliente or ""
+                cliente_cedula = sol.cliente.cedulaCliente or ""
+            elif sol.cotizacion and sol.cotizacion.cliente:
+                cliente_nombre = sol.cotizacion.cliente.nombreCliente or ""
+                cliente_cedula = sol.cotizacion.cliente.cedulaCliente or ""
+            else:
+                # Usar campos directos si están disponibles
+                cliente_nombre = getattr(sol, 'cliente_nombre', '') or ""
+                cliente_cedula = getattr(sol, 'cliente_cedula', '') or ""
+            
+            # Obtener marca y modelo si es auto
+            if sol.producto_descripcion == "Auto" and sol.cotizacion:
+                marca = getattr(sol.cotizacion, 'marca', '') or ""
+                modelo = getattr(sol.cotizacion, 'modelo', '') or ""
+                if marca or modelo:
+                    marca_modelo = f"{marca} {modelo}".strip()
+        except Exception as e:
+            print(f"Error obteniendo datos del cliente para solicitud {sol.id}: {e}")
+            cliente_nombre = "Error al obtener cliente"
+            cliente_cedula = ""
+            marca_modelo = ""
+        
         data.append({
             'id': sol.id,
             'codigo': sol.codigo,
-            'cliente_nombre': sol.cliente_nombre,
-            'cliente_cedula': sol.cliente_cedula,
+            'cliente_nombre': cliente_nombre,
+            'cliente_cedula': cliente_cedula,
+            'marca_modelo': marca_modelo,
             'monto_formateado': sol.monto_formateado,
             'producto_descripcion': sol.producto_descripcion,
             'fecha_creacion': sol.fecha_creacion.strftime('%d-%m-%Y %H:%M'),
@@ -969,7 +1003,7 @@ def api_etapas_disponibles_comite(request, solicitud_id):
             return JsonResponse({'success': False, 'error': 'La solicitud no está en etapa de comité.'}, status=400)
         
         # Obtener transiciones válidas desde la etapa actual
-        from .modelsWorkflow import TransicionEtapa
+        from .modelsWorkflow import TransicionEtapa, SubEstado
         transiciones = TransicionEtapa.objects.filter(
             pipeline=solicitud.pipeline,
             etapa_origen=solicitud.etapa_actual
@@ -977,10 +1011,24 @@ def api_etapas_disponibles_comite(request, solicitud_id):
         
         etapas_disponibles = []
         for transicion in transiciones:
+            # Obtener subestados de la etapa destino
+            subestados = SubEstado.objects.filter(
+                etapa=transicion.etapa_destino
+            ).order_by('orden')
+            
+            subestados_list = []
+            for subestado in subestados:
+                subestados_list.append({
+                    'id': subestado.id,
+                    'nombre': subestado.nombre,
+                    'orden': subestado.orden
+                })
+            
             etapas_disponibles.append({
                 'id': transicion.etapa_destino.id,
                 'nombre': transicion.etapa_destino.nombre,
-                'transicion_nombre': transicion.nombre
+                'transicion_nombre': transicion.nombre,
+                'subestados': subestados_list
             })
         
         return JsonResponse({'success': True, 'etapas': etapas_disponibles})
@@ -1011,9 +1059,11 @@ def api_avanzar_etapa_comite(request, solicitud_id):
         
         data = json.loads(request.body)
         etapa_destino_id = data.get('etapa_destino_id')
+        subestado_destino_id = data.get('subestado_destino_id')
         
         print(f"Parsed data: {data}")
         print(f"Etapa destino ID: {etapa_destino_id}")
+        print(f"Subestado destino ID: {subestado_destino_id}")
         
         if not etapa_destino_id:
             print(f"ERROR: etapa_destino_id is empty or None")
@@ -1073,16 +1123,27 @@ def api_avanzar_etapa_comite(request, solicitud_id):
             historial_anterior.fecha_fin = timezone.now()
             historial_anterior.save()
         
+        # Procesar subestado si se proporciona
+        subestado_destino = None
+        if subestado_destino_id:
+            from .modelsWorkflow import SubEstado
+            try:
+                subestado_destino = SubEstado.objects.get(id=subestado_destino_id, etapa=etapa_destino)
+            except SubEstado.DoesNotExist:
+                print(f"WARNING: Subestado {subestado_destino_id} no encontrado para etapa {etapa_destino.id}")
+        
         # Crear nuevo historial
         nuevo_historial = HistorialSolicitud.objects.create(
             solicitud=solicitud,
             etapa=etapa_destino,
+            subestado=subestado_destino,
             usuario_responsable=request.user,
             fecha_inicio=timezone.now()
         )
         
         # Actualizar la solicitud
         solicitud.etapa_actual = etapa_destino
+        solicitud.subestado_actual = subestado_destino
         solicitud.save()
         
         # Preparar datos para el correo

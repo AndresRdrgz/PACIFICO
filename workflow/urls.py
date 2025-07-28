@@ -6,6 +6,8 @@ from . import views_negocios
 from . import dashboard_views
 from . import views_calificacion
 from . import views_formulario
+from . import views_comite
+from . import apicomite
 #from . import api_appx_conexion
 
 urlpatterns = [
@@ -129,6 +131,19 @@ urlpatterns = [
     path('api/comite/usuarios/<int:usuario_id>/niveles/<int:nivel_id>/desasignar/', views_workflow.api_desasignar_usuario_nivel_comite, name='api_desasignar_usuario_nivel_comite'),
     path('api/comite/estadisticas/', views_workflow.api_estadisticas_comite, name='api_estadisticas_comite'),
     path('api/usuarios/', views_workflow.api_obtener_usuarios, name='api_obtener_usuarios'),
+    
+    # Comité View URLs (add these to resolve 404 error)
+    path('comite/', views_comite.bandeja_comite_view, name='bandeja_comite'),
+    path('comite/solicitud/<int:solicitud_id>/', views_comite.detalle_solicitud_comite, name='detalle_solicitud_comite'),
+    
+    # Additional Comité API URLs (from apicomite)
+    path('api/comite/solicitudes/', apicomite.api_solicitudes_comite, name='api_solicitudes_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/participar/', apicomite.api_participar_comite, name='api_participar_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/escalar/', apicomite.api_escalar_comite, name='api_escalar_comite'),
+    path('api/comite/niveles-usuario/', apicomite.api_niveles_usuario_comite, name='api_niveles_usuario_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/historial/', apicomite.api_historial_participaciones, name='api_historial_participaciones'),
+    path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
+    path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
     # URLs para calificación de documentos
     path('api/documento/calificar/', views_calificacion.calificar_documento, name='calificar_documento'),

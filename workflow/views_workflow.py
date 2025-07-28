@@ -4923,11 +4923,41 @@ def enviar_correo_bandeja_grupal(solicitud, etapa, request=None):
     Basada en la implementación de correos de la app tómbola.
     """
     try:
-        # Destinatarios fijos según especificación
-        destinatarios = [
-            "jacastillo@fpacifico.com",
-            "arodriguez@fpacifico.com"
-        ]
+        # Obtener usuarios que tienen acceso a esta etapa dinámicamente
+        destinatarios = []
+        
+        # Obtener permisos de bandeja para esta etapa
+        permisos_bandeja = PermisoBandeja.objects.filter(
+            etapa=etapa,
+            puede_ver=True  # Solo usuarios que pueden ver la bandeja
+        ).select_related('grupo', 'usuario')
+        
+        # Recopilar emails de usuarios con acceso
+        emails_set = set()  # Usar set para evitar duplicados
+        
+        for permiso in permisos_bandeja:
+            if permiso.usuario and permiso.usuario.email:
+                # Permiso directo a usuario
+                emails_set.add(permiso.usuario.email)
+                print(f"📧 Usuario directo agregado: {permiso.usuario.email}")
+            elif permiso.grupo:
+                # Permiso a grupo - obtener todos los usuarios del grupo
+                usuarios_grupo = permiso.grupo.user_set.filter(
+                    is_active=True,
+                    email__isnull=False,
+                    email__gt=''  # Email no vacío
+                )
+                for usuario in usuarios_grupo:
+                    emails_set.add(usuario.email)
+                    print(f"📧 Usuario del grupo '{permiso.grupo.name}' agregado: {usuario.email}")
+        
+        destinatarios = list(emails_set)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron destinatarios para la etapa '{etapa.nombre}'. Verificar permisos de bandeja.")
+            return
+        
+        print(f"📧 Total de {len(destinatarios)} destinatario(s) encontrado(s) para la etapa '{etapa.nombre}': {destinatarios}")
         
         # Construir la URL de la bandeja usando la función dinámica
         base_url = get_site_url(request)
@@ -5014,7 +5044,7 @@ def enviar_correo_bandeja_grupal(solicitud, etapa, request=None):
             email.connection = connection
             email.send()
         
-        print(f"✅ Correo enviado correctamente para solicitud {solicitud.codigo} - Etapa: {etapa.nombre}")
+        print(f"✅ Correo enviado correctamente para solicitud {solicitud.codigo} - Etapa: {etapa.nombre} - Enviado a {len(destinatarios)} destinatario(s)")
         
     except Exception as e:
         # Registrar el error pero no romper el flujo
@@ -5324,11 +5354,41 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
     Función para enviar correo automático cuando una solicitud entra a la etapa del Comité de Crédito.
     """
     try:
-        # Destinatarios específicos para el comité de crédito
-        destinatarios = [
-            "jacastillo@fpacifico.com",
-            "arodriguez@fpacifico.com"
-        ]
+        # Obtener usuarios que tienen acceso a la etapa del comité dinámicamente
+        destinatarios = []
+        
+        # Obtener permisos de bandeja para esta etapa del comité
+        permisos_bandeja = PermisoBandeja.objects.filter(
+            etapa=etapa,
+            puede_ver=True  # Solo usuarios que pueden ver la bandeja
+        ).select_related('grupo', 'usuario')
+        
+        # Recopilar emails de usuarios con acceso
+        emails_set = set()  # Usar set para evitar duplicados
+        
+        for permiso in permisos_bandeja:
+            if permiso.usuario and permiso.usuario.email:
+                # Permiso directo a usuario
+                emails_set.add(permiso.usuario.email)
+                print(f"📧 Usuario del comité agregado: {permiso.usuario.email}")
+            elif permiso.grupo:
+                # Permiso a grupo - obtener todos los usuarios del grupo
+                usuarios_grupo = permiso.grupo.user_set.filter(
+                    is_active=True,
+                    email__isnull=False,
+                    email__gt=''  # Email no vacío
+                )
+                for usuario in usuarios_grupo:
+                    emails_set.add(usuario.email)
+                    print(f"📧 Usuario del grupo '{permiso.grupo.name}' agregado al comité: {usuario.email}")
+        
+        destinatarios = list(emails_set)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron destinatarios para la etapa del comité '{etapa.nombre}'. Verificar permisos de bandeja.")
+            return
+        
+        print(f"🏛️ Total de {len(destinatarios)} miembro(s) del comité encontrado(s) para '{etapa.nombre}': {destinatarios}")
         
         # Construir la URL específica de la bandeja del comité usando la función dinámica
         base_url = get_site_url(request)
@@ -5428,7 +5488,7 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
             email.connection = connection
             email.send()
         
-        print(f"✅ Correo del comité enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"✅ Correo del comité enviado correctamente para solicitud {solicitud.codigo} - Enviado a {len(destinatarios)} miembro(s) del comité")
         
     except Exception as e:
         # Registrar el error pero no romper el flujo

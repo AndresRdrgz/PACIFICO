@@ -1659,6 +1659,10 @@
         
         // Mostrar loading
         const btnProcesar = document.querySelector('#modalParticipacion .btn-primary');
+        if (!btnProcesar) {
+            mostrarToast('Error: No se pudo encontrar el botón de procesar', 'error');
+            return;
+        }
         const originalText = btnProcesar.innerHTML;
         btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
         btnProcesar.disabled = true;
@@ -1781,6 +1785,10 @@
         
         // Mostrar loading
         const btnEscalar = document.querySelector('#modalEscalar .btn-escalar');
+        if (!btnEscalar) {
+            mostrarToast('Error: No se pudo encontrar el botón de escalar', 'error');
+            return;
+        }
         const originalText = btnEscalar.innerHTML;
         btnEscalar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
         btnEscalar.disabled = true;
@@ -2144,6 +2152,10 @@
     // Función para descargar PDF consolidado
     const downloadMergedPDF = async () => {
         const btnDownload = document.getElementById('btn-download-merged-pdf');
+        if (!btnDownload) {
+            mostrarToast('Error: No se pudo encontrar el botón de descarga', 'error');
+            return;
+        }
         const originalContent = btnDownload.innerHTML;
         
         try {
@@ -2226,19 +2238,34 @@
         // Función para verificar si hay participaciones y habilitar el botón
         function verificarParticipaciones() {
             const participaciones = document.querySelectorAll('.participacion-row');
-            btnAvanzarEtapa.disabled = participaciones.length === 0;
+            // Verificar que el botón existe antes de intentar modificar sus propiedades
+            if (btnAvanzarEtapa) {
+                btnAvanzarEtapa.disabled = participaciones.length === 0;
+            }
         }
         
-        // Verificar estado inicial
-        verificarParticipaciones();
+        // Verificar estado inicial solo si el botón existe
+        if (btnAvanzarEtapa) {
+            verificarParticipaciones();
+        }
     });
     
     // Función para mostrar modal de avanzar etapa
     function mostrarModalAvanzarEtapa() {
         const modal = new bootstrap.Modal(document.getElementById('modalAvanzarEtapa'));
+        
+        // Resetear subestados
+        const divSubestados = document.getElementById('divSubestados');
+        const selectSubestado = document.getElementById('selectSubestadoDestino');
+        divSubestados.style.display = 'none';
+        selectSubestado.innerHTML = '<option value="">Seleccione un subestado (opcional)...</option>';
+        
         cargarEtapasDisponibles();
         modal.show();
     }
+    
+    // Variable global para almacenar las etapas con sus subestados
+    let etapasDisponibles = [];
     
     // Función para cargar etapas disponibles
     function cargarEtapasDisponibles() {
@@ -2250,6 +2277,7 @@
             .then(data => {
                 if (data.success) {
                     selectEtapas.innerHTML = '<option value="">Seleccione una etapa...</option>';
+                    etapasDisponibles = data.etapas; // Guardar para uso posterior
                     data.etapas.forEach(etapa => {
                         selectEtapas.innerHTML += `<option value="${etapa.id}">${etapa.nombre}</option>`;
                     });
@@ -2265,10 +2293,44 @@
             });
     }
     
+    // Función para cargar subestados cuando se selecciona una etapa
+    function cargarSubestados() {
+        const selectEtapa = document.getElementById('selectEtapaDestino');
+        const selectSubestado = document.getElementById('selectSubestadoDestino');
+        const divSubestados = document.getElementById('divSubestados');
+        
+        const etapaId = selectEtapa.value;
+        
+        if (!etapaId) {
+            divSubestados.style.display = 'none';
+            return;
+        }
+        
+        // Buscar la etapa seleccionada en las etapas disponibles
+        const etapaSeleccionada = etapasDisponibles.find(etapa => etapa.id == etapaId);
+        
+        if (etapaSeleccionada && etapaSeleccionada.subestados && etapaSeleccionada.subestados.length > 0) {
+            // Mostrar el div de subestados
+            divSubestados.style.display = 'block';
+            
+            // Cargar los subestados
+            selectSubestado.innerHTML = '<option value="">Seleccione un subestado (opcional)...</option>';
+            etapaSeleccionada.subestados.forEach(subestado => {
+                selectSubestado.innerHTML += `<option value="${subestado.id}">${subestado.nombre}</option>`;
+            });
+        } else {
+            // Ocultar el div de subestados si no hay subestados
+            divSubestados.style.display = 'none';
+            selectSubestado.innerHTML = '<option value="">Seleccione un subestado (opcional)...</option>';
+        }
+    }
+    
     // Función para avanzar etapa
     function avanzarEtapa() {
         const selectEtapa = document.getElementById('selectEtapaDestino');
+        const selectSubestado = document.getElementById('selectSubestadoDestino');
         const etapaId = selectEtapa.value;
+        const subestadoId = selectSubestado.value;
         
         if (!etapaId) {
             mostrarToast('Por favor seleccione una etapa', 'error');
@@ -2276,6 +2338,10 @@
         }
         
         const btnAvanzar = document.getElementById('btnConfirmarAvanzar');
+        if (!btnAvanzar) {
+            mostrarToast('Error: No se pudo encontrar el botón de avanzar', 'error');
+            return;
+        }
         const originalText = btnAvanzar.innerHTML;
         
         btnAvanzar.disabled = true;
@@ -2288,7 +2354,8 @@
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                etapa_destino_id: etapaId
+                etapa_destino_id: etapaId,
+                subestado_destino_id: subestadoId || null
             })
         })
         .then(response => response.json())
@@ -2360,9 +2427,17 @@
                 
                 <div class="mb-3">
                     <label for="selectEtapaDestino" class="form-label">Etapa Destino *</label>
-                    <select class="form-control" id="selectEtapaDestino" required>
+                    <select class="form-control" id="selectEtapaDestino" required onchange="cargarSubestados()">
                         <option value="">Seleccione una etapa...</option>
                     </select>
+                </div>
+                
+                <div class="mb-3" id="divSubestados" style="display: none;">
+                    <label for="selectSubestadoDestino" class="form-label">Subestado Destino</label>
+                    <select class="form-control" id="selectSubestadoDestino">
+                        <option value="">Seleccione un subestado (opcional)...</option>
+                    </select>
+                    <small class="form-text text-muted">Si la etapa tiene subestados, puede seleccionar uno específico. Si no selecciona ninguno, se usará el subestado por defecto.</small>
                 </div>
                 
                 <div class="alert alert-warning">

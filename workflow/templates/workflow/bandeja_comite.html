@@ -5,13 +5,54 @@
 
 {% block extra_css %}
 <style>
+    /* Modern Design Variables - Consistent with Vista Mixta */
+    :root {
+        --primary-color: #2d5a2d;
+        --primary-hover: #1e5f2a;
+        --primary-light: #4a7c59;
+        --background-color: #f8fafc;
+        --card-background: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --border-radius: 12px;
+        --border-radius-sm: 8px;
+        --verde-pacifico: var(--primary-color);
+        
+        /* Status Colors */
+        --success-color: #059669;
+        --success-light: #d1fae5;
+        --warning-color: #d97706;
+        --warning-light: #fef3c7;
+        --danger-color: #dc2626;
+        --danger-light: #fee2e2;
+        --info-color: #2563eb;
+        --info-light: #dbeafe;
+        
+        /* SLA Colors */
+        --sla-good: #10b981;
+        --sla-warning: #f59e0b;
+        --sla-danger: #ef4444;
+        --sla-neutral: #6b7280;
+    }
+
+    /* Global Container Styling */
+    body {
+        background: var(--background-color);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
     .gradient-header {
-        background: linear-gradient(135deg, #009c3c 0%, #007529 100%);
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
-        border-radius: 0 0 1rem 1rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        box-shadow: var(--shadow-md);
     }
     
     .header-icon {
@@ -26,36 +67,36 @@
     }
     
     .search-section {
-        background: white;
-        border-radius: 12px;
+        background: var(--card-background);
+        border-radius: var(--border-radius);
         padding: 1.5rem;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e5e7eb;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
     }
     
     .table-modern {
-        background: white;
-        border-radius: 12px;
+        background: var(--card-background);
+        border-radius: var(--border-radius);
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e5e7eb;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
     }
     
     .table-modern table {
         width: 100%;
         margin-bottom: 0;
-        min-width: 1200px; /* Ancho mínimo para permitir scroll horizontal */
+        min-width: 800px; /* Reducido para menos dead space */
     }
     
     .table-modern thead {
-        background: linear-gradient(135deg, #009c3c 0%, #007529 100%) !important;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
     }
     
     .table-modern thead th {
         color: white !important;
         font-weight: 600 !important;
-        padding: 1rem 1.5rem !important;
+        padding: 0.875rem 1rem !important;
         border: none !important;
         text-transform: uppercase !important;
         font-size: 0.875rem !important;
@@ -76,65 +117,306 @@
     .table-modern tbody tr:hover {
         background-color: #f8fafc;
         transform: translateX(2px);
+        cursor: pointer;
+    }
+    
+    .table-modern tbody tr:active {
+        background-color: #e2e8f0;
+        transform: translateX(1px);
     }
     
     .table-modern tbody td {
-        padding: 1rem 1.5rem;
+        padding: 0.875rem 1rem;
         vertical-align: middle;
         border-top: 1px solid #f1f5f9;
         white-space: nowrap;
+        position: relative;
+    }
+    
+    .table-modern tbody tr[data-solicitud-id] td:first-child::after {
+        content: '\f054';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .table-modern tbody tr[data-solicitud-id]:hover td:first-child::after {
+        opacity: 1;
     }
     
     /* Definir anchos mínimos para cada columna */
-    .table-modern thead th:nth-child(1), /* Código */
+    .table-modern thead th:nth-child(1), /* Cliente */
     .table-modern tbody td:nth-child(1) {
-        min-width: 120px;
-    }
-    
-    .table-modern thead th:nth-child(2), /* Cliente */
-    .table-modern tbody td:nth-child(2) {
-        min-width: 200px;
+        min-width: 180px;
+        max-width: 250px;
         white-space: normal;
     }
     
-    .table-modern thead th:nth-child(3), /* Monto */
-    .table-modern tbody td:nth-child(3) {
-        min-width: 120px;
+    .table-modern thead th:nth-child(2), /* Monto */
+    .table-modern tbody td:nth-child(2) {
+        min-width: 100px;
+        max-width: 120px;
         text-align: right;
     }
     
-    .table-modern thead th:nth-child(4), /* Producto */
-    .table-modern tbody td:nth-child(4) {
-        min-width: 100px;
+    .table-modern thead th:nth-child(3), /* Producto */
+    .table-modern tbody td:nth-child(3) {
+        min-width: 80px;
+        max-width: 100px;
         text-align: center;
     }
     
-    .table-modern thead th:nth-child(5), /* Analista Revisor */
-    .table-modern tbody td:nth-child(5) {
-        min-width: 180px;
+    .table-modern thead th:nth-child(4), /* Analista Revisor */
+    .table-modern tbody td:nth-child(4) {
+        min-width: 140px;
+        max-width: 180px;
         white-space: normal;
     }
     
-    .table-modern thead th:nth-child(6), /* Creado por */
+    .table-modern thead th:nth-child(5), /* Creado por */
+    .table-modern tbody td:nth-child(5) {
+        min-width: 80px;
+        max-width: 120px;
+    }
+    
+    .table-modern thead th:nth-child(6), /* Fecha */
     .table-modern tbody td:nth-child(6) {
-        min-width: 100px;
+        min-width: 80px;
+        max-width: 100px;
+        text-align: center;
     }
     
-    .table-modern thead th:nth-child(7), /* Fecha */
+    .table-modern thead th:nth-child(7), /* Código */
     .table-modern tbody td:nth-child(7) {
-        min-width: 100px;
+        min-width: 80px;
+        max-width: 100px;
         text-align: center;
     }
     
-    .table-modern thead th:nth-child(8), /* Acciones */
-    .table-modern tbody td:nth-child(8) {
-        min-width: 100px;
-        text-align: center;
+    /* Responsive breakpoints */
+    @media (max-width: 1200px) {
+        .table-modern table {
+            min-width: 700px;
+        }
+        
+        .table-modern thead th:nth-child(1),
+        .table-modern tbody td:nth-child(1) {
+            min-width: 150px;
+            max-width: 200px;
+        }
+        
+        .table-modern thead th:nth-child(4),
+        .table-modern tbody td:nth-child(4) {
+            min-width: 120px;
+            max-width: 150px;
+        }
+        
+        .search-section {
+            padding: 1rem;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .table-modern table {
+            min-width: 600px;
+        }
+        
+        .table-modern thead th:nth-child(1),
+        .table-modern tbody td:nth-child(1) {
+            min-width: 120px;
+            max-width: 160px;
+        }
+        
+        .table-modern thead th:nth-child(4),
+        .table-modern tbody td:nth-child(4) {
+            min-width: 100px;
+            max-width: 130px;
+        }
+        
+        .table-modern thead th,
+        .table-modern tbody td {
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .search-section {
+            padding: 0.75rem;
+        }
+        
+        .gradient-header {
+            padding: 1.5rem 0;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .table-modern table {
+            min-width: 500px;
+        }
+        
+        .table-modern thead th:nth-child(5),
+        .table-modern tbody td:nth-child(5),
+        .table-modern thead th:nth-child(6),
+        .table-modern tbody td:nth-child(6) {
+            min-width: 60px;
+            max-width: 80px;
+        }
+        
+        .table-modern thead th,
+        .table-modern tbody td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .search-section {
+            padding: 0.5rem;
+        }
+        
+        .gradient-header {
+            padding: 1rem 0;
+        }
+        
+        .header-icon {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .gradient-header h1 {
+            font-size: 1.5rem;
+        }
+        
+            /* Mobile cards responsive adjustments */
+    .solicitud-card .card-header {
+        padding: 1rem;
+    }
+    
+    .solicitud-card .card-body {
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+    
+    .solicitud-card .card-footer {
+        padding: 0.75rem 1rem;
+    }
+    
+    .solicitud-card .cliente-name {
+        font-size: 1.1rem;
+    }
+    
+    .solicitud-card .monto {
+        font-size: 1.3rem;
+        padding: 0.5rem;
+    }
+    
+    .solicitud-card .analyst-info {
+        gap: 0.5rem;
+        padding: 0.5rem;
+    }
+    
+    .solicitud-card .analyst-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+    
+    .solicitud-card .cliente-cedula,
+    .solicitud-card .vehicle-info {
+        padding: 0.25rem 0;
+        font-size: 0.85rem;
+    }
+    }
+    
+    /* Extra small devices */
+    @media (max-width: 576px) {
+        .mobile-cards .col-12 {
+            padding: 0 0.25rem;
+        }
+        
+        .solicitud-card {
+            margin-bottom: 0.75rem;
+        }
+        
+        .solicitud-card .card-header {
+            padding: 0.75rem;
+        }
+        
+        .solicitud-card .card-body {
+            padding: 0.75rem;
+            gap: 0.5rem;
+        }
+        
+        .solicitud-card .card-footer {
+            padding: 0.75rem;
+        }
+        
+        .solicitud-card .cliente-name {
+            font-size: 1rem;
+        }
+        
+        .solicitud-card .monto {
+            font-size: 1.2rem;
+            padding: 0.5rem;
+        }
+        
+        .solicitud-card .producto-badge {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        
+        .solicitud-card .analyst-info {
+            padding: 0.5rem;
+            gap: 0.5rem;
+        }
+        
+        .solicitud-card .analyst-avatar {
+            width: 24px;
+            height: 24px;
+            font-size: 0.7rem;
+        }
+        
+        .solicitud-card .analyst-name {
+            font-size: 0.85rem;
+        }
+        
+        .solicitud-card .analyst-etapa {
+            font-size: 0.75rem;
+        }
+        
+        .solicitud-card .analyst-fecha {
+            font-size: 0.7rem;
+        }
+        
+        .solicitud-card .meta-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        
+        .solicitud-card .codigo {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
+        
+        .solicitud-card .fecha {
+            font-size: 0.7rem;
+        }
+        
+        .solicitud-card .cliente-cedula,
+        .solicitud-card .vehicle-info {
+            font-size: 0.8rem;
+            padding: 0.25rem 0;
+        }
     }
     
     .btn-action {
         padding: 0.5rem 1rem;
-        border-radius: 8px;
+        border-radius: var(--border-radius-sm);
         transition: all 0.2s ease;
         border: none;
         font-weight: 500;
@@ -145,25 +427,27 @@
     }
     
     .btn-view {
-        background: #e0f2fe;
-        color: #0369a1;
+        background: var(--info-light);
+        color: var(--info-color);
     }
     
     .btn-view:hover {
-        background: #0369a1;
+        background: var(--info-color);
         color: white;
         transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
     
     .btn-participate {
-        background: #dcfce7;
-        color: #166534;
+        background: var(--success-light);
+        color: var(--success-color);
     }
     
     .btn-participate:hover {
-        background: #166534;
+        background: var(--success-color);
         color: white;
         transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
     
     .product-badge {
@@ -176,13 +460,13 @@
     }
     
     .product-auto {
-        background: #dbeafe;
-        color: #1e40af;
+        background: var(--info-light);
+        color: var(--info-color);
     }
     
     .product-personal {
-        background: #d1fae5;
-        color: #059669;
+        background: var(--success-light);
+        color: var(--success-color);
     }
     
     .analyst-info {
@@ -213,31 +497,32 @@
     
     .pagination-modern .page-btn {
         padding: 0.5rem 1rem;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        background: white;
-        color: #374151;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        background: var(--card-background);
+        color: var(--text-primary);
         text-decoration: none;
         transition: all 0.2s ease;
     }
     
     .pagination-modern .page-btn:hover {
-        background: #f9fafb;
-        border-color: #009c3c;
-        color: #009c3c;
+        background: var(--background-color);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        box-shadow: var(--shadow-sm);
     }
     
     .pagination-modern .page-btn.active {
-        background: #009c3c;
+        background: var(--primary-color);
         color: white;
-        border-color: #009c3c;
+        border-color: var(--primary-color);
     }
     
     .loading-spinner {
         width: 40px;
         height: 40px;
-        border: 3px solid #f3f4f6;
-        border-top: 3px solid #009c3c;
+        border: 3px solid var(--border-color);
+        border-top: 3px solid var(--primary-color);
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin: 0 auto;
@@ -250,14 +535,262 @@
     
     .empty-state {
         text-align: center;
-        padding: 3rem;
-        color: #6b7280;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        border: 2px dashed var(--border-color);
+        margin: 2rem 0;
     }
     
     .empty-state i {
         font-size: 4rem;
         margin-bottom: 1rem;
-        color: #d1d5db;
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+    
+    .empty-state h4 {
+        color: var(--text-primary);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state p {
+        max-width: 400px;
+        margin: 0 auto 1.5rem;
+        line-height: 1.6;
+    }
+    
+    .empty-state .btn {
+        transition: all 0.2s ease;
+    }
+    
+    .empty-state .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Force hide table when no solicitudes */
+    .table-modern.d-none,
+    .mobile-cards.d-none {
+        display: none !important;
+    }
+    
+    .table-modern[style*="display: none"],
+    .mobile-cards[style*="display: none"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* Vehicle/Marca Styling - Using the same blue as etapa badge */
+    .text-vehicle {
+        color: var(--info-color) !important;
+        font-weight: 600 !important;
+    }
+    .text-vehicle i {
+        color: var(--info-color) !important;
+    }
+    
+    /* Mobile Cards Styling */
+    .mobile-cards {
+        padding: 0;
+    }
+    
+    .solicitud-card {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .solicitud-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+        border-color: var(--primary-color);
+    }
+    
+    .solicitud-card:active {
+        transform: translateY(0);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .solicitud-card .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+        padding: 1.25rem 1rem;
+        border: none;
+        flex-shrink: 0;
+        position: relative;
+    }
+    
+    .solicitud-card .card-header::after {
+        content: '\f054';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8rem;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+    
+    .solicitud-card:hover .card-header::after {
+        opacity: 1;
+    }
+    
+    .solicitud-card .card-body {
+        padding: 1.25rem 1rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .solicitud-card .card-footer {
+        background: var(--background-color);
+        border-top: 1px solid var(--border-color);
+        padding: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .solicitud-card .cliente-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        display: block;
+        margin-bottom: 0.5rem;
+        transition: color 0.2s ease;
+    }
+    
+    .solicitud-card:hover .cliente-name {
+        color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .solicitud-card .cliente-cedula {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .solicitud-card .vehicle-info {
+        color: var(--info-color);
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .solicitud-card .monto {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--success-color);
+        text-align: center;
+        padding: 0.75rem;
+        background: var(--success-light);
+        border-radius: var(--border-radius-sm);
+        margin: 0.5rem 0;
+    }
+    
+    .solicitud-card .producto-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        align-self: flex-start;
+    }
+    
+    .solicitud-card .analyst-info {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--background-color);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+    }
+    
+    .solicitud-card .analyst-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .solicitud-card .analyst-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .solicitud-card .analyst-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+    
+    .solicitud-card .analyst-etapa {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .solicitud-card .analyst-fecha {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+    
+    .solicitud-card .meta-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .solicitud-card .codigo {
+        font-weight: 600;
+        color: var(--text-primary);
+        background: var(--primary-light);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    
+    .solicitud-card .fecha {
+        color: var(--text-muted);
+        font-size: 0.75rem;
     }
 </style>
 {% endblock %}
@@ -299,46 +832,33 @@
     <div class="container-fluid">
         <div class="search-section">
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-12">
                     <div class="position-relative">
                         <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
                         <input type="text" 
                                id="searchInput" 
                                class="form-control ps-5" 
-                               placeholder="Buscar por código, cliente o cédula..."
+                               placeholder="Buscar por cliente, cédula o código..."
                                style="border-radius: 8px; padding: 0.75rem 1rem 0.75rem 2.5rem;">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <button id="btnFiltrosAvanzados" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalFiltros">
-                            <i class="fas fa-filter"></i>
-                            Filtros Avanzados
-                        </button>
-                        <button id="btnExportar" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalExportar">
-                            <i class="fas fa-download"></i>
-                            Exportar
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tabla de Solicitudes -->
-        <div class="table-modern">
-            <div class="table-container" style="height: 80vh; overflow: hidden; border: none;">
+        <!-- Vista de Escritorio: Tabla -->
+        <div class="table-modern d-none d-lg-block" id="tableDesktop">
+            <div class="table-container" style="height: 70vh; overflow: auto; border: none;">
                 <div class="table-responsive" style="height: 100%; border: none;">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Código</th>
                                 <th>Cliente</th>
                                 <th>Monto</th>
                                 <th>Producto</th>
                                 <th>Analista Revisor</th>
                                 <th>Creado por</th>
                                 <th>Fecha</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Código</th>
                             </tr>
                         </thead>
                         <tbody id="tablaComiteBody">
@@ -347,21 +867,39 @@
                     </table>
                 </div>
             </div>
+        </div>
 
-            <!-- Estado de Carga -->
-            <div id="loadingState" class="p-5" style="display: none;">
-                <div class="d-flex flex-column align-items-center">
-                    <div class="loading-spinner"></div>
-                    <p class="mt-3 text-muted mb-0">Cargando solicitudes...</p>
-                </div>
+        <!-- Vista Móvil: Cards -->
+        <div class="mobile-cards d-block d-lg-none" id="cardsMobile">
+            <div id="mobileCardsContainer" class="row g-3">
+                <!-- Las cards se cargarán dinámicamente -->
             </div>
+        </div>
 
-            <!-- Estado Vacío -->
-            <div id="emptyState" class="empty-state" style="display: none;">
-                <i class="fas fa-inbox"></i>
-                <h4 class="text-secondary mb-2">No hay solicitudes</h4>
-                <p class="text-muted mb-0">No se encontraron solicitudes en el comité que coincidan con tu búsqueda.</p>
+        <!-- Estado de Carga -->
+        <div id="loadingState" class="p-5" style="display: none;">
+            <div class="d-flex flex-column align-items-center">
+                <div class="loading-spinner"></div>
+                <p class="mt-3 text-muted mb-0">Cargando solicitudes...</p>
             </div>
+        </div>
+
+        <!-- Estado Vacío -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-gavel fa-4x text-muted mb-3"></i>
+            <h4 class="text-secondary mb-2">No hay solicitudes pendientes</h4>
+            <p class="text-muted mb-3">Actualmente no hay solicitudes esperando revisión del Comité de Crédito.</p>
+            <div class="d-flex flex-column align-items-center gap-2">
+                <small class="text-muted">
+                    <i class="fas fa-check-circle text-success me-1"></i>
+                    Todas las solicitudes han sido procesadas
+                </small>
+                <button id="btnRefrescarEmpty" class="btn btn-outline-primary btn-sm mt-2">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refrescar
+                </button>
+            </div>
+        </div>
 
             <!-- Paginación -->
             <div class="border-top p-4">
@@ -387,7 +925,7 @@
 <div class="modal fade" id="modalFiltros" tabindex="-1" aria-labelledby="modalFiltrosLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #009c3c 0%, #007529 100%); color: white;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white;">
                 <h5 class="modal-title" id="modalFiltrosLabel">
                     <i class="fas fa-filter me-2"></i>
                     Filtros Avanzados
@@ -432,7 +970,7 @@
                     <i class="fas fa-eraser me-2"></i>
                     Limpiar
                 </button>
-                <button type="button" class="btn btn-primary" id="btnAplicarFiltros" style="background: #009c3c; border-color: #009c3c;">
+                <button type="button" class="btn btn-primary" id="btnAplicarFiltros" style="background: var(--primary-color); border-color: var(--primary-color);">
                     <i class="fas fa-check me-2"></i>
                     Aplicar Filtros
                 </button>
@@ -445,7 +983,7 @@
 <div class="modal fade" id="modalExportar" tabindex="-1" aria-labelledby="modalExportarLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #009c3c 0%, #007529 100%); color: white;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white;">
                 <h5 class="modal-title" id="modalExportarLabel">
                     <i class="fas fa-download me-2"></i>
                     Exportar Datos
@@ -496,14 +1034,137 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('focus', function() {
-            this.style.borderColor = '#10b981';
-            this.style.boxShadow = '0 0 0 0.2rem rgba(16, 185, 129, 0.25)';
+            this.style.borderColor = 'var(--primary-color)';
+            this.style.boxShadow = '0 0 0 0.2rem rgba(45, 90, 45, 0.25)';
         });
         
         searchInput.addEventListener('blur', function() {
-            this.style.borderColor = '#d1d5db';
+            this.style.borderColor = 'var(--border-color)';
             this.style.boxShadow = 'none';
         });
+    }
+    
+    // Manejar botón de refrescar principal
+    const btnRefrescar = document.getElementById('btnRefrescar');
+    if (btnRefrescar) {
+        btnRefrescar.addEventListener('click', function() {
+            mostrarEstadoCarga();
+            
+            // Simular carga y recargar datos del comité
+            setTimeout(() => {
+                if (typeof cargarSolicitudesComite === 'function') {
+                    cargarSolicitudesComite();
+                } else {
+                    // Fallback: recargar la página
+                    window.location.reload();
+                }
+            }, 500);
+        });
+    }
+    
+    // Manejar botón de refrescar en estado vacío
+    const btnRefrescarEmpty = document.getElementById('btnRefrescarEmpty');
+    if (btnRefrescarEmpty) {
+        btnRefrescarEmpty.addEventListener('click', function() {
+            // Mostrar estado de carga
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            
+            if (emptyState) emptyState.style.display = 'none';
+            if (loadingState) loadingState.style.display = 'block';
+            
+            // Simular carga y recargar datos del comité
+            setTimeout(() => {
+                // Aquí se llamaría a la función de carga de datos del comité
+                if (typeof cargarSolicitudesComite === 'function') {
+                    cargarSolicitudesComite();
+                } else {
+                    // Fallback: recargar la página
+                    window.location.reload();
+                }
+            }, 500);
+        });
+    }
+    
+    // Función para mostrar/ocultar contenedores según el estado
+    window.mostrarEstadoSolicitudes = function(tieneSolicitudes, solicitudes = []) {
+        const tableDesktop = document.getElementById('tableDesktop');
+        const cardsMobile = document.getElementById('cardsMobile');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const paginationContainer = document.querySelector('.border-top.p-4');
+        const totalSolicitudes = document.getElementById('totalSolicitudes');
+        const searchSection = document.querySelector('.search-section');
+        
+        // Ocultar estado de carga
+        if (loadingState) loadingState.style.display = 'none';
+        
+        if (tieneSolicitudes && solicitudes.length > 0) {
+            // Hay solicitudes - mostrar tabla/cards, search section y ocultar estado vacío
+            if (tableDesktop) {
+                tableDesktop.style.display = 'block';
+                tableDesktop.className = 'table-modern d-none d-lg-block';
+            }
+            if (cardsMobile) {
+                cardsMobile.style.display = 'block';
+                cardsMobile.className = 'mobile-cards d-block d-lg-none';
+            }
+            if (searchSection) searchSection.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+            if (paginationContainer) paginationContainer.style.display = 'block';
+            
+            // Actualizar contador
+            if (totalSolicitudes) totalSolicitudes.textContent = solicitudes.length;
+        } else {
+            // No hay solicitudes - ocultar tabla/cards/search section y mostrar estado vacío
+            if (tableDesktop) {
+                tableDesktop.style.display = 'none !important';
+                tableDesktop.className = 'table-modern d-none';
+            }
+            if (cardsMobile) {
+                cardsMobile.style.display = 'none !important';
+                cardsMobile.className = 'mobile-cards d-none';
+            }
+            if (searchSection) searchSection.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            
+            // Actualizar contador
+            if (totalSolicitudes) totalSolicitudes.textContent = '0';
+        }
+    };
+    
+    // Función para mostrar estado de carga
+    window.mostrarEstadoCarga = function() {
+        const tableDesktop = document.getElementById('tableDesktop');
+        const cardsMobile = document.getElementById('cardsMobile');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const paginationContainer = document.querySelector('.border-top.p-4');
+        const searchSection = document.querySelector('.search-section');
+        
+        // Ocultar todo y mostrar carga
+        if (tableDesktop) {
+            tableDesktop.style.display = 'none !important';
+            tableDesktop.className = 'table-modern d-none';
+        }
+        if (cardsMobile) {
+            cardsMobile.style.display = 'none !important';
+            cardsMobile.className = 'mobile-cards d-none';
+        }
+        if (searchSection) searchSection.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'block';
+    };
+    
+    // Inicializar estado vacío por defecto si no hay solicitudes
+    const totalSolicitudesElement = document.getElementById('totalSolicitudes');
+    if (totalSolicitudesElement) {
+        const count = parseInt(totalSolicitudesElement.textContent) || 0;
+        if (count === 0) {
+            mostrarEstadoSolicitudes(false, []);
+        }
     }
 });
 </script>
