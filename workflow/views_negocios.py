@@ -97,6 +97,14 @@ def enrich_solicitud_data(solicitud):
     for key, value in enriched_data.items():
         setattr(solicitud, f'enriched_{key}', value)
     
+    # Ensure basic fields are accessible
+    if not hasattr(solicitud, 'id') or solicitud.id is None:
+        if hasattr(solicitud, 'pk') and solicitud.pk is not None:
+            solicitud.id = solicitud.pk
+        else:
+            print(f"⚠️  WARNING: Solicitud has no valid ID or PK: {solicitud}")
+            return None  # Return None for invalid solicitudes
+    
     return solicitud
 
 
@@ -160,12 +168,18 @@ def negocios_view(request):
     # Obtener pipelines disponibles para el usuario
     if request.user.is_superuser:
         pipelines_disponibles = Pipeline.objects.all()
+        print(f"🔍 DEBUG: Superuser {request.user} accessing pipelines")
+        print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines total")
+        for p in pipelines_disponibles:
+            print(f"    - {p.nombre} (ID: {p.pk})")
     else:
         # Obtener pipelines basado en permisos
         pipelines_disponibles = Pipeline.objects.filter(
             Q(permisopipeline__usuario=request.user) |
             Q(etapas__permisos__grupo__user=request.user)
         ).distinct()
+        print(f"🔍 DEBUG: Regular user {request.user} accessing pipelines")
+        print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines with permissions")
     
     # Obtener etapas para filtros
     etapas_disponibles = Etapa.objects.all()
@@ -182,14 +196,33 @@ def negocios_view(request):
     # Enriquecer datos de solicitudes para el template
     solicitudes_enriched = []
     for solicitud in solicitudes_page:
+        # Debug: Check for missing IDs
+        if not hasattr(solicitud, 'id') or solicitud.id is None:
+            print(f"⚠️  WARNING: Found solicitud without valid ID: {solicitud}")
+            print(f"    - PK: {getattr(solicitud, 'pk', 'None')}")
+            print(f"    - Cliente: {getattr(solicitud, 'cliente_nombre', 'Unknown')}")
+            continue  # Skip solicitudes without valid IDs
+            
         enriched = enrich_solicitud_data(solicitud)
-        solicitudes_enriched.append(enriched)
+        if enriched is not None:  # Only add valid enriched solicitudes
+            solicitudes_enriched.append(enriched)
+    
+    # Get current pipeline if filter is applied
+    current_pipeline = None
+    if pipeline_filter:
+        try:
+            current_pipeline = Pipeline.objects.get(id=pipeline_filter)
+        except Pipeline.DoesNotExist:
+            pass
     
     context = {
         'solicitudes': solicitudes_enriched,
+        'solicitudes_tabla': solicitudes_enriched,  # Template expects this variable name
         'total_solicitudes': total_solicitudes,
         'solicitudes_pendientes': solicitudes_pendientes,
         'pipelines_disponibles': pipelines_disponibles,
+        'pipelines': pipelines_disponibles,  # Template compatibility
+        'pipeline': current_pipeline,  # Current selected pipeline
         'etapas_disponibles': etapas_disponibles,
         'subestados_disponibles': subestados_disponibles,
         'search_query': search_query,
@@ -198,7 +231,15 @@ def negocios_view(request):
         'estado_filter': estado_filter,
         'is_superuser': request.user.is_superuser,
         'user': request.user,
+        'no_access': False,  # Explicitly set to False for access
+        'view_type': request.GET.get('view', 'table'),  # Default to table view
     }
+    print(f"🔍 DEBUG: Context being passed to template:")
+    print(f"    - pipelines_disponibles: {len(context['pipelines_disponibles'])} items")
+    print(f"    - pipelines: {len(context['pipelines'])} items")
+    print(f"    - current pipeline: {context['pipeline']}")
+    print(f"    - solicitudes: {len(context['solicitudes'])} items")
+    print(f"    - solicitudes_tabla: {len(context['solicitudes_tabla'])} items")
     print(f"Rendering negocios view with {len(solicitudes_enriched)} solicitudes")
     return render(request, 'workflow/negocios.html', context)
 

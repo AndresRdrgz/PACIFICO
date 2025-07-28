@@ -279,12 +279,18 @@
                             <div>
                                 <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Cliente</p>
                                 <p class="text-sm font-semibold text-gray-900 truncate">
+                                    {% if solicitud.id %}
                                     <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}"
                                         class="text-decoration-none text-success solicitud-link"
                                         title="Ver detalles de {{ solicitud.cliente_nombre }}"
                                         onclick="event.stopPropagation();">
                                         {{ solicitud.cliente_nombre }}
                                     </a>
+                                    {% else %}
+                                    <span class="text-danger" title="Solicitud sin ID válido">
+                                        {{ solicitud.cliente_nombre }}
+                                    </span>
+                                    {% endif %}
                                 </p>
                             </div>
                             <div>
@@ -405,6 +411,7 @@
                     <!-- Botones de acción -->
                     <div class="p-4 pt-3 bg-gray-50">
                         <div class="flex space-x-2">
+                            {% if s.id %}
                             <a href="{% url 'workflow:detalle_solicitud' s.id %}"
                                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fas fa-eye mr-1"></i>Ver
@@ -413,7 +420,13 @@
                                 class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-center py-2 px-3 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fas fa-arrow-right mr-1"></i>Etapa
                             </a>
-                            {% if s.acciones.eliminar %}
+                            {% else %}
+                            <span class="flex-1 bg-gray-400 text-white text-center py-2 px-3 rounded-lg text-sm font-medium"
+                                title="Solicitud sin ID válido">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>Sin ID
+                            </span>
+                            {% endif %}
+                            {% if s.acciones.eliminar and s.id %}
                             <button onclick="eliminarSolicitud('{{ s.id }}')"
                                 class="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fas fa-trash"></i>
@@ -565,18 +578,25 @@
                         <tbody>
                             {% for s in solicitudes_tabla %}
                             <tr class="align-middle table-row-hover clickable-row {{ s.enriched_sla_bg_class }}"
-                                data-solicitud-id="{{ s.id }}"
+                                {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
                                 data-etapa="{{ s.etapa_actual.nombre|default:'Sin etapa' }}"
-                                data-sla="{{ s.enriched_sla_data_attr }}" onclick="handleRowClick(event, {{ s.id }})"
-                                style="cursor: pointer;">
+                                data-sla="{{ s.enriched_sla_data_attr }}" 
+                                {% if s.id %}onclick="handleRowClick(event, {{ s.id }})"{% endif %}
+                                style="cursor: {% if s.id %}pointer{% else %}default{% endif %};">
                                 <td class="text-dark">
                                     <div>
                                         <div class="fw-semibold">
+                                            {% if s.id %}
                                             <a href="#" class="text-decoration-none text-success solicitud-link"
                                                 title="Ver detalles de {{ s.cliente_nombre }}"
                                                 onclick="event.stopPropagation();">
                                                 {{ s.cliente_nombre }}
                                             </a>
+                                            {% else %}
+                                            <span class="text-danger" title="Solicitud sin ID válido">
+                                                {{ s.cliente_nombre }}
+                                            </span>
+                                            {% endif %}
                                         </div>
                                         <small class="text-muted">{{ s.cliente_cedula }}</small>
                                     </div>
@@ -616,7 +636,7 @@
                                     <!-- Solicitud en bandeja grupal - deshabilitar cambio de etapa -->
                                     <div class="position-relative">
                                         <select class="form-select form-select-sm etapa-select"
-                                            data-solicitud-id="{{ s.id }}"
+                                            {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
                                             data-etapa-actual="{{ s.etapa_actual.id|default:'' }}"
                                             style="min-width: 120px; opacity: 0.6; cursor: not-allowed;" disabled
                                             title="Esta solicitud está en bandeja grupal. Debes esperar a que el equipo la procese antes de poder cambiar la etapa.">
@@ -634,9 +654,10 @@
                                     {% else %}
                                     <!-- Solicitud normal - permitir cambio de etapa -->
                                     <select class="form-select form-select-sm etapa-select"
-                                        data-solicitud-id="{{ s.id }}"
+                                        {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
                                         data-etapa-actual="{{ s.etapa_actual.id|default:'' }}"
-                                        style="min-width: 120px;">
+                                        style="min-width: 120px;"
+                                        {% if not s.id %}disabled title="Solicitud sin ID válido"{% endif %}>
                                         {% if not s.etapa_actual %}
                                         <option value="" selected>Sin etapa</option>
                                         {% else %}
@@ -793,7 +814,8 @@
                                     data-etapa-id="{{ etapa.id }}">
 
                                     {% for s in solicitudes_por_etapa|get_item:etapa.id %}
-                                    <div class="kanban-card mb-3" draggable="true" data-solicitud-id="{{ s.id }}"
+                                    <div class="kanban-card mb-3" draggable="{% if s.id %}true{% else %}false{% endif %}" 
+                                        {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
                                         data-etapa-id="{{ etapa.id }}"
                                         data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
                                         data-estado="{{ s.estado_actual|default:'Sin estado' }}"
@@ -808,7 +830,7 @@
                                             style="border-left: 4px solid {{ s.enriched_sla_border_color }} !important; height: 110px; border-radius: 6px; transition: all 0.3s ease; background: white; cursor: pointer;"
                                             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
                                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
-                                            onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'">
+                                            {% if s.id %}onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'"{% endif %}>
                                             <div class="card-body p-2" style="height: 100%;">
                                                 <!-- Header compacto -->
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -816,12 +838,18 @@
                                                         <h6 class="mb-0" style="font-size: 0.9rem;">
                                                             <i class="fas fa-user text-muted me-1"
                                                                 style="font-size: 0.75rem; width: 12px;"></i>
+                                                            {% if s.id %}
                                                             <a href="{% url 'workflow:detalle_solicitud' s.id %}"
                                                                 class="text-decoration-none fw-bold text-success solicitud-link-kanban"
                                                                 title="Ver detalles de {{ s.cliente_nombre }}"
                                                                 onclick="event.stopPropagation();">
                                                                 {{ s.cliente_nombre|truncatechars:15 }}
                                                             </a>
+                                                            {% else %}
+                                                            <span class="fw-bold text-danger" title="Solicitud sin ID válido">
+                                                                {{ s.cliente_nombre|truncatechars:15 }}
+                                                            </span>
+                                                            {% endif %}
                                                         </h6>
                                                         <small class="text-muted" style="font-size: 0.65rem;">{{
                                                             s.codigo
@@ -1216,6 +1244,12 @@
 
     // Función global para manejar clicks en filas de la tabla
     function handleRowClick(event, solicitudId) {
+        // Validate solicitud ID
+        if (!solicitudId || solicitudId === '' || solicitudId === 'None' || solicitudId === 'undefined') {
+            console.warn('⚠️ Cannot handle row click: Invalid solicitud ID:', solicitudId);
+            return;
+        }
+        
         // Prevenir el click si el usuario está interactuando con elementos de formulario
         if (event.target.tagName === 'SELECT' ||
             event.target.tagName === 'BUTTON' ||
@@ -1268,8 +1302,14 @@
             const cells = row.querySelectorAll('td');
             if (cells.length < 10) return; // Ensure we have enough cells
 
+            const solicitudId = row.getAttribute('data-solicitud-id');
+            if (!solicitudId || solicitudId === '' || solicitudId === 'None') {
+                console.warn('⚠️ Row with missing or invalid solicitud ID found:', row);
+                return; // Skip rows without valid IDs
+            }
+
             const solicitud = {
-                id: row.getAttribute('data-solicitud-id'),
+                id: solicitudId,
                 cliente: cells[0].textContent.trim(),
                 producto: cells[1].textContent.trim(),
                 monto: cells[2].textContent.trim(),
@@ -2168,6 +2208,10 @@
                 }
 
                 var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
+                if (!solicitudId || solicitudId === '' || solicitudId === 'None' || solicitudId === 'undefined') {
+                    console.warn('⚠️ Skipping etapa select with invalid solicitud ID:', solicitudId, select);
+                    return;
+                }
                 console.log('📋 Cargando transiciones para solicitud:', solicitudId);
 
                 // Modificar la función para incluir callback de completado
@@ -2210,6 +2254,10 @@
                 const transicionesCargadas = select.getAttribute('data-transiciones-cargadas') === 'true';
                 if (!transicionesCargadas) {
                     var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
+                    if (!solicitudId || solicitudId === '' || solicitudId === 'None' || solicitudId === 'undefined') {
+                        console.warn('⚠️ Cannot load transitions: Invalid solicitud ID:', solicitudId);
+                        return;
+                    }
                     console.log('📋 Cargando transiciones en focus para solicitud:', solicitudId);
                     cargarTransicionesValidas(solicitudId, select);
                 }
@@ -2234,6 +2282,12 @@
                 }
 
                 var solicitudId = select.getAttribute('data-solicitud-id') || select.dataset.solicitudId;
+                if (!solicitudId || solicitudId === '' || solicitudId === 'None' || solicitudId === 'undefined') {
+                    console.warn('⚠️ Cannot process etapa change: Invalid solicitud ID:', solicitudId);
+                    // Reset select to previous value
+                    select.selectedIndex = 0;
+                    return;
+                }
                 var etapaActual = select.getAttribute('data-etapa-actual') || select.dataset.etapaActual;
                 var nuevaEtapaId = select.value;
                 var nombreEtapa = select.options[select.selectedIndex]?.text || '';
