@@ -272,6 +272,7 @@ def nueva_solicitud(request):
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
+                propietario=request.user,  # Set propietario to the user who created the solicitud
                 cliente=cliente,
                 cotizacion=cotizacion,
                 motivo_consulta=motivo_consulta,
@@ -2693,6 +2694,7 @@ def nueva_solicitud(request):
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
+                propietario=request.user,  # Set propietario to the user who created the solicitud
                 cliente=cliente,
                 cotizacion=cotizacion,
                 motivo_consulta=motivo_consulta,
