@@ -3,12 +3,503 @@
 
 {% block title %}Vista Mixta - Sistema de Workflow{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Modern Design Variables - Inspired by APC Tracking */
+    :root {
+        --primary-color: #2d5a2d;
+        --primary-hover: #1e5f2a;
+        --primary-light: #4a7c59;
+        --background-color: #f8fafc;
+        --card-background: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --border-radius: 12px;
+        --border-radius-sm: 8px;
+        --verde-pacifico: var(--primary-color);
+        
+        /* Status Colors */
+        --success-color: #059669;
+        --success-light: #d1fae5;
+        --warning-color: #d97706;
+        --warning-light: #fef3c7;
+        --danger-color: #dc2626;
+        --danger-light: #fee2e2;
+        --info-color: #2563eb;
+        --info-light: #dbeafe;
+        
+        /* SLA Colors */
+        --sla-good: #10b981;
+        --sla-warning: #f59e0b;
+        --sla-danger: #ef4444;
+        --sla-neutral: #6b7280;
+    }
+
+    /* Global Container Styling */
+    body .workflow-container {
+        background: var(--background-color);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        position: relative;
+        overflow: visible;
+    }
+
+    /* Header Styling */
+    .workflow-header {
+        background: var(--card-background) !important;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        margin-bottom: 24px;
+        position: relative;
+        overflow: visible;
+    }
+
+    .workflow-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+    }
+
+    .workflow-header .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+        border: none !important;
+        padding: 24px !important;
+    }
+
+    /* Card Styling */
+    .modern-card {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .modern-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .modern-card .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+        border: none !important;
+        padding: 20px 24px !important;
+        border-radius: 0 !important;
+    }
+
+    .modern-card .card-body {
+        padding: 0 !important;
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+    }
+
+    /* Table Styling */
+    .modern-table-container {
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        overflow: hidden;
+    }
+
+    .modern-table {
+        margin: 0 !important;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .modern-table thead th {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
+        color: var(--text-primary) !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        border: none !important;
+        padding: 16px 20px !important;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .modern-table thead th:first-child {
+        border-radius: 0;
+        border-left: none;
+    }
+
+    .modern-table thead th:last-child {
+        border-radius: 0;
+        border-right: none;
+    }
+
+    .modern-table tbody tr {
+        transition: all 0.2s ease;
+        border: none !important;
+        position: relative;
+    }
+
+    .modern-table tbody tr::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--border-color);
+        opacity: 0.5;
+    }
+
+    .modern-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
+        transform: translateY(-1px);
+    }
+
+    .modern-table tbody tr:hover::after {
+        opacity: 0;
+    }
+
+    .modern-table tbody tr:last-child::after {
+        display: none;
+    }
+
+    .modern-table tbody td {
+        padding: 16px 20px !important;
+        border: none !important;
+        vertical-align: middle !important;
+        color: var(--text-primary) !important;
+        font-size: 0.875rem !important;
+    }
+
+    .modern-table tbody tr:last-child td {
+        border-bottom: none !important;
+    }
+
+    /* Badge Styling */
+    .modern-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .badge-etapa {
+        background: linear-gradient(135deg, var(--info-color), #3b82f6);
+        color: white;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    /* Button Styling */
+    .modern-btn-group {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .modern-btn {
+        padding: 8px 12px !important;
+        border-radius: var(--border-radius-sm) !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        border: none !important;
+        box-shadow: var(--shadow-sm) !important;
+        min-width: auto !important;
+    }
+
+    .modern-btn:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    .modern-btn-success {
+        background: linear-gradient(135deg, var(--success-color), #10b981) !important;
+        color: white !important;
+    }
+
+    .modern-btn-success:hover {
+        background: linear-gradient(135deg, #047857, var(--success-color)) !important;
+        color: white !important;
+    }
+
+    .modern-btn-primary {
+        background: linear-gradient(135deg, var(--info-color), #3b82f6) !important;
+        color: white !important;
+    }
+
+    .modern-btn-primary:hover {
+        background: linear-gradient(135deg, #1d4ed8, var(--info-color)) !important;
+        color: white !important;
+    }
+    
+    /* Make anchor tags look like buttons */
+    .modern-btn-primary {
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .modern-btn-warning {
+        background: linear-gradient(135deg, var(--warning-color), #f59e0b) !important;
+        color: white !important;
+    }
+
+    .modern-btn-warning:hover {
+        background: linear-gradient(135deg, #b45309, var(--warning-color)) !important;
+        color: white !important;
+    }
+
+    .modern-btn-info {
+        background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+        color: white !important;
+    }
+
+    .modern-btn-info:hover {
+        background: linear-gradient(135deg, #0e7490, #0891b2) !important;
+        color: white !important;
+    }
+
+    /* SLA Indicator Styling */
+    .sla-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sla-icon {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    .sla-text {
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .text-success { color: var(--sla-good) !important; }
+    .text-warning { color: var(--sla-warning) !important; }
+    .text-danger { color: var(--sla-danger) !important; }
+    .text-secondary { color: var(--sla-neutral) !important; }
+    
+    /* Vehicle/Marca Styling - Using the same blue as etapa badge */
+    .text-vehicle {
+        color: #3b82f6 !important;
+        font-weight: 600 !important;
+    }
+    
+    .text-vehicle i {
+        color: #3b82f6 !important;
+    }
+    
+    /* Instruction Section Styling - Tailwind-inspired */
+    .bg-blue-50 {
+        background-color: #eff6ff !important;
+    }
+    
+    .border-blue-200 {
+        border-color: #bfdbfe !important;
+    }
+    
+    .text-blue-600 {
+        color: #2563eb !important;
+    }
+    
+    .text-blue-800 {
+        color: #1e40af !important;
+    }
+    
+    .text-blue-900 {
+        color: #1e3a8a !important;
+    }
+    
+    .bg-blue-100 {
+        background-color: #dbeafe !important;
+    }
+    
+    .bg-green-100 {
+        background-color: #dcfce7 !important;
+    }
+    
+    .text-green-800 {
+        color: #166534 !important;
+    }
+    
+    .space-y-1 > * + * {
+        margin-top: 0.25rem !important;
+    }
+    
+    .space-x-3 > * + * {
+        margin-left: 0.75rem !important;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Link Styling */
+    .modern-link {
+        color: var(--primary-color) !important;
+        text-decoration: none !important;
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+
+    .modern-link:hover {
+        color: var(--primary-hover) !important;
+        text-decoration: underline !important;
+    }
+
+    /* Text Styling */
+    .text-muted { color: var(--text-muted) !important; }
+    .text-secondary { color: var(--text-secondary) !important; }
+    .text-primary { color: var(--text-primary) !important; }
+
+    /* Code Styling */
+    code {
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0) !important;
+        color: var(--text-primary) !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown Styling */
+    .modern-dropdown {
+        position: relative !important;
+        z-index: 1000 !important;
+    }
+    
+    .modern-dropdown .dropdown-toggle {
+        background: var(--card-background) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        border-radius: var(--border-radius-sm) !important;
+        box-shadow: var(--shadow-sm) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .modern-dropdown .dropdown-toggle:hover {
+        border-color: var(--primary-color) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    .modern-dropdown .dropdown-menu {
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--border-radius-sm) !important;
+        box-shadow: var(--shadow-lg) !important;
+        background: var(--card-background) !important;
+        z-index: 99999 !important;
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        min-width: 300px !important;
+        max-height: 400px !important;
+        overflow-y: auto !important;
+    }
+
+    .modern-dropdown .dropdown-item {
+        color: var(--text-primary) !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .modern-dropdown .dropdown-item:hover {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+        color: white !important;
+    }
+
+    /* Empty State Styling */
+    .empty-state {
+        padding: 40px 20px !important;
+        text-align: center !important;
+        color: var(--text-muted) !important;
+    }
+
+    .empty-state i {
+        font-size: 3rem !important;
+        margin-bottom: 16px !important;
+        opacity: 0.5 !important;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .modern-card {
+            margin-bottom: 16px;
+            border-radius: var(--border-radius-sm);
+        }
+
+        .modern-table tbody td {
+            padding: 12px 16px !important;
+            font-size: 0.8rem !important;
+        }
+
+        .modern-table thead th {
+            padding: 12px 16px !important;
+            font-size: 0.8rem !important;
+        }
+
+        .modern-btn {
+            padding: 6px 8px !important;
+            font-size: 0.7rem !important;
+        }
+
+        .btn-action-text {
+            display: none;
+        }
+
+        .modern-btn .fas {
+            margin-right: 0 !important;
+        }
+
+        .workflow-header .card-header {
+            padding: 16px !important;
+        }
+    }
+
+    /* Override default Bootstrap styles */
+    .card {
+        border: none !important;
+    }
+
+    .table-responsive {
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        background: var(--card-background);
+    }
+
+    /* Animation for page load */
+    .fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="mt-0 pt-0">
-    <!-- Header Estático - Sin Animaciones -->
-    <div class="card mb-1" style="border: 1px solid #e0e0e0;">
-        <div class="card-header"
-            style="background: var(--verde-pacifico); padding: 12px 20px; border-radius: 0; border: none;">
+<div class="workflow-container mt-0 pt-0">
+    <!-- Header Estático - Modern Design -->
+    <div class="workflow-header card mb-3">
+        <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h1 class="h3 mb-0 text-white fw-bold">
@@ -39,13 +530,13 @@
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <!-- Selector de Etapas con Bandeja -->
-                    <div class="dropdown position-static">
+                    <div class="dropdown modern-dropdown position-relative">
                         <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownEtapas"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-list me-1"></i>
                             Etapas con Bandeja
                         </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownEtapas" style="z-index: 99999;">
+                        <ul class="dropdown-menu" aria-labelledby="dropdownEtapas" style="z-index: 99999; position: absolute; top: 100%; left: 0; min-width: 300px; max-height: 400px; overflow-y: auto;">
                             {% if etapa_seleccionada %}
                             <li>
                                 <a class="dropdown-item" href="{% url 'workflow:vista_mixta_bandejas' %}">
@@ -77,135 +568,79 @@
 
 
 
-    <!-- Filtros Estáticos -->
-    <div class="card mb-2" style="border: 1px solid #e0e0e0;">
-        <div class="card-body py-2">
-            <div class="row g-1 align-items-center">
-                <div class="col-6 col-md-3">
-                    <select id="filtroEstado" class="form-select form-select-sm">
-                        <option value="">Todos los estados</option>
-                        {% for estado in estados_unicos %}
-                        <option value="{{ estado }}">{{ estado }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-md-3">
-                    <select id="filtroSLA" class="form-select form-select-sm">
-                        <option value="">Todos los SLA</option>
-                        <option value="en_tiempo">En tiempo</option>
-                        <option value="por_vencer">Por vencer</option>
-                        <option value="vencido">Vencido</option>
-                    </select>
-                </div>
-                <div class="col-12 col-md-5">
-                    <input type="text" id="busquedaGlobal" class="form-control form-control-sm"
-                        placeholder="Buscar por código, cliente, cédula...">
-                </div>
-                <div class="col-12 col-md-1">
-                    <button type="button" class="btn btn-sm btn-outline-info w-100" id="limpiarFiltros">
-                        <i class="fas fa-filter-circle-xmark"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Leyenda SLA Compacta -->
-    <small class="text-muted mb-2 d-block" style="font-size: 0.7rem;">
-        <i class="fas fa-info-circle me-1"></i>Leyenda SLA:
-        <i class="fas fa-circle text-success me-1 ms-2" style="font-size: 0.5rem;"></i>En tiempo
-        <i class="fas fa-circle text-warning me-1 ms-2" style="font-size: 0.5rem;"></i>Por vencer
-        <i class="fas fa-circle text-danger me-1 ms-2" style="font-size: 0.5rem;"></i>Vencido
-    </small>
 
     <!-- Vista de Supervisor/Superuser - Tabla Completa de Solicitudes -->
     {% if user.is_superuser or user.is_staff %}
-    <div class="card mb-3" style="border: 1px solid #e0e0e0;">
-        <div class="card-header" style="background: linear-gradient(135deg, #1e40af, #3b82f6); color: white;">
+    <div class="modern-card mb-3">
+        <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
+                <h5 class="mb-0 text-white">
                     <i class="fas fa-chart-line me-2"></i>
                     Vista de Supervisor - Gestión Completa de Solicitudes
                 </h5>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light btn-sm" id="toggle-supervisor-view">
+                    <button type="button" class="modern-btn modern-btn-primary" id="toggle-supervisor-view">
                         <i class="fas fa-eye me-1"></i>Mostrar/Ocultar Vista Completa
                     </button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="export-supervisor-data">
+                    <button type="button" class="modern-btn modern-btn-success" id="export-supervisor-data">
                         <i class="fas fa-download me-1"></i>Exportar Datos
                     </button>
                 </div>
             </div>
         </div>
-        <div class="card-body p-0" id="supervisor-view-content" style="display: none;">
-            <div class="table-responsive" style="max-height: 800px; overflow-y: auto;">
-                <table class="table table-hover mb-0" id="supervisor-table">
-                    <thead class="table-dark sticky-top">
-                        <tr>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-hashtag me-1"></i>Código
-                            </th>
-                            <th style="min-width: 150px;">
-                                <i class="fas fa-user me-1"></i>Cliente
-                            </th>
-                            <th style="min-width: 100px;">
-                                <i class="fas fa-id-card me-1"></i>Cédula
-                            </th>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-layer-group me-1"></i>Pipeline
-                            </th>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-tasks me-1"></i>Etapa
-                            </th>
-                            <th style="min-width: 100px;">
-                                <i class="fas fa-user-check me-1"></i>Asignado a
-                            </th>
-                            <th style="min-width: 100px;">
-                                <i class="fas fa-clock me-1"></i>SLA
-                            </th>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-calendar me-1"></i>Fecha Creación
-                            </th>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-calendar-check me-1"></i>Última Actualización
-                            </th>
-                            <th style="min-width: 100px;">
-                                <i class="fas fa-user-plus me-1"></i>Creado por
-                            </th>
-                            <th style="min-width: 100px;">
-                                <i class="fas fa-dollar-sign me-1"></i>Monto
-                            </th>
-                            <th style="min-width: 120px;">
-                                <i class="fas fa-cogs me-1"></i>Acciones
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="supervisor-table-body">
+        <div class="card-body" id="supervisor-view-content" style="display: none;">
+            <div class="modern-table-container table-responsive" style="max-height: 800px; overflow-y: auto;">
+                <div class="table-responsive">
+                    <table class="modern-table table table-hover mb-0" id="supervisor-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 180px;">
+                                    <i class="fas fa-user me-1"></i>Cliente y Producto
+                                </th>
+                                <th style="min-width: 120px;">
+                                    <i class="fas fa-layer-group me-1"></i>Pipeline
+                                </th>
+                                <th style="min-width: 100px;">
+                                    <i class="fas fa-user-check me-1"></i>Asignado a
+                                </th>
+                                <th style="min-width: 100px;">
+                                    <i class="fas fa-clock me-1"></i>SLA
+                                </th>
+                                <th style="min-width: 120px;">
+                                    <i class="fas fa-calendar me-1"></i>Fecha Creación
+                                </th>
+                                <th style="min-width: 120px;">
+                                    <i class="fas fa-calendar-check me-1"></i>Última Actualización
+                                </th>
+                                <th style="min-width: 100px;">
+                                    <i class="fas fa-dollar-sign me-1"></i>Monto
+                                </th>
+                                <th style="min-width: 120px;">
+                                    <i class="fas fa-cogs me-1"></i>Acciones
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="supervisor-table-body">
                         {% for solicitud in solicitudes_grupales %}
                         <tr class="supervisor-row" data-solicitud-id="{{ solicitud.id }}" data-tipo="grupal"
-                            data-cliente="{{ solicitud.cliente_nombre }}" data-estado="{{ solicitud.estado_actual }}"
+                            data-cliente="{{ solicitud.cliente_nombre_completo }}" data-estado="{{ solicitud.estado_actual }}"
                             data-etapa="{{ solicitud.etapa_actual.nombre }}"
                             data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                             <td>
-                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
+                                <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
                                     class="text-decoration-none">
-                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                    <strong class="text-primary">{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                 </a>
+                                <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                {% endif %}
                                 <br><small class="text-muted">Bandeja Grupal</small>
                             </td>
                             <td>
-                                <strong>{{ solicitud.cliente_nombre|default:"Sin cliente" }}</strong>
-                            </td>
-                            <td>
-                                <code>{{ solicitud.cliente_cedula|default:"-" }}</code>
-                            </td>
-                            <td>
                                 <span class="badge bg-secondary">{{ solicitud.pipeline.nombre }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre|default:"Sin etapa"
-                                    }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-warning text-dark">Sin asignar</span>
@@ -223,26 +658,21 @@
                                 <small>{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</small>
                             </td>
                             <td>
-                                <small>{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username
-                                    }}</small>
-                            </td>
-                            <td>
                                 <strong class="text-success">{{ solicitud.monto_formateado|default:"-" }}</strong>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-success btn-sm tomar-solicitud"
-                                        data-solicitud-id="{{ solicitud.id }}" data-codigo="{{ solicitud.codigo }}">
+                                        data-solicitud-id="{{ solicitud.id }}"
+                                        data-etapa-id="{{ solicitud.etapa_actual.id }}"
+                                        data-codigo="{{ solicitud.codigo }}">
                                         <i class="fas fa-hand-paper"></i>
                                     </button>
                                     <button class="btn btn-primary btn-sm asignar-solicitud"
-                                        data-solicitud-id="{{ solicitud.id }}" data-codigo="{{ solicitud.codigo }}"
-                                        data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                        data-solicitud-id="{{ solicitud.id }}"
+                                        data-etapa-id="{{ solicitud.etapa_actual.id }}"
+                                        data-codigo="{{ solicitud.codigo }}">
                                         <i class="fas fa-user-plus"></i>
-                                    </button>
-                                    <button class="btn btn-info btn-sm ver-detalle"
-                                        data-solicitud-id="{{ solicitud.id }}">
-                                        <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
                             </td>
@@ -251,29 +681,23 @@
 
                         {% for solicitud in solicitudes_personales %}
                         <tr class="supervisor-row" data-solicitud-id="{{ solicitud.id }}" data-tipo="personal"
-                            data-cliente="{{ solicitud.cliente_nombre }}" data-estado="{{ solicitud.estado_actual }}"
+                            data-cliente="{{ solicitud.cliente_nombre_completo }}" data-estado="{{ solicitud.estado_actual }}"
                             data-etapa="{{ solicitud.etapa_actual.nombre }}"
                             data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                             <td>
-                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
+                                <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
                                     class="text-decoration-none">
-                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                    <strong class="text-primary">{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                 </a>
+                                <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                {% endif %}
                                 <br><small class="text-muted">Asignada</small>
                             </td>
                             <td>
-                                <strong>{{ solicitud.cliente_nombre|default:"Sin cliente" }}</strong>
-                            </td>
-                            <td>
-                                <code>{{ solicitud.cliente_cedula|default:"-" }}</code>
-                            </td>
-                            <td>
                                 <span class="badge bg-secondary">{{ solicitud.pipeline.nombre }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre|default:"Sin etapa"
-                                    }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-success">{{
@@ -292,30 +716,24 @@
                                 <small>{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</small>
                             </td>
                             <td>
-                                <small>{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username
-                                    }}</small>
-                            </td>
-                            <td>
                                 <strong class="text-success">{{ solicitud.monto_formateado|default:"-" }}</strong>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     {% if solicitud.asignada_a == user %}
                                     <button class="btn btn-warning btn-sm devolver-solicitud"
-                                        data-solicitud-id="{{ solicitud.id }}" data-codigo="{{ solicitud.codigo }}">
+                                        data-solicitud-id="{{ solicitud.id }}"
+                                        data-codigo="{{ solicitud.codigo }}">
                                         <i class="fas fa-undo"></i>
                                     </button>
                                     {% endif %}
-                                    <button class="btn btn-info btn-sm ver-detalle"
-                                        data-solicitud-id="{{ solicitud.id }}">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <!-- Estadísticas de la Vista de Supervisor -->
@@ -384,14 +802,68 @@
 
     <!-- Contenedor de Bandejas -->
     <div id="contenedor-bandejas">
+        <!-- Filtros Modernos -->
+        <div class="modern-card mb-3">
+            <div class="card-body py-3">
+                <div class="row g-3 align-items-center">
+                    <div class="col-6 col-md-3">
+                        <select id="filtroEstado" class="form-select form-select-sm modern-dropdown">
+                            <option value="">Todos los estados</option>
+                            {% for estado in estados_unicos %}
+                            <option value="{{ estado }}">{{ estado }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select id="filtroSLA" class="form-select form-select-sm modern-dropdown">
+                            <option value="">Todos los SLA</option>
+                            <option value="en_tiempo">En tiempo</option>
+                            <option value="por_vencer">Por vencer</option>
+                            <option value="vencido">Vencido</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text modern-dropdown">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" id="busquedaGlobal" class="form-control form-control-sm modern-dropdown"
+                                placeholder="Buscar por cliente...">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-1">
+                        <button type="button" class="modern-btn modern-btn-info w-100" id="limpiarFiltros">
+                            <i class="fas fa-filter-circle-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Leyenda SLA Compacta -->
+                <div class="d-flex align-items-center mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        <i class="fas fa-info-circle me-1"></i>Leyenda SLA:
+                        <span class="ms-2">
+                            <span class="sla-icon text-success me-1"></span>En tiempo
+                        </span>
+                        <span class="ms-2">
+                            <span class="sla-icon text-warning me-1"></span>Por vencer
+                        </span>
+                        <span class="ms-2">
+                            <span class="sla-icon text-danger me-1"></span>Vencido
+                        </span>
+                    </small>
+                </div>
+            </div>
+        </div>
+
         <!-- Vista Mixta (Default) -->
         <div id="vista-mixta" class="vista-bandeja">
             <div class="row">
                 <!-- Bandeja Grupal -->
                 <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header" style="background: var(--verde-pacifico); color: #fff;">
-                            <h5 class="mb-0">
+                    <div class="modern-card">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-white">
                                 <i class="fas fa-users me-2"></i>
                                 {% if etapa_seleccionada %}
                                 Bandeja Grupal - {{ etapa_seleccionada.nombre }}
@@ -401,13 +873,12 @@
                                 <span class="badge bg-light text-dark ms-2">{{ solicitudes_grupales|length }}</span>
                             </h5>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light sticky-top">
+                        <div class="card-body">
+                            <div class="modern-table-container table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="modern-table table table-hover mb-0">
+                                    <thead>
                                         <tr>
-                                            <th>Código</th>
-                                            <th>Cliente</th>
+                                            <th>Cliente y Producto</th>
                                             <th>Etapa</th>
                                             <th>SLA</th>
                                             <th>Acciones</th>
@@ -416,60 +887,56 @@
                                     <tbody id="tabla-grupal">
                                         {% for solicitud in solicitudes_grupales %}
                                         <tr id="solicitud-grupal-{{ solicitud.id }}" class="solicitud-row"
-                                            data-cliente="{{ solicitud.cliente_nombre }}"
+                                            data-cliente="{{ solicitud.cliente_nombre_completo }}"
                                             data-estado="{{ solicitud.estado_actual }}"
                                             data-etapa="{{ solicitud.etapa_actual.nombre }}"
                                             data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                                             <td>
-                                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
-                                                    class="text-decoration-none">
-                                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                                <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
+                                                    class="modern-link">
+                                                    <strong>{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                                 </a>
-                                                <br><small class="text-muted">{{ solicitud.fecha_inicio|date:"d/m/Y"
-                                                    }}</small>
+                                                <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                                {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                                <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                                {% endif %}
+                                                <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
                                             </td>
                                             <td>
-                                                {{ solicitud.cliente_nombre }}
-                                                <br><small class="text-muted">{{ solicitud.cliente_cedula }}</small>
+                                                <span class="badge-etapa modern-badge">{{ solicitud.etapa_actual.nombre }}</span>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span>
+                                                <div class="sla-indicator">
+                                                    <div class="sla-icon {{ solicitud.sla_color }}"></div>
+                                                    <span class="sla-text {{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                                </div>
                                             </td>
                                             <td>
-                                                <i class="fas fa-circle {{ solicitud.sla_color }}"
-                                                    style="font-size: 0.8rem;"></i>
-                                                <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante
-                                                    }}</span>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-success btn-sm tomar-solicitud"
+                                                <div class="modern-btn-group">
+                                                    <button class="modern-btn modern-btn-success tomar-solicitud"
                                                         data-solicitud-id="{{ solicitud.id }}"
+                                                        data-etapa-id="{{ solicitud.etapa_actual.id }}"
                                                         data-codigo="{{ solicitud.codigo }}">
                                                         <i class="fas fa-hand-paper me-1"></i><span
                                                             class="btn-action-text">Tomar</span>
                                                     </button>
                                                     {% if user.is_superuser or user.is_staff %}
-                                                    <button class="btn btn-primary btn-sm asignar-solicitud"
+                                                    <button class="modern-btn modern-btn-primary asignar-solicitud"
                                                         data-solicitud-id="{{ solicitud.id }}"
-                                                        data-codigo="{{ solicitud.codigo }}"
-                                                        data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                                        data-etapa-id="{{ solicitud.etapa_actual.id }}"
+                                                        data-codigo="{{ solicitud.codigo }}">
                                                         <i class="fas fa-user-plus me-1"></i><span
                                                             class="btn-action-text">Asignar</span>
                                                     </button>
                                                     {% endif %}
-                                                    <button class="btn btn-info btn-sm ver-detalle"
-                                                        data-solicitud-id="{{ solicitud.id }}">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-4">
-                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                            <td colspan="4" class="empty-state">
+                                                <i class="fas fa-inbox"></i>
                                                 <br>No hay solicitudes en bandeja grupal
                                             </td>
                                         </tr>
@@ -483,9 +950,9 @@
 
                 <!-- Bandeja Personal -->
                 <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header" style="background: var(--verde-pacifico); color: #fff;">
-                            <h5 class="mb-0">
+                    <div class="modern-card">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-white">
                                 <i class="fas fa-user me-2"></i>
                                 Mis Tareas
                                 {% if etapa_seleccionada %}
@@ -494,13 +961,12 @@
                                 <span class="badge bg-light text-dark ms-2">{{ solicitudes_personales|length }}</span>
                             </h5>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light sticky-top">
+                        <div class="card-body">
+                            <div class="modern-table-container table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="modern-table table table-hover mb-0">
+                                    <thead>
                                         <tr>
-                                            <th>Código</th>
-                                            <th>Cliente</th>
+                                            <th>Cliente y Producto</th>
                                             <th>Etapa</th>
                                             <th>SLA</th>
                                             <th>Acciones</th>
@@ -509,50 +975,49 @@
                                     <tbody id="tabla-personal">
                                         {% for solicitud in solicitudes_personales %}
                                         <tr id="solicitud-personal-{{ solicitud.id }}" class="solicitud-row"
-                                            data-cliente="{{ solicitud.cliente_nombre }}"
+                                            data-cliente="{{ solicitud.cliente_nombre_completo }}"
                                             data-estado="{{ solicitud.estado_actual }}"
                                             data-etapa="{{ solicitud.etapa_actual.nombre }}"
                                             data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                            data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                                             <td>
-                                                <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
-                                                    class="text-decoration-none">
-                                                    <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                                <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
+                                                    class="modern-link">
+                                                    <strong>{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                                 </a>
-                                                <br><small class="text-muted">{{ solicitud.fecha_inicio|date:"d/m/Y"
-                                                    }}</small>
+                                                <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                                {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                                <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                                {% endif %}
+                                                <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
                                             </td>
                                             <td>
-                                                {{ solicitud.cliente_nombre }}
-                                                <br><small class="text-muted">{{ solicitud.cliente_cedula }}</small>
+                                                <span class="badge-etapa modern-badge">{{ solicitud.etapa_actual.nombre }}</span>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span>
+                                                <div class="sla-indicator">
+                                                    <div class="sla-icon {{ solicitud.sla_color }}"></div>
+                                                    <span class="sla-text {{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                                </div>
                                             </td>
                                             <td>
-                                                <i class="fas fa-circle {{ solicitud.sla_color }}"
-                                                    style="font-size: 0.8rem;"></i>
-                                                <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante
-                                                    }}</span>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-warning btn-sm devolver-solicitud"
+                                                <div class="modern-btn-group">
+                                                    <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
+                                                        class="modern-btn modern-btn-primary">
+                                                        <i class="fas fa-search me-1"></i><span class="btn-action-text">Analizar</span>
+                                                    </a>
+                                                    <button class="modern-btn modern-btn-warning devolver-solicitud"
                                                         data-solicitud-id="{{ solicitud.id }}"
                                                         data-codigo="{{ solicitud.codigo }}">
-                                                        <i class="fas fa-undo me-1"></i> Devolver
-                                                    </button>
-                                                    <button class="btn btn-info btn-sm ver-solicitud"
-                                                        data-solicitud-id="{{ solicitud.id }}">
-                                                        <i class="fas fa-eye me-1"></i> Ver
+                                                        <i class="fas fa-undo me-1"></i><span class="btn-action-text">Devolver</span>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-4">
-                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                            <td colspan="4" class="empty-state">
+                                                <i class="fas fa-inbox"></i>
                                                 <br>No tienes tareas asignadas
                                             </td>
                                         </tr>
@@ -568,22 +1033,20 @@
 
         <!-- Vista Solo Bandeja Grupal -->
         <div id="vista-grupal" class="vista-bandeja" style="display: none;">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-white">
                         <i class="fas fa-users me-2"></i>
                         Bandeja Grupal
                         <span class="badge bg-light text-dark ms-2">{{ solicitudes_grupales|length }}</span>
                     </h5>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 700px; overflow-y: auto;">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light sticky-top">
+                <div class="card-body">
+                    <div class="modern-table-container table-responsive" style="max-height: 700px; overflow-y: auto;">
+                        <table class="modern-table table table-hover mb-0">
+                            <thead>
                                 <tr>
-                                    <th>Código</th>
-                                    <th>Cliente</th>
-                                    <th>Cédula</th>
+                                    <th>Cliente y Producto</th>
                                     <th>Etapa</th>
                                     <th>Estado</th>
                                     <th>SLA</th>
@@ -593,56 +1056,56 @@
                             </thead>
                             <tbody id="tabla-grupal-expandida">
                                 {% for solicitud in solicitudes_grupales %}
-                                <tr class="solicitud-row" data-cliente="{{ solicitud.cliente_nombre }}"
+                                <tr class="solicitud-row" data-cliente="{{ solicitud.cliente_nombre_completo }}"
                                     data-estado="{{ solicitud.estado_actual }}"
                                     data-etapa="{{ solicitud.etapa_actual.nombre }}"
                                     data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                                     <td>
-                                        <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
-                                            class="text-decoration-none">
-                                            <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                        <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
+                                            class="modern-link">
+                                            <strong>{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                         </a>
+                                        <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                        {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                        <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                        {% endif %}
                                         <br><small class="text-muted">Bandeja Grupal</small>
                                     </td>
-                                    <td>{{ solicitud.cliente_nombre }}</td>
-                                    <td>{{ solicitud.cliente_cedula }}</td>
-                                    <td><span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span></td>
-                                    <td><span class="badge bg-secondary">{{ solicitud.estado_actual }}</span></td>
+                                    <td><span class="badge-etapa modern-badge">{{ solicitud.etapa_actual.nombre }}</span></td>
+                                    <td><span class="modern-badge" style="background: linear-gradient(135deg, var(--text-secondary), var(--text-muted)); color: white;">{{ solicitud.estado_actual }}</span></td>
                                     <td>
-                                        <i class="fas fa-circle {{ solicitud.sla_color }}"
-                                            style="font-size: 0.8rem;"></i>
-                                        <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                        <div class="sla-indicator">
+                                            <div class="sla-icon {{ solicitud.sla_color }}"></div>
+                                            <span class="sla-text {{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                        </div>
                                     </td>
-                                    <td>{{ solicitud.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                                    <td><small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</small></td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-success btn-sm tomar-solicitud"
+                                        <div class="modern-btn-group">
+                                            <button class="modern-btn modern-btn-success tomar-solicitud"
                                                 data-solicitud-id="{{ solicitud.id }}"
+                                                data-etapa-id="{{ solicitud.etapa_actual.id }}"
                                                 data-codigo="{{ solicitud.codigo }}">
                                                 <i class="fas fa-hand-paper me-1"></i><span
                                                     class="btn-action-text">Tomar</span>
                                             </button>
                                             {% if user.is_superuser or user.is_staff %}
-                                            <button class="btn btn-primary btn-sm asignar-solicitud"
+                                            <button class="modern-btn modern-btn-primary asignar-solicitud"
                                                 data-solicitud-id="{{ solicitud.id }}"
-                                                data-codigo="{{ solicitud.codigo }}"
-                                                data-etapa-id="{{ solicitud.etapa_actual.id }}">
+                                                data-etapa-id="{{ solicitud.etapa_actual.id }}"
+                                                data-codigo="{{ solicitud.codigo }}">
                                                 <i class="fas fa-user-plus me-1"></i><span
                                                     class="btn-action-text">Asignar</span>
                                             </button>
                                             {% endif %}
-                                            <button class="btn btn-info btn-sm ver-detalle"
-                                                data-solicitud-id="{{ solicitud.id }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <td colspan="6" class="empty-state">
+                                        <i class="fas fa-inbox"></i>
                                         <br>No hay solicitudes en bandeja grupal
                                     </td>
                                 </tr>
@@ -656,22 +1119,20 @@
 
         <!-- Vista Solo Bandeja Personal -->
         <div id="vista-personal" class="vista-bandeja" style="display: none;">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-white">
                         <i class="fas fa-user me-2"></i>
                         Mis Tareas
                         <span class="badge bg-light text-dark ms-2">{{ solicitudes_personales|length }}</span>
                     </h5>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 700px; overflow-y: auto;">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light sticky-top">
+                <div class="card-body">
+                    <div class="modern-table-container table-responsive" style="max-height: 700px; overflow-y: auto;">
+                        <table class="modern-table table table-hover mb-0">
+                            <thead>
                                 <tr>
-                                    <th>Código</th>
-                                    <th>Cliente</th>
-                                    <th>Cédula</th>
+                                    <th>Cliente y Producto</th>
                                     <th>Etapa</th>
                                     <th>Estado</th>
                                     <th>SLA</th>
@@ -681,47 +1142,46 @@
                             </thead>
                             <tbody id="tabla-personal-expandida">
                                 {% for solicitud in solicitudes_personales %}
-                                <tr class="solicitud-row" data-cliente="{{ solicitud.cliente_nombre }}"
+                                <tr class="solicitud-row" data-cliente="{{ solicitud.cliente_nombre_completo }}"
                                     data-estado="{{ solicitud.estado_actual }}"
                                     data-etapa="{{ solicitud.etapa_actual.nombre }}"
                                     data-sla="{% if solicitud.sla_color == 'text-danger' %}vencido{% elif solicitud.sla_color == 'text-warning' %}por_vencer{% else %}en_tiempo{% endif %}"
-                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre|lower }} {{ solicitud.cliente_cedula|lower }}">
+                                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente_nombre_completo|lower }} {{ solicitud.cliente_cedula_completa|lower }}">
                                     <td>
-                                        <a href="{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}"
-                                            class="text-decoration-none">
-                                            <strong class="text-primary">{{ solicitud.codigo }}</strong>
+                                        <a href="{% if solicitud.etapa_actual.nombre == 'Back Office' and solicitud.etapa_actual.es_bandeja_grupal %}{% url 'workflow:detalle_solicitud_backoffice' solicitud.id %}{% else %}{% url 'workflow:detalle_solicitud_analisis' solicitud.id %}{% endif %}"
+                                            class="modern-link">
+                                            <strong>{{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</strong>
                                         </a>
-                                        <br><small class="text-muted">Bandeja Grupal</small>
+                                        <br><small class="text-muted">{{ solicitud.producto_descripcion|default:"Sin producto" }}</small>
+                                        {% if solicitud.producto_descripcion == "Auto" and solicitud.cotizacion and solicitud.cotizacion.marca %}
+                                        <br><small class="text-vehicle"><i class="fas fa-car me-1"></i>{{ solicitud.cotizacion.marca }} {{ solicitud.cotizacion.modelo|default:"" }}</small>
+                                        {% endif %}
+                                        <br><small class="text-muted">Asignada</small>
                                     </td>
-                                    <td>{{ solicitud.cliente_nombre }}</td>
-                                    <td>{{ solicitud.cliente_cedula }}</td>
-                                    <td><span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span></td>
-                                    <td><span class="badge bg-secondary">{{ solicitud.estado_actual }}</span></td>
+                                    <td><span class="badge-etapa modern-badge">{{ solicitud.etapa_actual.nombre }}</span></td>
+                                    <td><span class="modern-badge" style="background: linear-gradient(135deg, var(--text-secondary), var(--text-muted)); color: white;">{{ solicitud.estado_actual }}</span></td>
                                     <td>
-                                        <i class="fas fa-circle {{ solicitud.sla_color }}"
-                                            style="font-size: 0.8rem;"></i>
-                                        <span class="{{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                        <div class="sla-indicator">
+                                            <div class="sla-icon {{ solicitud.sla_color }}"></div>
+                                            <span class="sla-text {{ solicitud.sla_color }}">{{ solicitud.sla_restante }}</span>
+                                        </div>
                                     </td>
-                                    <td>{{ solicitud.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                                    <td><small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</small></td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-warning btn-sm devolver-solicitud"
+                                        <div class="modern-btn-group">
+                                            <button class="modern-btn modern-btn-warning devolver-solicitud"
                                                 data-solicitud-id="{{ solicitud.id }}"
                                                 data-codigo="{{ solicitud.codigo }}">
                                                 <i class="fas fa-undo me-1"></i><span
                                                     class="btn-action-text">Devolver</span>
-                                            </button>
-                                            <button class="btn btn-info btn-sm ver-detalle"
-                                                data-solicitud-id="{{ solicitud.id }}">
-                                                <i class="fas fa-eye"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <td colspan="6" class="empty-state">
+                                        <i class="fas fa-inbox"></i>
                                         <br>No tienes tareas asignadas
                                     </td>
                                 </tr>
@@ -734,57 +1194,89 @@
         </div>
     </div>
 
-    <!-- KPIs con formato EXACTO de negocios.html -->
-    <div class="card card-custom mt-3" id="kpis-section">
-        <div class="card-body py-2">
-            <div class="row g-2">
+    <!-- KPIs Modernos - Inspirados en APC Tracking -->
+    <div class="mt-3" id="kpis-section">
+        <div class="py-3">
+            <div class="row g-4">
                 <div class="col-3">
-                    <div class="kpi-card-compact kpi-total">
-                        <div class="kpi-icon-compact">
+                    <div class="kpi-card-modern kpi-total">
+                        <div class="kpi-icon-modern">
                             <i class="fas fa-clipboard-list"></i>
                         </div>
-                        <div class="kpi-content-compact">
-                            <p class="kpi-label-compact">Total</p>
-                            <h4 class="kpi-number-compact" id="kpi-total-grupo">{{ total_grupo }}</h4>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Total</p>
+                            <h4 class="kpi-number-modern" id="kpi-total-grupo">{{ total_grupo }}</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="kpi-card-compact kpi-activas">
-                        <div class="kpi-icon-compact">
+                    <div class="kpi-card-modern kpi-activas">
+                        <div class="kpi-icon-modern">
                             <i class="fas fa-play-circle"></i>
                         </div>
-                        <div class="kpi-content-compact">
-                            <p class="kpi-label-compact">Activas</p>
-                            <h4 class="kpi-number-compact" id="kpi-mis-tareas">{{ mis_tareas }}</h4>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Activas</p>
+                            <h4 class="kpi-number-modern" id="kpi-mis-tareas">{{ mis_tareas }}</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="kpi-card-compact kpi-completadas">
-                        <div class="kpi-icon-compact">
+                    <div class="kpi-card-modern kpi-completadas">
+                        <div class="kpi-icon-modern">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                        <div class="kpi-content-compact">
-                            <p class="kpi-label-compact">Completadas</p>
-                            <h4 class="kpi-number-compact" id="kpi-en-tiempo">{{ en_tiempo }}</h4>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Bandeja Grupal</p>
+                            <h4 class="kpi-number-modern" id="kpi-grupales">{{ solicitudes_grupales|length }}</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-3">
-                    <div class="kpi-card-compact kpi-vencidas">
-                        <div class="kpi-icon-compact">
+                    <div class="kpi-card-modern kpi-vencidas">
+                        <div class="kpi-icon-modern">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
-                        <div class="kpi-content-compact">
-                            <p class="kpi-label-compact">Vencidas</p>
-                            <h4 class="kpi-number-compact" id="kpi-por-vencer">{{ por_vencer }}</h4>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Vencidas</p>
+                            <h4 class="kpi-number-modern" id="kpi-vencidas">{{ vencidas }}</h4>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Instrucciones Compactas para el Usuario -->
+<div class="mt-4 mb-3">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-info-circle text-blue-600 text-sm"></i>
+                </div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h6 class="text-sm font-semibold text-blue-900 mb-2">
+                    <i class="fas fa-lightbulb me-1"></i>Guía Rápida
+                </h6>
+                <div class="text-sm text-blue-800 space-y-1">
+                    <p class="mb-1">
+                        <i class="fas fa-mouse-pointer me-1"></i>
+                        <strong>Ver detalles:</strong> Haz clic en el <span class="text-blue-600 font-medium">nombre del cliente</span> para ver la solicitud completa
+                    </p>
+                    <p class="mb-1">
+                        <i class="fas fa-hand-paper me-1"></i>
+                        <strong>Tomar solicitud:</strong> Usa el botón <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">Tomar</span> para asignártela
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-user-plus me-1"></i>
+                        <strong>Asignar a otro:</strong> Usa el botón <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Asignar</span> para delegar a otro usuario
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 
 <!-- Modal de Confirmación Personalizado -->
@@ -1455,25 +1947,9 @@
             });
         });
 
-        // Función para ver detalle - navegar directamente a la página de análisis
-        document.querySelectorAll('.ver-detalle').forEach(button => {
-            button.addEventListener('click', function () {
-                const solicitudId = this.getAttribute('data-solicitud-id');
 
-                // Navegar directamente a la página de análisis
-                window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
-            });
-        });
 
-        // Función para ver solicitud
-        document.querySelectorAll('.ver-solicitud').forEach(button => {
-            button.addEventListener('click', function () {
-                const solicitudId = this.getAttribute('data-solicitud-id');
 
-                // Navegar directamente a la página de análisis
-                window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
-            });
-        });
 
         // BOTONES ASIGNAR SOLICITUD
         document.querySelectorAll('.asignar-solicitud').forEach(button => {
@@ -1489,7 +1965,13 @@
 
                 // Actualizar información del modal
                 document.getElementById('asignar-codigo-solicitud').textContent = codigo;
-                document.getElementById('asignar-etapa-solicitud').textContent = this.closest('tr').querySelector('.badge').textContent;
+                // Find the etapa badge - it's now in the 3rd column after removing cedula
+                const etapaBadge = this.closest('tr').querySelector('td:nth-child(3) .badge');
+                if (etapaBadge) {
+                    document.getElementById('asignar-etapa-solicitud').textContent = etapaBadge.textContent;
+                } else {
+                    document.getElementById('asignar-etapa-solicitud').textContent = 'Etapa no encontrada';
+                }
 
                 // Mostrar modal
                 const modal = new bootstrap.Modal(document.getElementById('modalAsignarSolicitud'));
@@ -1914,7 +2396,7 @@
 
             // Encabezados
             datos.push([
-                'Código', 'Cliente', 'Cédula', 'Pipeline', 'Etapa', 'Asignado a',
+                'Código', 'Cliente', 'Pipeline', 'Etapa', 'Asignado a',
                 'SLA', 'Fecha Creación', 'Última Actualización', 'Creado por', 'Monto', 'Tipo'
             ]);
 
@@ -1923,19 +2405,18 @@
                 if (fila.style.display !== 'none') {
                     const codigo = fila.querySelector('td:nth-child(1) strong').textContent;
                     const cliente = fila.querySelector('td:nth-child(2) strong').textContent;
-                    const cedula = fila.querySelector('td:nth-child(3) code').textContent;
-                    const pipeline = fila.querySelector('td:nth-child(4) .badge').textContent;
-                    const etapa = fila.querySelector('td:nth-child(5) .badge').textContent;
-                    const asignado = fila.querySelector('td:nth-child(6) .badge').textContent;
-                    const sla = fila.querySelector('td:nth-child(7) span').textContent.trim();
-                    const fechaCreacion = fila.querySelector('td:nth-child(8) small').textContent;
-                    const ultimaActualizacion = fila.querySelector('td:nth-child(9) small').textContent;
-                    const creadoPor = fila.querySelector('td:nth-child(10) small').textContent;
-                    const monto = fila.querySelector('td:nth-child(11) strong').textContent;
+                    const pipeline = fila.querySelector('td:nth-child(3) .badge').textContent;
+                    const etapa = fila.querySelector('td:nth-child(4) .badge').textContent;
+                    const asignado = fila.querySelector('td:nth-child(5) .badge').textContent;
+                    const sla = fila.querySelector('td:nth-child(6) span').textContent.trim();
+                    const fechaCreacion = fila.querySelector('td:nth-child(7) small').textContent;
+                    const ultimaActualizacion = fila.querySelector('td:nth-child(8) small').textContent;
+                    const creadoPor = fila.querySelector('td:nth-child(9) small').textContent;
+                    const monto = fila.querySelector('td:nth-child(10) strong').textContent;
                     const tipo = fila.dataset.tipo === 'grupal' ? 'Bandeja Grupal' : 'Asignada';
 
                     datos.push([
-                        codigo, cliente, cedula, pipeline, etapa, asignado, sla,
+                        codigo, cliente, pipeline, etapa, asignado, sla,
                         fechaCreacion, ultimaActualizacion, creadoPor, monto, tipo
                     ]);
                 }
@@ -2062,7 +2543,13 @@
 
                 // Actualizar información del modal
                 document.getElementById('asignar-codigo-solicitud').textContent = codigo;
-                document.getElementById('asignar-etapa-solicitud').textContent = button.closest('tr').querySelector('.badge').textContent;
+                // Find the etapa badge - it's now in the 3rd column after removing cedula
+                const etapaBadge = button.closest('tr').querySelector('td:nth-child(3) .badge');
+                if (etapaBadge) {
+                    document.getElementById('asignar-etapa-solicitud').textContent = etapaBadge.textContent;
+                } else {
+                    document.getElementById('asignar-etapa-solicitud').textContent = 'Etapa no encontrada';
+                }
 
                 // Mostrar modal
                 const modal = new bootstrap.Modal(document.getElementById('modalAsignarSolicitud'));
@@ -2077,14 +2564,7 @@
                 cargarUsuariosDisponibles(solicitudId, etapaId);
             }
 
-            // Botones de ver detalle en tabla de supervisor
-            if (e.target.closest('.supervisor-row .ver-detalle')) {
-                const button = e.target.closest('.ver-detalle');
-                const solicitudId = button.getAttribute('data-solicitud-id');
 
-                // Navegar directamente a la página de análisis
-                window.location.href = `/workflow/solicitud/${solicitudId}/analisis/`;
-            }
         });
 
         console.log('✅ Sistema de bandejas inicializado correctamente - SIN auto-refresh');
@@ -2093,211 +2573,121 @@
 </script>
 
 <style>
-    /* Estilos para KPIs compactos - EXACTOS de negocios.html */
-    .kpi-card-compact {
+    /* Modern KPI Styling - Inspired by APC Tracking */
+    .kpi-card-modern {
         display: flex;
         align-items: center;
-        padding: 8px 12px;
-        border-radius: 8px;
+        padding: 20px 24px;
+        border-radius: var(--border-radius);
         transition: all 0.3s ease;
-        height: 60px;
+        height: 90px;
+        background: var(--card-background);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+        margin-bottom: 8px;
     }
 
-    .kpi-card-compact:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    .kpi-card-modern:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--info-color);
     }
 
-    .kpi-icon-compact {
-        width: 40px;
-        height: 40px;
+    .kpi-icon-modern {
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 12px;
-        font-size: 1.2rem;
+        margin-right: 16px;
+        font-size: 1.4rem;
     }
 
-    .kpi-content-compact {
+    .kpi-content-modern {
         flex: 1;
     }
 
-    .kpi-label-compact {
-        font-size: 0.75rem;
-        margin-bottom: 2px;
+    .kpi-label-modern {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
         opacity: 0.9;
-        font-weight: 500;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
     }
 
-    .kpi-number-compact {
-        font-size: 1.1rem;
+    .kpi-number-modern {
+        font-size: 1.75rem;
         font-weight: 700;
         margin: 0;
         line-height: 1;
     }
 
-    /* Variantes de KPIs compactos - EXACTOS de negocios.html */
-    .kpi-total .kpi-icon-compact {
-        background: linear-gradient(135deg, #009c3c, #22a650);
+    /* KPI Variants */
+    .kpi-total .kpi-icon-modern {
+        background: linear-gradient(135deg, var(--success-color), #10b981);
         color: white;
     }
 
-    .kpi-total .kpi-number-compact {
-        color: #009c3c;
+    .kpi-total .kpi-number-modern {
+        color: var(--success-color);
     }
 
-    .kpi-activas .kpi-icon-compact {
-        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    .kpi-activas .kpi-icon-modern {
+        background: linear-gradient(135deg, var(--info-color), #3b82f6);
         color: white;
     }
 
-    .kpi-activas .kpi-number-compact {
-        color: #0d6efd;
+    .kpi-activas .kpi-number-modern {
+        color: var(--info-color);
     }
 
-    .kpi-completadas .kpi-icon-compact {
-        background: linear-gradient(135deg, #ffc107, #ffb84d);
-        color: #000;
-    }
-
-    .kpi-completadas .kpi-number-compact {
-        color: #ffc107;
-    }
-
-    .kpi-vencidas .kpi-icon-compact {
-        background: linear-gradient(135deg, #dc3545, #c82333);
+    .kpi-completadas .kpi-icon-modern {
+        background: linear-gradient(135deg, var(--warning-color), #f59e0b);
         color: white;
     }
 
-    .kpi-vencidas .kpi-number-compact {
-        color: #dc3545;
+    .kpi-completadas .kpi-number-modern {
+        color: var(--warning-color);
     }
 
-    /* Estilos para el header personalizado */
-    .card-custom {
-        border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    .kpi-vencidas .kpi-icon-modern {
+        background: linear-gradient(135deg, var(--danger-color), #f87171);
+        color: white;
     }
 
-    .card-header-custom {
-        border: none;
+    .kpi-vencidas .kpi-number-modern {
+        color: var(--danger-color);
     }
 
-    /* Variable CSS para el verde Pacífico */
-    :root {
-        --verde-pacifico: #28a745;
-    }
-
-    /* Estilos para las tablas */
-    .table-responsive {
-        border-radius: 8px;
-        height: 420px;
-        overflow-y: auto;
-    }
-
+    /* Responsive Adjustments */
     @media (max-width: 768px) {
-        .table-responsive {
-            height: 280px;
-        }
-    }
-
-    .table th {
-        font-weight: 600;
-        font-size: 0.875rem;
-        border-top: none;
-    }
-
-    .table td {
-        font-size: 0.875rem;
-        vertical-align: middle;
-    }
-
-    /* Animación fade-in */
-    .fade-in-up {
-        animation: fadeInUp 0.6s ease-out;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
+        .kpi-card-modern {
+            height: 80px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
         }
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Animación fade-in y hover para filas de tabla */
-    .solicitud-row {
-        transition: background-color 0.2s ease-in-out;
-    }
-
-    /* Estilos para botones de acción más pequeños y responsivos */
-    .table .btn-group-sm .btn {
-        padding: 0.15rem 0.4rem;
-        font-size: 0.75rem;
-        min-width: 56px;
-        text-align: center;
-        border-radius: 4px;
-    }
-
-    .table .btn-group-sm .btn .fas {
-        margin-right: 0.3rem;
-        /* Espacio reducido entre icono y texto */
-    }
-
-    /* En pantallas pequeñas, ocultar el texto de los botones para ahorrar espacio */
-    @media (max-width: 768px) {
-        .btn-action-text {
-            display: none;
-        }
-
-        .table .btn-group-sm .btn .fas {
-            margin-right: 0;
-            /* Sin margen si no hay texto */
-        }
-    }
-
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .kpi-card-compact {
-            height: 50px;
-            padding: 6px 8px;
-        }
-
-        .kpi-icon-compact {
+        .kpi-icon-modern {
+            width: 44px;
+            height: 40px;
             font-size: 1.2rem;
-            margin-right: 8px;
+            margin-right: 12px;
         }
 
-        .kpi-number-compact {
-            font-size: 1.2rem;
+        .kpi-number-modern {
+            font-size: 1.4rem;
         }
 
-        .kpi-label-compact {
-            font-size: 0.7rem;
+        .kpi-label-modern {
+            font-size: 0.75rem;
         }
     }
-
-    /* Estilos para la Vista de Supervisor */
+    /* Essential Supervisor Table Styles */
     #supervisor-table {
         font-size: 0.875rem;
-    }
-
-    #supervisor-table th {
-        font-weight: 600;
-        font-size: 0.8rem;
-        white-space: nowrap;
-        vertical-align: middle;
-    }
-
-    #supervisor-table td {
-        vertical-align: middle;
-        padding: 0.5rem 0.25rem;
     }
 
     .supervisor-row {
@@ -2305,84 +2695,29 @@
     }
 
     .supervisor-row:hover {
-        background-color: rgba(59, 130, 246, 0.05);
-    }
-
-    .supervisor-row td {
-        border-top: 1px solid #f0f0f0;
-    }
-
-    .supervisor-row td:first-child {
-        border-left: 3px solid transparent;
+        background-color: rgba(45, 90, 45, 0.05);
     }
 
     .supervisor-row[data-tipo="grupal"] td:first-child {
-        border-left-color: #ffc107;
+        border-left: 3px solid var(--warning-color);
     }
 
     .supervisor-row[data-tipo="personal"] td:first-child {
-        border-left-color: #28a745;
+        border-left: 3px solid var(--success-color);
     }
 
-    /* Estilos para los badges en la tabla de supervisor */
-    #supervisor-table .badge {
-        font-size: 0.7rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    /* Estilos para los botones en la tabla de supervisor */
-    #supervisor-table .btn-group-sm .btn {
-        padding: 0.15rem 0.3rem;
-        font-size: 0.7rem;
-        min-width: 32px;
-    }
-
-    /* Estilos para el header de la vista de supervisor */
-    #supervisor-view-content .card-header {
-        background: linear-gradient(135deg, #1e40af, #3b82f6);
-        border: none;
-    }
-
-    /* Estilos para el footer de estadísticas */
-    #supervisor-view-content .card-footer {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border-top: 1px solid #dee2e6;
-    }
-
-    /* Responsive para la vista de supervisor */
+    /* Responsive Design for All Components */
     @media (max-width: 1200px) {
         #supervisor-table {
             font-size: 0.8rem;
         }
-
-        #supervisor-table th,
-        #supervisor-table td {
-            padding: 0.25rem 0.15rem;
-        }
-
-        #supervisor-table .btn-group-sm .btn {
-            padding: 0.1rem 0.2rem;
-            font-size: 0.65rem;
-            min-width: 28px;
-        }
     }
 
     @media (max-width: 768px) {
-        #supervisor-view-content .table-responsive {
-            max-height: 600px;
-        }
-
-        #supervisor-table th,
-        #supervisor-table td {
+        #supervisor-table {
             font-size: 0.75rem;
-            padding: 0.2rem 0.1rem;
-        }
-
-        #supervisor-table .badge {
-            font-size: 0.65rem;
-            padding: 0.2rem 0.4rem;
         }
     }
 </style>
-
 {% endblock %}
+    

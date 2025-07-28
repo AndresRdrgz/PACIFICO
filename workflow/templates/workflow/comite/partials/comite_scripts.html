@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isLoading = false; // Prevenir múltiples llamadas simultáneas
 
     const tablaBody = document.getElementById('tablaComiteBody');
+    const mobileCardsContainer = document.getElementById('mobileCardsContainer');
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
@@ -47,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function mostrarEstadoCarga() {
         if (tablaBody) tablaBody.style.display = 'none';
+        if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
         if (emptyState) emptyState.style.display = 'none';
         if (loadingState) loadingState.style.display = 'block';
     }
@@ -54,10 +56,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function ocultarEstadoCarga() {
         if (loadingState) loadingState.style.display = 'none';
         if (tablaBody) tablaBody.style.display = 'table-row-group';
+        if (mobileCardsContainer) mobileCardsContainer.style.display = 'block';
     }
 
     function mostrarEstadoVacio() {
         if (tablaBody) tablaBody.style.display = 'none';
+        if (mobileCardsContainer) mobileCardsContainer.style.display = 'none';
         if (loadingState) loadingState.style.display = 'none';
         if (emptyState) emptyState.style.display = 'block';
     }
@@ -92,29 +96,33 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 console.log('Datos recibidos:', data);
                 
-                // Limpiar tabla completamente antes de agregar datos
+                // Limpiar tabla y cards completamente antes de agregar datos
                 if (tablaBody) {
                     tablaBody.innerHTML = '';
                     console.log('Tabla limpiada');
                 }
+                if (mobileCardsContainer) {
+                    mobileCardsContainer.innerHTML = '';
+                    console.log('Cards móviles limpiadas');
+                }
                 
                 if (data.success && data.solicitudes && data.solicitudes.length > 0) {
-                    // Crear un fragmento para insertar todas las filas de una vez
-                    const fragment = document.createDocumentFragment();
+                    // Crear fragmentos para insertar todas las filas y cards de una vez
+                    const tableFragment = document.createDocumentFragment();
+                    const cardsFragment = document.createDocumentFragment();
                     
                     data.solicitudes.forEach(solicitud => {
+                        // Crear fila de tabla
                         const row = document.createElement('tr');
-                        
-                        // Construir el HTML de la fila
+                        row.style.cursor = 'pointer';
+                        row.setAttribute('data-solicitud-id', solicitud.id);
                         row.innerHTML = `
                             <td>
-                                <a href="/workflow/comite/solicitud/${solicitud.id}/" class="text-primary fw-bold text-decoration-none">
-                                    ${solicitud.codigo}
-                                </a>
-                            </td>
-                            <td>
-                                <div class="fw-bold">${solicitud.cliente_nombre}</div>
-                                <div class="text-muted small">${solicitud.cliente_cedula}</div>
+                                <div class="text-primary fw-bold">
+                                    ${solicitud.cliente_nombre || 'Sin nombre'}
+                                </div>
+                                <div class="text-muted small">${solicitud.cliente_cedula || 'Sin cédula'}</div>
+                                ${solicitud.marca_modelo ? `<div class="text-vehicle small"><i class="fas fa-car me-1"></i>${solicitud.marca_modelo}</div>` : ''}
                             </td>
                             <td>
                                 <div class="fw-bold">${solicitud.monto_formateado}</div>
@@ -142,24 +150,86 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>
                                 <span class="small text-muted">${solicitud.fecha_creacion}</span>
                             </td>
-                            <td class="text-center">
-                                <div class="d-flex justify-content-center gap-2">
-                                    <a href="/workflow/detalle/${solicitud.id}/" class="btn-action btn-view" title="Ver Detalle">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <button class="btn-action btn-participate" onclick="abrirModalParticipacion(${solicitud.id})" title="Participar">
-                                        <i class="fas fa-check-circle"></i>
-                                    </button>
-                                </div>
+                            <td>
+                                <span class="text-muted small">${solicitud.codigo}</span>
                             </td>
                         `;
+                        tableFragment.appendChild(row);
                         
-                        fragment.appendChild(row);
+                        // Crear card móvil
+                        const cardCol = document.createElement('div');
+                        cardCol.className = 'col-12 col-md-6 col-lg-4';
+                        cardCol.innerHTML = `
+                            <div class="solicitud-card" data-solicitud-id="${solicitud.id}" style="cursor: pointer;">
+                                <div class="card-header">
+                                    <div class="cliente-name">
+                                        ${solicitud.cliente_nombre || 'Sin nombre'}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="cliente-cedula">
+                                        <i class="fas fa-id-card me-1"></i>${solicitud.cliente_cedula || 'Sin cédula'}
+                                    </div>
+                                    ${solicitud.marca_modelo ? `<div class="vehicle-info"><i class="fas fa-car me-1"></i>${solicitud.marca_modelo}</div>` : ''}
+                                    <div class="monto">
+                                        ${solicitud.monto_formateado}
+                                    </div>
+                                    <div class="producto-badge product-${solicitud.producto_descripcion.toLowerCase()}">
+                                        ${solicitud.producto_descripcion}
+                                    </div>
+                                    <div class="analyst-info">
+                                        <div class="analyst-avatar">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="analyst-details">
+                                            <div class="analyst-name">${solicitud.analista_revisor.nombre}</div>
+                                            <div class="analyst-etapa">${solicitud.analista_revisor.etapa}</div>
+                                            <div class="analyst-fecha">${solicitud.analista_revisor.fecha}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="meta-info">
+                                        <span class="codigo">${solicitud.codigo}</span>
+                                        <span class="fecha">${solicitud.fecha_creacion}</span>
+                                    </div>
+                                    <div class="text-muted small mt-2">
+                                        <i class="fas fa-user-plus me-1"></i>${solicitud.creada_por}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        cardsFragment.appendChild(cardCol);
                     });
                     
-                    // Insertar todas las filas de una vez
+                    // Insertar todas las filas y cards de una vez
                     if (tablaBody) {
-                        tablaBody.appendChild(fragment);
+                        tablaBody.appendChild(tableFragment);
+                        
+                        // Agregar event listeners para las filas de tabla
+                        const tableRows = tablaBody.querySelectorAll('tr[data-solicitud-id]');
+                        tableRows.forEach(row => {
+                            row.addEventListener('click', function() {
+                                const solicitudId = this.getAttribute('data-solicitud-id');
+                                if (solicitudId) {
+                                    window.location.href = `/workflow/comite/solicitud/${solicitudId}/`;
+                                }
+                            });
+                        });
+                    }
+                    if (mobileCardsContainer) {
+                        mobileCardsContainer.appendChild(cardsFragment);
+                        
+                        // Agregar event listeners para las cards móviles
+                        const cards = mobileCardsContainer.querySelectorAll('.solicitud-card');
+                        cards.forEach(card => {
+                            card.addEventListener('click', function() {
+                                const solicitudId = this.getAttribute('data-solicitud-id');
+                                if (solicitudId) {
+                                    window.location.href = `/workflow/comite/solicitud/${solicitudId}/`;
+                                }
+                            });
+                        });
                     }
                     
                     ocultarEstadoCarga();
