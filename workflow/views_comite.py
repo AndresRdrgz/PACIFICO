@@ -47,6 +47,34 @@ def bandeja_comite_view(request):
 
 
 @login_required
+def debug_bandeja_comite_view(request):
+    """
+    Debug view for troubleshooting the Comité bandeja
+    """
+    
+    # Get the same context as the original view
+    try:
+        etapa_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").first()
+        if etapa_comite:
+            total_solicitudes = Solicitud.objects.filter(etapa_actual=etapa_comite).count()
+        else:
+            total_solicitudes = 0
+    except Exception as e:
+        messages.error(request, f'Error al obtener las solicitudes del comité: {str(e)}')
+        etapa_comite = None
+        total_solicitudes = 0
+
+    context = {
+        'etapa_comite': etapa_comite,
+        'total_solicitudes': total_solicitudes,
+        'page_title': 'DEBUG - Bandeja del Comité de Crédito',
+        'page_description': 'Debug version for troubleshooting.'
+    }
+    
+    return render(request, 'workflow/debug_comite.html', context)
+
+
+@login_required
 def detalle_solicitud_comite(request, solicitud_id):
     """
     Vista especializada para el detalle de solicitudes en el comité de crédito

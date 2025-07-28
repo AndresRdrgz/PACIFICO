@@ -284,10 +284,16 @@
                                         class="text-decoration-none text-success solicitud-link"
                                         title="Ver detalles de {{ solicitud.cliente_nombre }}"
                                         onclick="event.stopPropagation();">
+                                        {% if solicitud.origen == 'Canal Digital' %}
+                                        <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
+                                        {% endif %}
                                         {{ solicitud.cliente_nombre }}
                                     </a>
                                     {% else %}
                                     <span class="text-danger" title="Solicitud sin ID válido">
+                                        {% if solicitud.origen == 'Canal Digital' %}
+                                        <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
+                                        {% endif %}
                                         {{ solicitud.cliente_nombre }}
                                     </span>
                                     {% endif %}
@@ -383,9 +389,9 @@
                             </span>
                             {% endif %}
                             {% if s.origen == 'Canal Digital' %}
-                            <span class="badge bg-info {% if s.etiquetas_oficial %}ms-1{% endif %}"
-                                style="font-size: 0.65rem;" title="Solicitud del Canal Digital">
-                                <i class="fas fa-mobile-alt me-1"></i>Digital
+                            <span class="badge bg-info digital-badge-card {% if s.etiquetas_oficial %}ms-1{% endif %}"
+                                style="font-size: 0.65rem; font-weight: 600;" title="Solicitud del Canal Digital">
+                                <i class="fas fa-mobile-alt me-1"></i>Canal Digital
                             </span>
                             {% endif %}
                         </div>
@@ -528,6 +534,18 @@
                                 <option value="">Todas las prioridades</option>
                             </select>
                         </div>
+                        <div class="filter-group" style="margin: 0;">
+                            <select id="filtroOrigen" onchange="applyFilters()"
+                                style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;"
+                                title="Filtrar por origen">
+                                <option value="">Todos los orígenes</option>
+                                <option value="Canal Digital">
+                                    <i class="fas fa-mobile-alt"></i> Canal Digital
+                                </option>
+                                <option value="Presencial">Presencial</option>
+                                <option value="Otro">Otros</option>
+                            </select>
+                        </div>
 
                         <!-- Action Buttons -->
                         <button class="refresh-btn" onclick="clearFilters()"
@@ -590,10 +608,16 @@
                                             <a href="#" class="text-decoration-none text-success solicitud-link"
                                                 title="Ver detalles de {{ s.cliente_nombre }}"
                                                 onclick="event.stopPropagation();">
+                                                {% if s.origen == 'Canal Digital' %}
+                                                <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
+                                                {% endif %}
                                                 {{ s.cliente_nombre }}
                                             </a>
                                             {% else %}
                                             <span class="text-danger" title="Solicitud sin ID válido">
+                                                {% if s.origen == 'Canal Digital' %}
+                                                <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
+                                                {% endif %}
                                                 {{ s.cliente_nombre }}
                                             </span>
                                             {% endif %}
@@ -677,6 +701,12 @@
                                             <i class="fas fa-users"></i>
                                         </span>
                                         {% endif %}
+                                        {% if s.origen == 'Canal Digital' %}
+                                        <span class="badge bg-info digital-badge"
+                                            title="Solicitud del Canal Digital">
+                                            <i class="fas fa-mobile-alt"></i> Digital
+                                        </span>
+                                        {% endif %}
                                     </div>
                                 </td>
 
@@ -733,21 +763,28 @@
         <div class="card card-custom mb-2">
             <div class="card-body py-2">
                 <div class="row g-1 align-items-center">
-                    <div class="col-6 col-md-3">
+                    <div class="col-4 col-md-2">
                         <select id="kanbanFiltroEtapa" class="form-select form-select-sm">
                             <option value="">Todas las etapas</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-3">
+                    <div class="col-4 col-md-2">
                         <select id="kanbanFiltroSLA" class="form-select form-select-sm">
                             <option value="">Todos los SLA</option>
                         </select>
                     </div>
-                    <div class="col-12 col-md-5">
+                    <div class="col-4 col-md-2">
+                        <select id="kanbanFiltroOrigen" class="form-select form-select-sm">
+                            <option value="">Todos los orígenes</option>
+                            <option value="Canal Digital">📱 Canal Digital</option>
+                            <option value="Presencial">🏢 Presencial</option>
+                        </select>
+                    </div>
+                    <div class="col-8 col-md-5">
                         <input type="text" id="kanbanBusquedaGlobal" class="form-control form-control-sm"
                             placeholder="Buscar...">
                     </div>
-                    <div class="col-12 col-md-1">
+                    <div class="col-4 col-md-1">
                         <button type="button" class="btn btn-sm btn-outline-info w-100" id="kanbanLimpiarFiltros">
                             <i class="fas fa-filter-circle-xmark"></i>
                         </button>
@@ -838,6 +875,9 @@
                                                         <h6 class="mb-0" style="font-size: 0.9rem;">
                                                             <i class="fas fa-user text-muted me-1"
                                                                 style="font-size: 0.75rem; width: 12px;"></i>
+                                                            {% if s.origen == 'Canal Digital' %}
+                                                            <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.7rem;"></i>
+                                                            {% endif %}
                                                             {% if s.id %}
                                                             <a href="{% url 'workflow:detalle_solicitud' s.id %}"
                                                                 class="text-decoration-none fw-bold text-success solicitud-link-kanban"
@@ -916,9 +956,9 @@
                                                     <div class="col-5 text-end">
                                                         <div class="d-flex align-items-center justify-content-end">
                                                             {% if s.origen == 'Canal Digital' %}
-                                                            <span class="badge bg-info me-1" style="font-size: 0.55rem;"
+                                                            <span class="badge bg-info me-1 digital-badge-mobile" style="font-size: 0.55rem;"
                                                                 title="Solicitud del Canal Digital">
-                                                                <i class="fas fa-mobile-alt"></i>
+                                                                <i class="fas fa-mobile-alt me-1"></i>Digital
                                                             </span>
                                                             {% endif %}
                                                             {% if s.prioridad %}
@@ -1337,7 +1377,7 @@
         // Configurar event listeners para filtros
         const filterElements = [
             'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad'
+            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'filtroOrigen'
         ];
 
         filterElements.forEach(filterId => {
@@ -1548,7 +1588,8 @@
             estado: document.getElementById('filtroEstado'),
             asignado: document.getElementById('filtroAsignado'),
             sla: document.getElementById('filtroSLA'),
-            prioridad: document.getElementById('filtroPrioridad')
+            prioridad: document.getElementById('filtroPrioridad'),
+            origen: document.getElementById('filtroOrigen')
         };
 
         Object.keys(filterElements).forEach(key => {
@@ -1567,6 +1608,7 @@
             if (currentFilters.asignado && solicitud.propietario !== currentFilters.asignado) return false;
             if (currentFilters.sla && solicitud.sla !== currentFilters.sla) return false;
             if (currentFilters.prioridad && solicitud.prioridad !== currentFilters.prioridad) return false;
+            if (currentFilters.origen && solicitud.origen !== currentFilters.origen) return false;
 
             // Búsqueda global
             if (currentFilters.search) {
@@ -1595,7 +1637,7 @@
     function clearFilters() {
         const filterElements = [
             'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'busquedaGlobal'
+            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'filtroOrigen', 'busquedaGlobal'
         ];
 
         filterElements.forEach(id => {
@@ -4755,6 +4797,89 @@
 
     .vista-desktop .refresh-btn:active {
         transform: translateY(0);
+    }
+
+    /* Digital Badge Styles */
+    .digital-badge {
+        background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        color: white !important;
+        font-weight: 600;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        animation: digitalPulse 2s ease-in-out infinite;
+    }
+
+    .digital-badge-card {
+        background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        color: white !important;
+        font-weight: 600;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .digital-badge-mobile {
+        background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        color: white !important;
+        font-weight: 600;
+        border: none !important;
+        box-shadow: 0 1px 4px rgba(23, 162, 184, 0.3);
+    }
+
+    .digital-badge:hover,
+    .digital-badge-card:hover,
+    .digital-badge-mobile:hover {
+        background: linear-gradient(135deg, #138496, #0f6674) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+    }
+
+    @keyframes digitalPulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        }
+        50% {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.5);
+        }
+    }
+
+    /* Enhanced Digital Badge with glow effect */
+    .digital-badge.enhanced {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .digital-badge.enhanced::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transform: rotate(45deg);
+        transition: all 0.6s ease;
+        opacity: 0;
+    }
+
+    .digital-badge.enhanced:hover::before {
+        animation: shine 0.6s ease-in-out;
+    }
+
+    @keyframes shine {
+        0% {
+            opacity: 0;
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
     }
 </style>
 
