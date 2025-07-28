@@ -1,0 +1,695 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Orden del Expediente - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Orden del Expediente */
+.orden-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e8 100%);
+  border: 2px solid #4caf50;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.orden-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.orden-icon {
+  font-size: 3rem;
+  color: #4caf50;
+  margin-bottom: 1rem;
+}
+
+.document-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  min-height: 400px;
+}
+
+.document-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+  cursor: move;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.document-item:last-child {
+  border-bottom: none;
+}
+
+.document-item:hover {
+  background: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.document-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.document-item.drag-over {
+  border-top: 3px solid #4caf50;
+  background: #e8f5e8;
+}
+
+.document-order-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #4caf50;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.document-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-complete {
+  background: #d1edff;
+  color: #0f5132;
+}
+
+.status-missing {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.expediente-summary {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.progress-ring {
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg);
+}
+
+.progress-ring-background {
+  fill: none;
+  stroke: #e0e0e0;
+  stroke-width: 8;
+}
+
+.progress-ring-progress {
+  fill: none;
+  stroke: #4caf50;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  transition: all 0.3s ease;
+}
+
+.checklist-item:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.checklist-item.completed {
+  background: #e8f5e8;
+  border-color: #4caf50;
+}
+
+.checklist-item input[type="checkbox"] {
+  margin-right: 1rem;
+  transform: scale(1.2);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #6c757d;
+  margin-right: 0.5rem;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.orden-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  padding: 1rem;
+  margin: 0 -2rem -2rem -2rem;
+  border-radius: 0 0 15px 15px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-gradient-success text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">
+                <i class="fas fa-folder-tree me-2"></i>
+                Back Office - Orden del Expediente
+              </h4>
+              <small class="opacity-75">Solicitud: {{ solicitud.codigo }}</small>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark fs-6">
+                <i class="fas fa-user me-1"></i>
+                {% if solicitud.cliente %}
+                  {{ solicitud.cliente.nombreCompleto }}
+                {% elif solicitud.cotizacion %}
+                  {{ solicitud.cotizacion.nombreCompleto }}
+                {% else %}
+                  Sin cliente asignado
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_checklist' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_captura' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_firma' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_orden' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Orden del Expediente -->
+          <div class="orden-container">
+            <div class="orden-header">
+              <div class="orden-icon">
+                <i class="fas fa-folder-tree"></i>
+              </div>
+              <h3>Organización del Expediente</h3>
+              <p class="text-muted">Organice y valide el orden correcto de todos los documentos del expediente</p>
+            </div>
+
+            <div class="row">
+              <!-- Panel Principal de Documentos -->
+              <div class="col-md-8">
+                <div class="card">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                      <i class="fas fa-list-ol me-2"></i>Orden de Documentos
+                    </h5>
+                    <div>
+                      <button class="btn btn-outline-primary btn-sm me-2" id="auto-order">
+                        <i class="fas fa-magic me-1"></i>Orden Automático
+                      </button>
+                      <button class="btn btn-outline-secondary btn-sm" id="reset-order">
+                        <i class="fas fa-undo me-1"></i>Restablecer
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body p-0">
+                    <div class="document-list" id="document-list">
+                      <!-- Documento 1 -->
+                      <div class="document-item" draggable="true" data-document-id="1">
+                        <div class="d-flex align-items-center">
+                          <span class="drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                          </span>
+                          <span class="document-order-number">1</span>
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <h6 class="mb-1">Formulario de Solicitud</h6>
+                                <small class="text-muted">Documento inicial del proceso</small>
+                              </div>
+                              <div>
+                                <span class="document-status-badge status-complete">Completo</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2">
+                                  <i class="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Documento 2 -->
+                      <div class="document-item" draggable="true" data-document-id="2">
+                        <div class="d-flex align-items-center">
+                          <span class="drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                          </span>
+                          <span class="document-order-number">2</span>
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <h6 class="mb-1">Cédula de Identidad</h6>
+                                <small class="text-muted">Documento de identificación</small>
+                              </div>
+                              <div>
+                                <span class="document-status-badge status-complete">Completo</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2">
+                                  <i class="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Documento 3 -->
+                      <div class="document-item" draggable="true" data-document-id="3">
+                        <div class="d-flex align-items-center">
+                          <span class="drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                          </span>
+                          <span class="document-order-number">3</span>
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <h6 class="mb-1">Comprobante de Ingresos</h6>
+                                <small class="text-muted">Última colilla de pago</small>
+                              </div>
+                              <div>
+                                <span class="document-status-badge status-review">En Revisión</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2">
+                                  <i class="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Documento 4 -->
+                      <div class="document-item" draggable="true" data-document-id="4">
+                        <div class="d-flex align-items-center">
+                          <span class="drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                          </span>
+                          <span class="document-order-number">4</span>
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <h6 class="mb-1">Referencias Comerciales</h6>
+                                <small class="text-muted">Cartas de referencia</small>
+                              </div>
+                              <div>
+                                <span class="document-status-badge status-missing">Faltante</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2">
+                                  <i class="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Documento 5 -->
+                      <div class="document-item" draggable="true" data-document-id="5">
+                        <div class="d-flex align-items-center">
+                          <span class="drag-handle">
+                            <i class="fas fa-grip-vertical"></i>
+                          </span>
+                          <span class="document-order-number">5</span>
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <h6 class="mb-1">Contrato Firmado</h6>
+                                <small class="text-muted">Documento final</small>
+                              </div>
+                              <div>
+                                <span class="document-status-badge status-complete">Completo</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2">
+                                  <i class="fas fa-eye"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Panel de Resumen y Control -->
+              <div class="col-md-4">
+                <!-- Resumen del Expediente -->
+                <div class="expediente-summary mb-4">
+                  <h6 class="mb-3">
+                    <i class="fas fa-chart-pie me-2"></i>Resumen del Expediente
+                  </h6>
+                  
+                  <div class="text-center mb-3">
+                    <svg class="progress-ring" width="80" height="80">
+                      <circle class="progress-ring-background" cx="40" cy="40" r="30"></circle>
+                      <circle class="progress-ring-progress" cx="40" cy="40" r="30" 
+                              stroke-dasharray="151.3" stroke-dashoffset="30.26"></circle>
+                    </svg>
+                    <div class="mt-2">
+                      <h5 class="mb-0">80%</h5>
+                      <small class="text-muted">Completado</small>
+                    </div>
+                  </div>
+
+                  <div class="row text-center">
+                    <div class="col-4">
+                      <div class="text-success">
+                        <i class="fas fa-check-circle fa-lg"></i>
+                        <div class="small mt-1">3 Completos</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="text-warning">
+                        <i class="fas fa-clock fa-lg"></i>
+                        <div class="small mt-1">1 En Revisión</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="text-danger">
+                        <i class="fas fa-exclamation-circle fa-lg"></i>
+                        <div class="small mt-1">1 Faltante</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Checklist de Validación -->
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-tasks me-2"></i>Checklist de Validación
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="checklist-item completed">
+                      <input type="checkbox" checked disabled>
+                      <span>Documentos en orden correcto</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                      <input type="checkbox">
+                      <span>Todas las firmas presentes</span>
+                    </div>
+                    
+                    <div class="checklist-item completed">
+                      <input type="checkbox" checked disabled>
+                      <span>Calidad de digitalización</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                      <input type="checkbox">
+                      <span>Documentos legibles</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                      <input type="checkbox">
+                      <span>Numeración correcta</span>
+                    </div>
+
+                    <div class="checklist-item completed">
+                      <input type="checkbox" checked disabled>
+                      <span>Índice generado</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Acciones Rápidas -->
+                <div class="card mt-3">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <button class="btn btn-outline-primary btn-sm w-100 mb-2">
+                      <i class="fas fa-print me-1"></i>Imprimir Expediente
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm w-100 mb-2">
+                      <i class="fas fa-file-pdf me-1"></i>Generar PDF
+                    </button>
+                    <button class="btn btn-outline-info btn-sm w-100 mb-2">
+                      <i class="fas fa-list me-1"></i>Crear Índice
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm w-100">
+                      <i class="fas fa-archive me-1"></i>Archivar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción Principales -->
+            <div class="orden-actions">
+              <div class="text-center">
+                <button class="btn btn-success btn-lg me-3">
+                  <i class="fas fa-check-double me-2"></i>Aprobar Expediente
+                </button>
+                <button class="btn btn-warning btn-lg me-3">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Marcar Observaciones
+                </button>
+                <button class="btn btn-secondary btn-lg">
+                  <i class="fas fa-save me-2"></i>Guardar Orden
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts específicos para Orden del Expediente -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const documentList = document.getElementById('document-list');
+    let draggedItem = null;
+
+    // Funciones de drag and drop
+    function handleDragStart(e) {
+        draggedItem = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.outerHTML);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        this.classList.add('drag-over');
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDragEnter(e) {
+        this.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        if (draggedItem !== this) {
+            const draggedHTML = draggedItem.outerHTML;
+            const thisHTML = this.outerHTML;
+            
+            this.outerHTML = draggedHTML;
+            draggedItem.outerHTML = thisHTML;
+            
+            updateOrderNumbers();
+            reinitializeDragAndDrop();
+        }
+
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        document.querySelectorAll('.document-item').forEach(item => {
+            item.classList.remove('dragging', 'drag-over');
+        });
+        draggedItem = null;
+    }
+
+    function initializeDragAndDrop() {
+        const items = document.querySelectorAll('.document-item');
+        items.forEach(item => {
+            item.addEventListener('dragstart', handleDragStart);
+            item.addEventListener('dragenter', handleDragEnter);
+            item.addEventListener('dragover', handleDragOver);
+            item.addEventListener('dragleave', handleDragLeave);
+            item.addEventListener('drop', handleDrop);
+            item.addEventListener('dragend', handleDragEnd);
+        });
+    }
+
+    function reinitializeDragAndDrop() {
+        const items = document.querySelectorAll('.document-item');
+        items.forEach(item => {
+            // Remover event listeners existentes
+            item.removeEventListener('dragstart', handleDragStart);
+            item.removeEventListener('dragenter', handleDragEnter);
+            item.removeEventListener('dragover', handleDragOver);
+            item.removeEventListener('dragleave', handleDragLeave);
+            item.removeEventListener('drop', handleDrop);
+            item.removeEventListener('dragend', handleDragEnd);
+        });
+        initializeDragAndDrop();
+    }
+
+    function updateOrderNumbers() {
+        const items = document.querySelectorAll('.document-item');
+        items.forEach((item, index) => {
+            const orderNumber = item.querySelector('.document-order-number');
+            if (orderNumber) {
+                orderNumber.textContent = index + 1;
+            }
+        });
+    }
+
+    // Inicializar drag and drop
+    initializeDragAndDrop();
+
+    // Orden automático
+    document.getElementById('auto-order').addEventListener('click', function() {
+        // Simular orden automático
+        alert('Función de orden automático en desarrollo');
+    });
+
+    // Restablecer orden
+    document.getElementById('reset-order').addEventListener('click', function() {
+        location.reload();
+    });
+
+    // Checklist items
+    document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                this.parentElement.classList.add('completed');
+            } else {
+                this.parentElement.classList.remove('completed');
+            }
+            updateProgressRing();
+        });
+    });
+
+    function updateProgressRing() {
+        const total = document.querySelectorAll('.checklist-item input[type="checkbox"]').length;
+        const checked = document.querySelectorAll('.checklist-item input[type="checkbox"]:checked').length;
+        const percentage = Math.round((checked / total) * 100);
+        
+        const circle = document.querySelector('.progress-ring-progress');
+        const radius = 30;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percentage / 100) * circumference;
+        
+        circle.style.strokeDashoffset = offset;
+        
+        // Actualizar texto
+        const percentageText = document.querySelector('.progress-ring').nextElementSibling.querySelector('h5');
+        if (percentageText) {
+            percentageText.textContent = percentage + '%';
+        }
+    }
+
+    // Inicializar progress ring
+    updateProgressRing();
+});
+</script>
+{% endblock %}

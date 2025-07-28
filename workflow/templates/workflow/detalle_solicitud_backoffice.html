@@ -271,6 +271,19 @@
 /* Transiciones suaves */
 .tab-modern {
   transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tab-modern:hover {
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.tab-modern:focus {
+  outline: none;
+  text-decoration: none;
 }
 
 /* Indicador de proceso secuencial */
@@ -416,68 +429,92 @@
           <!-- Pestañas de Navegación Mejoradas -->
           <div class="nav-tabs-container">
             <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
-              {% for subestado in solicitud.etapa_actual.subestados.all %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern {% if subestado.id == solicitud.subestado_actual.id %}active{% endif %}" id="tab-{{ subestado.id }}"
-                  data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
-                  aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}"
-                  data-subestado-orden="{{ subestado.orden }}"
-                  data-subestado-id="{{ subestado.id }}">
+                <a href="{% url 'backoffice_checklist' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}">
                   <div class="tab-content-wrapper">
-                    <div class="tab-number">{{ forloop.counter }}</div>
+                    <div class="tab-number">1</div>
                     <div class="tab-text">
-                      <span class="tab-title">{{ subestado.nombre }}</span>
-                      <span class="tab-status">{% if subestado.id == solicitud.subestado_actual.id %}Activo{% else %}En proceso{% endif %}</span>
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
                     </div>
                     <div class="tab-arrow">
                       <i class="fas fa-chevron-right"></i>
                     </div>
                   </div>
-                </button>
+                </a>
               </li>
-              {% empty %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern active" disabled>
+                <a href="{% url 'backoffice_captura' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}">
                   <div class="tab-content-wrapper">
-                    <div class="tab-number">!</div>
+                    <div class="tab-number">2</div>
                     <div class="tab-text">
-                      <span class="tab-title">Sin Procesos</span>
-                      <span class="tab-status">No configurado</span>
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
                     </div>
                   </div>
-                </button>
+                </a>
               </li>
-              {% endfor %}
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_firma' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_orden' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
             </ul>
           </div>
 
-          <!-- Contenido de las Pestañas -->
-          <div class="tab-content" id="backoffice-content">
-            {% for subestado in solicitud.etapa_actual.subestados.all %}
-            <div class="tab-pane fade {% if subestado.id == solicitud.subestado_actual.id %}show active{% endif %}" id="content-{{ subestado.id }}"
-              role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
-              <div class="subestado-content-modern">
-                <div class="process-step-header">
-                  <div class="step-indicator">
-                    <span class="step-number">{{ forloop.counter }}</span>
-                    <span class="step-total">/ {{ solicitud.etapa_actual.subestados.count }}</span>
-                  </div>
-                  <div class="subestado-icon">
-                    <i class="fas fa-folder-open"></i>
-                  </div>
-                  <div class="step-status">
-                    <span class="badge bg-primary">
-                      <i class="fas fa-cog me-1"></i>Procesando
-                    </span>
-                  </div>
-                </div>
+          <!-- Contenido del Subestado Actual -->
+          {% if solicitud.etapa_actual.subestados.exists %}
+          <div class="subestado-content-modern">
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">{{ current_step_number|default:"1" }}</span>
+                <span class="step-total">/ {{ solicitud.etapa_actual.subestados.count }}</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-folder-open"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
+            </div>
 
 
 
                 <!-- Archivos Requeridos Dinámicos -->
-                {% if archivos_por_subestado and subestado.id in archivos_por_subestado %}
-                {% with archivos=archivos_por_subestado|get_item:subestado.id %}
+                {% if archivos_por_subestado and solicitud.subestado_actual.id in archivos_por_subestado %}
+                {% with archivos=archivos_por_subestado|get_item:solicitud.subestado_actual.id %}
                 {% if archivos|length > 0 %}
 
                 <div class="process-details">
@@ -699,9 +736,7 @@
                   </button>
                 </div>
               </div>
-            </div>
-            {% empty %}
-            <div class="tab-pane fade show active">
+            {% else %}
               <div class="subestado-content-modern">
                 <div class="alert alert-warning text-center">
                   <div class="subestado-icon">
@@ -718,8 +753,7 @@
                   </div>
                 </div>
               </div>
-            </div>
-            {% endfor %}
+            {% endif %}
           </div>
         </div>
       </div>

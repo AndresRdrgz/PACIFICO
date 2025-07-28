@@ -39,6 +39,35 @@ class Etapa(models.Model):
         
         total_hours = self.sla.days * 24 + self.sla.seconds // 3600
         return f"{total_hours}h"
+    
+    def save(self, *args, **kwargs):
+        """Override save para auto-crear subestados de Back Office"""
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Si es una nueva etapa de Back Office con bandeja grupal, crear subestados predefinidos
+        if is_new and self.nombre == "Back Office" and self.es_bandeja_grupal:
+            self._crear_subestados_backoffice()
+    
+    def _crear_subestados_backoffice(self):
+        """Crea los 4 subestados predefinidos para Back Office"""
+        subestados_predefinidos = [
+            {'nombre': 'Checklist', 'orden': 1},
+            {'nombre': 'Captura', 'orden': 2},
+            {'nombre': 'Firma', 'orden': 3},
+            {'nombre': 'Orden del expediente', 'orden': 4},
+        ]
+        
+        for subestado_data in subestados_predefinidos:
+            SubEstado.objects.get_or_create(
+                etapa=self,
+                nombre=subestado_data['nombre'],
+                defaults={
+                    'pipeline': self.pipeline,
+                    'orden': subestado_data['orden']
+                }
+            )
+        print(f"✅ Auto-creados subestados para etapa Back Office: {self.pipeline.nombre} - {self.nombre}")
 
 
 class SubEstado(models.Model):

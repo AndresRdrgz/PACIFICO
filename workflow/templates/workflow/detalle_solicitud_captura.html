@@ -1,0 +1,404 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Captura - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Captura */
+.captura-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  border: 2px solid #2196f3;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.captura-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.captura-icon {
+  font-size: 3rem;
+  color: #2196f3;
+  margin-bottom: 1rem;
+}
+
+.upload-zone {
+  border: 2px dashed #2196f3;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(33, 150, 243, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-zone:hover {
+  border-color: #1976d2;
+  background: rgba(33, 150, 243, 0.1);
+  transform: translateY(-2px);
+}
+
+.upload-zone.drag-over {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.document-preview {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.document-preview:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.nav-pills-modern .nav-link {
+  border-radius: 25px;
+  padding: 0.75rem 1.5rem;
+  margin: 0 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.nav-pills-modern .nav-link.active {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-gradient-primary text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">
+                <i class="fas fa-camera me-2"></i>
+                Back Office - Captura de Documentos
+              </h4>
+              <small class="opacity-75">Solicitud: {{ solicitud.codigo }}</small>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark fs-6">
+                <i class="fas fa-user me-1"></i>
+                {% if solicitud.cliente %}
+                  {{ solicitud.cliente.nombreCompleto }}
+                {% elif solicitud.cotizacion %}
+                  {{ solicitud.cotizacion.nombreCompleto }}
+                {% else %}
+                  Sin cliente asignado
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_checklist' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_captura' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_firma' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_orden' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Captura -->
+          <div class="captura-container">
+            <div class="captura-header">
+              <div class="captura-icon">
+                <i class="fas fa-camera"></i>
+              </div>
+              <h3>Captura de Documentos</h3>
+              <p class="text-muted">Capture, escanee o suba los documentos requeridos para esta solicitud</p>
+            </div>
+
+            <!-- Navegación de Tipos de Documentos -->
+            <ul class="nav nav-pills nav-pills-modern justify-content-center mb-4" id="pills-tab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-scan-tab" data-bs-toggle="pill" data-bs-target="#pills-scan" type="button" role="tab" aria-controls="pills-scan" aria-selected="true">
+                  <i class="fas fa-scanner me-2"></i>Escanear
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-upload-tab" data-bs-toggle="pill" data-bs-target="#pills-upload" type="button" role="tab" aria-controls="pills-upload" aria-selected="false">
+                  <i class="fas fa-upload me-2"></i>Subir Archivo
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-camera-tab" data-bs-toggle="pill" data-bs-target="#pills-camera" type="button" role="tab" aria-controls="pills-camera" aria-selected="false">
+                  <i class="fas fa-camera me-2"></i>Cámara
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="pills-tabContent">
+              <!-- Pestaña de Escaneo -->
+              <div class="tab-pane fade show active" id="pills-scan" role="tabpanel" aria-labelledby="pills-scan-tab">
+                <div class="row">
+                  <div class="col-md-8">
+                    <div class="upload-zone" id="scan-zone">
+                      <i class="fas fa-scanner fa-3x text-primary mb-3"></i>
+                      <h5>Zona de Escaneo</h5>
+                      <p>Conecte su escáner y presione el botón para iniciar</p>
+                      <button class="btn btn-primary btn-lg">
+                        <i class="fas fa-play me-2"></i>Iniciar Escaneo
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="mb-0">Configuración de Escaneo</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label class="form-label">Resolución</label>
+                          <select class="form-select">
+                            <option>300 DPI (Recomendado)</option>
+                            <option>600 DPI (Alta calidad)</option>
+                            <option>150 DPI (Borrador)</option>
+                          </select>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Color</label>
+                          <select class="form-select">
+                            <option>Color</option>
+                            <option>Escala de grises</option>
+                            <option>Blanco y negro</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pestaña de Upload -->
+              <div class="tab-pane fade" id="pills-upload" role="tabpanel" aria-labelledby="pills-upload-tab">
+                <div class="upload-zone" id="upload-zone">
+                  <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                  <h5>Arrastre archivos aquí o haga clic para seleccionar</h5>
+                  <p>Formatos soportados: PDF, JPG, PNG, DOC, DOCX</p>
+                  <input type="file" id="file-input" multiple class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                  <button class="btn btn-primary btn-lg" onclick="document.getElementById('file-input').click()">
+                    <i class="fas fa-folder-open me-2"></i>Seleccionar Archivos
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pestaña de Cámara -->
+              <div class="tab-pane fade" id="pills-camera" role="tabpanel" aria-labelledby="pills-camera-tab">
+                <div class="row">
+                  <div class="col-md-8">
+                    <div class="card">
+                      <div class="card-body text-center">
+                        <video id="camera-video" width="100%" height="400" style="background: #f0f0f0; border-radius: 8px;"></video>
+                        <div class="mt-3">
+                          <button class="btn btn-success btn-lg me-2" id="start-camera">
+                            <i class="fas fa-video me-2"></i>Activar Cámara
+                          </button>
+                          <button class="btn btn-primary btn-lg" id="capture-photo" disabled>
+                            <i class="fas fa-camera me-2"></i>Capturar Foto
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="mb-0">Vista Previa</h6>
+                      </div>
+                      <div class="card-body">
+                        <canvas id="photo-canvas" width="200" height="150" style="border: 1px solid #ddd; width: 100%;"></canvas>
+                        <button class="btn btn-success w-100 mt-2" id="save-photo" disabled>
+                          <i class="fas fa-save me-2"></i>Guardar Foto
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista de Documentos Capturados -->
+            <div class="mt-4">
+              <h5>
+                <i class="fas fa-folder-open me-2"></i>Documentos Capturados
+              </h5>
+              <div id="captured-documents">
+                <!-- Aquí se mostrarán los documentos capturados -->
+                <div class="document-preview">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-file-pdf fa-2x text-danger me-3"></i>
+                      <div>
+                        <h6 class="mb-0">documento_ejemplo.pdf</h6>
+                        <small class="text-muted">Capturado hace 2 minutos</small>
+                      </div>
+                    </div>
+                    <div>
+                      <button class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-eye"></i> Ver
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="text-center mt-4">
+              <button class="btn btn-success btn-lg me-3">
+                <i class="fas fa-check me-2"></i>Finalizar Captura
+              </button>
+              <button class="btn btn-secondary btn-lg">
+                <i class="fas fa-save me-2"></i>Guardar Progreso
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts específicos para Captura -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables para cámara
+    let video = document.getElementById('camera-video');
+    let canvas = document.getElementById('photo-canvas');
+    let ctx = canvas.getContext('2d');
+    let stream = null;
+
+    // Activar cámara
+    document.getElementById('start-camera').addEventListener('click', async function() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.play();
+            
+            this.disabled = true;
+            document.getElementById('capture-photo').disabled = false;
+        } catch (err) {
+            alert('Error al acceder a la cámara: ' + err.message);
+        }
+    });
+
+    // Capturar foto
+    document.getElementById('capture-photo').addEventListener('click', function() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        document.getElementById('save-photo').disabled = false;
+    });
+
+    // Drag and drop para upload
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+
+    function handleFiles(files) {
+        Array.from(files).forEach(file => {
+            console.log('Archivo seleccionado:', file.name);
+            // Aquí agregarías la lógica para subir el archivo
+        });
+    }
+});
+</script>
+{% endblock %}

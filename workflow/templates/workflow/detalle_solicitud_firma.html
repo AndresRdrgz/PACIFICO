@@ -1,0 +1,560 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Firma - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Firma */
+.firma-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff3e0 100%);
+  border: 2px solid #ff9800;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.firma-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.firma-icon {
+  font-size: 3rem;
+  color: #ff9800;
+  margin-bottom: 1rem;
+}
+
+.signature-pad {
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  background: white;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.document-signature-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.document-signature-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.signature-status {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.signature-status.pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.signature-status.signed {
+  background: #d1edff;
+  color: #0f5132;
+  border: 1px solid #b8daff;
+}
+
+.signature-status.rejected {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f1aeb5;
+}
+
+.digital-signature-area {
+  border: 2px dashed #ff9800;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(255, 152, 0, 0.05);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.signature-tools {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.signature-preview {
+  max-width: 300px;
+  max-height: 150px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-gradient-warning text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">
+                <i class="fas fa-signature me-2"></i>
+                Back Office - Gestión de Firmas
+              </h4>
+              <small class="opacity-75">Solicitud: {{ solicitud.codigo }}</small>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-light text-dark fs-6">
+                <i class="fas fa-user me-1"></i>
+                {% if solicitud.cliente %}
+                  {{ solicitud.cliente.nombreCompleto }}
+                {% elif solicitud.cotizacion %}
+                  {{ solicitud.cotizacion.nombreCompleto }}
+                {% else %}
+                  Sin cliente asignado
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_checklist' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_captura' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_firma' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_orden' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Firma -->
+          <div class="firma-container">
+            <div class="firma-header">
+              <div class="firma-icon">
+                <i class="fas fa-signature"></i>
+              </div>
+              <h3>Gestión de Firmas Digitales</h3>
+              <p class="text-muted">Solicite, valide y gestione las firmas requeridas para esta solicitud</p>
+            </div>
+
+            <!-- Navegación de Tipos de Firma -->
+            <ul class="nav nav-pills nav-pills-modern justify-content-center mb-4" id="pills-tab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-documents-tab" data-bs-toggle="pill" data-bs-target="#pills-documents" type="button" role="tab" aria-controls="pills-documents" aria-selected="true">
+                  <i class="fas fa-file-signature me-2"></i>Documentos por Firmar
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-digital-tab" data-bs-toggle="pill" data-bs-target="#pills-digital" type="button" role="tab" aria-controls="pills-digital" aria-selected="false">
+                  <i class="fas fa-pen-fancy me-2"></i>Firma Digital
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-validation-tab" data-bs-toggle="pill" data-bs-target="#pills-validation" type="button" role="tab" aria-controls="pills-validation" aria-selected="false">
+                  <i class="fas fa-certificate me-2"></i>Validación
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="pills-tabContent">
+              <!-- Pestaña de Documentos por Firmar -->
+              <div class="tab-pane fade show active" id="pills-documents" role="tabpanel" aria-labelledby="pills-documents-tab">
+                <h5 class="mb-4">
+                  <i class="fas fa-list-check me-2"></i>Documentos Pendientes de Firma
+                </h5>
+                
+                <!-- Lista de documentos que requieren firma -->
+                <div class="document-signature-item">
+                  <div class="row align-items-center">
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-file-contract fa-2x text-warning me-3"></i>
+                        <div>
+                          <h6 class="mb-1">Contrato de Crédito</h6>
+                          <small class="text-muted">Documento principal - Requerido</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <span class="signature-status pending">
+                        <i class="fas fa-clock me-1"></i>Pendiente
+                      </span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                      <button class="btn btn-primary btn-sm me-2">
+                        <i class="fas fa-eye me-1"></i>Ver
+                      </button>
+                      <button class="btn btn-warning btn-sm">
+                        <i class="fas fa-signature me-1"></i>Firmar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="document-signature-item">
+                  <div class="row align-items-center">
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-file-shield fa-2x text-info me-3"></i>
+                        <div>
+                          <h6 class="mb-1">Autorización de Información</h6>
+                          <small class="text-muted">Documento de consentimiento</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <span class="signature-status signed">
+                        <i class="fas fa-check me-1"></i>Firmado
+                      </span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                      <button class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-eye me-1"></i>Ver
+                      </button>
+                      <button class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-certificate me-1"></i>Validar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="document-signature-item">
+                  <div class="row align-items-center">
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-file-invoice fa-2x text-success me-3"></i>
+                        <div>
+                          <h6 class="mb-1">Pagaré</h6>
+                          <small class="text-muted">Documento de garantía</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <span class="signature-status pending">
+                        <i class="fas fa-clock me-1"></i>Pendiente
+                      </span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                      <button class="btn btn-primary btn-sm me-2">
+                        <i class="fas fa-eye me-1"></i>Ver
+                      </button>
+                      <button class="btn btn-warning btn-sm">
+                        <i class="fas fa-signature me-1"></i>Firmar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pestaña de Firma Digital -->
+              <div class="tab-pane fade" id="pills-digital" role="tabpanel" aria-labelledby="pills-digital-tab">
+                <h5 class="mb-4">
+                  <i class="fas fa-pen-fancy me-2"></i>Crear Firma Digital
+                </h5>
+                
+                <div class="row">
+                  <div class="col-md-8">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="mb-0">Área de Firma</h6>
+                      </div>
+                      <div class="card-body text-center">
+                        <canvas id="signature-pad" class="signature-pad" width="600" height="200"></canvas>
+                        <div class="signature-tools mt-3">
+                          <button class="btn btn-outline-secondary" id="clear-signature">
+                            <i class="fas fa-eraser me-1"></i>Limpiar
+                          </button>
+                          <button class="btn btn-primary" id="save-signature">
+                            <i class="fas fa-save me-1"></i>Guardar Firma
+                          </button>
+                          <button class="btn btn-success" id="apply-signature" disabled>
+                            <i class="fas fa-stamp me-1"></i>Aplicar a Documento
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="card">
+                      <div class="card-header">
+                        <h6 class="mb-0">Firmas Guardadas</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3 text-center">
+                          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" 
+                               alt="Firma guardada" class="signature-preview">
+                          <div class="mt-2">
+                            <small class="text-muted">Firma principal</small>
+                          </div>
+                          <button class="btn btn-sm btn-outline-primary mt-1">
+                            <i class="fas fa-check me-1"></i>Usar esta firma
+                          </button>
+                        </div>
+                        <hr>
+                        <div class="text-center">
+                          <button class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-upload me-1"></i>Subir Firma
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pestaña de Validación -->
+              <div class="tab-pane fade" id="pills-validation" role="tabpanel" aria-labelledby="pills-validation-tab">
+                <h5 class="mb-4">
+                  <i class="fas fa-certificate me-2"></i>Validación de Firmas
+                </h5>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header bg-light">
+                        <h6 class="mb-0">Estado de Validación</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <span>Contrato de Crédito</span>
+                            <span class="badge bg-warning">Pendiente</span>
+                          </div>
+                          <div class="progress mt-1">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 50%"></div>
+                          </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <span>Autorización de Información</span>
+                            <span class="badge bg-success">Validado</span>
+                          </div>
+                          <div class="progress mt-1">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                          </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <span>Pagaré</span>
+                            <span class="badge bg-secondary">Sin firmar</span>
+                          </div>
+                          <div class="progress mt-1">
+                            <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header bg-light">
+                        <h6 class="mb-0">Certificado Digital</h6>
+                      </div>
+                      <div class="card-body text-center">
+                        <i class="fas fa-certificate fa-3x text-success mb-3"></i>
+                        <h6>Certificado Válido</h6>
+                        <p class="text-muted small">
+                          Emitido por: Autoridad Certificadora Nacional<br>
+                          Válido hasta: 31/12/2025<br>
+                          Serial: ABC123456789
+                        </p>
+                        <button class="btn btn-success btn-sm">
+                          <i class="fas fa-download me-1"></i>Descargar Certificado
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="text-center mt-4">
+              <button class="btn btn-success btn-lg me-3">
+                <i class="fas fa-check-double me-2"></i>Completar Proceso de Firmas
+              </button>
+              <button class="btn btn-warning btn-lg me-3">
+                <i class="fas fa-paper-plane me-2"></i>Enviar para Firma Externa
+              </button>
+              <button class="btn btn-secondary btn-lg">
+                <i class="fas fa-save me-2"></i>Guardar Progreso
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts específicos para Firma -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables para firma digital
+    const canvas = document.getElementById('signature-pad');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Configurar canvas
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Event listeners para mouse
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Event listeners para touch
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getMousePos(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const [currentX, currentY] = getMousePos(e);
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            [lastX, lastY] = [currentX, currentY];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return [
+                e.clientX - rect.left,
+                e.clientY - rect.top
+            ];
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        // Limpiar firma
+        document.getElementById('clear-signature').addEventListener('click', function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('apply-signature').disabled = true;
+        });
+
+        // Guardar firma
+        document.getElementById('save-signature').addEventListener('click', function() {
+            const imageData = canvas.toDataURL();
+            console.log('Firma guardada:', imageData);
+            document.getElementById('apply-signature').disabled = false;
+            alert('Firma guardada exitosamente');
+        });
+
+        // Aplicar firma
+        document.getElementById('apply-signature').addEventListener('click', function() {
+            alert('Funcionalidad de aplicar firma en desarrollo');
+        });
+    }
+});
+</script>
+{% endblock %}

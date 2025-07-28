@@ -32,6 +32,12 @@ urlpatterns = [
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
     path('solicitudes/<int:solicitud_id>/backoffice/', views_workflow.detalle_solicitud, name='detalle_solicitud_backoffice'),
+    
+    # URLs específicas para cada subestado del Back Office
+    path('solicitudes/<int:solicitud_id>/backoffice/checklist/', views_workflow.backoffice_checklist, name='backoffice_checklist'),
+    path('solicitudes/<int:solicitud_id>/backoffice/captura/', views_workflow.backoffice_captura, name='backoffice_captura'),
+    path('solicitudes/<int:solicitud_id>/backoffice/firma/', views_workflow.backoffice_firma, name='backoffice_firma'),
+    path('solicitudes/<int:solicitud_id>/backoffice/orden/', views_workflow.backoffice_orden, name='backoffice_orden'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
@@ -88,6 +94,7 @@ urlpatterns = [
     path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
     path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
     path('api/devolver-bandeja-grupal/', views_workflow.api_devolver_bandeja_grupal, name='api_devolver_bandeja_grupal'),
+    path('api/solicitudes/<int:solicitud_id>/cambiar-subestado/', views_workflow.api_cambiar_subestado_backoffice, name='api_cambiar_subestado_backoffice'),
     
     # PDF Download API URLs
     path('api/solicitudes/<int:solicitud_id>/download-merged-pdf/', views_workflow.api_download_merged_pdf, name='api_download_merged_pdf'),

@@ -560,7 +560,32 @@ def detalle_solicitud(request, solicitud_id):
             solicitud.save()
             print(f"DEBUG: Asignado primer subestado por defecto: {primer_subestado.nombre}")
         
-        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
+        # Verificar si se está cambiando de subestado por parámetro GET
+        subestado_param = request.GET.get('subestado')
+        if subestado_param:
+            try:
+                nuevo_subestado = solicitud.etapa_actual.subestados.get(nombre=subestado_param)
+                solicitud.subestado_actual = nuevo_subestado
+                solicitud.save()
+                print(f"DEBUG: Cambiado a subestado: {nuevo_subestado.nombre}")
+            except:
+                print(f"DEBUG: No se pudo cambiar al subestado: {subestado_param}")
+        
+        # Seleccionar template según el subestado actual
+        template_map = {
+            'Checklist': 'workflow/detalle_solicitud_backoffice.html',
+            'Captura': 'workflow/detalle_solicitud_captura.html', 
+            'Firma': 'workflow/detalle_solicitud_firma.html',
+            'Orden del expediente': 'workflow/detalle_solicitud_orden.html'
+        }
+        
+        # Obtener template según subestado, fallback al original
+        template_name = template_map.get(
+            solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Checklist',
+            'workflow/detalle_solicitud_backoffice.html'
+        )
+        
+        return render(request, template_name, context)
     
     return render(request, 'workflow/detalle_solicitud.html', context)
 
@@ -11456,3 +11481,186 @@ def asociar_entrevista(request):
         'success': False,
         'error': 'Método no permitido'
     }, status=405)
+
+
+# ==========================================
+# API PARA CAMBIO DE SUBESTADOS EN BACK OFFICE
+# ==========================================
+
+@login_required
+@csrf_exempt
+def api_cambiar_subestado_backoffice(request, solicitud_id):
+    """API para cambiar el subestado actual en Back Office"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para modificar esta solicitud'
+            }, status=403)
+        
+        # Verificar que estamos en Back Office
+        if not (solicitud.etapa_actual and 
+                solicitud.etapa_actual.nombre == "Back Office" and 
+                solicitud.etapa_actual.es_bandeja_grupal):
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta solicitud no está en la etapa de Back Office'
+            }, status=400)
+        
+        data = json.loads(request.body)
+        nuevo_subestado_nombre = data.get('subestado')
+        
+        if not nuevo_subestado_nombre:
+            return JsonResponse({
+                'success': False,
+                'error': 'Nombre de subestado requerido'
+            }, status=400)
+        
+        # Buscar el subestado
+        try:
+            nuevo_subestado = solicitud.etapa_actual.subestados.get(nombre=nuevo_subestado_nombre)
+        except:
+            return JsonResponse({
+                'success': False,
+                'error': f'Subestado "{nuevo_subestado_nombre}" no encontrado'
+            }, status=404)
+        
+        # Cambiar subestado
+        solicitud.subestado_actual = nuevo_subestado
+        solicitud.save()
+        
+        # Notificar cambio
+        notify_solicitud_change(solicitud, 'subestado_cambiado', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Cambiado a subestado: {nuevo_subestado.nombre}',
+            'subestado': {
+                'id': nuevo_subestado.id,
+                'nombre': nuevo_subestado.nombre,
+                'orden': nuevo_subestado.orden
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'JSON inválido'
+        }, status=400)
+    except Exception as e:
+        print(f"❌ Error en api_cambiar_subestado_backoffice: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+# ==========================================
+# BACK OFFICE SUBESTADO VIEWS
+# ==========================================
+
+@login_required
+def backoffice_checklist(request, solicitud_id):
+    """Vista específica para el subestado Checklist del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Checklist
+    try:
+        checklist_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Checklist')
+        solicitud.subestado_actual = checklist_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Checklist no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Reutilizar la lógica existente de detalle_solicitud
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required  
+def backoffice_captura(request, solicitud_id):
+    """Vista específica para el subestado Captura del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Captura
+    try:
+        captura_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Captura')
+        solicitud.subestado_actual = captura_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Captura no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Captura'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_firma(request, solicitud_id):
+    """Vista específica para el subestado Firma del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Firma
+    try:
+        firma_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Firma')
+        solicitud.subestado_actual = firma_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Firma no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Firma'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_orden(request, solicitud_id):
+    """Vista específica para el subestado Orden del expediente del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Orden del expediente
+    try:
+        orden_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Orden del expediente')
+        solicitud.subestado_actual = orden_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Orden del expediente no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Orden del expediente'
+    return detalle_solicitud(request, solicitud_id)
