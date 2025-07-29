@@ -416,6 +416,7 @@ class CalificacionDocumentoBackoffice(models.Model):
     ESTADO_CHOICES = [
         ('bueno', 'Bueno'),
         ('malo', 'Malo'),
+        ('pendiente', 'Pendiente'),
     ]
     
     requisito_solicitud = models.ForeignKey(

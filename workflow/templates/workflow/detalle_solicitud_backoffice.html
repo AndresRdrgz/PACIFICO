@@ -520,7 +520,7 @@
                 <div class="process-details">
                   {% for archivo_info in archivos %}
                   <div class="detail-card archivo-card-mejorada-backoffice"
-                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
+                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}0{% endif %}">
                     <!-- Header del archivo -->
                     <div class="archivo-header-backoffice">
                       <!-- IZQUIERDA: Información del documento -->
@@ -597,24 +597,28 @@
 
                       <!-- DERECHA: Botones de calificación -->
                       <div class="seccion-acciones-derecha-backoffice">
-                        <!-- Botones de Calificación -->
-                        <div class="botones-calificacion-backoffice">
+                        <!-- Botones de Calificación Optimizados para Checklist -->
+                        <div class="botones-calificacion-backoffice botones-checklist-optimizado">
                           <!-- Bueno -->
-                          <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
+                          <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
                             data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
                             title="Marcar como bueno"
                             {% if not archivo_info.archivo_actual %}disabled{% endif %}>
                             <i class="fas fa-thumbs-up"></i>
                             <span>Bueno</span>
                           </button>
-                          <!-- Malo -->
-                          <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
+                          
+                          <!-- Pendiente (solo visual para documentos opcionales sin archivo) -->
+                          {% if not archivo_info.obligatorio and not archivo_info.archivo_actual %}
+                          <button type="button" class="btn calificar-btn-backoffice btn-pendiente-visual {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'pendiente' %}activo{% endif %}" data-estado="pendiente"
                             data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Marcar como malo"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-thumbs-down"></i>
-                            <span>Malo</span>
+                            title="Documento opcional pendiente (sin archivo)"
+                            disabled>
+                            <i class="fas fa-clock"></i>
+                            <span>Pendiente</span>
                           </button>
+                          {% endif %}
+                          
                           <!-- Comentarios -->
                           <button type="button" class="btn comentario-btn-backoffice"
                             data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
@@ -727,13 +731,19 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <button id="btn-control-calidad" class="btn btn-primary me-2" onclick="marcarControlCalidad()">
-                    <i class="fas fa-check-circle me-1"></i>Control de Calidad Realizado
+                  <!-- Nuevo botón de avance - siempre habilitado, validación al hacer clic -->
+                  <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    <span id="btn-avanzar-texto">Avanzar</span>
                   </button>
-                  <button id="btn-avanzar-etapa" type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa" disabled>
-                    <i class="fas fa-arrow-right me-1"></i>
-                    Avanzar Etapa
-                  </button>
+                  
+                  <!-- Indicador de estado de validación -->
+                  <div id="validacion-estado" class="mt-2">
+                    <small class="text-muted">
+                      <i class="fas fa-check-circle text-success me-1"></i>
+                      <span id="validacion-mensaje">Listo para avanzar</span>
+                    </small>
+                  </div>
                 </div>
               </div>
             {% else %}
@@ -1348,7 +1358,7 @@
       const botonesBueno = card.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"]');
       const botonesMalo = card.querySelectorAll('.calificar-btn-backoffice[data-estado="malo"]');
       
-      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos`);
+      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos (Checklist optimizado)`);
       
       // Verificar si debe estar marcado como bueno o malo basado en el estado guardado
       // Esta función se ejecutará después de que actualizarEstadoCalificacion haya hecho su trabajo
@@ -3174,6 +3184,416 @@
     return cookieValue;
   }
 
+// Función para validar documentos consultando la base de datos
+function validarDocumentosYAvanzar() {
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Mostrar mensaje detallado
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
+}
+
+// ========================================
+// FUNCIONES AUXILIARES
+// ========================================
+
+// Función para obtener el token CSRF
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+// ========================================
+// FUNCIONES DEL MODAL DE AVANCE
+// ========================================
+
+// Función para cargar información del modal cuando se abre
+function cargarInformacionAvance() {
+  console.log('🔄 Cargando información de avance...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar loading
+  document.getElementById('avance-loading').style.display = 'block';
+  document.getElementById('avance-error').style.display = 'none';
+  
+  // Cargar siguiente subestado
+  fetch(`/workflow/api/solicitudes/${solicitudId}/siguiente-subestado/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Guardar información del siguiente paso
+        window.siguientePaso = data;
+        
+        if (data.siguiente_subestado) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = data.siguiente_subestado.nombre;
+        } else if (data.siguiente_etapa) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = data.siguiente_etapa.nombre;
+        } else {
+          document.getElementById('avanzar-siguiente-subestado').textContent = 'Fin del proceso';
+        }
+      } else {
+        document.getElementById('avanzar-siguiente-subestado').textContent = 'Error al cargar';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('avanzar-siguiente-subestado').textContent = 'Error de conexión';
+    })
+    .finally(() => {
+      document.getElementById('avance-loading').style.display = 'none';
+    });
+  
+  // Cargar usuarios disponibles
+  cargarUsuariosDisponiblesAvance();
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvance() {
+  console.log('👥 Cargando usuarios disponibles...');
+  
+  fetch('/workflow/api/usuarios/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarUsuariosEnTabla(data.usuarios);
+      } else {
+        mostrarErrorAvance('Error al cargar usuarios: ' + (data.message || 'Error desconocido'));
+      }
+    })
+    .catch(error => {
+      console.error('Error cargando usuarios:', error);
+      mostrarErrorAvance('Error de conexión al cargar usuarios');
+    });
+}
+
+// Función para mostrar usuarios en la tabla
+function mostrarUsuariosEnTabla(usuarios) {
+  console.log('📋 Mostrando usuarios en tabla:', usuarios.length);
+  
+  const tbody = document.getElementById('lista-usuarios-avance');
+  const contador = document.getElementById('contador-usuarios-avance');
+  
+  if (!usuarios || usuarios.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay usuarios disponibles</td></tr>';
+    contador.textContent = '0';
+    return;
+  }
+  
+  let html = '';
+  usuarios.forEach((usuario, index) => {
+    const avatarUrl = usuario.profile_picture || '/static/images/profile.png';
+    const grupos = 'Sin información de grupos';
+    const roleBadge = '';
+    const adminBadge = '';
+    
+    html += `
+      <tr id="usuario-row-${usuario.id}" style="cursor: pointer;" onclick="seleccionarUsuarioAvance(${usuario.id}, '${usuario.full_name}')">
+        <td>${index + 1}</td>
+        <td>
+          <img src="${avatarUrl}" alt="Avatar" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+        </td>
+        <td>
+          <div>
+            <strong>${usuario.full_name}</strong>
+            <div class="small text-muted">@${usuario.username}</div>
+          </div>
+        </td>
+        <td>
+          <div class="small">${usuario.email}</div>
+        </td>
+        <td>
+          <div class="small">${grupos}</div>
+          <div>${roleBadge} ${adminBadge}</div>
+        </td>
+        <td>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); seleccionarUsuarioAvance(${usuario.id}, '${usuario.full_name}')">
+            <i class="fas fa-check"></i> Seleccionar
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+  contador.textContent = usuarios.length;
+}
+
+// Función para seleccionar opción (yo, otro, o bandeja)
+function seleccionarOpcionAvance(opcion) {
+  console.log('🎯 Opción seleccionada:', opcion);
+  
+  // Resetear todos los botones
+  document.getElementById('btn-continuar-yo').classList.remove('btn-primary');
+  document.getElementById('btn-continuar-yo').classList.add('btn-outline-primary');
+  document.getElementById('btn-asignar-otro').classList.remove('btn-success');
+  document.getElementById('btn-asignar-otro').classList.add('btn-outline-success');
+  document.getElementById('btn-bandeja-grupal').classList.remove('btn-warning');
+  document.getElementById('btn-bandeja-grupal').classList.add('btn-outline-warning');
+  
+  // Activar botón seleccionado y configurar estado
+  if (opcion === 'yo') {
+    document.getElementById('btn-continuar-yo').classList.remove('btn-outline-primary');
+    document.getElementById('btn-continuar-yo').classList.add('btn-primary');
+    document.getElementById('seccion-asignar-usuario').style.display = 'none';
+    document.getElementById('btn-confirmar-avance').disabled = false;
+    window.opcionSeleccionada = 'yo';
+    window.usuarioSeleccionadoId = null;
+  } else if (opcion === 'otro') {
+    document.getElementById('btn-asignar-otro').classList.remove('btn-outline-success');
+    document.getElementById('btn-asignar-otro').classList.add('btn-success');
+    document.getElementById('seccion-asignar-usuario').style.display = 'block';
+    document.getElementById('btn-confirmar-avance').disabled = true;
+    window.opcionSeleccionada = 'otro';
+    window.usuarioSeleccionadoId = null;
+  } else if (opcion === 'bandeja') {
+    document.getElementById('btn-bandeja-grupal').classList.remove('btn-outline-warning');
+    document.getElementById('btn-bandeja-grupal').classList.add('btn-warning');
+    document.getElementById('seccion-asignar-usuario').style.display = 'none';
+    document.getElementById('btn-confirmar-avance').disabled = false;
+    window.opcionSeleccionada = 'bandeja';
+    window.usuarioSeleccionadoId = null;
+  }
+}
+
+// Función para seleccionar usuario
+function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
+  console.log('👤 Usuario seleccionado:', usuarioId, usuarioNombre);
+  
+  // Remover selección anterior
+  document.querySelectorAll('#lista-usuarios-avance tr').forEach(row => {
+    row.classList.remove('table-success');
+    row.style.backgroundColor = '';
+  });
+  
+  // Marcar fila seleccionada
+  const row = document.getElementById(`usuario-row-${usuarioId}`);
+  if (row) {
+    row.classList.add('table-success');
+    row.style.backgroundColor = '#d1edff';
+  }
+  
+  // Habilitar botón de confirmar
+  document.getElementById('btn-confirmar-avance').disabled = false;
+  
+  // Guardar selección
+  window.usuarioSeleccionadoId = usuarioId;
+  window.usuarioSeleccionadoNombre = usuarioNombre;
+}
+
+// Función para confirmar el avance
+function confirmarAvance() {
+  console.log('✅ Confirmando avance...');
+  
+  const solicitudId = {{ solicitud.id }};
+  const opcion = window.opcionSeleccionada;
+  const usuarioId = window.usuarioSeleccionadoId;
+  
+  if (!opcion) {
+    alert('Por favor selecciona una opción (Continuar Yo, Asignar a Otro Usuario, o Devolver a Bandeja Grupal)');
+    return;
+  }
+  
+  if (opcion === 'otro' && !usuarioId) {
+    alert('Por favor selecciona un usuario');
+    return;
+  }
+  
+  // Deshabilitar botón y mostrar loading
+  const btn = document.getElementById('btn-confirmar-avance');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+  
+  // Preparar datos
+  const data = {
+    opcion: opcion
+  };
+  
+  if (opcion === 'otro') {
+    data.usuario_id = usuarioId;
+  } else if (opcion === 'bandeja') {
+    // Para bandeja grupal, no asignamos a un usuario específico (usuario_asignado = null)
+    data.usuario_id = null;
+  }
+  
+  // Agregar información del siguiente paso
+  if (window.siguientePaso) {
+    if (window.siguientePaso.siguiente_subestado) {
+      data.siguiente_subestado_id = window.siguientePaso.siguiente_subestado.id;
+    }
+    // Si no hay siguiente subestado, la API manejará la transición a la siguiente etapa
+  }
+  
+  console.log('📤 Enviando datos:', data);
+  
+  // Enviar solicitud
+  fetch(`/workflow/api/solicitudes/${solicitudId}/avanzar-subestado/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestado'));
+      modal.hide();
+      
+      // Mostrar mensaje de éxito
+      alert('✅ ' + (data.mensaje || data.message || 'Avance completado exitosamente'));
+      
+      // Redirigir según la opción
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        window.location.reload();
+      }
+    } else {
+      mostrarErrorAvance(data.error || data.message || 'Error al avanzar subestado');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    mostrarErrorAvance('Error de conexión');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  });
+}
+
+// Función para mostrar errores en el modal
+function mostrarErrorAvance(mensaje) {
+  console.error('❌ Error en avance:', mensaje);
+  
+  document.getElementById('avance-error-mensaje').textContent = mensaje;
+  document.getElementById('avance-error').style.display = 'block';
+  
+  setTimeout(() => {
+    document.getElementById('avance-error').style.display = 'none';
+  }, 5000);
+}
+
+// Función para configurar búsqueda de usuarios
+function configurarBusquedaUsuarios() {
+  const input = document.getElementById('buscar-usuario-avance');
+  const btnLimpiar = document.getElementById('limpiar-busqueda-avance');
+  
+  if (input) {
+    input.addEventListener('input', function() {
+      filtrarUsuarios(this.value);
+    });
+  }
+  
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener('click', function() {
+      input.value = '';
+      filtrarUsuarios('');
+    });
+  }
+}
+
+// Función para filtrar usuarios
+function filtrarUsuarios(termino) {
+  const filas = document.querySelectorAll('#lista-usuarios-avance tr');
+  let contador = 0;
+  
+  filas.forEach(fila => {
+    if (fila.querySelector('td')) { // Evitar header
+      const texto = fila.textContent.toLowerCase();
+      const visible = texto.includes(termino.toLowerCase());
+      fila.style.display = visible ? '' : 'none';
+      if (visible) contador++;
+    }
+  });
+  
+  document.getElementById('contador-usuarios-avance').textContent = contador;
+}
+
+// Event listener para cuando se abre el modal
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('modalAvanzarSubestado');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function() {
+      cargarInformacionAvance();
+      configurarBusquedaUsuarios();
+    });
+  }
+});
+
 </script>
 
 <!-- Modal para Comentarios -->
@@ -3428,6 +3848,132 @@
         </button>
         <button type="button" class="btn btn-success" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
           <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Avanzar Subestado -->
+<div class="modal fade" id="modalAvanzarSubestado" tabindex="-1" aria-labelledby="modalAvanzarSubestadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Botones de opción -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
+              <i class="fas fa-user me-2"></i>
+              Continuar Yo
+            </button>
+            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
+              <i class="fas fa-user-plus me-2"></i>
+              Asignar a Otro Usuario
+            </button>
+            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
+              <i class="fas fa-inbox me-2"></i>
+              Devolver a Bandeja Grupal
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
+        <div id="seccion-asignar-usuario" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Barra de búsqueda -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
+              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Busca por nombre, email, grupos o roles (Staff/Admin)
+            </small>
+          </div>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
         </button>
       </div>
     </div>

@@ -163,6 +163,11 @@ urlpatterns = [
     path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),
     path('asociar-entrevista/', views_workflow.asociar_entrevista, name='asociar_entrevista'),
     
+    # URLs para nuevo flujo de avance de subestado
+    path('api/solicitudes/<int:solicitud_id>/siguiente-subestado/', views_workflow.api_obtener_siguiente_subestado, name='api_obtener_siguiente_subestado'),
+    path('api/solicitudes/<int:solicitud_id>/validar-documentos/', views_workflow.api_validar_documentos_backoffice, name='api_validar_documentos_backoffice'),
+    path('api/solicitudes/<int:solicitud_id>/avanzar-subestado/', views_workflow.api_avanzar_subestado_backoffice, name='api_avanzar_subestado_backoffice'),
+    
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
 ]

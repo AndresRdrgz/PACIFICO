@@ -11664,3 +11664,371 @@ def backoffice_orden(request, solicitud_id):
     request.GET = request.GET.copy()
     request.GET['subestado'] = 'Orden del expediente'
     return detalle_solicitud(request, solicitud_id)
+
+
+def crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado):
+    """
+    Crear calificaciones automáticas como 'pendiente' para documentos opcionales sin archivo
+    cuando una solicitud es asignada en Back Office.
+    """
+    from .models import CalificacionDocumentoBackoffice, RequisitoTransicion, RequisitoSolicitud
+    
+    try:
+        # Obtener todas las transiciones de salida de la etapa Back Office
+        transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
+        
+        # Obtener todos los requisitos de transición para estas transiciones
+        for transicion in transiciones_salida:
+            requisitos_transicion = RequisitoTransicion.objects.filter(
+                transicion=transicion,
+                obligatorio=False  # Solo documentos opcionales
+            ).select_related('requisito')
+            
+            for req_transicion in requisitos_transicion:
+                # Verificar si existe un RequisitoSolicitud para este requisito
+                requisito_solicitud = RequisitoSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    requisito=req_transicion.requisito
+                ).first()
+                
+                # Si existe el RequisitoSolicitud pero NO tiene archivo, crear calificación pendiente
+                if requisito_solicitud and not requisito_solicitud.archivo:
+                    # Verificar que no exista ya una calificación
+                    calificacion_existente = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=requisito_solicitud
+                    ).first()
+                    
+                    if not calificacion_existente:
+                        # Crear calificación pendiente
+                        CalificacionDocumentoBackoffice.objects.create(
+                            requisito_solicitud=requisito_solicitud,
+                            calificado_por=usuario_asignado,
+                            estado='pendiente'
+                        )
+                        print(f"✅ Calificación pendiente creada para requisito: {req_transicion.requisito.nombre}")
+        
+        print(f"🎯 Calificaciones pendientes procesadas para solicitud {solicitud.codigo}")
+        
+    except Exception as e:
+        print(f"❌ Error creando calificaciones pendientes: {str(e)}")
+        # No lanzar excepción para no interrumpir el flujo de asignación
+
+
+def verificar_documentos_pendientes_backoffice(solicitud):
+    """
+    Verificar si hay documentos pendientes (opcionales sin archivo) en Back Office
+    """
+    from .models import CalificacionDocumentoBackoffice, RequisitoTransicion, RequisitoSolicitud
+    
+    documentos_pendientes = []
+    
+    try:
+        # Obtener calificaciones pendientes
+        calificaciones_pendientes = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud=solicitud,
+            estado='pendiente'
+        ).select_related('requisito_solicitud__requisito')
+        
+        for calificacion in calificaciones_pendientes:
+            documentos_pendientes.append({
+                'id': calificacion.requisito_solicitud.id,
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'calificacion_id': calificacion.id
+            })
+        
+        return documentos_pendientes
+        
+    except Exception as e:
+        print(f"❌ Error verificando documentos pendientes: {str(e)}")
+        return []
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_siguiente_subestado(request, solicitud_id):
+    """
+    API para obtener el siguiente subestado disponible para una solicitud en Back Office
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or 'back office' not in solicitud.etapa_actual.nombre.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'La solicitud no está en Back Office'
+            }, status=400)
+        
+        # Obtener el subestado actual
+        subestado_actual = solicitud.subestado_actual
+        if not subestado_actual:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró el subestado actual'
+            }, status=400)
+        
+        # Obtener todos los subestados de Back Office ordenados
+        subestados_backoffice = solicitud.etapa_actual.subestados.all().order_by('orden')
+        
+        # Encontrar el siguiente subestado
+        siguiente_subestado = None
+        for subestado in subestados_backoffice:
+            if subestado.orden > subestado_actual.orden:
+                siguiente_subestado = subestado
+                break
+        
+        # Si no hay siguiente subestado, significa que terminamos Back Office
+        if siguiente_subestado:
+            return JsonResponse({
+                'success': True,
+                'siguiente_subestado': {
+                    'id': siguiente_subestado.id,
+                    'nombre': siguiente_subestado.nombre,
+                    'orden': siguiente_subestado.orden
+                }
+            })
+        else:
+            # Obtener siguiente etapa disponible
+            transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
+            if transiciones_salida.exists():
+                siguiente_etapa = transiciones_salida.first().etapa_destino
+                return JsonResponse({
+                    'success': True,
+                    'siguiente_subestado': None,
+                    'siguiente_etapa': {
+                        'id': siguiente_etapa.id,
+                        'nombre': siguiente_etapa.nombre
+                    }
+                })
+            else:
+                return JsonResponse({
+                    'success': True,
+                    'siguiente_subestado': None,
+                    'siguiente_etapa': None
+                })
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo siguiente subestado: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_validar_documentos_backoffice(request, solicitud_id):
+    """
+    Validar que todos los documentos obligatorios estén calificados como 'bueno'
+    antes de permitir avanzar al siguiente subestado.
+    """
+    from .models import CalificacionDocumentoBackoffice
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que el usuario tenga permisos
+        if not (request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user):
+            return JsonResponse({
+                'success': False, 
+                'error': 'No tienes permisos para validar esta solicitud'
+            }, status=403)
+        
+        # FALLBACK: Como no hay transiciones configuradas, usar todos los RequisitoSolicitud
+        # y asumir que todos son obligatorios por defecto
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(
+            solicitud=solicitud
+        ).select_related('requisito')
+        
+        documentos_problematicos = []
+        
+        for req_sol in requisitos_solicitud:
+            # Buscar la calificación más reciente para este documento
+            calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                requisito_solicitud=req_sol,
+                calificado_por=request.user
+            ).first()
+            
+            if not calificacion:
+                # No hay calificación - asumir que es obligatorio
+                documentos_problematicos.append({
+                    'nombre': req_sol.requisito.nombre,
+                    'problema': 'sin_calificar',
+                    'estado_actual': None
+                })
+            elif calificacion.estado != 'bueno':
+                # Está calificado pero no como "bueno" - asumir que es obligatorio
+                documentos_problematicos.append({
+                    'nombre': req_sol.requisito.nombre,
+                    'problema': 'mal_calificado',
+                    'estado_actual': calificacion.estado
+                })
+        
+        # Verificar si todos los documentos obligatorios están correctos
+        if len(documentos_problematicos) == 0:
+            return JsonResponse({
+                'success': True,
+                'puede_avanzar': True,
+                'mensaje': 'Todos los documentos obligatorios están calificados como "Buenos"'
+            })
+        else:
+            # Construir mensaje detallado
+            mensajes_detalle = []
+            for doc in documentos_problematicos:
+                if doc['problema'] == 'sin_calificar':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Sin calificar")
+                elif doc['problema'] == 'mal_calificado':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como '{doc['estado_actual']}' (debe ser 'bueno')")
+                elif doc['problema'] == 'no_existe':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento no encontrado")
+            
+            return JsonResponse({
+                'success': True,
+                'puede_avanzar': False,
+                'documentos_problematicos': documentos_problematicos,
+                'mensaje': 'Algunos documentos obligatorios no están calificados como "Buenos"',
+                'detalle': mensajes_detalle
+            })
+            
+    except Exception as e:
+        print(f"❌ Error validando documentos: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avanzar_subestado_backoffice(request, solicitud_id):
+    """
+    API para avanzar al siguiente subestado en Back Office con opción de asignación
+    """
+    try:
+        import json
+        from django.contrib.auth.models import User
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        data = json.loads(request.body)
+        
+        opcion = data.get('opcion')  # 'yo' o 'otro'
+        usuario_id = data.get('usuario_id')
+        siguiente_subestado_id = data.get('siguiente_subestado_id')
+        
+        # Validaciones
+        if opcion not in ['yo', 'otro', 'bandeja']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Opción inválida. Debe ser "yo", "otro" o "bandeja"'
+            }, status=400)
+        
+        if opcion == 'otro' and not usuario_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe especificar un usuario para asignar'
+            }, status=400)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or 'back office' not in solicitud.etapa_actual.nombre.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'La solicitud no está en Back Office'
+            }, status=400)
+        
+        # Determinar el usuario asignado
+        if opcion == 'yo':
+            usuario_asignado = request.user
+        elif opcion == 'otro':
+            usuario_asignado = get_object_or_404(User, id=usuario_id)
+        else:  # opcion == 'bandeja'
+            usuario_asignado = None  # Sin asignar, queda en bandeja grupal
+        
+        # Si hay siguiente subestado, avanzar a él
+        if siguiente_subestado_id:
+            siguiente_subestado = get_object_or_404(SubEstado, id=siguiente_subestado_id)
+            
+            # Actualizar la solicitud
+            solicitud.subestado_actual = siguiente_subestado
+            solicitud.asignada_a = usuario_asignado
+            solicitud.save()
+            
+            # Crear calificaciones pendientes para el nuevo subestado si es necesario
+            if opcion == 'otro' and usuario_asignado:
+                crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado)
+            
+            # Generar URL de redirección
+            if opcion == 'yo':
+                redirect_url = f"/solicitudes/{solicitud.id}/backoffice/{siguiente_subestado.nombre.lower().replace(' ', '-')}/"
+            else:  # opcion == 'otro' o 'bandeja'
+                redirect_url = "/workflow/bandeja-mixta/"
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'subestado_changed', request.user)
+            
+            # Generar mensaje según la opción
+            if opcion == 'yo':
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre}. Continuarás trabajando en este subestado.'
+            elif opcion == 'otro':
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre} y asignada a {usuario_asignado.get_full_name() or usuario_asignado.username}.'
+            else:  # opcion == 'bandeja'
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre} y devuelta a la bandeja grupal para que cualquier usuario pueda tomarla.'
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': mensaje,
+                'redirect_url': redirect_url
+            })
+        
+        else:
+            # No hay siguiente subestado, avanzar a la siguiente etapa
+            transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
+            
+            if not transiciones_salida.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No hay transiciones disponibles desde esta etapa'
+                }, status=400)
+            
+            # Tomar la primera transición disponible (puede mejorarse con lógica más específica)
+            transicion = transiciones_salida.first()
+            siguiente_etapa = transicion.etapa_destino
+            
+            # Actualizar la solicitud
+            solicitud.etapa_actual = siguiente_etapa
+            solicitud.subestado_actual = None  # Se asignará en la nueva etapa
+            solicitud.asignada_a = usuario_asignado
+            solicitud.save()
+            
+            # Generar URL de redirección
+            if opcion == 'yo':
+                redirect_url = f"/solicitudes/{solicitud.id}/"
+            else:  # opcion == 'otro' o 'bandeja'
+                redirect_url = "/workflow/bandeja-mixta/"
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'etapa_changed', request.user)
+            
+            # Generar mensaje según la opción
+            if opcion == 'yo':
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre}. Continuarás trabajando en esta etapa.'
+            elif opcion == 'otro':
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre} y asignada a {usuario_asignado.get_full_name() or usuario_asignado.username}.'
+            else:  # opcion == 'bandeja'
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre} y devuelta a la bandeja grupal para que cualquier usuario pueda tomarla.'
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': mensaje,
+                'redirect_url': redirect_url
+            })
+        
+    except Exception as e:
+        print(f"❌ Error avanzando subestado: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
