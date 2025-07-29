@@ -20,6 +20,18 @@
                             <i class="fas fa-briefcase me-2"></i>
                             {% if pipeline %}{{ pipeline.nombre }}{% else %}Pipeline de Negocio{% endif %}
                         </h1>
+                        <!-- Indicador de Pipeline Guardado -->
+                        {% if last_pipeline_saved and pipeline_filter %}
+                        <small class="text-white-50 d-block mt-1">
+                            <i class="fas fa-bookmark me-1"></i>
+                            Pipeline guardado como preferencia
+                            <button type="button" class="btn btn-link text-white-50 p-0 ms-1" 
+                                    onclick="clearSavedPipeline()" 
+                                    title="Eliminar preferencia">
+                                <i class="fas fa-times" style="font-size: 0.8rem;"></i>
+                            </button>
+                        </small>
+                        {% endif %}
                     </div>
                     <div class="d-flex gap-2 align-items-center">
                         <!-- Selector de Pipeline -->
@@ -625,33 +637,36 @@
                                         <small class="text-muted">{{ s.cliente_cedula }}</small>
                                     </div>
                                 </td>
-                                <td class="text-dark">{{ s.producto_descripcion }}</td>
+                                <td class="text-dark">
+                                    {{ s.producto_descripcion }}
+                                    {% if s.producto_descripcion == "Préstamo de Auto" and s.cotizacion and s.cotizacion.marca %}
+                                    <br><small class="text-muted"><i class="fas fa-car me-1"></i>{{ s.cotizacion.marca }} {{ s.cotizacion.modelo|default:"" }}</small>
+                                    {% endif %}
+                                </td>
                                 <td><span class="fw-bold text-success">{{ s.monto_formateado }}</span></td>
                                 <td class="text-dark">
                                     <div class="d-flex align-items-center">
-                                        {% if s.propietario_user %}
-                                        {% if s.propietario_user.userprofile and s.propietario_user.userprofile.profile_picture %}
-                                        <img src="{{ s.propietario_user.userprofile.profile_picture.url }}"
-                                            alt="{{ s.propietario_user.get_full_name|default:s.propietario_user.username }}"
+                                        {% if s.propietario %}
+                                        {% if s.propietario.userprofile and s.propietario.userprofile.profile_picture %}
+                                        <img src="{{ s.propietario.userprofile.profile_picture.url }}"
+                                            alt="{{ s.propietario.get_full_name|default:s.propietario.username }}"
                                             class="me-2 rounded-circle object-cover border"
                                             style="width: 24px; height: 24px; object-fit: cover;">
                                         {% else %}
                                         <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
                                             style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
-                                            {{
-                                            s.propietario_user.first_name|first|default:s.propietario_user.username|first|upper
-                                            }}
+                                            {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
                                         </div>
                                         {% endif %}
                                         <span class="small">
-                                            {{ s.propietario_user.get_full_name|default:s.propietario_user.username }}
+                                            {{ s.propietario.get_full_name|default:s.propietario.username }}
                                         </span>
                                         {% else %}
                                         <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
                                             style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
                                             ?
                                         </div>
-                                        <span class="small">{{ s.propietario|default:"Sin propietario" }}</span>
+                                        <span class="small">Sin propietario</span>
                                         {% endif %}
                                     </div>
                                 </td>
@@ -716,7 +731,7 @@
                                             {{ s.sla_restante }}
                                         </div>
                                         <small class="text-muted">
-                                            {{ s.enriched_sla_status_text }}
+                                            {{ s.sla_tiempo_restante }}
                                         </small>
                                     </div>
                                 </td>
@@ -1730,6 +1745,61 @@
     // Función para inicializar la aplicación
     document.addEventListener('DOMContentLoaded', function () {
         console.log('🚀 Inicializando sistema de tabla mejorado...');
+
+        // =====================================
+        // SISTEMA DE REDIRECCIÓN AUTOMÁTICA DE PIPELINE
+        // =====================================
+        
+        // Verificar si hay pipeline seleccionado y guardarlo como preferencia
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPipeline = urlParams.get('pipeline');
+        
+        // Si hay un pipeline en la URL, mostramos notificación de que se guardó
+        if (currentPipeline && currentPipeline !== '' && currentPipeline !== 'null') {
+            // Solo mostrar notificación si no es la primera carga desde redirección
+            const isRedirect = sessionStorage.getItem('pipeline_redirect_flag');
+            if (!isRedirect) {
+                setTimeout(() => {
+                    if (typeof window.mostrarNotificacionExito === 'function') {
+                        window.mostrarNotificacionExito('Pipeline guardado como preferencia. Al regresar a Negocios, serás redirigido automáticamente aquí.');
+                    }
+                }, 1000);
+            }
+            // Limpiar flag de redirección
+            sessionStorage.removeItem('pipeline_redirect_flag');
+        }
+        
+        // Función para limpiar pipeline guardado (opcional)
+        window.clearSavedPipeline = function() {
+            fetch('{% url "workflow:api_clear_saved_pipeline" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof window.mostrarNotificacionExito === 'function') {
+                        window.mostrarNotificacionExito('Preferencia de pipeline eliminada.');
+                    }
+                    // Redirigir a negocios sin filtros
+                    window.location.href = '{% url "workflow:negocios" %}';
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing saved pipeline:', error);
+                if (typeof window.mostrarNotificacionError === 'function') {
+                    window.mostrarNotificacionError('Error al eliminar preferencia de pipeline.');
+                }
+            });
+        };
+        
+        // Marcar como redirección si venimos desde redirección automática
+        {% if last_pipeline_saved and pipeline_filter %}
+        sessionStorage.setItem('pipeline_redirect_flag', 'true');
+        {% endif %}
 
         // Inicializar datos de la tabla desde el DOM
         initializeTableData();

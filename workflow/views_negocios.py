@@ -1,20 +1,16 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Q, F
+from django.db.models import Q
 from django.utils import timezone
-from django.contrib.auth.models import User
-from datetime import datetime, timedelta
-import json
-
+from django.urls import reverse
 from .modelsWorkflow import (
-    Solicitud, Pipeline, Etapa, SubEstado, HistorialSolicitud,
-    RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
-    PermisoPipeline, PermisoBandeja
+    Pipeline, Etapa, SubEstado, Solicitud, HistorialSolicitud,
+    PermisoPipeline, PermisoEtapa
 )
 from pacifico.models import Cliente, Cotizacion
-
+from django.contrib.auth.models import User, Group
 
 def enrich_solicitud_data(solicitud):
     """
@@ -97,6 +93,60 @@ def enrich_solicitud_data(solicitud):
     for key, value in enriched_data.items():
         setattr(solicitud, f'enriched_{key}', value)
     
+    # Agregar propiedades adicionales para el template
+    # Cliente information
+    solicitud.cliente_nombre = solicitud.cliente_nombre_completo
+    solicitud.cliente_cedula = solicitud.cliente_cedula_completa
+    
+    # Estado information
+    if solicitud.subestado_actual:
+        solicitud.estado_actual = solicitud.subestado_actual.nombre
+        solicitud.estado_color = 'primary'  # Default color
+    else:
+        solicitud.estado_actual = 'Sin estado'
+        solicitud.estado_color = 'secondary'
+    
+    # SLA information
+    if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+        # Get the historial entry for the current etapa to calculate SLA from the correct start date
+        historial_actual = solicitud.historial.filter(etapa=solicitud.etapa_actual).order_by('-fecha_inicio').first()
+        if historial_actual:
+            tiempo_transcurrido = timezone.now() - historial_actual.fecha_inicio
+            tiempo_restante = solicitud.etapa_actual.sla - tiempo_transcurrido
+            
+            if tiempo_transcurrido > solicitud.etapa_actual.sla:
+                solicitud.sla_color = 'text-danger'
+                solicitud.sla_restante = 'Vencido'
+                # Calculate overdue time
+                tiempo_vencido = tiempo_transcurrido - solicitud.etapa_actual.sla
+                horas_vencidas = int(tiempo_vencido.total_seconds() // 3600)
+                minutos_vencidos = int((tiempo_vencido.total_seconds() % 3600) // 60)
+                solicitud.sla_tiempo_restante = f"+{horas_vencidas}h {minutos_vencidos}m"
+            elif tiempo_transcurrido > (solicitud.etapa_actual.sla * 0.8):
+                solicitud.sla_color = 'text-warning'
+                solicitud.sla_restante = 'Por vencer'
+                # Calculate remaining time
+                horas_restantes = int(tiempo_restante.total_seconds() // 3600)
+                minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
+                solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
+            else:
+                solicitud.sla_color = 'text-success'
+                solicitud.sla_restante = 'En tiempo'
+                # Calculate remaining time
+                horas_restantes = int(tiempo_restante.total_seconds() // 3600)
+                minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
+                solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
+        else:
+            solicitud.sla_color = 'text-muted'
+            solicitud.sla_restante = 'N/A'
+            solicitud.sla_tiempo_restante = 'N/A'
+    else:
+        solicitud.sla_color = 'text-muted'
+        solicitud.sla_restante = 'N/A'
+        solicitud.sla_tiempo_restante = 'N/A'
+    
+    # Propietario is already available as solicitud.propietario
+    
     # Ensure basic fields are accessible
     if not hasattr(solicitud, 'id') or solicitud.id is None:
         if hasattr(solicitud, 'pk') and solicitud.pk is not None:
@@ -112,13 +162,57 @@ def enrich_solicitud_data(solicitud):
 def negocios_view(request):
     """
     Vista principal de negocios con tabla de solicitudes y funcionalidad de drawer
+    Con redirección automática al último pipeline seleccionado
     """
     # Obtener parámetros de filtrado y búsqueda
     search_query = request.GET.get('search', '')
     pipeline_filter = request.GET.get('pipeline', '')
     etapa_filter = request.GET.get('etapa', '')
     estado_filter = request.GET.get('estado', '')
-    page = request.GET.get('page', 1)
+    page = request.GET.get('page', '1')  # Keep as string for consistency
+    
+    # NUEVA FUNCIONALIDAD: Redirección automática al último pipeline seleccionado
+    session_key = f'negocios_last_pipeline_{request.user.id}'
+    
+    # Debug logging
+    print(f"🔍 DEBUG: search_query='{search_query}', etapa_filter='{etapa_filter}', estado_filter='{estado_filter}', page='{page}'")
+    print(f"🔍 DEBUG: pipeline_filter='{pipeline_filter}', session_key in session: {session_key in request.session}")
+    if session_key in request.session:
+        print(f"🔍 DEBUG: saved pipeline: {request.session[session_key]}")
+    
+    # Si hay un pipeline_filter, guardarlo en la sesión
+    if pipeline_filter:
+        request.session[session_key] = pipeline_filter
+        print(f"🔄 Guardando pipeline {pipeline_filter} en sesión para usuario {request.user.username}")
+    
+    # Si NO hay filtros y existe un pipeline guardado en sesión, redirigir
+    elif not any([search_query, etapa_filter, estado_filter, page != '1']) and session_key in request.session:
+        last_pipeline = request.session[session_key]
+        print(f"🚀 Redirigiendo usuario {request.user.username} al último pipeline: {last_pipeline}")
+        
+        # Verificar que el pipeline aún existe y el usuario tiene acceso
+        try:
+            if request.user.is_superuser:
+                pipeline_exists = Pipeline.objects.filter(id=last_pipeline).exists()
+            else:
+                pipeline_exists = Pipeline.objects.filter(
+                    Q(id=last_pipeline) &
+                    (Q(permisopipeline__usuario=request.user) |
+                     Q(etapas__permisos__grupo__user=request.user))
+                ).exists()
+            
+            if pipeline_exists:
+                # Construir URL con el pipeline filter
+                redirect_url = f"{reverse('workflow:negocios')}?pipeline={last_pipeline}"
+                return redirect(redirect_url)
+            else:
+                # Si el pipeline ya no existe o no tiene acceso, limpiar la sesión
+                del request.session[session_key]
+                print(f"⚠️  Pipeline {last_pipeline} ya no existe o sin acceso - limpiando sesión")
+        except (ValueError, TypeError):
+            # Si el pipeline_id no es válido, limpiar la sesión
+            del request.session[session_key]
+            print(f"⚠️  Pipeline ID inválido en sesión - limpiando")
     
     # Construir queryset base según permisos del usuario
     if request.user.is_superuser:
@@ -163,7 +257,7 @@ def negocios_view(request):
     
     # Paginación
     paginator = Paginator(solicitudes, 25)  # 25 solicitudes por página
-    solicitudes_page = paginator.get_page(page)
+    solicitudes_page = paginator.get_page(int(page))
     
     # Obtener pipelines disponibles para el usuario
     if request.user.is_superuser:
@@ -202,7 +296,7 @@ def negocios_view(request):
             print(f"    - PK: {getattr(solicitud, 'pk', 'None')}")
             print(f"    - Cliente: {getattr(solicitud, 'cliente_nombre', 'Unknown')}")
             continue  # Skip solicitudes without valid IDs
-            
+           
         enriched = enrich_solicitud_data(solicitud)
         if enriched is not None:  # Only add valid enriched solicitudes
             solicitudes_enriched.append(enriched)
@@ -233,6 +327,8 @@ def negocios_view(request):
         'user': request.user,
         'no_access': False,  # Explicitly set to False for access
         'view_type': request.GET.get('view', 'table'),  # Default to table view
+        'last_pipeline_saved': session_key in request.session,  # Info for frontend
+        'last_pipeline_id': request.session.get(session_key, None),  # ID del último pipeline
     }
     print(f"🔍 DEBUG: Context being passed to template:")
     print(f"    - pipelines_disponibles: {len(context['pipelines_disponibles'])} items")
@@ -634,4 +730,84 @@ def api_estadisticas(request):
         'solicitudes_completadas': solicitudes_completadas,
         'solicitudes_vencidas': solicitudes_vencidas,
         'solicitudes_por_pipeline': solicitudes_por_pipeline,
+    })
+
+
+@login_required
+def api_clear_saved_pipeline(request):
+    """
+    API para limpiar el pipeline guardado en la sesión del usuario
+    """
+    if request.method == 'POST':
+        session_key = f'negocios_last_pipeline_{request.user.id}'
+        
+        if session_key in request.session:
+            pipeline_id = request.session[session_key]
+            del request.session[session_key]
+            print(f"🗑️  Pipeline {pipeline_id} eliminado de la sesión para usuario {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Pipeline guardado eliminado exitosamente',
+                'cleared_pipeline_id': pipeline_id
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'No hay pipeline guardado en la sesión'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+
+
+@login_required
+def api_get_saved_pipeline(request):
+    """
+    API para obtener información del pipeline guardado en la sesión
+    """
+    session_key = f'negocios_last_pipeline_{request.user.id}'
+    
+    if session_key in request.session:
+        pipeline_id = request.session[session_key]
+        
+        try:
+            # Verificar que el pipeline existe y el usuario tiene acceso
+            if request.user.is_superuser:
+                pipeline = Pipeline.objects.get(id=pipeline_id)
+            else:
+                pipeline = Pipeline.objects.filter(
+                    Q(id=pipeline_id) &
+                    (Q(permisopipeline__usuario=request.user) |
+                     Q(etapas__permisos__grupo__user=request.user))
+                ).first()
+            
+            if pipeline:
+                return JsonResponse({
+                    'has_saved_pipeline': True,
+                    'pipeline_id': pipeline_id,
+                    'pipeline_name': pipeline.nombre,
+                    'redirect_url': f"{reverse('workflow:negocios')}?pipeline={pipeline_id}"
+                })
+            else:
+                # Pipeline no existe o sin acceso, limpiar sesión
+                del request.session[session_key]
+                return JsonResponse({
+                    'has_saved_pipeline': False,
+                    'message': 'Pipeline guardado ya no disponible'
+                })
+                
+        except (Pipeline.DoesNotExist, ValueError, TypeError):
+            # Pipeline inválido, limpiar sesión
+            del request.session[session_key]
+            return JsonResponse({
+                'has_saved_pipeline': False,
+                'message': 'Pipeline guardado inválido'
+            })
+    
+    return JsonResponse({
+        'has_saved_pipeline': False,
+        'message': 'No hay pipeline guardado'
     })

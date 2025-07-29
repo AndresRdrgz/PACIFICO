@@ -143,7 +143,7 @@ def api_solicitudes_comite(request):
                 cliente_cedula = getattr(sol, 'cliente_cedula', '') or ""
             
             # Obtener marca y modelo si es auto
-            if sol.producto_descripcion == "Auto" and sol.cotizacion:
+            if sol.producto_descripcion == "Préstamo de Auto" and sol.cotizacion:
                 marca = getattr(sol.cotizacion, 'marca', '') or ""
                 modelo = getattr(sol.cotizacion, 'modelo', '') or ""
                 if marca or modelo:

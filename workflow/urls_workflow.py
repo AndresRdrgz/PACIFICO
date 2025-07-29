@@ -128,6 +128,10 @@ urlpatterns += [
     path('api/solicitudes/<int:solicitud_id>/detalle/', views_workflow.api_solicitud_detalle, name='api_solicitud_detalle'),
     path('api/estadisticas/', views_negocios.api_estadisticas, name='api_estadisticas'),
     
+    # APIs para gestión de pipeline guardado en sesión
+    path('api/negocios/clear-saved-pipeline/', views_negocios.api_clear_saved_pipeline, name='api_clear_saved_pipeline'),
+    path('api/negocios/get-saved-pipeline/', views_negocios.api_get_saved_pipeline, name='api_get_saved_pipeline'),
+    
     # Páginas especiales
     path('construccion/', views_workflow.sitio_construccion, name='sitio_construccion'),
     

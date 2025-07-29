@@ -335,7 +335,7 @@ class Solicitud(models.Model):
             return producto_directo
         elif self.cotizacion:
             if self.cotizacion.tipoPrestamo == 'auto':
-                return "Auto"
+                return "Préstamo de Auto"
             elif self.cotizacion.tipoPrestamo == 'personal':
                 return "Préstamo Personal"
         return "N/A"
