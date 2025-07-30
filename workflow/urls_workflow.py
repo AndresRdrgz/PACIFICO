@@ -11,6 +11,7 @@ from . import api_documentos
 from . import views_comite
 from . import apicomite
 from . import dashboard_views
+from . import views_calificacion
 
 # Import reportes views with error handling
 try:
@@ -40,6 +41,7 @@ urlpatterns += [
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
     path('agenda-firma/', views_workflow.agenda_firma_view, name='agenda_firma'),
+    path('pendientes-errores/', views_workflow.pendientes_errores_view, name='pendientes_errores'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/v2/', views_workflow.detalle_solicitud_v2, name='detalle_solicitud_v2'),
     path('solicitud/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
@@ -246,5 +248,15 @@ if views_reportes is not None:
         path('reportes/api/<int:reporte_id>/eliminar/', views_reportes.api_eliminar_reporte, name='api_eliminar_reporte'),
         path('reportes/api/reportes-predefinidos/', views_reportes.api_reportes_predefinidos, name='api_reportes_predefinidos'),
     ]
+
+# URLs para calificación de documentos
+urlpatterns += [
+    path('api/documento/calificar/', views_calificacion.calificar_documento, name='calificar_documento'),
+    path('api/documento/comentar/', views_calificacion.comentar_documento, name='comentar_documento'),
+    path('api/documento/comentario/editar/', views_calificacion.editar_comentario, name='editar_comentario'),
+    path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
+    path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
+    path('api/documento/subsanar/', views_calificacion.subsanar_documento, name='subsanar_documento'),
+]
 
 

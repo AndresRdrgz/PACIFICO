@@ -4,7 +4,7 @@ from . import api
 from . import views_workflow
 from . import views_negocios
 from . import dashboard_views
-from . import views_calificacion
+
 from . import views_formulario
 from . import views_comite
 from . import apicomite
@@ -29,6 +29,7 @@ urlpatterns = [
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
     path('agenda-firma/', views_workflow.agenda_firma_view, name='agenda_firma'),
+
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
@@ -155,12 +156,7 @@ urlpatterns = [
     path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
     path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
-    # URLs para calificación de documentos
-    path('api/documento/calificar/', views_calificacion.calificar_documento, name='calificar_documento'),
-    path('api/documento/comentar/', views_calificacion.comentar_documento, name='comentar_documento'),
-    path('api/documento/comentario/editar/', views_calificacion.editar_comentario, name='editar_comentario'),
-    path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
-    path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
+
     
     # URLs para asociación de entrevistas
     path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),

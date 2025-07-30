@@ -444,6 +444,24 @@ class CalificacionDocumentoBackoffice(models.Model):
     )
     fecha_calificacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
+    subsanado = models.BooleanField(
+        default=False, 
+        verbose_name="Subsanado",
+        help_text="Marca si el documento marcado como malo ha sido subsanado"
+    )
+    subsanado_por = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documentos_subsanados_backoffice',
+        verbose_name="Subsanado por"
+    )
+    fecha_subsanado = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de subsanación"
+    )
     
     class Meta:
         db_table = 'workflow_calificacion_documento_backoffice'

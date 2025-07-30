@@ -12764,3 +12764,85 @@ def api_obtener_citas_solicitud(request, solicitud_id):
             'success': False,
             'error': f'Error al obtener las citas: {str(e)}'
         }, status=500)
+
+
+# ==========================================================
+# VISTA PARA PENDIENTES Y ERRORES  
+# ==========================================================
+
+@login_required
+def pendientes_errores_view(request):
+    """
+    Vista principal para el módulo de Pendientes y errores
+    Muestra tres tablas: pendientes, errores y pendientes antes de firma
+    """
+    from django.core.paginator import Paginator
+    from .models import CalificacionDocumentoBackoffice, RequisitoSolicitud
+    from .modelsWorkflow import PendienteSolicitud
+    
+    try:
+        # Obtener datos para tabla de pendientes (documentos pendientes)
+        pendientes_query = CalificacionDocumentoBackoffice.objects.filter(
+            estado='pendiente',
+            requisito_solicitud__solicitud__isnull=False
+        ).select_related(
+            'requisito_solicitud',
+            'requisito_solicitud__solicitud',
+            'requisito_solicitud__requisito',
+            'calificado_por'
+        ).order_by('-fecha_calificacion')
+
+        # Obtener datos para tabla de errores (documentos marcados como malo)
+        errores_query = CalificacionDocumentoBackoffice.objects.filter(
+            estado='malo',
+            requisito_solicitud__solicitud__isnull=False
+        ).select_related(
+            'requisito_solicitud',
+            'requisito_solicitud__solicitud', 
+            'requisito_solicitud__requisito',
+            'calificado_por',
+            'subsanado_por'
+        ).order_by('-fecha_calificacion')
+
+        # Obtener datos para tabla de pendientes antes de firma
+        pendientes_firma_query = PendienteSolicitud.objects.filter(
+            estado__in=['por_hacer', 'haciendo']
+        ).select_related(
+            'solicitud',
+            'pendiente',
+            'agregado_por',
+            'completado_por'
+        ).order_by('-fecha_agregado')
+
+        # Paginación para pendientes
+        pendientes_paginator = Paginator(pendientes_query, 10)
+        pendientes_page = request.GET.get('pendientes_page', 1)
+        pendientes = pendientes_paginator.get_page(pendientes_page)
+
+        # Paginación para errores  
+        errores_paginator = Paginator(errores_query, 10)
+        errores_page = request.GET.get('errores_page', 1)
+        errores = errores_paginator.get_page(errores_page)
+
+        # Paginación para pendientes antes de firma
+        pendientes_firma_paginator = Paginator(pendientes_firma_query, 10)
+        pendientes_firma_page = request.GET.get('pendientes_firma_page', 1)
+        pendientes_firma = pendientes_firma_paginator.get_page(pendientes_firma_page)
+
+        context = {
+            'titulo_pagina': 'Pendientes y errores',
+            'usuario': request.user,
+            'pendientes': pendientes,
+            'errores': errores,
+            'pendientes_firma': pendientes_firma,
+            'total_pendientes': pendientes_query.count(),
+            'total_errores': errores_query.count(),
+            'total_pendientes_firma': pendientes_firma_query.count(),
+        }
+        
+        return render(request, 'workflow/pendientes_errores.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar pendientes y errores: {str(e)}')
+        return redirect('workflow:dashboard')
+

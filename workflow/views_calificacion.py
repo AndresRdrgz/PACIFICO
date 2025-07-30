@@ -220,3 +220,62 @@ def obtener_calificaciones_documento(request, requisito_solicitud_id):
         import traceback
         print(f"DEBUG TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def subsanar_documento(request):
+    """
+    API para marcar un documento como subsanado.
+    Al marcar como subsanado, el estado cambia automáticamente a 'bueno'
+    """
+    from django.utils import timezone
+    
+    try:
+        data = json.loads(request.body)
+        requisito_solicitud_id = data.get('requisito_solicitud_id')
+        
+        # Validar datos
+        if not requisito_solicitud_id:
+            return JsonResponse({'error': 'ID de requisito requerido'}, status=400)
+        
+        requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
+        
+        # Buscar la calificación existente marcada como 'malo'
+        try:
+            calificacion = CalificacionDocumentoBackoffice.objects.get(
+                requisito_solicitud=requisito_solicitud,
+                estado='malo'
+            )
+        except CalificacionDocumentoBackoffice.DoesNotExist:
+            return JsonResponse({
+                'error': 'No se encontró una calificación marcada como malo para este documento'
+            }, status=404)
+        
+        # Actualizar la calificación como subsanada y cambiar estado a 'bueno'
+        calificacion.subsanado = True
+        calificacion.subsanado_por = request.user
+        calificacion.fecha_subsanado = timezone.now()
+        calificacion.estado = 'bueno'  # Cambiar automáticamente a bueno
+        calificacion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Documento marcado como subsanado exitosamente',
+            'data': {
+                'id': calificacion.id,
+                'estado': calificacion.estado,
+                'subsanado': calificacion.subsanado,
+                'subsanado_por': calificacion.subsanado_por.username,
+                'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M'),
+                'requisito_solicitud_id': requisito_solicitud.id
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        print(f"Error en subsanar_documento: {str(e)}")
+        return JsonResponse({
+            'error': f'Error al subsanar documento: {str(e)}'
+        }, status=500)

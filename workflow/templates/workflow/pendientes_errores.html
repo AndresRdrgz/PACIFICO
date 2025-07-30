@@ -1,0 +1,933 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo_pagina }} - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Estilos para el sistema de pestañas */
+.pendientes-header {
+  background: linear-gradient(135deg, #dc3545, #fd7e14);
+  color: white;
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.pendientes-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.pendientes-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 0;
+}
+
+/* Sistema de Pestañas Moderno */
+.tab-navigation {
+  margin-bottom: 2rem;
+}
+
+.nav-pills {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.nav-pills .nav-link {
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  color: #6c757d;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.nav-pills .nav-link:hover {
+  background: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+  transform: translateY(-2px);
+}
+
+.nav-pills .nav-link.active {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.nav-pills .nav-link.active:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+}
+
+.tab-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.nav-link.active .tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.nav-link:not(.active) .tab-badge.pendientes {
+  background: #ffc107;
+  color: #000;
+}
+
+.nav-link:not(.active) .tab-badge.errores {
+  background: #dc3545;
+  color: white;
+}
+
+.nav-link:not(.active) .tab-badge.firma {
+  background: #6f42c1;
+  color: white;
+}
+
+/* KPI Cards - Layout compacto */
+.kpi-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.kpi-card.pendientes {
+  border-left-color: #ffc107;
+}
+
+.kpi-card.errores {
+  border-left-color: #dc3545;
+}
+
+.kpi-card.firma {
+  border-left-color: #6f42c1;
+}
+
+.kpi-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  line-height: 1;
+}
+
+.kpi-label {
+  color: #6c757d;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Tabla moderna */
+.table-container {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 1.5rem 2rem;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table-header h3 {
+  margin: 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.table-responsive {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.table th {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 1rem 0.75rem;
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+/* Status badges */
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pendiente {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.malo {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f1aeb5;
+}
+
+.status-badge.por-hacer {
+  background: #cff4fc;
+  color: #055160;
+  border: 1px solid #9eeaf9;
+}
+
+.status-badge.haciendo {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+/* Botón subsanar */
+.btn-subsanar {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-subsanar:hover {
+  background: linear-gradient(135deg, #218838, #1da688);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+/* User avatar */
+.user-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-right: 0.75rem;
+}
+
+/* Links */
+.solicitud-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.solicitud-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.3;
+}
+
+.empty-state h5 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Paginación moderna */
+.pagination-container {
+  padding: 1.5rem 2rem;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+.pagination .page-link {
+  border-radius: 8px;
+  margin: 0 0.25rem;
+  border: 1px solid #dee2e6;
+  color: #007bff;
+  font-weight: 500;
+}
+
+.pagination .page-item.active .page-link {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border-color: #007bff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-pills .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .kpi-card {
+    padding: 0.75rem;
+  }
+  
+  .kpi-number {
+    font-size: 1.5rem;
+  }
+  
+  .kpi-label {
+    font-size: 0.7rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.9rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .pendientes-header h1 {
+    font-size: 2rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="pendientes-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h1><i class="fas fa-exclamation-triangle me-3"></i>{{ titulo_pagina }}</h1>
+        <p>Sistema de gestión de pendientes y errores - Vista por pestañas</p>
+      </div>
+      <div class="text-end">
+        <small class="d-block mb-2">
+          <i class="fas fa-sync-alt"></i> Auto-refresh cada 30s
+        </small>
+        <button class="btn btn-light btn-sm" onclick="location.reload()">
+          <i class="fas fa-refresh"></i> Actualizar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <ul class="nav nav-pills nav-fill" id="pendientesTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pendientes-tab" data-bs-toggle="pill" data-bs-target="#pendientes-pane" 
+                type="button" role="tab" aria-controls="pendientes-pane" aria-selected="true">
+          <i class="fas fa-clock"></i>
+          <span>Documentos Pendientes</span>
+          <span class="tab-badge pendientes">{{ total_pendientes }}</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="errores-tab" data-bs-toggle="pill" data-bs-target="#errores-pane" 
+                type="button" role="tab" aria-controls="errores-pane" aria-selected="false">
+          <i class="fas fa-times-circle"></i>
+          <span>Documentos con Errores</span>
+          <span class="tab-badge errores">{{ total_errores }}</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="firma-tab" data-bs-toggle="pill" data-bs-target="#firma-pane" 
+                type="button" role="tab" aria-controls="firma-pane" aria-selected="false">
+          <i class="fas fa-file-signature"></i>
+          <span>Pendientes Antes de Firma</span>
+          <span class="tab-badge firma">{{ total_pendientes_firma }}</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <!-- KPIs Row - Mostrar los 3 indicadores juntos -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <div class="kpi-card pendientes">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <div class="kpi-number" style="color: #ffc107;">{{ total_pendientes }}</div>
+            <p class="kpi-label">Documentos Pendientes</p>
+          </div>
+          <div class="col-4 text-end">
+            <i class="fas fa-clock" style="font-size: 1.5rem; color: #ffc107; opacity: 0.4;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="kpi-card errores">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <div class="kpi-number" style="color: #dc3545;">{{ total_errores }}</div>
+            <p class="kpi-label">Documentos con Errores</p>
+          </div>
+          <div class="col-4 text-end">
+            <i class="fas fa-times-circle" style="font-size: 1.5rem; color: #dc3545; opacity: 0.4;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="kpi-card firma">
+        <div class="row align-items-center">
+          <div class="col-8">
+            <div class="kpi-number" style="color: #6f42c1;">{{ total_pendientes_firma }}</div>
+            <p class="kpi-label">Pendientes Antes de Firma</p>
+          </div>
+          <div class="col-4 text-end">
+            <i class="fas fa-file-signature" style="font-size: 1.5rem; color: #6f42c1; opacity: 0.4;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="pendientesTabContent">
+    
+    <!-- PESTAÑA 1: DOCUMENTOS PENDIENTES -->
+    <div class="tab-pane fade show active" id="pendientes-pane" role="tabpanel" aria-labelledby="pendientes-tab">
+
+      <!-- Tabla de Pendientes -->
+      <div class="table-container">
+        <div class="table-header">
+          <h3>
+            <i class="fas fa-clock" style="color: #ffc107;"></i>
+            Lista de Documentos Pendientes
+          </h3>
+        </div>
+        
+        {% if pendientes %}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Solicitud</th>
+                <th>Documento</th>
+                <th>Cliente</th>
+                <th>Calificado por</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pendiente in pendientes %}
+              <tr>
+                <td>
+                  <a href="{% url 'workflow:detalle_solicitud' pendiente.requisito_solicitud.solicitud.id %}" 
+                     class="solicitud-link">
+                    {{ pendiente.requisito_solicitud.solicitud.codigo }}
+                  </a>
+                </td>
+                <td>{{ pendiente.requisito_solicitud.requisito.nombre }}</td>
+                <td>
+                  {% if pendiente.requisito_solicitud.solicitud.cliente %}
+                    {{ pendiente.requisito_solicitud.solicitud.cliente.nombreCliente }}
+                  {% elif pendiente.requisito_solicitud.solicitud.cotizacion %}
+                    {{ pendiente.requisito_solicitud.solicitud.cotizacion.nombreCliente }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="user-avatar">
+                      {% if pendiente.calificado_por.first_name %}
+                        {{ pendiente.calificado_por.first_name|first }}{{ pendiente.calificado_por.last_name|first }}
+                      {% else %}
+                        {{ pendiente.calificado_por.username|first|upper }}
+                      {% endif %}
+                    </div>
+                    <div>
+                      {% if pendiente.calificado_por.first_name %}
+                        {{ pendiente.calificado_por.first_name }} {{ pendiente.calificado_por.last_name }}
+                      {% else %}
+                        {{ pendiente.calificado_por.username }}
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>{{ pendiente.fecha_calificacion|date:"d/m/Y H:i" }}</td>
+                <td>
+                  <span class="status-badge pendiente">{{ pendiente.get_estado_display }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Paginación para Pendientes -->
+        {% if pendientes.has_other_pages %}
+        <div class="pagination-container">
+          <nav aria-label="Paginación de pendientes">
+            <ul class="pagination mb-0 justify-content-center">
+              {% if pendientes.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?pendientes_page={{ pendientes.previous_page_number }}">Anterior</a>
+                </li>
+              {% endif %}
+              
+              {% for num in pendientes.paginator.page_range %}
+                {% if pendientes.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% else %}
+                  <li class="page-item">
+                    <a class="page-link" href="?pendientes_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              
+              {% if pendientes.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?pendientes_page={{ pendientes.next_page_number }}">Siguiente</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <h5>No hay documentos pendientes</h5>
+          <p>Todos los documentos han sido procesados correctamente.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: DOCUMENTOS CON ERRORES -->
+    <div class="tab-pane fade" id="errores-pane" role="tabpanel" aria-labelledby="errores-tab">
+
+      <!-- Tabla de Errores -->
+      <div class="table-container">
+        <div class="table-header">
+          <h3>
+            <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+            Lista de Documentos con Errores
+          </h3>
+        </div>
+        
+        {% if errores %}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Solicitud</th>
+                <th>Documento</th>
+                <th>Cliente</th>
+                <th>Calificado por</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Subsanado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for error in errores %}
+              <tr>
+                <td>
+                  <a href="{% url 'workflow:detalle_solicitud' error.requisito_solicitud.solicitud.id %}" 
+                     class="solicitud-link">
+                    {{ error.requisito_solicitud.solicitud.codigo }}
+                  </a>
+                </td>
+                <td>{{ error.requisito_solicitud.requisito.nombre }}</td>
+                <td>
+                  {% if error.requisito_solicitud.solicitud.cliente %}
+                    {{ error.requisito_solicitud.solicitud.cliente.nombreCliente }}
+                  {% elif error.requisito_solicitud.solicitud.cotizacion %}
+                    {{ error.requisito_solicitud.solicitud.cotizacion.nombreCliente }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="user-avatar">
+                      {% if error.calificado_por.first_name %}
+                        {{ error.calificado_por.first_name|first }}{{ error.calificado_por.last_name|first }}
+                      {% else %}
+                        {{ error.calificado_por.username|first|upper }}
+                      {% endif %}
+                    </div>
+                    <div>
+                      {% if error.calificado_por.first_name %}
+                        {{ error.calificado_por.first_name }} {{ error.calificado_por.last_name }}
+                      {% else %}
+                        {{ error.calificado_por.username }}
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>{{ error.fecha_calificacion|date:"d/m/Y H:i" }}</td>
+                <td>
+                  <span class="status-badge malo">{{ error.get_estado_display }}</span>
+                </td>
+                <td>
+                  {% if error.subsanado %}
+                    <div class="text-success">
+                      <i class="fas fa-check-circle"></i>
+                      <small class="d-block">Por {{ error.subsanado_por.username }}</small>
+                      <small class="text-muted">{{ error.fecha_subsanado|date:"d/m/Y H:i" }}</small>
+                    </div>
+                  {% else %}
+                    <span class="text-muted">No</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if not error.subsanado %}
+                    <button type="button" class="btn btn-subsanar btn-sm" 
+                            onclick="subsanarDocumento({{ error.requisito_solicitud.id }})"
+                            data-requisito-id="{{ error.requisito_solicitud.id }}">
+                      <i class="fas fa-check"></i> Subsanar
+                    </button>
+                  {% else %}
+                    <span class="badge bg-success">Subsanado</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Paginación para Errores -->
+        {% if errores.has_other_pages %}
+        <div class="pagination-container">
+          <nav aria-label="Paginación de errores">
+            <ul class="pagination mb-0 justify-content-center">
+              {% if errores.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?errores_page={{ errores.previous_page_number }}">Anterior</a>
+                </li>
+              {% endif %}
+              
+              {% for num in errores.paginator.page_range %}
+                {% if errores.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% else %}
+                  <li class="page-item">
+                    <a class="page-link" href="?errores_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              
+              {% if errores.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?errores_page={{ errores.next_page_number }}">Siguiente</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <h5>No hay documentos con errores</h5>
+          <p>Todos los documentos están en buen estado.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- PESTAÑA 3: PENDIENTES ANTES DE FIRMA -->
+    <div class="tab-pane fade" id="firma-pane" role="tabpanel" aria-labelledby="firma-tab">
+
+      <!-- Tabla de Pendientes Antes de Firma -->
+      <div class="table-container">
+        <div class="table-header">
+          <h3>
+            <i class="fas fa-file-signature" style="color: #6f42c1;"></i>
+            Lista de Pendientes Antes de Firma
+          </h3>
+        </div>
+        
+        {% if pendientes_firma %}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Solicitud</th>
+                <th>Pendiente</th>
+                <th>Cliente</th>
+                <th>Agregado por</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pendiente_firma in pendientes_firma %}
+              <tr>
+                <td>
+                  <a href="{% url 'workflow:detalle_solicitud' pendiente_firma.solicitud.id %}" 
+                     class="solicitud-link">
+                    {{ pendiente_firma.solicitud.codigo }}
+                  </a>
+                </td>
+                <td>{{ pendiente_firma.pendiente.nombre }}</td>
+                <td>
+                  {% if pendiente_firma.solicitud.cliente %}
+                    {{ pendiente_firma.solicitud.cliente.nombreCliente }}
+                  {% elif pendiente_firma.solicitud.cotizacion %}
+                    {{ pendiente_firma.solicitud.cotizacion.nombreCliente }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="user-avatar">
+                      {% if pendiente_firma.agregado_por.first_name %}
+                        {{ pendiente_firma.agregado_por.first_name|first }}{{ pendiente_firma.agregado_por.last_name|first }}
+                      {% else %}
+                        {{ pendiente_firma.agregado_por.username|first|upper }}
+                      {% endif %}
+                    </div>
+                    <div>
+                      {% if pendiente_firma.agregado_por.first_name %}
+                        {{ pendiente_firma.agregado_por.first_name }} {{ pendiente_firma.agregado_por.last_name }}
+                      {% else %}
+                        {{ pendiente_firma.agregado_por.username }}
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>{{ pendiente_firma.fecha_agregado|date:"d/m/Y H:i" }}</td>
+                <td>
+                  {% if pendiente_firma.estado == 'por_hacer' %}
+                    <span class="status-badge por-hacer">Por Hacer</span>
+                  {% elif pendiente_firma.estado == 'haciendo' %}
+                    <span class="status-badge haciendo">Haciendo</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if pendiente_firma.notas %}
+                    <small>{{ pendiente_firma.notas|truncatechars:50 }}</small>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Paginación para Pendientes Antes de Firma -->
+        {% if pendientes_firma.has_other_pages %}
+        <div class="pagination-container">
+          <nav aria-label="Paginación de pendientes antes de firma">
+            <ul class="pagination mb-0 justify-content-center">
+              {% if pendientes_firma.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?pendientes_firma_page={{ pendientes_firma.previous_page_number }}">Anterior</a>
+                </li>
+              {% endif %}
+              
+              {% for num in pendientes_firma.paginator.page_range %}
+                {% if pendientes_firma.number == num %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                  </li>
+                {% else %}
+                  <li class="page-item">
+                    <a class="page-link" href="?pendientes_firma_page={{ num }}">{{ num }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              
+              {% if pendientes_firma.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?pendientes_firma_page={{ pendientes_firma.next_page_number }}">Siguiente</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-check-circle"></i>
+          <h5>No hay pendientes antes de firma</h5>
+          <p>Todas las solicitudes están listas para firma.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Función para subsanar documento
+function subsanarDocumento(requisitoSolicitudId) {
+  if (!confirm('¿Está seguro de que desea marcar este documento como subsanado? Esto cambiará automáticamente el estado a "Bueno".')) {
+    return;
+  }
+
+  const button = document.querySelector(`[data-requisito-id="${requisitoSolicitudId}"]`);
+  const originalText = button.innerHTML;
+  
+  // Deshabilitar botón y mostrar loading
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+  fetch('{% url "workflow:subsanar_documento" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      requisito_solicitud_id: requisitoSolicitudId
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Mostrar mensaje de éxito
+      showNotification('Documento subsanado exitosamente', 'success');
+      
+      // Recargar la página para actualizar las tablas
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showNotification(data.error || 'Error al subsanar documento', 'error');
+      button.disabled = false;
+      button.innerHTML = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showNotification('Error de conexión al subsanar documento', 'error');
+    button.disabled = false;
+    button.innerHTML = originalText;
+  });
+}
+
+// Función para obtener CSRF token
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Función para mostrar notificaciones
+function showNotification(message, type) {
+  // Crear elemento de notificación
+  const notification = document.createElement('div');
+  notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  notification.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Auto-remove después de 5 segundos
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
+}
+
+// Recordar pestaña activa en localStorage
+document.addEventListener('DOMContentLoaded', function() {
+  // Cargar pestaña guardada
+  const activeTab = localStorage.getItem('pendientesActiveTab');
+  if (activeTab) {
+    const tabButton = document.querySelector(`#${activeTab}`);
+    if (tabButton) {
+      const tabInstance = new bootstrap.Tab(tabButton);
+      tabInstance.show();
+    }
+  }
+  
+  // Guardar pestaña cuando cambie
+  const tabButtons = document.querySelectorAll('#pendientesTab button[data-bs-toggle="pill"]');
+  tabButtons.forEach(button => {
+    button.addEventListener('shown.bs.tab', function (event) {
+      localStorage.setItem('pendientesActiveTab', event.target.id);
+    });
+  });
+});
+
+// Auto-refresh cada 30 segundos para mantener datos actualizados
+setInterval(() => {
+  // Solo refrescar si no hay modales abiertos
+  if (!document.querySelector('.modal.show')) {
+    window.location.reload();
+  }
+}, 30000);
+</script>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+{% endblock %}
