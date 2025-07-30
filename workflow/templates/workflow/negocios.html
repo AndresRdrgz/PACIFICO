@@ -798,8 +798,23 @@
         </div>
 
         {% endif %}
-        {% else %}
+        {% elif view_type == 'kanban' %}
         <!-- Vista Kanban Mejorada -->
+
+        <!-- Debug Information -->
+        {% if pipeline %}
+        <div class="alert alert-info">
+            <h6>🐛 Debug Information:</h6>
+            <p><strong>Pipeline:</strong> {{ pipeline.nombre }} (ID: {{ pipeline.id }})</p>
+            <p><strong>Etapas encontradas:</strong> {{ pipeline.etapas.count }}</p>
+            <p><strong>Total solicitudes:</strong> {{ solicitudes|length }}</p>
+            <p><strong>Solicitudes por etapa keys:</strong> {{ solicitudes_por_etapa.keys|join:", " }}</p>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <p><strong>⚠️ No pipeline selected</strong></p>
+        </div>
+        {% endif %}
 
         <!-- Filtros Compactos para Kanban -->
         <div class="card card-custom mb-2">
@@ -839,207 +854,216 @@
         <div class="alert alert-warning border-warning mb-3"
             style="border-left: 4px solid #ffc107 !important; background: linear-gradient(135deg, #fff8e1, #fff3cd); border-radius: 8px;">
             <div class="d-flex align-items-center">
-
-                <!-- Disclaimer de desarrollo para Kanban -->
-                <div class="alert alert-warning border-warning mb-3"
-                    style="border-left: 4px solid #ffc107 !important; background: linear-gradient(135deg, #fff8e1, #fff3cd); border-radius: 8px;">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.2rem;"></i>
-                        <div>
-                            <h6 class="alert-heading mb-1" style="color: #856404; font-weight: 600;">
-                                <i class="fas fa-tools me-1"></i>
-                                Sección en Desarrollo
-                            </h6>
-                            <p class="mb-0" style="color: #856404; font-size: 0.9rem;">
-                                La vista Kanban está actualmente en desarrollo. Algunas funcionalidades pueden presentar
-                                limitaciones o estar sujetas a cambios.
-                                <br>
-                                <small class="text-muted">Para una experiencia completa, recomendamos usar la vista de
-                                    tabla.</small>
-                            </p>
-                        </div>
-                    </div>
+                <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.2rem;"></i>
+                <div>
+                    <h6 class="alert-heading mb-1" style="color: #856404; font-weight: 600;">
+                        <i class="fas fa-tools me-1"></i>
+                        Sección en Desarrollo
+                    </h6>
+                    <p class="mb-0" style="color: #856404; font-size: 0.9rem;">
+                        La vista Kanban está actualmente en desarrollo. Algunas funcionalidades pueden presentar
+                        limitaciones o estar sujetas a cambios.
+                        <br>
+                        <small class="text-muted">Para una experiencia completa, recomendamos usar la vista de
+                            tabla.</small>
+                    </p>
                 </div>
+            </div>
+        </div>
 
-                <!-- Contenedor Kanban con scroll horizontal -->
-                <div class="kanban-container"
-                    style="height: calc(100vh - 280px); overflow-y: hidden; min-height: 700px;">
-                    <div class="kanban-board d-flex" style="overflow-x: auto; gap: 0.75rem; padding-bottom: 1rem;">
-                        {% for etapa in pipeline.etapas.all %}
-                        <div class="kanban-column" style="min-width: 320px; width: 320px; flex-shrink: 0;">
-                            <div class="card shadow h-100"
-                                style="border: 2px solid #e9ecef; border-radius: 12px; background: #ffffff;">
-                                <!-- Header de etapa con búsqueda -->
-                                <div class="card-header text-white"
-                                    style="background: #28a745; border-radius: 12px 12px 0 0; border: none;">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0 fw-bold text-white">
-                                            <i class="fas fa-list-ul me-2 text-white"></i>
-                                            {{ etapa.nombre }}
-                                        </h6>
-                                        <span class="badge bg-white text-success fw-bold"
-                                            id="count-etapa-{{ etapa.id }}">
-                                            {{ solicitudes_por_etapa|get_item:etapa.id|length }}
-                                        </span>
-                                    </div>
-                                    <input type="text" class="form-control form-control-sm etapa-search"
-                                        placeholder="Buscar en {{ etapa.nombre }}..." data-etapa-id="{{ etapa.id }}"
-                                        style="background: rgba(255,255,255,0.9); border: none;">
-                                </div>
+        <!-- Contenedor Kanban con scroll horizontal -->
+        {% if pipeline %}
+        <div class="kanban-container"
+            style="height: calc(100vh - 280px); overflow-y: hidden; min-height: 700px;">
+            <div class="kanban-board d-flex" style="overflow-x: auto; gap: 0.75rem; padding-bottom: 1rem;">
+                {% for etapa in pipeline.etapas.all %}
+                <div class="kanban-column" style="min-width: 320px; width: 320px; flex-shrink: 0;">
+                    <div class="card shadow h-100"
+                        style="border: 2px solid #e9ecef; border-radius: 12px; background: #ffffff;">
+                        <!-- Header de etapa con búsqueda -->
+                        <div class="card-header text-white"
+                            style="background: #28a745; border-radius: 12px 12px 0 0; border: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 fw-bold text-white">
+                                    <i class="fas fa-list-ul me-2 text-white"></i>
+                                    {{ etapa.nombre }}
+                                </h6>
+                                <span class="badge bg-white text-success fw-bold"
+                                    id="count-etapa-{{ etapa.id }}">
+                                    {{ solicitudes_por_etapa|get_item:etapa.id|length }}
+                                </span>
+                            </div>
+                            <input type="text" class="form-control form-control-sm etapa-search"
+                                placeholder="Buscar en {{ etapa.nombre }}..." data-etapa-id="{{ etapa.id }}"
+                                style="background: rgba(255,255,255,0.9); border: none;">
+                        </div>
 
-                                <!-- Cuerpo de etapa con scroll -->
-                                <div class="card-body p-3 kanban-column-body"
-                                    style="height: calc(100vh - 380px); overflow-y: auto; background: #f8f9fa;"
-                                    data-etapa-id="{{ etapa.id }}">
+                        <!-- Cuerpo de etapa con scroll -->
+                        <div class="card-body p-3 kanban-column-body"
+                            style="height: calc(100vh - 380px); overflow-y: auto; background: #f8f9fa;"
+                            data-etapa-id="{{ etapa.id }}">
 
-                                    {% for s in solicitudes_por_etapa|get_item:etapa.id %}
-                                    <div class="kanban-card mb-3" draggable="{% if s.id %}true{% else %}false{% endif %}" 
-                                        {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
-                                        data-etapa-id="{{ etapa.id }}"
-                                        data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
-                                        data-estado="{{ s.estado_actual|default:'Sin estado' }}"
-                                        data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
-                                        data-sla="{{ s.enriched_sla_data_attr }}"
-                                        data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}"
-                                        data-codigo="{{ s.codigo }}" data-monto="{{ s.monto_formateado }}"
-                                        data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
-                                        data-sla-texto="{{ s.sla_restante }}" style="cursor: grab;">
+                            {% for s in solicitudes_por_etapa|get_item:etapa.id %}
+                            <div class="kanban-card mb-3" draggable="{% if s.id %}true{% else %}false{% endif %}" 
+                                {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
+                                data-etapa-id="{{ etapa.id }}"
+                                data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
+                                data-estado="{{ s.estado_actual|default:'Sin estado' }}"
+                                data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
+                                data-sla="{{ s.enriched_sla_data_attr }}"
+                                data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}"
+                                data-codigo="{{ s.codigo }}" data-monto="{{ s.monto_formateado }}"
+                                data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
+                                data-sla-texto="{{ s.sla_restante }}" style="cursor: grab;">
 
-                                        <div class="card shadow-sm border-0"
-                                            style="border-left: 4px solid {{ s.enriched_sla_border_color }} !important; height: 110px; border-radius: 6px; transition: all 0.3s ease; background: white; cursor: pointer;"
-                                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
-                                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
-                                            {% if s.id %}onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'"{% endif %}>
-                                            <div class="card-body p-2" style="height: 100%;">
-                                                <!-- Header compacto -->
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <div>
-                                                        <h6 class="mb-0" style="font-size: 0.9rem;">
-                                                            <i class="fas fa-user text-muted me-1"
-                                                                style="font-size: 0.75rem; width: 12px;"></i>
-                                                            {% if s.origen == 'Canal Digital' %}
-                                                            <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.7rem;"></i>
-                                                            {% endif %}
-                                                            {% if s.id %}
-                                                            <a href="{% url 'workflow:detalle_solicitud' s.id %}"
-                                                                class="text-decoration-none fw-bold text-success solicitud-link-kanban"
-                                                                title="Ver detalles de {{ s.cliente_nombre }}"
-                                                                onclick="event.stopPropagation();">
-                                                                {{ s.cliente_nombre|truncatechars:15 }}
-                                                            </a>
-                                                            {% else %}
-                                                            <span class="fw-bold text-danger" title="Solicitud sin ID válido">
-                                                                {{ s.cliente_nombre|truncatechars:15 }}
-                                                            </span>
-                                                            {% endif %}
-                                                        </h6>
-                                                        <small class="text-muted" style="font-size: 0.65rem;">{{
-                                                            s.codigo
-                                                            }}</small>
-                                                    </div>
+                                <div class="card shadow-sm border-0"
+                                    style="border-left: 4px solid {{ s.enriched_sla_border_color }} !important; height: 110px; border-radius: 6px; transition: all 0.3s ease; background: white; cursor: pointer;"
+                                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
+                                    {% if s.id %}onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'"{% endif %}>
+                                    <div class="card-body p-2" style="height: 100%;">
+                                        <!-- Header compacto -->
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <h6 class="mb-0" style="font-size: 0.9rem;">
+                                                    <i class="fas fa-user text-muted me-1"
+                                                        style="font-size: 0.75rem; width: 12px;"></i>
+                                                    {% if s.origen == 'Canal Digital' %}
+                                                    <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.7rem;"></i>
+                                                    {% endif %}
+                                                    {% if s.id %}
+                                                    <a href="{% url 'workflow:detalle_solicitud' s.id %}"
+                                                        class="text-decoration-none fw-bold text-success solicitud-link-kanban"
+                                                        title="Ver detalles de {{ s.cliente_nombre }}"
+                                                        onclick="event.stopPropagation();">
+                                                        {{ s.cliente_nombre|truncatechars:15 }}
+                                                    </a>
+                                                    {% else %}
+                                                    <span class="fw-bold text-danger" title="Solicitud sin ID válido">
+                                                        {{ s.cliente_nombre|truncatechars:15 }}
+                                                    </span>
+                                                    {% endif %}
+                                                </h6>
+                                                <small class="text-muted" style="font-size: 0.65rem;">{{
+                                                    s.codigo
+                                                    }}</small>
+                                            </div>
 
-                                                    <!-- Timer y Status -->
-                                                    <div class="text-end">
-                                                        <div class="d-flex align-items-center justify-content-end mb-1">
-                                                            <i class="fas fa-clock text-muted me-1"
-                                                                style="font-size: 0.75rem; width: 12px;"></i>
-                                                            <span class="{{ s.sla_color }} fw-bold"
-                                                                style="font-size: 0.7rem;">{{
-                                                                s.sla_restante }}</span>
-                                                        </div>
-                                                        <span class="badge bg-{{ s.estado_color }}"
-                                                            style="font-size: 0.6rem; padding: 2px 5px;">{{
-                                                            s.estado_actual
-                                                            }}</span>
-                                                    </div>
+                                            <!-- Timer y Status -->
+                                            <div class="text-end">
+                                                <div class="d-flex align-items-center justify-content-end mb-1">
+                                                    <i class="fas fa-clock text-muted me-1"
+                                                        style="font-size: 0.75rem; width: 12px;"></i>
+                                                    <span class="{{ s.sla_color }} fw-bold"
+                                                        style="font-size: 0.7rem;">{{
+                                                        s.sla_restante }}</span>
+                                                </div>
+                                                <span class="badge bg-{{ s.estado_color }}"
+                                                    style="font-size: 0.6rem; padding: 2px 5px;">{{
+                                                    s.estado_actual
+                                                    }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Contenido en 2 columnas -->
+                                        <div class="row g-1">
+                                            <!-- Columna izquierda -->
+                                            <div class="col-7">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <span class="text-success fw-bold"
+                                                        style="font-size: 0.75rem;">{{
+                                                        s.monto_formateado }}</span>
                                                 </div>
 
-                                                <!-- Contenido en 2 columnas -->
-                                                <div class="row g-1">
-                                                    <!-- Columna izquierda -->
-                                                    <div class="col-7">
-                                                        <div class="d-flex align-items-center mb-1">
-                                                            <span class="text-success fw-bold"
-                                                                style="font-size: 0.75rem;">{{
-                                                                s.monto_formateado }}</span>
-                                                        </div>
+                                                {% if not s.enriched_is_unassigned %}
+                                                <div class="d-flex align-items-center">
+                                                    {% with s.enriched_asignado_avatar as avatar %}
+                                                    {% if avatar.type == 'image' %}
+                                                    <img src="{{ avatar.src }}" alt="{{ avatar.alt }}"
+                                                        class="w-4 h-4 rounded-full object-cover me-1">
+                                                    {% elif avatar.type == 'initial' %}
+                                                    <div
+                                                        class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
+                                                        {{ avatar.content }}</div>
+                                                    {% else %}
+                                                    <div class="{{ avatar.class }} me-1"><i
+                                                            class="{{ avatar.content }}"></i></div>
+                                                    {% endif %}
+                                                    <span style="font-size: 0.7rem; color: #6c757d;">{{
+                                                        s.asignado_a|truncatechars:10 }}</span>
+                                                    {% endwith %}
+                                                </div>
+                                                {% else %}
+                                                <div>
+                                                    {% with s.enriched_asignado_avatar as avatar %}
+                                                    <div class="{{ avatar.class }} me-1"><i
+                                                            class="{{ avatar.content }}"></i></div>
+                                                    <span style="font-size: 0.7rem; color: #6c757d;">{{
+                                                        s.asignado_a|truncatechars:10 }}</span>
+                                                    {% endwith %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
 
-                                                        {% if not s.enriched_is_unassigned %}
-                                                        <div class="d-flex align-items-center">
-                                                            {% with s.enriched_asignado_avatar as avatar %}
-                                                            {% if avatar.type == 'image' %}
-                                                            <img src="{{ avatar.src }}" alt="{{ avatar.alt }}"
-                                                                class="w-4 h-4 rounded-full object-cover me-1">
-                                                            {% elif avatar.type == 'initial' %}
-                                                            <div
-                                                                class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
-                                                                {{ avatar.content }}</div>
-                                                            {% else %}
-                                                            <div class="{{ avatar.class }} me-1"><i
-                                                                    class="{{ avatar.content }}"></i></div>
-                                                            {% endif %}
-                                                            <span style="font-size: 0.7rem; color: #6c757d;">{{
-                                                                s.asignado_a|truncatechars:10 }}</span>
-                                                            {% endwith %}
-                                                        </div>
-                                                        {% else %}
-                                                        <div>
-                                                            {% with s.enriched_asignado_avatar as avatar %}
-                                                            <div class="{{ avatar.class }} me-1"><i
-                                                                    class="{{ avatar.content }}"></i></div>
-                                                            <span style="font-size: 0.7rem; color: #6c757d;">{{
-                                                                s.asignado_a|truncatechars:10 }}</span>
-                                                            {% endwith %}
-                                                        </div>
-                                                        {% endif %}
-                                                    </div>
-
-                                                    <!-- Columna derecha -->
-                                                    <div class="col-5 text-end">
-                                                        <div class="d-flex align-items-center justify-content-end">
-                                                            {% if s.origen == 'Canal Digital' %}
-                                                            <span class="badge bg-info me-1 digital-badge-mobile" style="font-size: 0.55rem;"
-                                                                title="Solicitud del Canal Digital">
-                                                                <i class="fas fa-mobile-alt me-1"></i>Digital
-                                                            </span>
-                                                            {% endif %}
-                                                            {% if s.prioridad %}
-                                                            <span class="badge me-1"
-                                                                style="font-size: 0.55rem; padding: 1px 4px; background-color: {{ s.enriched_prioridad_bg_color }}; color: {{ s.enriched_prioridad_text_color }};">
-                                                                {{ s.prioridad }}
-                                                            </span>
-                                                            {% endif %}
-                                                            <small class="text-muted" style="font-size: 0.65rem;">{{
-                                                                s.fecha_inicio
-                                                                }}</small>
-                                                        </div>
-                                                    </div>
+                                            <!-- Columna derecha -->
+                                            <div class="col-5 text-end">
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    {% if s.origen == 'Canal Digital' %}
+                                                    <span class="badge bg-info me-1 digital-badge-mobile" style="font-size: 0.55rem;"
+                                                        title="Solicitud del Canal Digital">
+                                                        <i class="fas fa-mobile-alt me-1"></i>Digital
+                                                    </span>
+                                                    {% endif %}
+                                                    {% if s.prioridad %}
+                                                    <span class="badge me-1"
+                                                        style="font-size: 0.55rem; padding: 1px 4px; background-color: {{ s.enriched_prioridad_bg_color }}; color: {{ s.enriched_prioridad_text_color }};">
+                                                        {{ s.prioridad }}
+                                                    </span>
+                                                    {% endif %}
+                                                    <small class="text-muted" style="font-size: 0.65rem;">{{
+                                                        s.fecha_inicio
+                                                        }}</small>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    {% empty %}
-                                    <div class="text-center py-4">
-                                        <i class="fas fa-inbox text-muted mb-2"></i>
-                                        <p class="text-muted small">Sin solicitudes</p>
-                                    </div>
-                                    {% endfor %}
-
-                                    <!-- Mensaje cuando no hay solicitudes -->
-                                    <div class="no-solicitudes text-center py-4" style="display: none;">
-                                        <i class="fas fa-inbox text-muted mb-2"></i>
-                                        <p class="text-muted small">Sin solicitudes</p>
-                                    </div>
                                 </div>
                             </div>
+                            {% empty %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox text-muted mb-2"></i>
+                                <p class="text-muted small">Sin solicitudes</p>
+                            </div>
+                            {% endfor %}
+
+                            <!-- Mensaje cuando no hay solicitudes -->
+                            <div class="no-solicitudes text-center py-4" style="display: none;">
+                                <i class="fas fa-inbox text-muted mb-2"></i>
+                                <p class="text-muted small">Sin solicitudes</p>
+                            </div>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i>No hay etapas configuradas</h5>
+                        <p class="mb-0">El pipeline seleccionado no tiene etapas configuradas. Para usar la vista Kanban, es necesario configurar las etapas del pipeline.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Pipeline requerido</h5>
+            <p class="mb-0">Para utilizar la vista Kanban, primero selecciona un pipeline.</p>
+        </div>
+        {% endif %}
 
                 {% endif %}
 
-                {% else %}
+        {% else %}
                 <!-- Instrucciones para seleccionar un Pipeline -->
                 <div class="card mb-4"
                     style="border: 2px solid #e3f2fd; background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);">
@@ -2524,10 +2548,9 @@
             urlParams.set('view', vista);
 
             // Mantener el pipeline si existe
-            // Django template code - will be processed server-side
-            // {% if pipeline %}
-            // urlParams.set('pipeline', '{{ pipeline.id }}');
-            // {% endif %}
+            {% if pipeline %}
+            urlParams.set('pipeline', '{{ pipeline.id }}');
+            {% endif %}
 
             // Redirigir con los nuevos parámetros
             var newUrl = window.location.pathname + '?' + urlParams.toString();
@@ -2733,6 +2756,201 @@
             });
         });
     });
+
+    // Kanban View Initialization
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentView = '{{ request.GET.view|default:"table" }}';
+        
+        if (currentView === 'kanban') {
+            console.log('🎯 Inicializando vista Kanban');
+            
+            // Initialize Kanban filters
+            initializeKanbanFilters();
+            
+            // Initialize drag and drop if not already initialized
+            setTimeout(() => {
+                if (typeof inicializarDragAndDrop === 'function') {
+                    inicializarDragAndDrop();
+                    console.log('✅ Drag and drop inicializado para Kanban');
+                }
+            }, 500);
+            
+            // Initialize search functionality for Kanban
+            initializeKanbanSearch();
+        }
+    });
+
+    // Kanban Filter Functions
+    function initializeKanbanFilters() {
+        const filtroEtapa = document.getElementById('kanbanFiltroEtapa');
+        const filtroSLA = document.getElementById('kanbanFiltroSLA');
+        const filtroOrigen = document.getElementById('kanbanFiltroOrigen');
+        const busquedaGlobal = document.getElementById('kanbanBusquedaGlobal');
+        const limpiarFiltros = document.getElementById('kanbanLimpiarFiltros');
+
+        // Populate filter options
+        if (filtroEtapa) {
+            populateKanbanEtapaFilter();
+        }
+        
+        if (filtroSLA) {
+            populateKanbanSLAFilter();
+        }
+
+        // Add event listeners
+        [filtroEtapa, filtroSLA, filtroOrigen].forEach(filter => {
+            if (filter) {
+                filter.addEventListener('change', applyKanbanFilters);
+            }
+        });
+
+        if (busquedaGlobal) {
+            busquedaGlobal.addEventListener('input', debounce(applyKanbanFilters, 300));
+        }
+
+        if (limpiarFiltros) {
+            limpiarFiltros.addEventListener('click', clearKanbanFilters);
+        }
+    }
+
+    function populateKanbanEtapaFilter() {
+        const filter = document.getElementById('kanbanFiltroEtapa');
+        const etapas = new Set();
+        
+        document.querySelectorAll('.kanban-column .card-header h6').forEach(header => {
+            const etapaName = header.textContent.trim().replace(/\s+\d+$/, ''); // Remove count
+            etapas.add(etapaName);
+        });
+
+        etapas.forEach(etapa => {
+            const option = document.createElement('option');
+            option.value = etapa;
+            option.textContent = etapa;
+            filter.appendChild(option);
+        });
+    }
+
+    function populateKanbanSLAFilter() {
+        const filter = document.getElementById('kanbanFiltroSLA');
+        const slaOptions = [
+            { value: 'text-success', text: '✅ En tiempo' },
+            { value: 'text-warning', text: '⚠️ Por vencer' },
+            { value: 'text-danger', text: '🚨 Vencido' }
+        ];
+
+        slaOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.text;
+            filter.appendChild(optionElement);
+        });
+    }
+
+    function applyKanbanFilters() {
+        const filtroEtapa = document.getElementById('kanbanFiltroEtapa')?.value || '';
+        const filtroSLA = document.getElementById('kanbanFiltroSLA')?.value || '';
+        const filtroOrigen = document.getElementById('kanbanFiltroOrigen')?.value || '';
+        const busqueda = document.getElementById('kanbanBusquedaGlobal')?.value.toLowerCase() || '';
+
+        document.querySelectorAll('.kanban-card').forEach(card => {
+            let visible = true;
+
+            // Filter by search
+            if (busqueda) {
+                const searchData = card.dataset.search || '';
+                if (!searchData.includes(busqueda)) {
+                    visible = false;
+                }
+            }
+
+            // Filter by SLA
+            if (filtroSLA) {
+                const slaSpan = card.querySelector('.sla_color, [class*="text-"]');
+                if (!slaSpan || !slaSpan.className.includes(filtroSLA)) {
+                    visible = false;
+                }
+            }
+
+            // Filter by origin
+            if (filtroOrigen) {
+                const hasDigitalIcon = card.querySelector('.fa-mobile-alt');
+                if (filtroOrigen === 'Canal Digital' && !hasDigitalIcon) {
+                    visible = false;
+                } else if (filtroOrigen === 'Presencial' && hasDigitalIcon) {
+                    visible = false;
+                }
+            }
+
+            card.style.display = visible ? 'block' : 'none';
+        });
+
+        // Update counts for each column
+        updateKanbanColumnCounts();
+    }
+
+    function clearKanbanFilters() {
+        document.getElementById('kanbanFiltroEtapa').value = '';
+        document.getElementById('kanbanFiltroSLA').value = '';
+        document.getElementById('kanbanFiltroOrigen').value = '';
+        document.getElementById('kanbanBusquedaGlobal').value = '';
+        
+        // Show all cards
+        document.querySelectorAll('.kanban-card').forEach(card => {
+            card.style.display = 'block';
+        });
+        
+        updateKanbanColumnCounts();
+    }
+
+    function updateKanbanColumnCounts() {
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            const visibleCards = column.querySelectorAll('.kanban-card:not([style*="display: none"])');
+            const countBadge = column.querySelector('.badge');
+            if (countBadge) {
+                countBadge.textContent = visibleCards.length;
+            }
+        });
+    }
+
+    function initializeKanbanSearch() {
+        const searchInputs = document.querySelectorAll('.etapa-search');
+        searchInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const etapaId = this.dataset.etapaId;
+                const searchTerm = this.value.toLowerCase();
+                const column = document.querySelector(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
+                
+                if (column) {
+                    const cards = column.querySelectorAll('.kanban-card');
+                    cards.forEach(card => {
+                        const searchData = card.dataset.search || '';
+                        const clienteName = card.dataset.cliente || '';
+                        const codigo = card.dataset.codigo || '';
+                        
+                        const isMatch = searchData.includes(searchTerm) || 
+                                       clienteName.toLowerCase().includes(searchTerm) ||
+                                       codigo.toLowerCase().includes(searchTerm);
+                        
+                        card.style.display = isMatch ? 'block' : 'none';
+                    });
+                }
+            });
+        });
+    }
+
+    // Utility function for debouncing
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -5056,6 +5274,137 @@
             opacity: 0;
             transform: translateX(100%) translateY(100%) rotate(45deg);
         }
+    }
+
+    /* === KANBAN VIEW SPECIFIC STYLES === */
+    .kanban-container {
+        background: var(--background-color);
+        border-radius: var(--border-radius);
+        padding: 16px;
+        height: calc(100vh - 280px);
+        min-height: 700px;
+        overflow: hidden;
+    }
+
+    .kanban-board {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 16px;
+        height: 100%;
+    }
+
+    .kanban-column {
+        min-width: 320px;
+        width: 320px;
+        flex-shrink: 0;
+        height: 100%;
+    }
+
+    .kanban-column .card {
+        height: 100%;
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background: var(--card-background);
+        box-shadow: var(--shadow-md);
+        transition: all 0.2s ease;
+    }
+
+    .kanban-column .card:hover {
+        box-shadow: var(--shadow-lg);
+    }
+
+    .kanban-column-body {
+        height: calc(100vh - 380px);
+        overflow-y: auto;
+        background: #f8f9fa;
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-muted) transparent;
+    }
+
+    .kanban-column-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .kanban-column-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .kanban-column-body::-webkit-scrollbar-thumb {
+        background: var(--text-muted);
+        border-radius: 3px;
+    }
+
+    .kanban-column-body::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+
+    .kanban-card {
+        cursor: grab;
+        transition: all 0.2s ease;
+        border-radius: var(--border-radius-sm);
+        margin-bottom: 12px;
+    }
+
+    .kanban-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+
+    .kanban-card:active {
+        cursor: grabbing;
+    }
+
+    .kanban-card.dragging {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+
+    .kanban-column-body.drag-over {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border: 2px dashed var(--primary-color);
+    }
+
+    /* Kanban card responsive design */
+    @media (max-width: 768px) {
+        .kanban-container {
+            height: calc(100vh - 320px);
+            padding: 8px;
+        }
+        
+        .kanban-column {
+            min-width: 280px;
+            width: 280px;
+        }
+        
+        .kanban-column-body {
+            height: calc(100vh - 420px);
+        }
+    }
+
+    /* Kanban drag and drop visual feedback */
+    .kanban-card.drag-preview {
+        transform: rotate(2deg);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        z-index: 1000;
+    }
+
+    .drop-zone-active {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe) !important;
+        border: 2px dashed #0ea5e9 !important;
+    }
+
+    .drop-zone-active::before {
+        content: "Suelta aquí para cambiar de etapa";
+        display: block;
+        text-align: center;
+        color: #0ea5e9;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 8px;
+        margin: 8px 0;
+        background: rgba(14, 165, 233, 0.1);
+        border-radius: 4px;
     }
 </style>
 
