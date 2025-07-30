@@ -249,7 +249,7 @@ def negocios_view(request):
             else:
                 pipeline_exists = Pipeline.objects.filter(
                     Q(id=last_pipeline) &
-                    (Q(permisopipeline__usuario=request.user) |
+                    (Q(permisos_pipeline__usuario=request.user) |
                      Q(etapas__permisos__grupo__user=request.user))
                 ).exists()
             
@@ -321,7 +321,7 @@ def negocios_view(request):
     else:
         # Obtener pipelines basado en permisos
         pipelines_disponibles = Pipeline.objects.filter(
-            Q(permisopipeline__usuario=request.user) |
+            Q(permisos_pipeline__usuario=request.user) |
             Q(etapas__permisos__grupo__user=request.user)
         ).distinct()
         print(f"🔍 DEBUG: Regular user {request.user} accessing pipelines")
@@ -663,7 +663,7 @@ def api_estadisticas_negocios(request):
             pipelines = Pipeline.objects.all()
         else:
             pipelines = Pipeline.objects.filter(
-                Q(permisopipeline__usuario=request.user) |
+                Q(permisos_pipeline__usuario=request.user) |
                 Q(etapas__permisos__grupo__user=request.user)
             ).distinct()
         
@@ -756,7 +756,7 @@ def api_estadisticas(request):
         pipelines = Pipeline.objects.all()
     else:
         pipelines = Pipeline.objects.filter(
-            Q(permisopipeline__usuario=request.user) |
+            Q(permisos_pipeline__usuario=request.user) |
             Q(etapas__permisos__grupo__user=request.user)
         ).distinct()
     
@@ -832,7 +832,7 @@ def api_get_saved_pipeline(request):
             else:
                 pipeline = Pipeline.objects.filter(
                     Q(id=pipeline_id) &
-                    (Q(permisopipeline__usuario=request.user) |
+                    (Q(permisos_pipeline__usuario=request.user) |
                      Q(etapas__permisos__grupo__user=request.user))
                 ).first()
             

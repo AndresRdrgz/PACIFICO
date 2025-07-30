@@ -29,6 +29,11 @@ urlpatterns = [
     # Workflow URLs
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
+    
+    # Makito Tracking URLs
+    path('makito-tracking/', views_workflow.makito_tracking_view, name='makito_tracking'),
+    path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
+    path('sura-tracking/', views_workflow.sura_tracking_view, name='sura_tracking'),
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
@@ -179,6 +184,16 @@ urlpatterns = [
     path('api/debida-diligencia/upload/<int:solicitud_id>/', views_workflow.api_debida_diligencia_upload, name='api_debida_diligencia_upload'),
     path('api/debida-diligencia/reenviar-correo/<int:solicitud_id>/', views_workflow.api_debida_diligencia_reenviar_correo, name='api_debida_diligencia_reenviar_correo'),
     path('api/debida-diligencia-tracking/', views_workflow.api_debida_diligencia_tracking, name='api_debida_diligencia_tracking'),
+    
+    # APC Makito Tracking API URLs
+    path('api/apc/list/', views_workflow.api_apc_list, name='api_apc_list'),
+    path('api/apc/detail/<str:solicitud_codigo>/', views_workflow.api_apc_detail, name='api_apc_detail'),
+    path('api/apc/check-status/<int:solicitud_id>/', views_workflow.api_check_apc_status, name='api_check_apc_status'),
+    
+    # SURA Makito Tracking API URLs
+    path('api/sura/list/', views_workflow.api_sura_list, name='api_sura_list'),
+    path('api/sura/detail/<str:solicitud_codigo>/', views_workflow.api_sura_detail, name='api_sura_detail'),
+    path('api/sura/check-status/<int:solicitud_id>/', views_workflow.api_check_sura_status, name='api_check_sura_status'),
     
     # Makito RPA API URLs for Debida Diligencia
     path('api/makito/debida-diligencia/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_debida_diligencia_update_status, name='api_makito_debida_diligencia_update_status'),

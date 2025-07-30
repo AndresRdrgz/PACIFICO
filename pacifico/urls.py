@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import fideicomiso_view, main_menu, get_lineas, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel, view_active_sessions, terminate_all_sessions, download_merged_pdf
+from .views import fideicomiso_view, main_menu, get_lineas, cotizacion_seguro_auto, cotizacionesList, download_cotizaciones_excel, view_active_sessions, terminate_all_sessions, download_merged_pdf, makito_rpa_request
 from . import views
 from . import viewsClientes
 from . import viewsDebidaDiligencia
@@ -44,6 +44,9 @@ urlpatterns = [
     path('usuario/editar/', edit_profile, name='edit_profile'),
     path('calculoAppx/', views.calculoAppx, name='calculoAppx'),
     path('download_cotizaciones_json/', views.download_cotizaciones_json, name='download_cotizaciones_json'),
+
+    # Makito RPA URLs
+    path('makito-rpa-request/', views.makito_rpa_request, name='makito_rpa_request'),
 
     # Debida Diligencia URLs
     path('debida-diligencia/solicitar/<int:cliente_id>/', viewsDebidaDiligencia.solicitar_debida_diligencia, name='solicitar_debida_diligencia'),

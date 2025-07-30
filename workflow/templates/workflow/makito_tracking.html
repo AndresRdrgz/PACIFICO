@@ -863,6 +863,17 @@
                     {% else %}
                         Seguimiento de descargas APC procesadas por Makito RPA
                     {% endif %}
+                    {% if not user.is_superuser %}
+                        <br><small class="text-info">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Mostrando únicamente las solicitudes donde eres propietario
+                        </small>
+                    {% else %}
+                        <br><small class="text-success">
+                            <i class="fas fa-crown me-1"></i>
+                            Vista de administrador: Mostrando todas las solicitudes
+                        </small>
+                    {% endif %}
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -1255,27 +1266,24 @@ function updateStats(solicitudes) {
     const statsContainer = document.getElementById('statsContainer');
     
     if (trackingType === 'unified') {
-        // Para vista unificada, mostrar estadísticas por tipo también
-        const apcCount = solicitudes.filter(s => s.tipo_solicitud === 'APC').length;
-        const suraCount = solicitudes.filter(s => s.tipo_solicitud === 'SURA').length;
-        const diligenciaCount = solicitudes.filter(s => s.tipo_solicitud === 'DEBIDA DILIGENCIA').length;
-        
+        // Para vista unificada, mostrar solo KPI generales y tiempo promedio
+        // Calcular tiempo promedio de completación (horas)
+        let totalTime = 0, completedTimeCount = 0;
+        solicitudes.forEach(s => {
+            const statusField = s.status_field || `${trackingType}_status`;
+            const status = s[statusField];
+            const start = s[s.fecha_inicio_field] ? new Date(s[s.fecha_inicio_field]) : null;
+            const end = s[s.fecha_completado_field] ? new Date(s[s.fecha_completado_field]) : null;
+            if (status === 'completed' && start && end) {
+                totalTime += (end - start);
+                completedTimeCount++;
+            }
+        });
+        const avgMinutes = completedTimeCount ? (totalTime / completedTimeCount / (1000 * 60)) : 0;
         statsContainer.innerHTML = `
             <div class="stat-card">
                 <div class="stat-number">${total}</div>
                 <div class="stat-label">Total Solicitudes</div>
-            </div>
-            <div class="stat-card stat-info">
-                <div class="stat-number">${apcCount}</div>
-                <div class="stat-label">APC</div>
-            </div>
-            <div class="stat-card stat-warning">
-                <div class="stat-number">${suraCount}</div>
-                <div class="stat-label">SURA</div>
-            </div>
-            <div class="stat-card" style="border-left: 4px solid #ef4444;">
-                <div class="stat-number" style="color: #ef4444;">${diligenciaCount}</div>
-                <div class="stat-label">Debida Diligencia</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">${pending}</div>
@@ -1288,6 +1296,10 @@ function updateStats(solicitudes) {
             <div class="stat-card">
                 <div class="stat-number">${completed}</div>
                 <div class="stat-label">Completadas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${avgMinutes.toFixed(2)}</div>
+                <div class="stat-label">Tiempo Promedio (min)</div>
             </div>
         `;
     } else {
@@ -1654,7 +1666,7 @@ function populateModal(solicitud, tipoSolicitud = null) {
     
     if (isUserSuperuser) {
         modalActions.innerHTML = `
-            <button type="button" class="btn btn-warning" onclick="reenviarSolicitud('${solicitud.codigo}')">
+            <button type="button" class="btn btn-warning" onclick="reenviarSolicitud('${solicitud.codigo}', '${modalType}')">
                 <i class="fas fa-paper-plane"></i> Reenviar
             </button>
         `;
@@ -1680,10 +1692,16 @@ async function reenviarSolicitud(codigo, tipoSolicitud = null) {
         
         if (trackingType === 'unified' && tipoSolicitud) {
             // Vista unificada: usar el tipo específico de solicitud
-            if (tipoSolicitud === 'debida_diligencia') {
-                endpoint = `${apiEndpoints[tipoSolicitud].reenviar}${codigo}/`;
+            // Normalize the tipo to match apiEndpoints keys
+            let normalizedType = tipoSolicitud.toLowerCase();
+            if (normalizedType === 'debida diligencia' || normalizedType === 'debida_diligencia') {
+                normalizedType = 'debida_diligencia';
+            }
+            
+            if (apiEndpoints[normalizedType]) {
+                endpoint = `${apiEndpoints[normalizedType].reenviar}${codigo}/`;
             } else {
-                endpoint = `${apiEndpoints[tipoSolicitud].reenviar}${codigo}/`;
+                throw new Error(`Tipo de solicitud no soportado: ${tipoSolicitud}`);
             }
         } else {
             // Vista específica: usar el tipo configurado
@@ -1734,19 +1752,15 @@ function showSuccess(message) {
 
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    } catch (error) {
-        return 'Fecha inválida';
-    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // Function to generate timeline HTML

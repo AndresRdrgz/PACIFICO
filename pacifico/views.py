@@ -1152,3 +1152,162 @@ def reportesDashboard(request):
     }
 
     return render(request, 'reportesDashboard.html', context)
+
+
+@csrf_exempt
+@login_required
+def makito_rpa_request(request):
+    """
+    Handle Makito RPA automation requests
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    
+    try:
+        import json
+        from django.core.mail import send_mail
+        from django.conf import settings
+        import uuid
+        from datetime import datetime
+        
+        data = json.loads(request.body)
+        service_type = data.get('serviceType')
+        
+        # Validate required fields
+        if not service_type:
+            return JsonResponse({'success': False, 'error': 'Tipo de servicio requerido'})
+        
+        # Generate unique request code
+        request_code = f"MAKITO-{datetime.now().strftime('%Y%m%d%H%M%S')}-{str(uuid.uuid4())[:8].upper()}"
+        
+        # Prepare email data based on service type
+        subject_codes = {
+            'apc': 'cot_APC',
+            'sura': 'cot_SURA',
+            'debida_diligencia': 'cot_DebidaDiligencia'
+        }
+        
+        subject = f"{subject_codes.get(service_type, 'cot_UNKNOWN')} - {request_code}"
+        
+        # Build email body with structured data for regex extraction
+        email_body = """
+==========================================
+DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
+==========================================
+"""
+        
+        # Add common fields
+        email_body += f"<codigoSolicitudvar>{request_code}</codigoSolicitudvar>\n"
+        email_body += f"<numeroDocumentovar>{data.get('noDocumento', '')}</numeroDocumentovar>\n"
+        email_body += f"<tipoDocumentovar>{data.get('tipoDocumento', '')}</tipoDocumentovar>\n"
+        email_body += f"<usuarioSolicitantevar>{request.user.email}</usuarioSolicitantevar>\n"
+        email_body += f"<tipoServiciovar>{service_type}</tipoServiciovar>\n"
+        
+        # Add service-specific fields
+        if service_type == 'sura':
+            email_body += f"<primerNombrevar>{data.get('primerNombre', '')}</primerNombrevar>\n"
+            email_body += f"<segundoNombrevar>{data.get('segundoNombre', '')}</segundoNombrevar>\n"
+            email_body += f"<primerApellidovar>{data.get('primerApellido', '')}</primerApellidovar>\n"
+            email_body += f"<segundoApellidovar>{data.get('segundoApellido', '')}</segundoApellidovar>\n"
+            
+            # Create client name
+            nombres = [data.get('primerNombre', ''), data.get('segundoNombre', '')]
+            apellidos = [data.get('primerApellido', ''), data.get('segundoApellido', '')]
+            cliente_completo = ' '.join([n for n in nombres if n]) + ' ' + ' '.join([a for a in apellidos if a])
+            
+            email_body += f"<clientevar>{cliente_completo.strip()}</clientevar>\n"
+            email_body += f"<valorAutovar>{data.get('valorAuto', '')}</valorAutovar>\n"
+            email_body += f"<anoAutovar>{data.get('anoAuto', '')}</anoAutovar>\n"
+            email_body += f"<marcaAutovar>{data.get('marcaAuto', '')}</marcaAutovar>\n"
+            email_body += f"<modeloAutovar>{data.get('modeloAuto', '')}</modeloAutovar>\n"
+            
+        elif service_type == 'debida_diligencia':
+            email_body += f"<clientevar>{data.get('nombreCompleto', '')}</clientevar>\n"
+        
+        elif service_type == 'apc':
+            # For APC, we only need the document info which is already added above
+            pass
+        
+        email_body += """
+==========================================
+INSTRUCCIONES PARA MAKITO RPA:
+==========================================
+"""
+        
+        if service_type == 'apc':
+            email_body += """
+- Proceso: Solicitar descarga de APC
+- Documento requerido: Reporte APC del cliente
+- Extraer información de buró de crédito
+- Enviar resultado al usuario solicitante
+"""
+        elif service_type == 'sura':
+            email_body += """
+- Proceso: Cotizar póliza de seguro de auto con SURA
+- Cotizar cobertura de seguro vehicular
+- Incluir todas las coberturas disponibles
+- Enviar cotización completa al usuario solicitante
+"""
+        elif service_type == 'debida_diligencia':
+            email_body += """
+- Proceso: Realizar debida diligencia del cliente
+- Verificar información en bases de datos públicas
+- Buscar antecedentes y referencias
+- Compilar reporte de debida diligencia
+- Enviar reporte al usuario solicitante
+"""
+        
+        email_body += f"""
+==========================================
+DATOS DE CONTACTO:
+==========================================
+Usuario solicitante: {request.user.get_full_name() or request.user.username}
+Email del usuario: {request.user.email}
+Fecha de solicitud: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+==========================================
+"""
+        
+        # Send email to Makito RPA
+        try:
+            from django.core.mail import send_mail
+            
+            # Send to main recipient
+            send_mail(
+                subject=subject,
+                message=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['makito@fpacifico.com'],
+                fail_silently=False,
+            )
+            
+            # Send CC copy
+            send_mail(
+                subject=f"[COPIA] {subject}",
+                message=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['arodriguez@fpacifico.com', 'jacastillo@fpacifico.com'],
+                fail_silently=True,  # Don't fail if CC emails fail
+            )
+            
+            # Log the request
+            logger.info(f"Makito RPA request sent - Type: {service_type}, User: {request.user.username}, Code: {request_code}")
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Solicitud enviada exitosamente a Makito RPA',
+                'request_code': request_code
+            })
+            
+        except Exception as email_error:
+            logger.error(f"Error sending Makito RPA email: {str(email_error)}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error enviando email: {str(email_error)}'
+            })
+    
+    except Exception as e:
+        logger.error(f"Error processing Makito RPA request: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Error procesando solicitud: {str(e)}'
+        })

@@ -13,10 +13,6 @@
                     </div>
                     <div class="header-actions">
                         <div class="actions-buttons">
-                            <button class="action-btn-header info" id="modalBtnVerDetalle" data-solicitud-id=""
-                                title="Ver Detalle">
-                                <i class="fas fa-eye"></i>
-                            </button>
                             <button class="action-btn-header warning" id="modalBtnReconsideracion" data-solicitud-id=""
                                 title="Solicitar Reconsideración" style="display: none;" onclick="abrirModalReconsideracion(document.getElementById('modalBtnReconsideracion').dataset.solicitudId)">>
                                 <i class="fas fa-redo"></i>
@@ -44,12 +40,7 @@
                             <i class="fas fa-file-alt me-2"></i>Documentos
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial"
-                            type="button" role="tab" aria-controls="historial" aria-selected="false">
-                            <i class="fas fa-history me-2"></i>Historial
-                        </button>
-                    </li>
+                    
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="diligencia-tab" data-bs-toggle="tab" data-bs-target="#diligencia"
                             type="button" role="tab" aria-controls="diligencia" aria-selected="false">
@@ -66,6 +57,12 @@
                         <button class="nav-link" id="reconsideracion-tab" data-bs-toggle="tab" data-bs-target="#reconsideracion"
                             type="button" role="tab" aria-controls="reconsideracion" aria-selected="false">
                             <i class="fas fa-redo me-2"></i>Reconsideración
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial"
+                            type="button" role="tab" aria-controls="historial" aria-selected="false">
+                            <i class="fas fa-history me-2"></i>Historial
                         </button>
                     </li>
                 </ul>
@@ -1005,6 +1002,25 @@
     .btn-ver-cotizacion:hover {
         background: var(--accent-teal-hover);
         color: white;
+    }
+
+    /* Summary Ver Cotización Button Styles */
+    .btn-ver-cotizacion-summary:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    .btn-ver-cotizacion-summary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    }
+
+    .btn-ver-cotizacion-summary:disabled {
+        background: #9ca3af !important;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none !important;
     }
 
     .cotizacion-error {
@@ -3891,11 +3907,11 @@
         window.currentModalSolicitudId = solicitudId;
         window.currentActiveTab = activeTab;
 
-        // Set the solicitudId on the Ver Detalle button
-        const btnVerDetalle = document.getElementById('modalBtnVerDetalle');
-        if (btnVerDetalle) {
-            btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
-            console.log('Set button data-solicitud-id to:', btnVerDetalle.getAttribute('data-solicitud-id'));
+        // Set the solicitudId on the Ver Cotización button
+        const btnVerCotizacion = document.getElementById('modalBtnVerCotizacion');
+        if (btnVerCotizacion) {
+            btnVerCotizacion.setAttribute('data-solicitud-id', solicitudId);
+            console.log('Set button data-solicitud-id to:', btnVerCotizacion.getAttribute('data-solicitud-id'));
         }
 
         // Show loading state
@@ -4043,8 +4059,8 @@
             }
         });
 
-        // Disable action buttons
-        const actionButtons = document.querySelectorAll('.action-btn-header');
+        // Disable action buttons (except Ver Cotización which will be enabled once data loads)
+        const actionButtons = document.querySelectorAll('.action-btn-header:not(#modalBtnVerCotizacion)');
         actionButtons.forEach(btn => {
             btn.disabled = true;
         });
@@ -4087,10 +4103,16 @@
         }
 
         // Enable action buttons but show they're unavailable
-        const actionButtons = document.querySelectorAll('.action-btn-header');
+        const actionButtons = document.querySelectorAll('.action-btn-header:not(#modalBtnVerCotizacion)');
         actionButtons.forEach(btn => {
             btn.disabled = false;
         });
+        
+        // Keep Ver Cotización button disabled in error state since no data is available
+        const btnVerCotizacion = document.getElementById('modalBtnVerCotizacion');
+        if (btnVerCotizacion) {
+            btnVerCotizacion.disabled = true;
+        }
     }
 
     function populateModalData(data) {
@@ -4109,10 +4131,22 @@
             const solicitudId = window.currentSolicitudId;
             console.log('Current solicitudId:', solicitudId);
 
-            // Set the solicitudId on the Ver Detalle button
-            const btnVerDetalle = document.getElementById('modalBtnVerDetalle');
-            if (btnVerDetalle) {
-                btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
+            // Set the solicitudId on the Ver Cotización button and enable it if cotization data exists
+            const btnVerCotizacion = document.getElementById('modalBtnVerCotizacion');
+            if (btnVerCotizacion) {
+                btnVerCotizacion.setAttribute('data-solicitud-id', solicitudId);
+                
+                // Enable the button if cotization data is available
+                const cotizacion = data.cotizacion || {};
+                const hasValidCotization = cotizacion && (cotizacion.id || cotizacion.numero) && cotizacion.tipoPrestamo;
+                
+                if (hasValidCotization) {
+                    btnVerCotizacion.disabled = false;
+                    console.log('Ver Cotización button enabled - cotization data available');
+                } else {
+                    btnVerCotizacion.disabled = true;
+                    console.log('Ver Cotización button disabled - no valid cotization data');
+                }
             }
 
             // Set the solicitudId on the Reconsideración button
@@ -4376,9 +4410,103 @@
                     <div class="summary-item-content"><span class="summary-item-label">${isCarLoan ? 'Datos Vehículo' : 'Prima'}</span><span class="summary-item-value">${isCarLoan ? vehicleData : (cotizacion.prima_formateada || 'N/A')}</span></div>
                 </div>
             </div>
+            <!-- Cotización Actions -->
+            <div class="summary-actions" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <button type="button" 
+                        class="btn-ver-cotizacion-summary" 
+                        id="btnVerCotizacionSummary"
+                        onclick="redirectToCotizacion()"
+                        style="width: 100%; padding: 12px 20px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s ease; cursor: pointer; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">
+                    <i class="fas fa-external-link-alt"></i>
+                    Ver Cotización Completa
+                </button>
+            </div>
         </div>
     `;
         summaryCard.innerHTML = summaryHtml;
+        
+        // Enable/disable the summary button based on cotization data availability
+        setTimeout(() => {
+            const btnSummary = document.getElementById('btnVerCotizacionSummary');
+            if (btnSummary) {
+                // Simplified check: just need cotizacion_id to redirect
+                const hasCotizacionData = data.cotizacion_id;
+                
+                console.log('🔍 Button enablement check:', {
+                    cotizacion: !!cotizacion,
+                    cotizacion_id: data.cotizacion_id,
+                    tipoPrestamo: cotizacion.tipoPrestamo,
+                    hasCotizacionData: hasCotizacionData
+                });
+                
+                if (hasCotizacionData) {
+                    btnSummary.disabled = false;
+                    btnSummary.style.opacity = '1';
+                    btnSummary.style.cursor = 'pointer';
+                    console.log('✅ Summary Ver Cotización button enabled');
+                } else {
+                    btnSummary.disabled = true;
+                    btnSummary.style.opacity = '0.6';
+                    btnSummary.style.cursor = 'not-allowed';
+                    console.log('❌ Summary Ver Cotización button disabled - no cotizacion_id');
+                }
+            }
+        }, 100);
+    }
+
+    // Function to redirect to cotization page
+    function redirectToCotizacion() {
+        try {
+            console.log('🚀 redirectToCotizacion called');
+            
+            // Get cotization data from current modal data
+            const modalData = window.currentModalData;
+            console.log('📊 Modal data:', modalData);
+            
+            if (!modalData || !modalData.cotizacion) {
+                console.error('❌ No cotization data available');
+                alert('No hay información de cotización disponible');
+                return;
+            }
+
+            // Get the related cotizacion ID and loan type from API response
+            const cotizacionInfo = modalData.cotizacion || {};
+            const cotizacionId = modalData.cotizacion_id;
+            const tipoPrestamo = cotizacionInfo.tipoPrestamo;
+            
+            console.log('🔍 Cotization details:', {
+                cotizacionInfo: cotizacionInfo,
+                cotizacionId: cotizacionId,
+                tipoPrestamo: tipoPrestamo
+            });
+            
+            let cotizacionUrl;
+
+            if (!cotizacionId) {
+                console.error('❌ No cotizacion ID available');
+                alert('No hay información de cotización disponible para redirigir');
+                return;
+            }
+            
+            // Build URL based on loan type
+            if (tipoPrestamo === 'personal') {
+                cotizacionUrl = `/cotizacionPP/${cotizacionId}/`;
+            } else if (tipoPrestamo === 'auto') {
+                cotizacionUrl = `/cotizacion/${cotizacionId}/`;
+            } else {
+                console.warn('⚠️ Loan type not specified or unrecognized, defaulting to cotizacion_detail');
+                cotizacionUrl = `/cotizacion/${cotizacionId}/`;
+            }
+
+            console.log('🌐 Redirecting to:', cotizacionUrl);
+            
+            // Open in new tab
+            window.open(cotizacionUrl, '_blank');
+            
+        } catch (error) {
+            console.error('💥 Error redirecting to cotization:', error);
+            alert('Error al abrir la cotización');
+        }
     }
 
     // Helper function to set element text safely
@@ -5197,19 +5325,111 @@
         console.log('Testing modal with mock data...');
         mostrarModalSolicitud('test-123');
     };
+    
+    // Comprehensive end-to-end test function
+    window.testVerCotizacionEndToEnd = function(solicitudId) {
+        console.log('🧪 === COMPREHENSIVE VER COTIZACIÓN TEST ===');
+        
+        if (!solicitudId) {
+            // Try to get from current context
+            solicitudId = window.currentSolicitudId;
+            if (!solicitudId) {
+                console.error('❌ No solicitudId provided. Usage: testVerCotizacionEndToEnd(123)');
+                return;
+            }
+        }
+        
+        console.log('🔍 Testing with solicitudId:', solicitudId);
+        
+        // Step 1: Test API endpoint
+        console.log('📡 Step 1: Testing API endpoint...');
+        fetch(`/workflow/api/solicitud_brief/${solicitudId}/`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ API Response received:', data);
+                console.log('📊 Cotization data:', data.cotizacion);
+                console.log('🆔 Cotization ID:', data.cotizacion_id);
+                
+                // Step 2: Test modal population
+                console.log('📝 Step 2: Testing modal population...');
+                window.currentModalData = data;
+                populateUnifiedSummaryCard(data);
+                
+                // Step 3: Test button state
+                setTimeout(() => {
+                    console.log('🔘 Step 3: Testing button state...');
+                    testButtonData();
+                    
+                    // Step 4: Test redirect function directly
+                    console.log('🌐 Step 4: Testing redirect function...');
+                    console.log('Ready to test redirectToCotizacion() - check console and try clicking the button');
+                }, 200);
+            })
+            .catch(error => {
+                console.error('❌ API test failed:', error);
+            });
+    };
+    
+    // Show quick testing guide
+    window.showCotizacionTestGuide = function() {
+        console.log('🚀 VER COTIZACIÓN TESTING GUIDE:');
+        console.log('1. testButtonData() - Check current button state');
+        console.log('2. testVerCotizacionEndToEnd(solicitudId) - Full end-to-end test');
+        console.log('3. redirectToCotizacion() - Test redirect directly');
+        console.log('📝 Example: testVerCotizacionEndToEnd(123)');
+    };
+    
+    // Auto-show guide when modal loads
+    console.log('🔧 Ver Cotización debugging tools loaded. Type showCotizacionTestGuide() for help.');
 
     // Add test function for checking button data attribute
     window.testButtonData = function () {
-        const button = document.getElementById('modalBtnVerDetalle');
+        const button = document.getElementById('modalBtnVerCotizacion');
+        console.log('=== VER COTIZACIÓN BUTTON DEBUG ===');
         console.log('Button exists:', button !== null);
+        console.log('Button disabled:', button ? button.disabled : 'N/A');
         console.log('Button data-solicitud-id:', button ? button.getAttribute('data-solicitud-id') : 'Button not found');
         console.log('Global currentSolicitudId:', window.currentSolicitudId);
         console.log('Button HTML:', button ? button.outerHTML : 'Button not found');
+        
+        // Check modal data
+        console.log('Current modal data exists:', !!window.currentModalData);
+        if (window.currentModalData) {
+            console.log('Cotization data exists:', !!window.currentModalData.cotizacion);
+            if (window.currentModalData.cotizacion) {
+                const cot = window.currentModalData.cotizacion;
+                console.log('Cotization details:', {
+                    id: cot.id,
+                    numero: cot.numero,
+                    tipoPrestamo: cot.tipoPrestamo,
+                    hasValidId: !!(cot.id || cot.numero),
+                    hasValidType: !!cot.tipoPrestamo
+                });
+            }
+        }
 
         // Try to trigger click programmatically
-        if (button) {
+        if (button && !button.disabled) {
             console.log('Triggering click programmatically...');
             button.click();
+        } else if (button) {
+            console.log('Button is disabled, cannot trigger click');
+        }
+        
+        // Check summary button
+        const summaryButton = document.getElementById('btnVerCotizacionSummary');
+        console.log('=== SUMMARY VER COTIZACIÓN BUTTON DEBUG ===');
+        console.log('Summary button exists:', summaryButton !== null);
+        console.log('Summary button disabled:', summaryButton ? summaryButton.disabled : 'N/A');
+        console.log('Summary button style.opacity:', summaryButton ? summaryButton.style.opacity : 'N/A');
+        console.log('Summary button HTML:', summaryButton ? summaryButton.outerHTML : 'Button not found');
+
+        // Try to trigger summary click programmatically
+        if (summaryButton && !summaryButton.disabled) {
+            console.log('🚀 Attempting to trigger summary button click...');
+            summaryButton.click();
+        } else if (summaryButton) {
+            console.log('❌ Summary button is disabled, cannot click');
         }
     };
 
@@ -5389,31 +5609,64 @@
             });
         }
 
-        // Add click handler for 'Ver Detalle' button using event delegation
+        // Add click handler for 'Ver Cotización' button using event delegation
         document.addEventListener('click', function (event) {
-            if (event.target && event.target.id === 'modalBtnVerDetalle') {
-                let solicitudId = event.target.getAttribute('data-solicitud-id');
-                let globalSolicitudId = window.currentSolicitudId;
-
-                console.log('Ver Detalle clicked');
-                console.log('Button data-solicitud-id:', solicitudId);
-                console.log('Global currentSolicitudId:', globalSolicitudId);
-                console.log('Button element:', event.target);
-
-                // Try to get solicitudId from multiple sources
-                const finalSolicitudId = solicitudId || globalSolicitudId;
-
-                if (finalSolicitudId && finalSolicitudId !== 'null' && finalSolicitudId !== 'undefined' && finalSolicitudId !== '') {
-                    console.log('Navigating to:', `/workflow/solicitud/${finalSolicitudId}/`);
-                    window.location.href = `/workflow/solicitud/${finalSolicitudId}/`;
-                } else {
-                    console.error('No valid solicitud ID found:', {
-                        buttonAttribute: solicitudId,
-                        globalVariable: globalSolicitudId,
-                        buttonElement: event.target
-                    });
-                    alert('No se pudo determinar el ID de la solicitud.');
+            // Handle clicks on the button or its child elements
+            const button = event.target.closest('#modalBtnVerCotizacion');
+            if (button) {
+                console.log('Ver Cotización clicked');
+                
+                // Check if button is disabled
+                if (button.disabled) {
+                    console.log('Button is disabled, ignoring click');
+                    return;
                 }
+                
+                // Get cotization data from modal
+                const currentData = window.currentModalData;
+                if (!currentData || !currentData.cotizacion) {
+                    console.error('No cotization data found in modal');
+                    alert('No se pudo encontrar la información de la cotización.');
+                    return;
+                }
+
+                const cotizacion = currentData.cotizacion;
+                const tipoPrestamo = cotizacion.tipoPrestamo;
+                const cotizacionId = cotizacion.id || cotizacion.numero;
+
+                console.log('Cotization data:', {
+                    tipoPrestamo: tipoPrestamo,
+                    cotizacionId: cotizacionId,
+                    cotizacion: cotizacion
+                });
+
+                // Validate required data
+                if (!cotizacionId) {
+                    console.error('No cotization ID found');
+                    alert('No se pudo encontrar el ID de la cotización.');
+                    return;
+                }
+
+                if (!tipoPrestamo) {
+                    console.error('No loan type found');
+                    alert('No se pudo determinar el tipo de préstamo.');
+                    return;
+                }
+
+                // Determine URL based on loan type
+                let redirectUrl = '';
+                if (tipoPrestamo === 'auto') {
+                    redirectUrl = `/cotizacion/${cotizacionId}/`;
+                } else if (tipoPrestamo === 'personal') {
+                    redirectUrl = `/cotizacionPP/${cotizacionId}/`;
+                } else {
+                    console.error('Unknown loan type:', tipoPrestamo);
+                    alert('Tipo de préstamo no reconocido: ' + (tipoPrestamo || 'sin definir'));
+                    return;
+                }
+
+                console.log('Navigating to cotization:', redirectUrl);
+                window.location.href = redirectUrl;
             }
         });
     }

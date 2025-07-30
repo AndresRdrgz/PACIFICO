@@ -6601,7 +6601,13 @@ def api_debida_diligencia_tracking(request):
             debida_diligencia_status='no_iniciado'
         ).select_related(
             'pipeline', 'etapa_actual', 'creada_por', 'asignada_a', 'cliente'
-        ).order_by('-diligencia_fecha_solicitud')
+        )
+        
+        # Aplicar filtro de usuario si no es superuser
+        if not request.user.is_superuser:
+            solicitudes = solicitudes.filter(propietario=request.user)
+        
+        solicitudes = solicitudes.order_by('-diligencia_fecha_solicitud')
         
         # Aplicar filtros
         if status_filter:
@@ -8213,6 +8219,8 @@ def api_solicitud_brief(request, solicitud_id):
             'referencias': referencias,
             'documentos': documentos,
             'cotizacion': cotizacion_info,
+            # Include the related Cotizacion primary key for redirection
+            'cotizacion_id': solicitud.cotizacion.id if solicitud.cotizacion else None,
         }, encoder=DjangoJSONEncoder)
         
     except Exception as e:
@@ -10767,7 +10775,13 @@ def apc_tracking_view(request):
         descargar_apc_makito=True
     ).select_related(
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-    ).order_by('-apc_fecha_solicitud')
+    )
+    
+    # Aplicar filtro de usuario si no es superuser
+    if not request.user.is_superuser:
+        solicitudes_apc = solicitudes_apc.filter(propietario=request.user)
+    
+    solicitudes_apc = solicitudes_apc.order_by('-apc_fecha_solicitud')
     
     context = {
         'solicitudes_apc': solicitudes_apc,
@@ -10788,19 +10802,30 @@ def makito_tracking_view(request):
         descargar_apc_makito=True
     ).select_related(
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-    ).order_by('-apc_fecha_solicitud')
+    )
     
     solicitudes_sura = Solicitud.objects.filter(
         cotizar_sura_makito=True
     ).select_related(
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-    ).order_by('-sura_fecha_solicitud')
+    )
     
     solicitudes_diligencia = Solicitud.objects.filter(
         debida_diligencia_status__in=['solicitado', 'en_progreso', 'completado', 'error']
     ).select_related(
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-    ).order_by('-diligencia_fecha_solicitud')
+    )
+    
+    # Aplicar filtro de usuario si no es superuser
+    if not request.user.is_superuser:
+        solicitudes_apc = solicitudes_apc.filter(propietario=request.user)
+        solicitudes_sura = solicitudes_sura.filter(propietario=request.user)
+        solicitudes_diligencia = solicitudes_diligencia.filter(propietario=request.user)
+    
+    # Ordenar por fecha
+    solicitudes_apc = solicitudes_apc.order_by('-apc_fecha_solicitud')
+    solicitudes_sura = solicitudes_sura.order_by('-sura_fecha_solicitud')
+    solicitudes_diligencia = solicitudes_diligencia.order_by('-diligencia_fecha_solicitud')
     
     context = {
         'solicitudes_apc': solicitudes_apc,
@@ -10823,7 +10848,13 @@ def sura_tracking_view(request):
         cotizar_sura_makito=True
     ).select_related(
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
-    ).order_by('-sura_fecha_solicitud')
+    )
+    
+    # Aplicar filtro de usuario si no es superuser
+    if not request.user.is_superuser:
+        solicitudes_sura = solicitudes_sura.filter(propietario=request.user)
+    
+    solicitudes_sura = solicitudes_sura.order_by('-sura_fecha_solicitud')
     
     context = {
         'solicitudes_sura': solicitudes_sura,
@@ -12014,6 +12045,10 @@ def api_apc_list(request):
             'pipeline', 'creada_por', 'etapa_actual'
         )
         
+        # Aplicar filtro de usuario si no es superuser
+        if not request.user.is_superuser:
+            queryset = queryset.filter(propietario=request.user)
+        
         # Aplicar filtros
         if status_filter:
             queryset = queryset.filter(apc_status=status_filter)
@@ -12050,6 +12085,7 @@ def api_apc_list(request):
                 'pipeline': solicitud.pipeline.nombre,
                 'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
                 'creada_por_email': solicitud.creada_por.email,
+                'propietario': solicitud.propietario.get_full_name() or solicitud.propietario.username if solicitud.propietario else '',
                 'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
                 'fecha_creacion': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
                 'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_solicitud else '',
@@ -12095,6 +12131,13 @@ def api_apc_detail(request, solicitud_codigo):
                 'error': f'Solicitud con código {solicitud_codigo} no encontrada'
             }, status=404)
         
+        # Verificar permisos si no es superuser
+        if not request.user.is_superuser and solicitud.propietario != request.user:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para ver esta solicitud'
+            }, status=403)
+        
         # Construir respuesta detallada
         data = {
             'codigo': solicitud.codigo,
@@ -12106,6 +12149,7 @@ def api_apc_detail(request, solicitud_codigo):
             'pipeline': solicitud.pipeline.nombre,
             'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
             'creada_por_email': solicitud.creada_por.email,
+            'propietario': solicitud.propietario.get_full_name() or solicitud.propietario.username if solicitud.propietario else '',
             'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
             'fecha_creacion': solicitud.fecha_creacion.isoformat(),
             'apc_fecha_solicitud': solicitud.apc_fecha_solicitud.isoformat() if solicitud.apc_fecha_solicitud else None,
@@ -12126,6 +12170,155 @@ def api_apc_detail(request, solicitud_codigo):
         return JsonResponse({
             'success': False,
             'error': f'Error al obtener detalles APC: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_sura_list(request):
+    """
+    API para obtener la lista de solicitudes SURA con filtros
+    """
+    try:
+        # Parámetros de filtro
+        status_filter = request.GET.get('status', '')
+        fecha_desde = request.GET.get('fecha_desde', '')
+        fecha_hasta = request.GET.get('fecha_hasta', '')
+        
+        # Query base
+        queryset = Solicitud.objects.filter(
+            cotizar_sura_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual'
+        )
+        
+        # Aplicar filtro de usuario si no es superuser
+        if not request.user.is_superuser:
+            queryset = queryset.filter(propietario=request.user)
+        
+        # Aplicar filtros
+        if status_filter:
+            queryset = queryset.filter(sura_status=status_filter)
+        
+        if fecha_desde:
+            try:
+                from datetime import datetime
+                fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+                queryset = queryset.filter(sura_fecha_solicitud__date__gte=fecha_desde_obj)
+            except ValueError:
+                pass
+        
+        if fecha_hasta:
+            try:
+                from datetime import datetime
+                fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+                queryset = queryset.filter(sura_fecha_solicitud__date__lte=fecha_hasta_obj)
+            except ValueError:
+                pass
+        
+        # Ordenar por fecha de solicitud más reciente
+        queryset = queryset.order_by('-sura_fecha_solicitud')
+        
+        # Construir respuesta
+        data = []
+        for solicitud in queryset:
+            data.append({
+                'codigo': solicitud.codigo,
+                'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
+                'sura_primer_nombre': solicitud.sura_primer_nombre or '',
+                'sura_primer_apellido': solicitud.sura_primer_apellido or '',
+                'sura_no_documento': solicitud.sura_no_documento or '',
+                'sura_status': solicitud.sura_status,
+                'sura_status_display': solicitud.get_sura_status_display(),
+                'pipeline': solicitud.pipeline.nombre,
+                'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+                'creada_por_email': solicitud.creada_por.email,
+                'propietario': solicitud.propietario.get_full_name() or solicitud.propietario.username if solicitud.propietario else '',
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+                'fecha_creacion': solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                'sura_fecha_solicitud': solicitud.sura_fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_solicitud else '',
+                'sura_fecha_inicio': solicitud.sura_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_inicio else '',
+                'sura_fecha_completado': solicitud.sura_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_completado else '',
+                'sura_observaciones': solicitud.sura_observaciones or '',
+                'sura_archivo_url': solicitud.sura_archivo.url if solicitud.sura_archivo else None,
+                'sura_archivo_disponible': bool(solicitud.sura_archivo),
+                'url_detail': f'/workflow/solicitud/{solicitud.id}/'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'total': len(data),
+            'solicitudes': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener lista SURA: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_sura_detail(request, solicitud_codigo):
+    """
+    API para obtener detalles completos de una solicitud SURA específica
+    """
+    try:
+        # Buscar la solicitud por código
+        solicitud = Solicitud.objects.filter(
+            codigo=solicitud_codigo,
+            cotizar_sura_makito=True
+        ).select_related(
+            'pipeline', 'creada_por', 'etapa_actual'
+        ).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': f'Solicitud con código {solicitud_codigo} no encontrada'
+            }, status=404)
+        
+        # Verificar permisos si no es superuser
+        if not request.user.is_superuser and solicitud.propietario != request.user:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para ver esta solicitud'
+            }, status=403)
+        
+        # Construir respuesta detallada
+        data = {
+            'codigo': solicitud.codigo,
+            'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
+            'sura_primer_nombre': solicitud.sura_primer_nombre or '',
+            'sura_primer_apellido': solicitud.sura_primer_apellido or '',
+            'sura_no_documento': solicitud.sura_no_documento or '',
+            'sura_status': solicitud.sura_status,
+            'sura_status_display': solicitud.get_sura_status_display(),
+            'pipeline': solicitud.pipeline.nombre,
+            'creada_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username,
+            'creada_por_email': solicitud.creada_por.email,
+            'propietario': solicitud.propietario.get_full_name() or solicitud.propietario.username if solicitud.propietario else '',
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+            'sura_fecha_solicitud': solicitud.sura_fecha_solicitud.isoformat() if solicitud.sura_fecha_solicitud else None,
+            'sura_fecha_inicio': solicitud.sura_fecha_inicio.isoformat() if solicitud.sura_fecha_inicio else None,
+            'sura_fecha_completado': solicitud.sura_fecha_completado.isoformat() if solicitud.sura_fecha_completado else None,
+            'sura_observaciones': solicitud.sura_observaciones or '',
+            'sura_archivo_url': solicitud.sura_archivo.url if solicitud.sura_archivo else None,
+            'sura_archivo_disponible': bool(solicitud.sura_archivo),
+            'sura_archivo_nombre': solicitud.sura_archivo.name.split('/')[-1] if solicitud.sura_archivo else None,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'solicitud': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener detalles SURA: {str(e)}'
         }, status=500)
 
 
