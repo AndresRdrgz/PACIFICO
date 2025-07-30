@@ -2403,24 +2403,36 @@ function cargarSiguientesSubestadosCaptura() {
 }
 
 function mostrarSiguientesSubestados(container) {
-    // Mostrar TODAS las 6 subetapas disponibles
-    const todosLosSubestados = subestadosDisponiblesCaptura;
+    // Filtrar solo los subestados legítimos de Back Office
+    const subestadosBackOffice = [
+        'checklist', 'captura', 'firma', 'orden del expediente', 
+        'trámite', 'subsanación de pendientes trámite'
+    ];
     
-    if (todosLosSubestados.length === 0) {
+    const subestadosLegitimos = subestadosDisponiblesCaptura.filter(subestado => {
+        const nombreLimpio = subestado.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(nombreValido => 
+            nombreLimpio.includes(nombreValido) || nombreValido.includes(nombreLimpio)
+        );
+    });
+    
+    console.log('🔍 Subestados originales:', subestadosDisponiblesCaptura.length);
+    console.log('🔍 Subestados filtrados (Back Office):', subestadosLegitimos.length);
+    console.log('✅ Subestados legítimos:', subestadosLegitimos.map(s => s.nombre));
+    
+    if (subestadosLegitimos.length === 0) {
         container.innerHTML = `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                No hay subestados disponibles en este momento.
+                No hay subestados de Back Office disponibles en este momento.
             </div>
         `;
         return;
     }
     
-    console.log('🔍 Mostrando TODAS las subetapas:', todosLosSubestados);
-    
     let html = '<div class="row g-2">';
     
-    todosLosSubestados.forEach((subestado, index) => {
+    subestadosLegitimos.forEach((subestado, index) => {
         const esActual = subestado.es_actual;
         const puedeAvanzar = subestado.puede_avanzar;
         const esCompletado = subestado.es_completado;
