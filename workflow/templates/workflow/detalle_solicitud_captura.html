@@ -1948,7 +1948,8 @@ function seleccionarOpcionAvance(opcion) {
 function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
     console.log('👥 Usuario seleccionado:', usuarioNombre);
     
-    usuarioSeleccionadoAvance = {
+    // Asignar a la variable global
+    window.usuarioSeleccionadoAvance = {
         id: usuarioId,
         nombre: usuarioNombre
     };
@@ -1967,8 +1968,8 @@ function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
         btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
     }
     
-    // Habilitar botón de confirmar
-    document.getElementById('btn-confirmar-avance').disabled = false;
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceCaptura();
 }
 
 // Función para confirmar el avance
@@ -2248,7 +2249,11 @@ function mostrarModalAvanzarSubestado() {
     
     // Cargar información necesaria
     cargarSiguientesSubestadosCaptura();
-    configurarEventosAsignacionCaptura();
+    
+    // Configurar eventos con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventosAsignacionCaptura();
+    }, 100);
 }
 
 function cargarSiguientesSubestadosCaptura() {
@@ -2374,6 +2379,20 @@ function configurarEventosAsignacionCaptura() {
     const radios = document.querySelectorAll('input[name="opcion-asignacion"]');
     console.log(`📻 Encontrados ${radios.length} radio buttons de asignación`);
     
+    // Verificar que la sección de usuarios existe
+    const seccionUsuarios = document.getElementById('seccion-asignar-usuario');
+    console.log('🔍 Sección asignar-usuario:', seccionUsuarios ? 'ENCONTRADA' : 'NO ENCONTRADA');
+    
+    if (radios.length === 0) {
+        console.error('❌ No se encontraron radio buttons de asignación');
+        return;
+    }
+    
+    if (!seccionUsuarios) {
+        console.error('❌ No se encontró la sección seccion-asignar-usuario');
+        return;
+    }
+    
     // Configurar radio buttons de asignación
     radios.forEach((radio, index) => {
         console.log(`📻 Radio ${index + 1}: ID=${radio.id}, Value=${radio.value}`);
@@ -2382,26 +2401,22 @@ function configurarEventosAsignacionCaptura() {
             console.log(`🔘 Opción de asignación cambiada a: ${this.value}`);
             
             if (this.value === 'otro') {
-                console.log('👥 Mostrando selector de usuarios EXISTENTE...');
-                // Usar el sistema existente
-                const seccionAsignar = document.getElementById('seccion-asignar-usuario');
-                if (seccionAsignar) {
-                    seccionAsignar.style.display = 'block';
-                    console.log('✅ Sección asignar-usuario mostrada correctamente');
-                    
-                    // CLAVE: Llamar la función que carga los usuarios
-                    console.log('🔄 Cargando usuarios disponibles...');
-                    cargarUsuariosDisponiblesAvance();
-                } else {
-                    console.error('❌ No se encontró seccion-asignar-usuario');
-                }
+                console.log('👥 Mostrando selector de usuarios...');
+                seccionUsuarios.style.display = 'block';
+                console.log('✅ Sección asignar-usuario mostrada');
+                
+                // CLAVE: Llamar la función que carga los usuarios
+                console.log('🔄 Cargando usuarios disponibles...');
+                cargarUsuariosDisponiblesAvance()
+                    .then(() => {
+                        console.log('✅ Usuarios cargados exitosamente');
+                    })
+                    .catch(error => {
+                        console.error('❌ Error cargando usuarios:', error);
+                    });
             } else {
                 console.log('🚫 Ocultando selector de usuarios...');
-                // Ocultar sistema existente
-                const seccionAsignar = document.getElementById('seccion-asignar-usuario');
-                if (seccionAsignar) {
-                    seccionAsignar.style.display = 'none';
-                }
+                seccionUsuarios.style.display = 'none';
                 // Limpiar selección existente
                 window.usuarioSeleccionadoAvance = null;
                 console.log('🗑️ Usuario seleccionado limpiado');
@@ -2412,6 +2427,51 @@ function configurarEventosAsignacionCaptura() {
     });
     
     console.log('✅ Eventos de asignación configurados correctamente');
+}
+
+// Función de debugging temporal para probar la funcionalidad
+function debugAsignacion() {
+    console.log('🐛 === DEBUGGING ASIGNACIÓN ===');
+    
+    // 1. Verificar radio buttons
+    const radios = document.querySelectorAll('input[name="opcion-asignacion"]');
+    console.log(`📻 Radio buttons encontrados: ${radios.length}`);
+    radios.forEach((radio, i) => {
+        console.log(`  ${i+1}. ID: ${radio.id}, Value: ${radio.value}, Checked: ${radio.checked}`);
+    });
+    
+    // 2. Verificar sección de usuarios
+    const seccionUsuarios = document.getElementById('seccion-asignar-usuario');
+    console.log(`👥 Sección usuarios: ${seccionUsuarios ? 'ENCONTRADA' : 'NO ENCONTRADA'}`);
+    if (seccionUsuarios) {
+        console.log(`   Display: ${seccionUsuarios.style.display}`);
+    }
+    
+    // 3. Probar manualmente mostrar sección
+    if (seccionUsuarios) {
+        seccionUsuarios.style.display = 'block';
+        console.log('✅ Sección mostrada manualmente');
+        
+        // 4. Cargar usuarios
+        console.log('🔄 Cargando usuarios...');
+        cargarUsuariosDisponiblesAvance()
+            .then(() => {
+                console.log('✅ Usuarios cargados exitosamente via debug');
+            })
+            .catch(error => {
+                console.error('❌ Error cargando usuarios via debug:', error);
+            });
+    }
+    
+    // 5. Marcar automáticamente "Asignar a otro"
+    const radioOtro = document.getElementById('opcion-otro');
+    if (radioOtro) {
+        radioOtro.checked = true;
+        radioOtro.dispatchEvent(new Event('change'));
+        console.log('✅ Radio "Asignar a otro" marcado automáticamente');
+    }
+    
+    console.log('🐛 === FIN DEBUG ===');
 }
 
 // NOTA: Usamos el sistema existente de seccion-asignar-usuario 
@@ -2915,6 +2975,11 @@ function getCsrfToken() {
       </div>
       
       <div class="modal-footer" style="background: #f0fdfa;">
+        <!-- Botón de debugging temporal -->
+        <button type="button" class="btn btn-info btn-sm" onclick="debugAsignacion()" title="Debug: Probar asignación">
+          <i class="fas fa-bug me-1"></i>Debug
+        </button>
+        
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
           <i class="fas fa-times me-1"></i>
           Cancelar

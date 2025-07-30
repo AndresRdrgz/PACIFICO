@@ -12023,7 +12023,24 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
             
             # Generar URL de redirección
             if opcion == 'yo':
-                redirect_url = f"/solicitudes/{solicitud.id}/backoffice/{siguiente_subestado.nombre.lower().replace(' ', '-')}/"
+                # Normalizar nombre del subestado para la URL
+                def normalizar_subestado_url(nombre):
+                    """Normaliza el nombre del subestado para crear URLs válidas"""
+                    # Mapeo específico para los subestados de Back Office
+                    mapeo_subestados = {
+                        'checklist': 'checklist',
+                        'captura': 'captura', 
+                        'firma': 'firma',
+                        'orden del expediente': 'orden',
+                        'trámite': 'tramite',  # Sin acento
+                        'subsanación de pendientes trámite': 'subsanacion'  # Sin acento y simplificado
+                    }
+                    
+                    nombre_lower = nombre.lower().strip()
+                    return mapeo_subestados.get(nombre_lower, nombre_lower.replace(' ', '-'))
+                
+                subestado_url = normalizar_subestado_url(siguiente_subestado.nombre)
+                redirect_url = f"/solicitudes/{solicitud.id}/backoffice/{subestado_url}/"
             else:  # opcion == 'otro' o 'bandeja'
                 redirect_url = "/workflow/bandeja-mixta/"
             

@@ -151,6 +151,51 @@
   margin-right: -2rem;
   margin-bottom: -2rem;
 }
+
+/* Estilos para los botones rectangulares de acción */
+.btn-captura-action {
+  width: 200px;
+  height: 60px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-captura-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-devolver {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+}
+
+.btn-devolver:hover {
+  background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+  color: white;
+}
+
+.btn-avanzar {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+}
+
+.btn-avanzar:hover {
+  background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+  color: white;
+}
+
+.btn-captura-action i {
+  font-size: 16px;
+}
 </style>
 {% endblock %}
 
@@ -462,27 +507,21 @@
               </div>
             </div>
 
-            <!-- Botones de Acción -->
-            <div class="action-buttons">
-              <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
-              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
-                <i class="fas fa-arrow-right me-2"></i>
-                <span id="btn-avanzar-texto">Avanzar</span>
-              </button>
-              
-              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
-              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: inline-block;" onclick="mostrarModalDevolucion()">
-                <i class="fas fa-arrow-left me-2"></i>
-                <span>Devolver a Oficial</span>
-              </button>
-              
-              <!-- Indicador de estado de validación -->
-              <div id="validacion-estado" class="mt-2">
-                <small class="text-muted">
-                  <i class="fas fa-check-circle text-success me-1"></i>
-                  <span id="validacion-mensaje">Listo para avanzar</span>
-                </small>
-              </div>
+            <!-- Botones de Acción Rectangulares -->
+            <div class="d-flex justify-content-center gap-3">
+                
+                <!-- 1. Devolver a Oficial -->
+                <button type="button" class="btn btn-captura-action btn-devolver" onclick="mostrarModalDevolverOficial()" title="Devolver a Oficial">
+                  <i class="fas fa-user-tie me-2"></i>
+                  <span>Devolver a Oficial</span>
+                </button>
+                
+                <!-- 2. Avanzar Subestado -->
+                <button type="button" class="btn btn-captura-action btn-avanzar" onclick="mostrarModalAvanzarSubestado()" title="Avanzar Subestado">
+                  <i class="fas fa-arrow-right me-2"></i>
+                  <span>Avanzar Subestado</span>
+                </button>
+                
             </div>
           </div>
         </div>
@@ -1492,6 +1531,45 @@ function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
 function confirmarAvance() {
     console.log('✅ Confirmando avance...');
     
+    // Verificar si estamos usando el sistema de Firma (nuevos botones rectangulares)
+    const usingFirmaSystem = !!siguienteSubestadoSeleccionadoFirma;
+    
+    if (usingFirmaSystem) {
+        // Usar sistema de Firma
+        if (!siguienteSubestadoSeleccionadoFirma) {
+            mostrarMensaje('Debe seleccionar un subestado', 'error');
+            return;
+        }
+        
+        // Verificar qué opción seleccionó el usuario en el modal
+        const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-firma"]:checked');
+        
+        if (!opcionSeleccionada) {
+            mostrarMensaje('Debe seleccionar una opción de asignación', 'error');
+            return;
+        }
+        
+        const data = {
+            opcion: opcionSeleccionada.value,
+            siguiente_subestado_id: siguienteSubestadoSeleccionadoFirma.id
+        };
+        
+        // Si seleccionó "otro", agregar el usuario seleccionado
+        if (opcionSeleccionada.value === 'otro' && window.usuarioSeleccionadoAvanceFirma) {
+            data.usuario_id = parseInt(window.usuarioSeleccionadoAvanceFirma.id);
+        }
+        
+        console.log('📤 Enviando datos desde Firma (botones rectangulares):', JSON.stringify(data, null, 2));
+        
+        const btnConfirmar = document.getElementById('btn-confirmar-avance');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        
+        enviarAvanceRequest(data, btnConfirmar);
+        return;
+    }
+    
+    // Sistema original
     if (!opcionAvanceSeleccionada) {
         mostrarMensaje('Debe seleccionar una opción de avance', 'error');
         return;
@@ -1514,6 +1592,12 @@ function confirmarAvance() {
         siguiente_subestado_id: siguientePaso?.siguiente_subestado?.id || null
     };
     
+    enviarAvanceRequest(data, btnConfirmar);
+}
+
+// Función auxiliar para enviar la request de avance
+function enviarAvanceRequest(data, btnConfirmar) {
+    
     fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
         method: 'POST',
         headers: {
@@ -1530,17 +1614,33 @@ function confirmarAvance() {
             modal.hide();
             
             // Mostrar mensaje de éxito
-            const mensaje = opcionAvanceSeleccionada === 'yo' ?
-                'Avanzando al siguiente subestado...' :
-                opcionAvanceSeleccionada === 'otro' ?
-                `Solicitud asignada a ${usuarioSeleccionadoAvance.nombre}` :
-                'Solicitud devuelta a bandeja grupal';
+            let mensaje;
+            let redirigir = true;
+            
+            if (siguienteSubestadoSeleccionadoFirma) {
+                // Sistema de Firma (botones rectangulares)
+                mensaje = `Avanzando a: ${siguienteSubestadoSeleccionadoFirma.nombre}`;
+            } else {
+                // Sistema original
+                mensaje = opcionAvanceSeleccionada === 'yo' ?
+                    'Avanzando al siguiente subestado...' :
+                    opcionAvanceSeleccionada === 'otro' ?
+                    `Solicitud asignada a ${usuarioSeleccionadoAvance.nombre}` :
+                    'Solicitud devuelta a bandeja grupal';
+            }
             
             mostrarMensaje(mensaje, 'success');
             
             // Redirigir según la opción
             setTimeout(() => {
-                if (opcionAvanceSeleccionada === 'yo') {
+                if (siguienteSubestadoSeleccionadoFirma) {
+                    // Para Firma, usar redirect_url o recargar
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.reload();
+                    }
+                } else if (opcionAvanceSeleccionada === 'yo') {
                     window.location.href = data.redirect_url;
                 } else {
                     window.location.href = '/workflow/bandeja-mixta/';
@@ -1676,6 +1776,373 @@ function cargarTransicionesNegativas() {
             console.error('Error al cargar transiciones negativas:', error);
         });
 }
+
+// ========================================
+// FUNCIONES PARA BOTONES RECTANGULARES
+// ========================================
+
+// Función para mostrar modal Devolver a Oficial (usando el modal existente)
+function mostrarModalDevolverOficial() {
+    console.log('🔄 Abriendo modal Devolver a Oficial desde botón rectangular');
+    mostrarModalDevolucion(); // Llama a la función existente
+}
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestado() {
+    console.log('🚀 Abriendo modal Avanzar Subestado');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestado');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado no encontrado');
+        mostrarMensaje('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    // Configurar accesibilidad
+    modalElement.removeAttribute('aria-hidden');
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar información necesaria para Firma
+    if (typeof cargarInformacionAvance === 'function') {
+        cargarInformacionAvance();
+    }
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosFirma();
+    
+    // Los radio buttons ya están visibles por defecto
+    
+    // Configurar eventos con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventosAsignacionFirma();
+    }, 100);
+}
+
+function cargarSiguientesSubestadosFirma() {
+    const container = document.getElementById('siguiente-subestado-container');
+    
+    fetch(`/workflow/api/subestados-disponibles/{{ solicitud.id }}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.subestadosDisponiblesFirma = data.subestados;
+                mostrarSiguientesSubestadosFirma(container);
+            } else {
+                console.error('❌ Error cargando subestados:', data.error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar subestados: ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de red:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error de conexión al cargar subestados
+                </div>
+            `;
+        });
+}
+
+function mostrarSiguientesSubestadosFirma(container) {
+    // Filtrar solo los 6 subestados legítimos de Back Office
+    const subestadosBackOffice = [
+        'checklist', 'captura', 'firma', 'orden del expediente', 
+        'trámite', 'subsanación de pendientes trámite'
+    ];
+    
+    const subestadosLegitimos = window.subestadosDisponiblesFirma.filter(subestado => {
+        const nombreLimpio = subestado.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(nombreValido => 
+            nombreLimpio.includes(nombreValido) || nombreValido.includes(nombreLimpio)
+        );
+    });
+    
+    console.log('🔍 Subestados filtrados (Back Office):', subestadosLegitimos.length);
+    console.log('✅ Subestados legítimos:', subestadosLegitimos.map(s => s.nombre));
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados de Back Office disponibles en este momento.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease;">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado-firma" id="subestado-firma-${index}" value="${subestado.id}" class="form-check-input me-2" onchange="seleccionarSiguienteSubestadoFirma(${subestado.id}, '${subestado.nombre}')">
+                        <label for="subestado-firma-${index}" class="form-check-label">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">${subestado.descripcion || 'Disponible para avanzar'}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Variables globales para Firma
+let siguienteSubestadoSeleccionadoFirma = null;
+
+function seleccionarSiguienteSubestadoFirma(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoFirma = { 
+        id: parseInt(subestadoId), // Asegurar que sea número
+        nombre: subestadoNombre 
+    };
+    console.log('🎯 Subestado seleccionado en Firma:', siguienteSubestadoSeleccionadoFirma);
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceFirma();
+}
+
+// Configurar eventos para radio buttons del sistema de Firma
+function configurarEventosAsignacionFirma() {
+    console.log('⚙️ Configurando eventos de asignación para Firma...');
+    
+    // Verificar que los radio buttons existen
+    const radios = document.querySelectorAll('input[name="opcion-asignacion-firma"]');
+    console.log(`📻 Encontrados ${radios.length} radio buttons de asignación`);
+    
+    // Verificar que la sección de usuarios existe
+    const seccionUsuarios = document.getElementById('seccion-asignar-usuario-firma');
+    console.log('🔍 Sección asignar-usuario-firma:', seccionUsuarios ? 'ENCONTRADA' : 'NO ENCONTRADA');
+    
+    if (radios.length === 0) {
+        console.error('❌ No se encontraron radio buttons de asignación');
+        return;
+    }
+    
+    if (!seccionUsuarios) {
+        console.error('❌ No se encontró la sección seccion-asignar-usuario-firma');
+        return;
+    }
+    
+    // Configurar radio buttons de asignación
+    radios.forEach((radio, index) => {
+        console.log(`📻 Radio ${index + 1}: ID=${radio.id}, Value=${radio.value}`);
+        
+        radio.addEventListener('change', function() {
+            console.log(`🔘 Opción de asignación cambiada a: ${this.value}`);
+            
+            if (this.value === 'otro') {
+                console.log('👥 Mostrando selector de usuarios...');
+                seccionUsuarios.style.display = 'block';
+                console.log('✅ Sección asignar-usuario-firma mostrada');
+                
+                // Cargar usuarios
+                console.log('🔄 Cargando usuarios disponibles...');
+                cargarUsuariosDisponiblesAvanceFirma()
+                    .then(() => {
+                        console.log('✅ Usuarios cargados exitosamente');
+                    })
+                    .catch(error => {
+                        console.error('❌ Error cargando usuarios:', error);
+                    });
+            } else {
+                console.log('🚫 Ocultando selector de usuarios...');
+                seccionUsuarios.style.display = 'none';
+                // Limpiar selección existente
+                window.usuarioSeleccionadoAvanceFirma = null;
+                console.log('🗑️ Usuario seleccionado limpiado');
+            }
+            
+            validarFormularioAvanceFirma();
+        });
+    });
+    
+    console.log('✅ Eventos de asignación configurados correctamente');
+}
+
+function cargarUsuariosDisponiblesAvanceFirma() {
+    return fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaFirma(data.usuarios);
+                return Promise.resolve();
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaFirma(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-firma');
+    const contador = document.getElementById('contador-usuarios-avance-firma');
+    
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.className = 'usuario-item';
+        row.setAttribute('data-usuario-id', usuario.id);
+        row.setAttribute('data-usuario-nombre', usuario.nombre || usuario.username || 'Usuario');
+        row.setAttribute('data-usuario-email', usuario.email || '');
+        
+        const avatar = usuario.profile_picture ?
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre || usuario.username || 'Usuario'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+            </div>`;
+        
+        const badges = [];
+        if (usuario.is_staff) badges.push('<span class="badge bg-info ms-1">Staff</span>');
+        if (usuario.is_superuser) badges.push('<span class="badge bg-danger ms-1">Admin</span>');
+        
+        const grupos = usuario.grupos && usuario.grupos.length > 0 ?
+            usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') :
+            '<span class="text-muted">Sin grupos</span>';
+        
+        row.innerHTML = `
+            <td class="text-center">
+                <span class="badge bg-secondary">${index + 1}</span>
+            </td>
+            <td class="text-center">${avatar}</td>
+            <td>
+                <div>
+                    <strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong>
+                    ${badges.join('')}
+                </div>
+            </td>
+            <td>
+                <small class="text-muted">${usuario.email || ''}</small>
+            </td>
+            <td>${grupos}</td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-firma" 
+                        data-usuario-id="${usuario.id}" 
+                        data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Asignar
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    // Agregar event listeners a los botones de asignar
+    document.querySelectorAll('.asignar-usuario-avance-firma').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const usuarioId = this.getAttribute('data-usuario-id');
+            const usuarioNombre = this.getAttribute('data-usuario-nombre');
+            seleccionarUsuarioAvanceFirma(usuarioId, usuarioNombre);
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceFirma(usuarioId, usuarioNombre) {
+    console.log('👥 Usuario seleccionado en Firma:', usuarioNombre);
+    
+    // Asignar a la variable global
+    window.usuarioSeleccionadoAvanceFirma = {
+        id: usuarioId,
+        nombre: usuarioNombre
+    };
+    
+    // Actualizar estilos de botones
+    document.querySelectorAll('.asignar-usuario-avance-firma').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-firma`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceFirma();
+}
+
+function validarFormularioAvanceFirma() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-firma"]:checked');
+    
+    let valido = true;
+    
+    // Verificar que hay un subestado seleccionado
+    if (!siguienteSubestadoSeleccionadoFirma) {
+        valido = false;
+    }
+    
+    // Verificar que hay una opción de asignación seleccionada
+    if (!opcionSeleccionada) {
+        valido = false;
+    }
+    
+    // Si seleccionó "otro", verificar que hay un usuario seleccionado
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !window.usuarioSeleccionadoAvanceFirma) {
+        valido = false;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    console.log('🔍 Validación Firma:', {
+        subestado: !!siguienteSubestadoSeleccionadoFirma,
+        opcion: !!opcionSeleccionada,
+        usuario: opcionSeleccionada?.value === 'otro' ? !!window.usuarioSeleccionadoAvanceFirma : true,
+        valido
+    });
+    
+    return valido;
+}
+
+// Función auxiliar para obtener CSRF token (si no existe ya)
+function getCsrfToken() {
+    const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenInput) {
+        return tokenInput.value;
+    }
+    
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    console.error('❌ No se pudo encontrar el CSRF token');
+    return '';
+}
 </script>
 
 <!-- Modal para Agregar Pendientes Antes de Firma -->
@@ -1781,6 +2248,17 @@ function cargarTransicionesNegativas() {
           <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
         </div>
 
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>
+            Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container">
+            <!-- Los subestados se cargarán dinámicamente -->
+          </div>
+        </div>
+
         <!-- Estado de documentos (oculto para Firma) -->
         <div id="estado-documentos" class="mb-4" style="display: none;">
           <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
@@ -1875,50 +2353,49 @@ function cargarTransicionesNegativas() {
             ¿Quién continuará con el siguiente subestado?
           </h6>
           
-          <!-- Botones de opción -->
-          <div class="d-flex gap-2 mb-3">
-            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
-              <i class="fas fa-user me-2"></i>
-              Continuar Yo
-            </button>
-            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
-              <i class="fas fa-user-plus me-2"></i>
-              Asignar a Otro Usuario
-            </button>
-            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
-              <i class="fas fa-inbox me-2"></i>
-              Devolver a Bandeja Grupal
-            </button>
+          <!-- Radio buttons para sistema de Firma (botones rectangulares) -->
+          <div id="opciones-asignacion-firma">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-firma" id="opcion-yo-firma" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-firma" class="form-check-label">
+                <i class="fas fa-user me-2"></i>
+                <strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-firma" id="opcion-otro-firma" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-firma" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i>
+                <strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-firma" id="opcion-bandeja-firma" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-firma" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i>
+                <strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
-        <div id="seccion-asignar-usuario" style="display: none;">
+
+        
+        <!-- Sección de asignación a otro usuario (sistema de Firma) -->
+        <div id="seccion-asignar-usuario-firma" style="display: none;">
           <h6 class="fw-bold" style="color: #009c3c;">
             <i class="fas fa-users me-2"></i>
             Usuarios Disponibles:
           </h6>
 
-          <!-- Barra de búsqueda -->
-          <div class="mb-3">
-            <div class="input-group">
-              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
-                <i class="fas fa-search"></i>
-              </span>
-              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
-              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-            <small class="text-muted">
-              <i class="fas fa-info-circle me-1"></i>
-              Busca por nombre, email, grupos o roles (Staff/Admin)
-            </small>
-          </div>
-
           <!-- Tabla de usuarios -->
           <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-firma" style="border-radius: 8px; overflow: hidden;">
               <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
                 <tr>
                   <th scope="col" style="width: 50px;">#</th>
@@ -1929,7 +2406,7 @@ function cargarTransicionesNegativas() {
                   <th scope="col" style="width: 120px;">Acciones</th>
                 </tr>
               </thead>
-              <tbody id="lista-usuarios-avance">
+              <tbody id="lista-usuarios-avance-firma">
                 <!-- Los usuarios se cargarán dinámicamente -->
               </tbody>
             </table>
@@ -1939,7 +2416,7 @@ function cargarTransicionesNegativas() {
           <div class="mt-2">
             <small class="text-muted">
               <i class="fas fa-users me-1"></i>
-              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+              <span id="contador-usuarios-avance-firma">0</span> usuarios encontrados
             </small>
           </div>
         </div>
