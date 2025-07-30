@@ -167,6 +167,7 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/siguiente-subestado/', views_workflow.api_obtener_siguiente_subestado, name='api_obtener_siguiente_subestado'),
     path('api/solicitudes/<int:solicitud_id>/validar-documentos/', views_workflow.api_validar_documentos_backoffice, name='api_validar_documentos_backoffice'),
     path('api/solicitudes/<int:solicitud_id>/avanzar-subestado/', views_workflow.api_avanzar_subestado_backoffice, name='api_avanzar_subestado_backoffice'),
+    path('api/solicitudes/<int:solicitud_id>/transiciones-negativas/', views_workflow.api_obtener_transiciones_negativas, name='api_obtener_transiciones_negativas'),
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),

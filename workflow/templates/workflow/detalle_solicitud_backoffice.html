@@ -599,44 +599,46 @@
                       <div class="seccion-acciones-derecha-backoffice">
                         <!-- Botones de Calificación Optimizados para Checklist -->
                         <div class="botones-calificacion-backoffice botones-checklist-optimizado">
-                          <!-- Bueno -->
-                          <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Marcar como bueno"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-thumbs-up"></i>
-                            <span>Bueno</span>
-                          </button>
-                          
-                          <!-- Pendiente (solo visual para documentos opcionales sin archivo) -->
-                          {% if not archivo_info.obligatorio and not archivo_info.archivo_actual %}
-                          <button type="button" class="btn calificar-btn-backoffice btn-pendiente-visual {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'pendiente' %}activo{% endif %}" data-estado="pendiente"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Documento opcional pendiente (sin archivo)"
-                            disabled>
-                            <i class="fas fa-clock"></i>
-                            <span>Pendiente</span>
-                          </button>
+                          {% if archivo_info.archivo_actual.archivo %}
+                            <!-- Si tiene archivo: Solo Bueno/Malo -->
+                            <!-- Bueno -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Marcar como bueno">
+                              <i class="fas fa-thumbs-up"></i>
+                              <span>Bueno</span>
+                            </button>
+                            
+                            <!-- Malo - Abre modal directamente -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'malo' %}activo{% endif %}" data-estado="malo"
+                              title="Marcar como malo"
+                              onclick="mostrarModalOpciones('{{ archivo_info.archivo_actual.id }}', '{{ archivo_info.requisito.nombre }}')">
+                              <i class="fas fa-thumbs-down"></i>
+                              <span>Malo</span>
+                            </button>
+                            
+                            <!-- Comentarios -->
+                            <button type="button" class="btn comentario-btn-backoffice"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Ver/Agregar comentarios">
+                              <i class="fas fa-comment"></i>
+                              <span>Comentar</span>
+                              <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                            </button>
+                          {% else %}
+                            <!-- Si NO tiene archivo: Mostrar estado pendiente automático -->
+                            <div class="estado-sin-archivo">
+                              <span class="badge bg-warning text-dark">
+                                <i class="fas fa-clock me-1"></i>
+                                Pendiente (Sin archivo)
+                              </span>
+                              {% if not archivo_info.obligatorio %}
+                                <small class="text-muted ms-2">Documento opcional</small>
+                              {% else %}
+                                <small class="text-danger ms-2">Documento requerido</small>
+                              {% endif %}
+                            </div>
                           {% endif %}
-                          
-                          <!-- Comentarios -->
-                          <button type="button" class="btn comentario-btn-backoffice"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Ver/Agregar comentarios"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-comment"></i>
-                            <span>Comentar</span>
-                            <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
-                          </button>
-                        </div>
-                        <!-- Opciones -->
-                        <div class="seccion-opciones">
-                          <button class="btn opciones-dropdown-btn-backoffice" type="button"
-                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
-                            title="Opciones adicionales">
-                            <i class="fas fa-ellipsis-v"></i>
-                            <span>Opciones</span>
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -731,10 +733,16 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <!-- Nuevo botón de avance - siempre habilitado, validación al hacer clic -->
+                  <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
                   <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
                     <i class="fas fa-arrow-right me-2"></i>
                     <span id="btn-avanzar-texto">Avanzar</span>
+                  </button>
+                  
+                  <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+                  <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: none;" onclick="mostrarModalDevolucion()">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    <span>Devolver a Oficial</span>
                   </button>
                   
                   <!-- Indicador de estado de validación -->
@@ -3220,7 +3228,26 @@ function validarDocumentosYAvanzar() {
       } else {
         console.log('❌ Validación fallida:', data.documentos_problematicos);
         
-        // Mostrar mensaje detallado
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
         let mensajeCompleto = data.mensaje + '\n\n';
         if (data.detalle && data.detalle.length > 0) {
           mensajeCompleto += data.detalle.join('\n');
@@ -3263,6 +3290,171 @@ function validarDocumentosYAvanzar() {
 }
 
 // ========================================
+// FUNCIONES PARA DEVOLUCIÓN A OFICIAL
+// ========================================
+
+// Variable global para almacenar transiciones negativas
+let transicionesNegativas = [];
+
+// Función para cargar transiciones negativas al cargar la página
+function cargarTransicionesNegativas() {
+  const solicitudId = {{ solicitud.id }};
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      console.log('🔄 Transiciones negativas:', data);
+      
+      if (data.success && data.tiene_transiciones_negativas) {
+        transicionesNegativas = data.transiciones_negativas;
+        
+        // Mostrar botón de devolver
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          btnDevolver.style.display = 'inline-block';
+          
+          // Actualizar texto del botón si hay múltiples transiciones
+          if (transicionesNegativas.length === 1) {
+            btnDevolver.querySelector('span').textContent = transicionesNegativas[0].nombre;
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando transiciones negativas:', error);
+    });
+}
+
+// Función para mostrar modal de devolución
+function mostrarModalDevolucion() {
+  console.log('📋 Mostrando modal de devolución...');
+  
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles.');
+    return;
+  }
+  
+  // Cargar información de la transición
+  const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
+  document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+  
+  // Cargar documentos problemáticos
+  cargarDocumentosProblematicos();
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+  modal.show();
+}
+
+// Función para cargar documentos problemáticos
+function cargarDocumentosProblematicos() {
+  const solicitudId = {{ solicitud.id }};
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+    .then(response => response.json())
+    .then(data => {
+      const listaContainer = document.getElementById('lista-documentos-problematicos');
+      
+      if (data.success && data.documentos_pendientes && data.documentos_pendientes.length > 0) {
+        let html = '';
+        data.documentos_pendientes.forEach(doc => {
+          html += `
+            <div class="d-flex align-items-center mb-2 p-2" style="background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+              <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+              <span class="fw-medium">${doc.nombre}</span>
+              <span class="badge bg-warning ms-auto">Pendiente</span>
+            </div>
+          `;
+        });
+        listaContainer.innerHTML = html;
+      } else {
+        listaContainer.innerHTML = `
+          <div class="text-center text-muted">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            No hay documentos problemáticos detectados
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando documentos problemáticos:', error);
+      document.getElementById('lista-documentos-problematicos').innerHTML = `
+        <div class="text-center text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Error al cargar documentos
+        </div>
+      `;
+    });
+}
+
+// Función para confirmar devolución
+function confirmarDevolucion() {
+  const motivo = document.getElementById('motivo-devolucion').value.trim();
+  
+  if (!motivo) {
+    alert('Por favor, ingresa el motivo de la devolución.');
+    return;
+  }
+  
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles.');
+    return;
+  }
+  
+  const transicion = transicionesNegativas[0];
+  const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+  const textoOriginal = btnConfirmar.innerHTML;
+  
+  // Mostrar loading
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+  btnConfirmar.disabled = true;
+  
+  // Ejecutar transición
+  fetch('/workflow/api/ejecutar-transicion/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      solicitud_id: {{ solicitud.id }},
+      transicion_id: transicion.id,
+      motivo: motivo
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert(`Solicitud devuelta exitosamente a ${transicion.etapa_destino.nombre}`);
+      
+      // Cerrar modal y redirigir
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+      modal.hide();
+      
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        window.location.reload();
+      }
+    } else {
+      alert(`Error al devolver solicitud: ${data.message || data.error}`);
+      
+      // Restaurar botón
+      btnConfirmar.innerHTML = textoOriginal;
+      btnConfirmar.disabled = false;
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error en devolución:', error);
+    alert('Error de conexión al devolver solicitud.');
+    
+    // Restaurar botón
+    btnConfirmar.innerHTML = textoOriginal;
+    btnConfirmar.disabled = false;
+  });
+}
+
+// ========================================
 // FUNCIONES AUXILIARES
 // ========================================
 
@@ -3285,24 +3477,36 @@ function cargarInformacionAvance() {
   // Mostrar loading
   document.getElementById('avance-loading').style.display = 'block';
   document.getElementById('avance-error').style.display = 'none';
+  document.getElementById('estado-documentos').style.display = 'none';
   
-  // Cargar siguiente subestado
-  fetch(`/workflow/api/solicitudes/${solicitudId}/siguiente-subestado/`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Guardar información del siguiente paso
-        window.siguientePaso = data;
+  // Cargar siguiente subestado Y validar documentos en paralelo
+  Promise.all([
+    fetch(`/workflow/api/solicitudes/${solicitudId}/siguiente-subestado/`),
+    fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+  ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([subestadoData, validacionData]) => {
+      console.log('📊 Información de subestado:', subestadoData);
+      console.log('📊 Validación de documentos:', validacionData);
+      
+      // Actualizar información del siguiente paso
+      if (subestadoData.success) {
+        window.siguientePaso = subestadoData;
         
-        if (data.siguiente_subestado) {
-          document.getElementById('avanzar-siguiente-subestado').textContent = data.siguiente_subestado.nombre;
-        } else if (data.siguiente_etapa) {
-          document.getElementById('avanzar-siguiente-subestado').textContent = data.siguiente_etapa.nombre;
+        if (subestadoData.siguiente_subestado) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_subestado.nombre;
+        } else if (subestadoData.siguiente_etapa) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_etapa.nombre;
         } else {
           document.getElementById('avanzar-siguiente-subestado').textContent = 'Fin del proceso';
         }
       } else {
         document.getElementById('avanzar-siguiente-subestado').textContent = 'Error al cargar';
+      }
+      
+      // Mostrar estado de documentos
+      if (validacionData.success) {
+        mostrarEstadoDocumentos(validacionData);
       }
     })
     .catch(error => {
@@ -3315,6 +3519,59 @@ function cargarInformacionAvance() {
   
   // Cargar usuarios disponibles
   cargarUsuariosDisponiblesAvance();
+}
+
+// Función para mostrar el estado de documentos en el modal
+function mostrarEstadoDocumentos(data) {
+  console.log('📋 Mostrando estado de documentos:', data);
+  
+  // Mostrar la sección de estado de documentos
+  document.getElementById('estado-documentos').style.display = 'block';
+  
+  // Actualizar contadores
+  document.getElementById('documentos-total-count').textContent = data.total_documentos || 0;
+  document.getElementById('documentos-buenos-count').textContent = data.documentos_buenos || 0;
+  document.getElementById('documentos-pendientes-count').textContent = data.documentos_pendientes ? data.documentos_pendientes.length : 0;
+  
+  // Mostrar lista de documentos pendientes si existen
+  const listaPendientes = document.getElementById('lista-documentos-pendientes');
+  const sinPendientes = document.getElementById('sin-documentos-pendientes');
+  const listaPendientesContainer = document.getElementById('documentos-pendientes-lista');
+  
+  if (data.documentos_pendientes && data.documentos_pendientes.length > 0) {
+    // Hay documentos pendientes - mostrar lista
+    listaPendientes.style.display = 'block';
+    sinPendientes.style.display = 'none';
+    
+    // Limpiar lista anterior
+    listaPendientesContainer.innerHTML = '';
+    
+    // Agregar cada documento pendiente
+    data.documentos_pendientes.forEach((doc, index) => {
+      const docElement = document.createElement('div');
+      docElement.className = 'mb-2';
+      docElement.innerHTML = `
+        <div class="d-flex align-items-center p-2" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+          <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; background: #f59e0b; color: white; flex-shrink: 0;">
+            <i class="fas fa-clock" style="font-size: 12px;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-bold" style="color: #92400e; font-size: 0.9rem;">${doc.nombre}</div>
+            <small style="color: #b45309;">Documento opcional sin archivo - marcado como pendiente</small>
+          </div>
+          <div class="badge" style="background: #f59e0b; color: white; font-size: 0.75rem;">
+            Pendiente
+          </div>
+        </div>
+      `;
+      listaPendientesContainer.appendChild(docElement);
+    });
+    
+  } else {
+    // No hay documentos pendientes
+    listaPendientes.style.display = 'none';
+    sinPendientes.style.display = 'block';
+  }
 }
 
 // Función para cargar usuarios disponibles
@@ -3592,6 +3849,9 @@ document.addEventListener('DOMContentLoaded', function() {
       configurarBusquedaUsuarios();
     });
   }
+  
+  // Cargar transiciones negativas al inicializar la página
+  cargarTransicionesNegativas();
 });
 
 </script>
@@ -3649,10 +3909,14 @@ document.addEventListener('DOMContentLoaded', function() {
           <strong>Documento:</strong> <span id="opciones-documento-nombre"></span>
         </div>
         <div class="mb-3">
-          <p class="text-muted">Selecciona una opción para calificar este documento como "malo":</p>
+          <p class="text-muted"><strong>Debes seleccionar una opción</strong> para calificar este documento como "malo":</p>
         </div>
         <div id="opciones-container">
           <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Nota:</strong> Selecciona una opción de la lista para continuar. El documento se calificará automáticamente como "malo" con la razón seleccionada.
         </div>
       </div>
       <div class="modal-footer">
@@ -3876,6 +4140,84 @@ document.addEventListener('DOMContentLoaded', function() {
           <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
         </div>
 
+        <!-- Estado de documentos -->
+        <div id="estado-documentos" class="mb-4" style="display: none;">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Estado de Documentos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              
+              <!-- Resumen de documentos -->
+              <div class="row text-center mb-3">
+                <div class="col-4">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                      <i class="fas fa-check" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #059669;" id="documentos-buenos-count">0</div>
+                    <small class="text-muted">Buenos</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                      <i class="fas fa-clock" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #d97706;" id="documentos-pendientes-count">0</div>
+                    <small class="text-muted">Pendientes</small>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                      <i class="fas fa-file-alt" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #4b5563;" id="documentos-total-count">0</div>
+                    <small class="text-muted">Total</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de documentos pendientes -->
+              <div id="lista-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2" style="color: #d97706;"></i>
+                    <div>
+                      <strong>Documentos Pendientes Detectados</strong>
+                      <br>
+                      <small>Los siguientes documentos opcionales están marcados como pendientes y avanzarán en este estado:</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="documentos-pendientes-lista" class="mb-3">
+                  <!-- Los documentos pendientes se insertarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Mensaje cuando no hay pendientes -->
+              <div id="sin-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 1px solid #10b981; border-radius: 8px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2" style="color: #10b981;"></i>
+                    <div>
+                      <strong>Todos los documentos están procesados</strong>
+                      <br>
+                      <small>No hay documentos pendientes. Puedes continuar con confianza.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
         <!-- Opciones de asignación -->
         <div class="mb-4">
           <h6 class="fw-bold" style="color: #009c3c;">
@@ -3974,6 +4316,68 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
           <i class="fas fa-check me-1"></i>
           Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Devolver a Oficial -->
+<div class="modal fade" id="modalDevolverOficial" tabindex="-1" aria-labelledby="modalDevolverOficialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #fff;">
+        <h5 class="modal-title" id="modalDevolverOficialLabel">
+          <i class="fas fa-arrow-left me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%); color: #dc2626; border: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Solicitud:</strong> <span>{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span>{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Se devolverá a:</strong> <span id="devolver-etapa-destino">Cargando...</span>
+        </div>
+
+        <!-- Resumen de documentos problemáticos -->
+        <div id="documentos-problematicos" class="mb-4">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Documentos Problemáticos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div id="lista-documentos-problematicos">
+                <!-- Se llenará dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de devolución -->
+        <div class="mb-3">
+          <label for="motivo-devolucion" class="form-label fw-bold">
+            <i class="fas fa-comment-alt me-2"></i>
+            Motivo de la devolución
+          </label>
+          <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucion()">
+          <i class="fas fa-arrow-left me-1"></i>
+          Confirmar Devolución
         </button>
       </div>
     </div>

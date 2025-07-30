@@ -383,7 +383,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const boton = e.target.closest('.calificar-btn-backoffice');
       const requisitoId = boton.getAttribute('data-requisito');
       const estado = boton.getAttribute('data-estado');
-      calificarDocumento(requisitoId, estado);
+
+      // Solo calificar automáticamente si NO es el botón "malo"
+      // El botón "malo" abre el modal y califica solo cuando se selecciona una opción
+      if (estado !== 'malo') {
+        calificarDocumento(requisitoId, estado);
+      }
     }
 
     if (e.target.closest('.comentario-btn-backoffice')) {
@@ -846,6 +851,9 @@ function mostrarErrorAvance(mensaje) {
 
 // Event listener para cuando se abre el modal
 document.addEventListener('DOMContentLoaded', function () {
+  // Cargar transiciones negativas al cargar la página
+  cargarTransicionesNegativas();
+
   const modalAvanzar = document.getElementById('modalAvanzarSubestado');
   if (modalAvanzar) {
     modalAvanzar.addEventListener('show.bs.modal', function () {
@@ -927,6 +935,125 @@ function diagnosticarBotonAvanzar() {
   };
 }
 
+// Funciones para transiciones negativas
+let transicionesNegativas = [];
+
+function cargarTransicionesNegativas() {
+  const solicitudId = window.location.pathname.split('/')[3];
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        transicionesNegativas = data.transiciones_negativas || [];
+
+        // Mostrar/ocultar botón "Devolver a Oficial"
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          if (data.tiene_transiciones_negativas) {
+            btnDevolver.style.display = 'inline-block';
+          } else {
+            btnDevolver.style.display = 'none';
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar transiciones negativas:', error);
+    });
+}
+
+function mostrarModalDevolucion() {
+  // Cargar documentos problemáticos
+  cargarDocumentosProblematicos();
+
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+  modal.show();
+}
+
+function cargarDocumentosProblematicos() {
+  const solicitudId = window.location.pathname.split('/')[3];
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('lista-documentos-problematicos');
+      if (container && data.documentos_problematicos) {
+        let html = '<h6>Documentos con problemas:</h6><ul class="list-unstyled">';
+
+        data.documentos_problematicos.forEach(doc => {
+          let problema = '';
+          if (doc.problema === 'sin_calificar') {
+            problema = 'Sin calificar';
+          } else if (doc.problema === 'mal_calificado') {
+            problema = `Calificado como "${doc.estado_actual}"`;
+          }
+
+          html += `<li class="text-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>${doc.nombre}:</strong> ${problema}</li>`;
+        });
+
+        html += '</ul>';
+        container.innerHTML = html;
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar documentos problemáticos:', error);
+    });
+}
+
+function confirmarDevolucion() {
+  const motivo = document.getElementById('motivo-devolucion').value.trim();
+
+  if (!motivo) {
+    alert('Debes proporcionar un motivo para la devolución');
+    return;
+  }
+
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles');
+    return;
+  }
+
+  // Usar la primera transición negativa disponible
+  const transicion = transicionesNegativas[0];
+  const solicitudId = window.location.pathname.split('/')[3];
+
+  // Ejecutar transición
+  fetch(`/workflow/api/solicitudes/${solicitudId}/ejecutar-transicion/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      transicion_id: transicion.id,
+      comentario: `Devuelto a oficial: ${motivo}`
+    })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarMensaje('Solicitud devuelta al oficial exitosamente', 'success');
+
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+        modal.hide();
+
+        // Recargar página después de un momento
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        mostrarMensaje(`Error al devolver solicitud: ${data.error}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error al devolver solicitud:', error);
+      mostrarMensaje('Error al devolver solicitud', 'error');
+    });
+}
+
 // Hacer funciones disponibles globalmente
 window.inicializarValidacionTiempoReal = inicializarValidacionTiempoReal;
 window.validarDocumentosEnTiempoReal = validarDocumentosEnTiempoReal;
@@ -935,4 +1062,7 @@ window.seleccionarUsuarioAvance = seleccionarUsuarioAvance;
 window.confirmarAvance = confirmarAvance;
 window.diagnosticarBotonAvanzar = diagnosticarBotonAvanzar;
 window.habilitarBotonEmergencia = habilitarBotonEmergencia;
-window.validarYAbrirModal = validarYAbrirModal; 
+window.validarYAbrirModal = validarYAbrirModal;
+window.cargarTransicionesNegativas = cargarTransicionesNegativas;
+window.mostrarModalDevolucion = mostrarModalDevolucion;
+window.confirmarDevolucion = confirmarDevolucion; 

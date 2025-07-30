@@ -11836,8 +11836,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'error': 'No tienes permisos para validar esta solicitud'
             }, status=403)
         
-        # FALLBACK: Como no hay transiciones configuradas, usar todos los RequisitoSolicitud
-        # y asumir que todos son obligatorios por defecto
+        # Obtener todos los RequisitoSolicitud con información de si son obligatorios
         requisitos_solicitud = RequisitoSolicitud.objects.filter(
             solicitud=solicitud
         ).select_related('requisito')
@@ -11845,25 +11844,46 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         documentos_problematicos = []
         
         for req_sol in requisitos_solicitud:
-            # Buscar la calificación más reciente para este documento
-            calificacion = CalificacionDocumentoBackoffice.objects.filter(
-                requisito_solicitud=req_sol,
-                calificado_por=request.user
+            # Verificar si este requisito es obligatorio consultando RequisitoTransicion
+            req_trans = RequisitoTransicion.objects.filter(
+                transicion__etapa_origen=solicitud.etapa_actual,
+                transicion__pipeline=solicitud.pipeline,
+                requisito=req_sol.requisito
             ).first()
             
-            if not calificacion:
-                # No hay calificación - asumir que es obligatorio
-                documentos_problematicos.append({
+            # Solo validar si es obligatorio
+            if req_trans and req_trans.obligatorio:
+                # Buscar la calificación más reciente para este documento (de cualquier usuario)
+                calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                    requisito_solicitud=req_sol
+                ).order_by('-fecha_calificacion').first()
+                
+                if not calificacion:
+                    # No hay calificación y es obligatorio
+                    documentos_problematicos.append({
+                        'nombre': req_sol.requisito.nombre,
+                        'problema': 'sin_calificar',
+                        'estado_actual': None
+                    })
+                elif calificacion.estado != 'bueno':
+                    # Está calificado pero no como "bueno" y es obligatorio
+                    documentos_problematicos.append({
+                        'nombre': req_sol.requisito.nombre,
+                        'problema': 'mal_calificado',
+                        'estado_actual': calificacion.estado
+                    })
+        
+        # Obtener información adicional sobre documentos pendientes
+        documentos_pendientes = []
+        for req_sol in requisitos_solicitud:
+            calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                requisito_solicitud=req_sol
+            ).order_by('-fecha_calificacion').first()
+            
+            if calificacion and calificacion.estado == 'pendiente':
+                documentos_pendientes.append({
                     'nombre': req_sol.requisito.nombre,
-                    'problema': 'sin_calificar',
-                    'estado_actual': None
-                })
-            elif calificacion.estado != 'bueno':
-                # Está calificado pero no como "bueno" - asumir que es obligatorio
-                documentos_problematicos.append({
-                    'nombre': req_sol.requisito.nombre,
-                    'problema': 'mal_calificado',
-                    'estado_actual': calificacion.estado
+                    'estado': 'pendiente'
                 })
         
         # Verificar si todos los documentos obligatorios están correctos
@@ -11871,7 +11891,10 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': True,
-                'mensaje': 'Todos los documentos obligatorios están calificados como "Buenos"'
+                'mensaje': 'Todos los documentos obligatorios están calificados como "Buenos"',
+                'documentos_pendientes': documentos_pendientes,
+                'total_documentos': len(requisitos_solicitud),
+                'documentos_buenos': len(requisitos_solicitud) - len(documentos_pendientes)
             })
         else:
             # Construir mensaje detallado
@@ -11888,8 +11911,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'success': True,
                 'puede_avanzar': False,
                 'documentos_problematicos': documentos_problematicos,
+                'documentos_pendientes': documentos_pendientes,
                 'mensaje': 'Algunos documentos obligatorios no están calificados como "Buenos"',
-                'detalle': mensajes_detalle
+                'detalle': mensajes_detalle,
+                'total_documentos': len(requisitos_solicitud),
+                'documentos_buenos': len([req for req in requisitos_solicitud if CalificacionDocumentoBackoffice.objects.filter(requisito_solicitud=req, estado='bueno').exists()])
             })
             
     except Exception as e:
@@ -12031,4 +12057,45 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_transiciones_negativas(request, solicitud_id):
+    """API para obtener transiciones negativas (hacia atrás) disponibles para una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        etapa_actual = solicitud.etapa_actual
+        
+        # Buscar transiciones desde la etapa actual hacia etapas con orden menor (transiciones negativas)
+        transiciones_negativas = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=etapa_actual,
+            etapa_destino__orden__lt=etapa_actual.orden  # Orden menor = hacia atrás
+        ).select_related('etapa_destino').order_by('-etapa_destino__orden')  # Ordenar por etapa destino descendente
+        
+        transiciones_data = []
+        for transicion in transiciones_negativas:
+            transiciones_data.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_destino': {
+                    'id': transicion.etapa_destino.id,
+                    'nombre': transicion.etapa_destino.nombre,
+                    'orden': transicion.etapa_destino.orden
+                },
+                'requiere_permiso': transicion.requiere_permiso
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones_negativas': transiciones_data,
+            'tiene_transiciones_negativas': len(transiciones_data) > 0
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener transiciones negativas: {str(e)}'
         }, status=500)

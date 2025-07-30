@@ -18,7 +18,7 @@ def calificar_documento(request):
         opcion_desplegable_id = data.get('opcion_desplegable_id')
         
         # Validar datos
-        if not requisito_solicitud_id or estado not in ['bueno', 'malo']:
+        if not requisito_solicitud_id or estado not in ['bueno', 'malo', 'pendiente']:
             return JsonResponse({'error': 'Datos inválidos'}, status=400)
         
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
