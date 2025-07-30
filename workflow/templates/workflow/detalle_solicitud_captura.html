@@ -2403,29 +2403,29 @@ function cargarSiguientesSubestadosCaptura() {
 }
 
 function mostrarSiguientesSubestados(container) {
-    // Filtrar solo los subestados que pueden ser avanzados
-    const subestadosAvanzables = subestadosDisponiblesCaptura.filter(subestado => 
-        subestado.puede_avanzar || subestado.es_completado
-    );
+    // Mostrar TODAS las 6 subetapas disponibles
+    const todosLosSubestados = subestadosDisponiblesCaptura;
     
-    if (subestadosAvanzables.length === 0) {
+    if (todosLosSubestados.length === 0) {
         container.innerHTML = `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                No hay subestados disponibles para avanzar en este momento.
+                No hay subestados disponibles en este momento.
             </div>
         `;
         return;
     }
     
+    console.log('🔍 Mostrando TODAS las subetapas:', todosLosSubestados);
+    
     let html = '<div class="row g-2">';
     
-    subestadosAvanzables.forEach((subestado, index) => {
+    todosLosSubestados.forEach((subestado, index) => {
         const esActual = subestado.es_actual;
         const puedeAvanzar = subestado.puede_avanzar;
         const esCompletado = subestado.es_completado;
         
-        // Determinar estilo y estado
+        // Determinar estilo y estado - TODAS las subetapas son seleccionables
         let borderClass = 'border-success';
         let descripcion = 'Disponible para avanzar';
         let disabled = '';
@@ -2433,14 +2433,17 @@ function mostrarSiguientesSubestados(container) {
         if (esActual) {
             borderClass = 'border-primary';
             descripcion = 'Subestado actual';
-            disabled = 'disabled';
+            // NO deshabilitar - permitir permanecer en el mismo subestado
         } else if (esCompletado) {
             borderClass = 'border-info';
             descripcion = 'Ya completado - puede regresar';
-        } else if (!puedeAvanzar) {
-            borderClass = 'border-secondary';
-            descripcion = 'No disponible aún';
-            disabled = 'disabled';
+        } else if (puedeAvanzar) {
+            borderClass = 'border-success';
+            descripcion = 'Disponible para avanzar';
+        } else {
+            borderClass = 'border-warning';
+            descripcion = 'Avance directo disponible';
+            // NO deshabilitar - permitir saltos de subestado
         }
         
         html += `
