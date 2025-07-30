@@ -1794,13 +1794,13 @@ function mostrarUsuariosEnTabla(usuarios) {
         const row = document.createElement('tr');
         row.className = 'usuario-item';
         row.setAttribute('data-usuario-id', usuario.id);
-        row.setAttribute('data-usuario-nombre', usuario.nombre);
-        row.setAttribute('data-usuario-email', usuario.email);
+        row.setAttribute('data-usuario-nombre', usuario.nombre || usuario.username || 'Usuario');
+        row.setAttribute('data-usuario-email', usuario.email || '');
         
         const avatar = usuario.profile_picture ?
-            `<img src="${usuario.profile_picture}" alt="${usuario.nombre}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre || usuario.username || 'Usuario'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
             `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
-                ${usuario.nombre.charAt(0).toUpperCase()}
+                ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
             </div>`;
         
         const badges = [];
@@ -1818,18 +1818,18 @@ function mostrarUsuariosEnTabla(usuarios) {
             <td class="text-center">${avatar}</td>
             <td>
                 <div>
-                    <strong class="fw-bold">${usuario.nombre}</strong>
+                    <strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong>
                     ${badges.join('')}
                 </div>
             </td>
             <td>
-                <small class="text-muted">${usuario.email}</small>
+                <small class="text-muted">${usuario.email || ''}</small>
             </td>
             <td>${grupos}</td>
             <td class="text-center">
                 <button class="btn btn-success btn-sm asignar-usuario-avance" 
                         data-usuario-id="${usuario.id}" 
-                        data-usuario-nombre="${usuario.nombre}">
+                        data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
                     <i class="fas fa-user-plus me-1"></i>
                     Asignar
                 </button>
@@ -2102,13 +2102,14 @@ function confirmarDevolucion() {
     btnConfirmar.disabled = true;
     
     // Ejecutar transición
-    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/ejecutar-transicion/`, {
+    fetch(`/workflow/api/ejecutar-transicion/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
+            solicitud_id: SOLICITUD_ID,
             transicion_id: transicion.id,
             comentario: `Devuelto desde Captura: ${motivo}`
         })
@@ -2211,143 +2212,22 @@ function createToastContainer() {
 
 // ========================================
 // FUNCIONES ESPECIALIZADAS PARA CAPTURA
-// 2 BOTONES RECTANGULARES: Devolver a Oficial + Avanzar Subestado
+// 2 BOTONES RECTANGULARES: Devolver a Oficial (modal original) + Avanzar Subestado (modal especializado)
 // ========================================
 
-let transicionesNegativasCaptura = [];
+// Variables para el modal Avanzar Subestado
 let subestadosDisponiblesCaptura = [];
-let usuariosDisponiblesCaptura = [];
 let siguienteSubestadoSeleccionado = null;
-let usuarioSeleccionadoCaptura = null;
 
-// 1. MODAL DEVOLVER A OFICIAL
+// 1. MODAL DEVOLVER A OFICIAL (usar el modal original que ya funciona)
 function mostrarModalDevolverOficial() {
-    console.log('🔄 Abriendo modal Devolver a Oficial');
+    console.log('🔄 Abriendo modal Devolver a Oficial (original)');
     
-    // Obtener modal element
-    const modalElement = document.getElementById('modalCapturaDevolver');
-    
-    // Remover aria-hidden antes de mostrar (fix accesibilidad)
-    modalElement.removeAttribute('aria-hidden');
-    
-    // Mostrar modal
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-    
-    // Event listener para restaurar aria-hidden cuando se cierre
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        modalElement.setAttribute('aria-hidden', 'true');
-    }, { once: true });
-    
-    // Cargar transiciones negativas
-    cargarTransicionesNegativasCaptura();
+    // Usar el modal original que ya tiene toda la lógica correcta
+    mostrarModalDevolucion();
 }
 
-function cargarTransicionesNegativasCaptura() {
-    const container = document.getElementById('transiciones-negativas-container');
-    
-    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/transiciones-negativas/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.transiciones && data.transiciones.length > 0) {
-                transicionesNegativasCaptura = data.transiciones;
-                mostrarTransicionesNegativas(container);
-                document.getElementById('btn-confirmar-devolucion').disabled = false;
-            } else {
-                container.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        No hay transiciones negativas disponibles para esta solicitud.
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error cargando transiciones:', error);
-            container.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error al cargar las opciones de devolución.
-                </div>
-            `;
-        });
-}
-
-function mostrarTransicionesNegativas(container) {
-    let html = '<div class="row g-2">';
-    
-    transicionesNegativasCaptura.forEach((transicion, index) => {
-        html += `
-            <div class="col-md-6">
-                <div class="card border-warning">
-                    <div class="card-body p-3">
-                        <input type="radio" name="transicion-negativa" id="transicion-${index}" 
-                               value="${transicion.etapa_destino_id}" class="form-check-input me-2">
-                        <label for="transicion-${index}" class="form-check-label">
-                            <strong>${transicion.etapa_destino_nombre}</strong>
-                            <br><small class="text-muted">${transicion.descripcion || 'Devolver a esta etapa'}</small>
-                        </label>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function confirmarDevolucionOficial() {
-    const transicionSeleccionada = document.querySelector('input[name="transicion-negativa"]:checked');
-    const comentario = document.getElementById('comentario-devolucion').value;
-    
-    if (!transicionSeleccionada) {
-        showToast('Debe seleccionar una etapa de destino', 'warning');
-        return;
-    }
-    
-    const etapaDestinoId = transicionSeleccionada.value;
-    
-    // Preparar datos para enviar
-    const data = {
-        etapa_destino_id: etapaDestinoId,
-        comentario: comentario
-    };
-    
-    // Deshabilitar botón mientras se procesa
-    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
-    btnConfirmar.disabled = true;
-    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
-    
-    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/cambiar-etapa/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Solicitud devuelta al oficial exitosamente', 'success');
-            // Redirigir a bandeja mixta después de un momento
-            setTimeout(() => {
-                window.location.href = '/workflow/bandeja-mixta/';
-            }, 1500);
-        } else {
-            showToast('Error: ' + (data.error || data.mensaje), 'error');
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="fas fa-user-tie me-1"></i> Devolver a Oficial';
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error devolviendo solicitud:', error);
-        showToast('Error al devolver la solicitud', 'error');
-        btnConfirmar.disabled = false;
-        btnConfirmar.innerHTML = '<i class="fas fa-user-tie me-1"></i> Devolver a Oficial';
-    });
-}
+// Las funciones duplicadas fueron eliminadas - se usa el modal original
 
 // 2. MODAL AVANZAR SUBESTADO  
 function mostrarModalAvanzarSubestado() {
@@ -2490,216 +2370,54 @@ function seleccionarSiguienteSubestado(subestadoId, subestadoNombre) {
 }
 
 function configurarEventosAsignacionCaptura() {
+    console.log('⚙️ Configurando eventos de asignación...');
+    
+    // Verificar que los radio buttons existen
+    const radios = document.querySelectorAll('input[name="opcion-asignacion"]');
+    console.log(`📻 Encontrados ${radios.length} radio buttons de asignación`);
+    
     // Configurar radio buttons de asignación
-    document.querySelectorAll('input[name="opcion-asignacion"]').forEach(radio => {
+    radios.forEach((radio, index) => {
+        console.log(`📻 Radio ${index + 1}: ID=${radio.id}, Value=${radio.value}`);
+        
         radio.addEventListener('change', function() {
             console.log(`🔘 Opción de asignación cambiada a: ${this.value}`);
-            const selectorUsuario = document.getElementById('selector-usuario-container');
             
             if (this.value === 'otro') {
-                console.log('👥 Mostrando selector de usuarios...');
-                selectorUsuario.style.display = 'block';
-                cargarUsuariosDisponiblesCaptura();
+                console.log('👥 Mostrando selector de usuarios EXISTENTE...');
+                // Usar el sistema existente
+                const seccionAsignar = document.getElementById('seccion-asignar-usuario');
+                if (seccionAsignar) {
+                    seccionAsignar.style.display = 'block';
+                    console.log('✅ Sección asignar-usuario mostrada correctamente');
+                    
+                    // CLAVE: Llamar la función que carga los usuarios
+                    console.log('🔄 Cargando usuarios disponibles...');
+                    cargarUsuariosDisponiblesAvance();
+                } else {
+                    console.error('❌ No se encontró seccion-asignar-usuario');
+                }
             } else {
                 console.log('🚫 Ocultando selector de usuarios...');
-                selectorUsuario.style.display = 'none';
-                usuarioSeleccionadoCaptura = null;
+                // Ocultar sistema existente
+                const seccionAsignar = document.getElementById('seccion-asignar-usuario');
+                if (seccionAsignar) {
+                    seccionAsignar.style.display = 'none';
+                }
+                // Limpiar selección existente
+                window.usuarioSeleccionadoAvance = null;
+                console.log('🗑️ Usuario seleccionado limpiado');
             }
             
             validarFormularioAvanceCaptura();
         });
     });
     
-    // Configurar búsqueda de usuarios
-    const inputBusqueda = document.getElementById('buscar-usuario-avance');
-    if (inputBusqueda) {
-        inputBusqueda.addEventListener('input', function() {
-            filtrarUsuariosCaptura(this.value);
-        });
-    }
+    console.log('✅ Eventos de asignación configurados correctamente');
 }
 
-function cargarUsuariosDisponiblesCaptura() {
-    console.log('🔄 Iniciando carga de usuarios disponibles...');
-    
-    // Obtener elementos
-    const tbody = document.getElementById('lista-usuarios-avance');
-    const spinner = document.getElementById('spinner-usuarios-avance');
-    
-    // Mostrar spinner inicial
-    if (spinner) {
-        spinner.style.display = 'block';
-    }
-    
-    // Limpiar tabla
-    if (tbody) {
-        tbody.innerHTML = '';
-    }
-    
-    fetch('/workflow/api/comite/usuarios-disponibles/')
-        .then(response => {
-            console.log('📡 Respuesta recibida, status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Datos recibidos:', data);
-            
-            if (data.success && data.usuarios) {
-                console.log(`✅ ${data.usuarios.length} usuarios cargados correctamente`);
-                usuariosDisponiblesCaptura = data.usuarios;
-                mostrarUsuariosCaptura(usuariosDisponiblesCaptura);
-            } else {
-                console.warn('⚠️ Respuesta sin usuarios:', data);
-                
-                // Ocultar spinner
-                if (spinner) {
-                    spinner.style.display = 'none';
-                }
-                
-                // Mostrar mensaje en tabla
-                if (tbody) {
-                    tbody.innerHTML = `
-                        <tr>
-                          <td colspan="6" class="text-center p-3 text-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            No se pudieron cargar los usuarios disponibles.
-                            <br><small>Respuesta: ${JSON.stringify(data)}</small>
-                          </td>
-                        </tr>
-                    `;
-                }
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error cargando usuarios:', error);
-            
-            // Ocultar spinner
-            if (spinner) {
-                spinner.style.display = 'none';
-            }
-            
-            // Mostrar error en tabla
-            if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                      <td colspan="6" class="text-center p-3 text-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error al cargar los usuarios: ${error.message}
-                        <br><small>Revise la consola para más detalles</small>
-                      </td>
-                    </tr>
-                `;
-            }
-        });
-}
-
-function mostrarUsuariosCaptura(usuarios) {
-    const tbody = document.getElementById('lista-usuarios-avance');
-    const spinner = document.getElementById('spinner-usuarios-avance');
-    
-    console.log(`🎭 Mostrando ${usuarios.length} usuarios en la tabla`);
-    
-    if (!tbody) {
-        console.error('❌ Tbody lista-usuarios-avance no encontrado');
-        return;
-    }
-    
-    // Ocultar spinner cuando se cargan usuarios
-    if (spinner) {
-        spinner.style.display = 'none';
-    }
-    
-    if (usuarios.length === 0) {
-        console.log('⚠️ No hay usuarios para mostrar');
-        tbody.innerHTML = `
-            <tr>
-              <td colspan="6" class="text-center p-3 text-muted">
-                <i class="fas fa-search"></i>
-                <p class="mb-0">No se encontraron usuarios</p>
-              </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let html = '';
-    usuarios.forEach((usuario, index) => {
-        console.log(`👤 Usuario ${index + 1}: ${usuario.nombre_completo} (ID: ${usuario.id})`);
-        
-        // Escapar comillas en el nombre para evitar errores de JavaScript
-        const nombreEscapado = usuario.nombre_completo.replace(/'/g, "\\'");
-        
-        html += `
-            <tr id="usuario-row-${usuario.id}" style="cursor: pointer;" onclick="seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')">
-              <td>${index + 1}</td>
-              <td>
-                <img src="/static/images/profile.png" alt="Avatar" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
-              </td>
-              <td>
-                <div>
-                  <strong>${usuario.nombre_completo}</strong>
-                  <div class="small text-muted">@${usuario.username}</div>
-                </div>
-              </td>
-              <td>
-                <div class="small">${usuario.email || ''}</div>
-              </td>
-              <td>
-                <div class="small">Sin información de grupos</div>
-              </td>
-              <td>
-                <button type="button" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')">
-                  <i class="fas fa-check"></i> Seleccionar
-                </button>
-              </td>
-            </tr>
-        `;
-    });
-    
-    console.log('✅ HTML generado para usuarios:', html.length, 'caracteres');
-    tbody.innerHTML = html;
-    console.log('✅ Usuarios renderizados correctamente en la tabla');
-}
-
-function filtrarUsuariosCaptura(termino) {
-    const usuariosFiltrados = usuariosDisponiblesCaptura.filter(usuario => 
-        usuario.nombre_completo.toLowerCase().includes(termino.toLowerCase()) ||
-        usuario.username.toLowerCase().includes(termino.toLowerCase())
-    );
-    
-    mostrarUsuariosCaptura(usuariosFiltrados);
-}
-
-function seleccionarUsuarioCaptura(usuarioId, usuarioNombre) {
-    console.log(`👆 Usuario seleccionado: ${usuarioNombre} (ID: ${usuarioId})`);
-    
-    // Remover selección anterior
-    const filasUsuarios = document.querySelectorAll('#lista-usuarios-avance tr');
-    filasUsuarios.forEach(fila => {
-        fila.classList.remove('table-success');
-        fila.style.backgroundColor = '';
-    });
-    
-    // Marcar la fila seleccionada
-    const filaSeleccionada = document.getElementById(`usuario-row-${usuarioId}`);
-    if (filaSeleccionada) {
-        filaSeleccionada.classList.add('table-success');
-        filaSeleccionada.style.backgroundColor = '#d1e7dd';
-    }
-    
-    usuarioSeleccionadoCaptura = { 
-        id: parseInt(usuarioId), 
-        nombre: usuarioNombre 
-    };
-    
-    console.log('✅ Usuario guardado en variable:', usuarioSeleccionadoCaptura);
-    
-    // Validar formulario después de seleccionar usuario
-    validarFormularioAvanceCaptura();
-}
+// NOTA: Usamos el sistema existente de seccion-asignar-usuario 
+// con sus funciones seleccionarUsuarioAvance() y usuarioSeleccionadoAvance
 
 function validarFormularioAvanceCaptura() {
     const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
@@ -2718,7 +2436,7 @@ function validarFormularioAvanceCaptura() {
     }
     
     // Si seleccionó "otro", verificar que hay un usuario seleccionado
-    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !usuarioSeleccionadoCaptura) {
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !window.usuarioSeleccionadoAvance) {
         valido = false;
     }
     
@@ -2736,15 +2454,15 @@ function confirmarAvanceCaptura() {
     console.log('🔍 DEBUG - Datos para enviar:');
     console.log('  - Siguiente subestado:', siguienteSubestadoSeleccionado);
     console.log('  - Opción seleccionada:', opcionSeleccionada.value);
-    console.log('  - Usuario seleccionado:', usuarioSeleccionadoCaptura);
+    console.log('  - Usuario seleccionado:', window.usuarioSeleccionadoAvance);
     
     const data = {
         opcion: opcionSeleccionada.value,
         siguiente_subestado_id: siguienteSubestadoSeleccionado.id
     };
     
-    if (opcionSeleccionada.value === 'otro' && usuarioSeleccionadoCaptura) {
-        data.usuario_id = parseInt(usuarioSeleccionadoCaptura.id);
+    if (opcionSeleccionada.value === 'otro' && window.usuarioSeleccionadoAvance) {
+        data.usuario_id = parseInt(window.usuarioSeleccionadoAvance.id);
     }
     
     console.log('📤 Enviando datos:', JSON.stringify(data, null, 2));
@@ -3278,50 +2996,7 @@ function getCsrfToken() {
 <!-- MODALES ESPECIALIZADOS PARA CAPTURA -->
 <!-- ========================================== -->
 
-<!-- Modal Devolver a Oficial -->
-<div class="modal fade" id="modalCapturaDevolver" tabindex="-1" aria-labelledby="modalCapturaDevolverLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529;">
-        <h5 class="modal-title" id="modalCapturaDevolverLabel">
-          <i class="fas fa-user-tie me-2"></i>
-          Devolver a Oficial
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          <strong>¿Está seguro de devolver esta solicitud al Oficial?</strong>
-          <p class="mb-0 mt-2">Seleccione la etapa a la que desea devolver la solicitud:</p>
-        </div>
-        
-        <div id="transiciones-negativas-container">
-          <div class="d-flex justify-content-center p-3">
-            <div class="spinner-border text-warning" role="status">
-              <span class="visually-hidden">Cargando...</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mt-3">
-          <label for="comentario-devolucion" class="form-label">Comentario (opcional):</label>
-          <textarea id="comentario-devolucion" class="form-control" rows="3" placeholder="Indique el motivo de la devolución..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i>
-          Cancelar
-        </button>
-        <button type="button" class="btn btn-warning" id="btn-confirmar-devolucion" onclick="confirmarDevolucionOficial()" disabled>
-          <i class="fas fa-user-tie me-1"></i>
-          Devolver a Oficial
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Modal Devolver a Oficial eliminado - se usa el modal original modalDevolverOficial -->
 
 <!-- Modal Enviar a Bandeja Grupal eliminado por petición del usuario -->
 
@@ -3406,19 +3081,7 @@ function getCsrfToken() {
           </div>
         </div>
         
-        <!-- Selector de Usuario (solo cuando se selecciona "otro") -->
-        <div id="selector-usuario-container" class="mb-4" style="display: none;">
-          <label class="form-label fw-bold">
-            <i class="fas fa-search me-2"></i>
-            Seleccionar usuario:
-          </label>
-          <!-- Spinner inicial -->
-          <div id="spinner-usuarios-avance" class="text-center p-3">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Cargando usuarios...</span>
-            </div>
-          </div>
-        </div>
+
         
       </div>
       <div class="modal-footer">
