@@ -114,9 +114,9 @@ function validarYAbrirModal() {
 function calificarDocumento(requisitoId, estado, opcionId = null) {
   const csrfToken = getCsrfToken();
   const data = {
-    requisito_id: requisitoId,
+    requisito_solicitud_id: requisitoId,
     estado: estado,
-    opcion_id: opcionId
+    opcion_desplegable_id: opcionId
   };
 
   fetch('/workflow/api/documento/calificar/', {

@@ -520,7 +520,7 @@
                 <div class="process-details">
                   {% for archivo_info in archivos %}
                   <div class="detail-card archivo-card-mejorada-backoffice"
-                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}0{% endif %}">
+                    data-requisito-id="{{ archivo_info.archivo_actual.id }}">
                     <!-- Header del archivo -->
                     <div class="archivo-header-backoffice">
                       <!-- IZQUIERDA: Información del documento -->
@@ -600,7 +600,7 @@
                         <!-- Botones de Calificación Optimizados para Checklist -->
                         <div class="botones-calificacion-backoffice botones-checklist-optimizado">
                           {% if archivo_info.archivo_actual.archivo %}
-                            <!-- Si tiene archivo: Solo Bueno/Malo -->
+                            <!-- Si tiene archivo: Bueno/Malo/Pendiente -->
                             <!-- Bueno -->
                             <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
                               data-requisito="{{ archivo_info.archivo_actual.id }}"
@@ -617,6 +617,14 @@
                               <span>Malo</span>
                             </button>
                             
+                            <!-- 🆕 PENDIENTE - NUEVO BOTÓN -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'pendiente' %}activo{% endif %}" data-estado="pendiente"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Marcar como pendiente">
+                              <i class="fas fa-clock"></i>
+                              <span>Pendiente</span>
+                            </button>
+                            
                             <!-- Comentarios -->
                             <button type="button" class="btn comentario-btn-backoffice"
                               data-requisito="{{ archivo_info.archivo_actual.id }}"
@@ -626,16 +634,48 @@
                               <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
                             </button>
                           {% else %}
-                            <!-- Si NO tiene archivo: Mostrar estado pendiente automático -->
-                            <div class="estado-sin-archivo">
-                              <span class="badge bg-warning text-dark">
-                                <i class="fas fa-clock me-1"></i>
-                                Pendiente (Sin archivo)
-                              </span>
+                            <!-- Si NO tiene archivo: Mostrar botones con "Pendiente" automáticamente activo -->
+                            <!-- Bueno - Deshabilitado -->
+                            <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
+                              disabled title="Debe subir archivo para calificar como bueno">
+                              <i class="fas fa-thumbs-up"></i>
+                              <span>Bueno</span>
+                            </button>
+                            
+                            <!-- Malo - Deshabilitado -->
+                            <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
+                              disabled title="Debe subir archivo para calificar como malo">
+                              <i class="fas fa-thumbs-down"></i>
+                              <span>Malo</span>
+                            </button>
+                            
+                            <!-- Pendiente - AUTOMÁTICAMENTE ACTIVO -->
+                            <button type="button" class="btn calificar-btn-backoffice activo" data-estado="pendiente"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Pendiente (Sin archivo)"
+                              data-calificado="pendiente"
+                              style="background-color: #ffc107 !important; border-color: #ffc107 !important; color: #212529 !important; font-weight: bold; box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);">
+                              <i class="fas fa-clock"></i>
+                              <span>Pendiente</span>
+                            </button>
+                            
+                            <!-- Comentarios -->
+                            <button type="button" class="btn comentario-btn-backoffice"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Ver/Agregar comentarios">
+                              <i class="fas fa-comment"></i>
+                              <span>Comentar</span>
+                              <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                            </button>
+                            
+                            <!-- Información adicional -->
+                            <div class="mt-2">
+                              <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sin archivo - Marcado automáticamente como pendiente</small>
+                              <br>
                               {% if not archivo_info.obligatorio %}
-                                <small class="text-muted ms-2">Documento opcional</small>
+                                <small class="text-muted">Documento opcional</small>
                               {% else %}
-                                <small class="text-danger ms-2">Documento requerido</small>
+                                <small class="text-danger">Documento requerido</small>
                               {% endif %}
                             </div>
                           {% endif %}
@@ -1365,8 +1405,9 @@
       // Buscar todos los botones de calificación en esta card
       const botonesBueno = card.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"]');
       const botonesMalo = card.querySelectorAll('.calificar-btn-backoffice[data-estado="malo"]');
+      const botonesPendiente = card.querySelectorAll('.calificar-btn-backoffice[data-estado="pendiente"]');
       
-      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos (Checklist optimizado)`);
+      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} buenos, ${botonesMalo.length} malos, ${botonesPendiente.length} pendientes`);
       
       // Verificar si debe estar marcado como bueno o malo basado en el estado guardado
       // Esta función se ejecutará después de que actualizarEstadoCalificacion haya hecho su trabajo
@@ -1841,6 +1882,12 @@
           btn.style.color = 'white !important';
           btn.style.fontWeight = 'bold';
           btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        } else if (estado === 'pendiente') {
+          btn.style.backgroundColor = '#ffc107 !important';
+          btn.style.borderColor = '#ffc107 !important';
+          btn.style.color = '#212529 !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
         }
       });
     }, 1000);
@@ -3531,7 +3578,8 @@ function mostrarEstadoDocumentos(data) {
   // Actualizar contadores
   document.getElementById('documentos-total-count').textContent = data.total_documentos || 0;
   document.getElementById('documentos-buenos-count').textContent = data.documentos_buenos || 0;
-  document.getElementById('documentos-pendientes-count').textContent = data.documentos_pendientes ? data.documentos_pendientes.length : 0;
+  document.getElementById('documentos-malos-count').textContent = data.documentos_malos || 0;
+  document.getElementById('documentos-pendientes-count').textContent = data.documentos_pendientes_count || data.documentos_pendientes?.length || 0;
   
   // Mostrar lista de documentos pendientes si existen
   const listaPendientes = document.getElementById('lista-documentos-pendientes');
@@ -4153,7 +4201,7 @@ document.addEventListener('DOMContentLoaded', function() {
               
               <!-- Resumen de documentos -->
               <div class="row text-center mb-3">
-                <div class="col-4">
+                <div class="col-3">
                   <div class="d-flex flex-column align-items-center">
                     <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
                       <i class="fas fa-check" style="font-size: 18px;"></i>
@@ -4162,7 +4210,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <small class="text-muted">Buenos</small>
                   </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                      <i class="fas fa-times" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #dc2626;" id="documentos-malos-count">0</div>
+                    <small class="text-muted">Malos</small>
+                  </div>
+                </div>
+                <div class="col-3">
                   <div class="d-flex flex-column align-items-center">
                     <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
                       <i class="fas fa-clock" style="font-size: 18px;"></i>
@@ -4171,7 +4228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <small class="text-muted">Pendientes</small>
                   </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                   <div class="d-flex flex-column align-items-center">
                     <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
                       <i class="fas fa-file-alt" style="font-size: 18px;"></i>

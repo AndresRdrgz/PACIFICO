@@ -507,6 +507,46 @@ def detalle_solicitud(request, solicitud_id):
                     activo=True
                 ).select_related('comentario_por').order_by('-fecha_comentario')
                 
+                # 🚨 DEBUG: LÓGICA AUTOMÁTICA CON VALIDACIÓN ESTRICTA (PRIMERA FUNCIÓN)
+                print(f"🔍 DEBUG F1 - Solicitud actual: {solicitud.id} ({solicitud.codigo})")
+                print(f"🔍 DEBUG F1 - Procesando req_sol: {req_sol.id} - Requisito: {req_sol.requisito.nombre}")
+                print(f"🔍 DEBUG F1 - req_sol.solicitud.id: {req_sol.solicitud.id}")
+                print(f"🔍 DEBUG F1 - ¿Coincide solicitud?: {req_sol.solicitud.id == solicitud.id}")
+                
+                # 🛡️ VALIDACIÓN ESTRICTA: Solo procesar si pertenece a la solicitud actual
+                if req_sol.solicitud.id != solicitud.id:
+                    print(f"❌ ERROR CRÍTICO F1: req_sol pertenece a solicitud {req_sol.solicitud.id} pero estamos en {solicitud.id}")
+                    continue  # Saltar este requisito
+                
+                if not req_sol.archivo:  # Sin archivo
+                    print(f"📄 F1 Sin archivo para: {req_sol.requisito.nombre} en solicitud {solicitud.codigo}")
+                    # Buscar si ya existe calificación
+                    calificacion_existente = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=req_sol
+                    ).first()
+                    
+                    # Si no existe, crearla automáticamente como "pendiente"
+                    if not calificacion_existente:
+                        try:
+                            print(f"💾 F1 CREANDO calificación pendiente para:")
+                            print(f"   - RequisitoSolicitud ID: {req_sol.id}")
+                            print(f"   - Requisito: {req_sol.requisito.nombre}")
+                            print(f"   - Solicitud: {req_sol.solicitud.codigo} (ID: {req_sol.solicitud.id})")
+                            print(f"   - Usuario: {request.user.username}")
+                            
+                            CalificacionDocumentoBackoffice.objects.create(
+                                requisito_solicitud=req_sol,
+                                calificado_por=request.user,
+                                estado='pendiente'
+                            )
+                            print(f"✅ F1 Calificación creada exitosamente")
+                            # Recargar calificaciones para incluir la nueva
+                            calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+                                requisito_solicitud=req_sol
+                            ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
+                        except Exception as e:
+                            print(f"❌ F1 Error creando calificación: {e}")
+
                 requisitos_necesarios[req_id]['archivo_actual'] = req_sol
                 requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
                 requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
@@ -579,7 +619,7 @@ def detalle_solicitud(request, solicitud_id):
             'Orden del expediente': 'workflow/detalle_solicitud_orden.html'
         }
         
-        # Obtener template según subestado, fallback al original
+        # PRIMERA FUNCIÓN DETALLE_SOLICITUD - AHORA CON AUTO-CREACIÓN TAMBIÉN
         template_name = template_map.get(
             solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Checklist',
             'workflow/detalle_solicitud_backoffice.html'
@@ -589,6 +629,8 @@ def detalle_solicitud(request, solicitud_id):
     
     return render(request, 'workflow/detalle_solicitud.html', context)
 
+# FUNCIÓN DUPLICADA CAMBIADA A NOMBRE DIFERENTE 
+# def detalle_solicitud → detalle_solicitud_DUPLICADA_DESHABILITADA
 
 @login_required
 def transicion_solicitud(request, solicitud_id):
@@ -2821,187 +2863,6 @@ def nueva_solicitud(request):
     }
     
     return render(request, 'workflow/nueva_solicitud.html', context)
-
-
-@login_required
-def detalle_solicitud(request, solicitud_id):
-    """Detalle de una solicitud específica"""
-    
-    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
-    
-    # Verificar permisos
-    if solicitud.asignada_a and solicitud.asignada_a != request.user:
-        # Superusers bypass permission checks
-        if not (request.user.is_superuser or request.user.is_staff):
-            grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_ver=True
-            ).exists()
-            
-            if not tiene_permiso:
-                messages.error(request, 'No tienes permisos para ver esta solicitud.')
-                return redirect('bandeja_trabajo')
-    
-    # Obtener transiciones disponibles
-    transiciones_disponibles = []
-    if solicitud.etapa_actual:
-        transiciones = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        )
-        
-        for transicion in transiciones:
-            # Verificar requisitos para esta transición
-            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
-            
-            if not transicion.requiere_permiso:
-                transiciones_disponibles.append({
-                    'transicion': transicion,
-                    'puede_realizar': len(requisitos_faltantes) == 0,
-                    'requisitos_faltantes': requisitos_faltantes,
-                    'total_requisitos_faltantes': len(requisitos_faltantes)
-                })
-            else:
-                # Verificar si el usuario tiene permisos específicos
-                grupos_usuario = request.user.groups.all()
-                tiene_permiso = PermisoEtapa.objects.filter(
-                    etapa=transicion.etapa_destino,
-                    grupo__in=grupos_usuario
-                ).exists()
-                if tiene_permiso:
-                    transiciones_disponibles.append({
-                        'transicion': transicion,
-                        'puede_realizar': len(requisitos_faltantes) == 0,
-                        'requisitos_faltantes': requisitos_faltantes,
-                        'total_requisitos_faltantes': len(requisitos_faltantes)
-                    })
-    
-    # Obtener historial
-    historial = solicitud.historial.all().order_by('-fecha_inicio')
-    
-    # Obtener requisitos
-    requisitos = solicitud.requisitos.all()
-    
-    # Obtener campos personalizados
-    campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
-    valores_campos = solicitud.valores_personalizados.all()
-    
-    # Para vista backoffice: obtener archivos requeridos por subestado
-    archivos_por_subestado = {}
-    if (solicitud.etapa_actual and 
-        solicitud.etapa_actual.nombre == "Back Office" and 
-        solicitud.etapa_actual.es_bandeja_grupal):
-        
-        # Obtener transiciones de salida desde la etapa actual
-        transiciones_salida = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
-        transiciones_entrada = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_destino=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
-        requisitos_necesarios = {}
-        
-        # Procesar requisitos de transiciones de salida
-        for transicion in transiciones_salida:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'salida'
-                    }
-        
-        # Procesar requisitos de transiciones de entrada
-        for transicion in transiciones_entrada:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'entrada'
-                    }
-        
-        # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
-        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud).select_related('requisito')
-        for req_sol in requisitos_solicitud:
-            req_id = req_sol.requisito_id  # Usar el foreign key directamente
-            if req_id in requisitos_necesarios:
-                # Obtener calificaciones y comentarios
-                from .models import CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, OpcionDesplegable
-                
-                calificaciones = CalificacionDocumentoBackoffice.objects.filter(
-                    requisito_solicitud=req_sol
-                ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
-                
-                comentarios = ComentarioDocumentoBackoffice.objects.filter(
-                    requisito_solicitud=req_sol,
-                    activo=True
-                ).select_related('comentario_por').order_by('-fecha_comentario')
-                
-                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
-                requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
-                requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
-                requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
-        
-        # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
-        for subestado in solicitud.etapa_actual.subestados.all():
-            archivos_por_subestado[subestado.id] = list(requisitos_necesarios.values())
-    
-    # Calcular estadísticas de archivos para el template
-    archivos_stats = {}
-    if archivos_por_subestado:
-        for subestado_id, archivos in archivos_por_subestado.items():
-            total_archivos = len(archivos)
-            archivos_completos = len([archivo for archivo in archivos if archivo['esta_cumplido']])
-            archivos_stats[subestado_id] = {
-                'total': total_archivos,
-                'completos': archivos_completos,
-                'pendientes': total_archivos - archivos_completos,
-                'porcentaje': round((archivos_completos / total_archivos * 100) if total_archivos > 0 else 0, 1)
-            }
-    
-    # Obtener opciones de desplegable para calificación
-    opciones_desplegable = []
-    if archivos_por_subestado:  # Solo si estamos en Back Office
-        from .models import OpcionDesplegable
-        opciones_desplegable = OpcionDesplegable.objects.filter(activo=True).order_by('orden')
-    
-    context = {
-        'solicitud': solicitud,
-        'transiciones_disponibles': transiciones_disponibles,
-        'historial': historial,
-        'requisitos': requisitos,
-        'campos_personalizados': campos_personalizados,
-        'valores_campos': valores_campos,
-        'archivos_por_subestado': archivos_por_subestado,
-        'archivos_stats': archivos_stats,
-        'opciones_desplegable': opciones_desplegable,
-    }
-    
-    # Verificar si estamos en la etapa "Back Office" con bandeja grupal
-    if (solicitud.etapa_actual and 
-        solicitud.etapa_actual.nombre == "Back Office" and 
-        solicitud.etapa_actual.es_bandeja_grupal):
-        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
-    
-    return render(request, 'workflow/detalle_solicitud.html', context)
 
 
 @login_required
@@ -11842,84 +11703,92 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         ).select_related('requisito')
         
         documentos_problematicos = []
-        
-        for req_sol in requisitos_solicitud:
-            # Verificar si este requisito es obligatorio consultando RequisitoTransicion
-            req_trans = RequisitoTransicion.objects.filter(
-                transicion__etapa_origen=solicitud.etapa_actual,
-                transicion__pipeline=solicitud.pipeline,
-                requisito=req_sol.requisito
-            ).first()
-            
-            # Solo validar si es obligatorio
-            if req_trans and req_trans.obligatorio:
-                # Buscar la calificación más reciente para este documento (de cualquier usuario)
-                calificacion = CalificacionDocumentoBackoffice.objects.filter(
-                    requisito_solicitud=req_sol
-                ).order_by('-fecha_calificacion').first()
-                
-                if not calificacion:
-                    # No hay calificación y es obligatorio
-                    documentos_problematicos.append({
-                        'nombre': req_sol.requisito.nombre,
-                        'problema': 'sin_calificar',
-                        'estado_actual': None
-                    })
-                elif calificacion.estado != 'bueno':
-                    # Está calificado pero no como "bueno" y es obligatorio
-                    documentos_problematicos.append({
-                        'nombre': req_sol.requisito.nombre,
-                        'problema': 'mal_calificado',
-                        'estado_actual': calificacion.estado
-                    })
-        
-        # Obtener información adicional sobre documentos pendientes
         documentos_pendientes = []
+        documentos_buenos = 0
+        documentos_malos = 0
+        
+        # Validar documentos - Solo "malo" bloquea el avance
         for req_sol in requisitos_solicitud:
+            # Buscar la calificación más reciente
             calificacion = CalificacionDocumentoBackoffice.objects.filter(
                 requisito_solicitud=req_sol
             ).order_by('-fecha_calificacion').first()
             
-            if calificacion and calificacion.estado == 'pendiente':
+            if calificacion:
+                estado = calificacion.estado
+                
+                # Contar por estado
+                if estado == 'bueno':
+                    documentos_buenos += 1
+                elif estado == 'malo':
+                    documentos_malos += 1
+                    # Solo documentos "malo" bloquean el avance
+                    documentos_problematicos.append({
+                        'nombre': req_sol.requisito.nombre,
+                        'problema': 'calificado_como_malo',
+                        'estado_actual': estado
+                    })
+                elif estado == 'pendiente':
+                    documentos_pendientes.append({
+                        'nombre': req_sol.requisito.nombre,
+                        'estado': 'pendiente'
+                    })
+            else:
+                # Sin calificación = pendiente automático (permite avanzar)
                 documentos_pendientes.append({
                     'nombre': req_sol.requisito.nombre,
                     'estado': 'pendiente'
                 })
+                
+                # Crear calificación automática como "pendiente"
+                try:
+                    CalificacionDocumentoBackoffice.objects.get_or_create(
+                        requisito_solicitud=req_sol,
+                        defaults={
+                            'calificado_por': request.user,
+                            'estado': 'pendiente'
+                        }
+                    )
+                except Exception:
+                    pass  # Ignorar errores de creación automática
         
-        # Verificar si todos los documentos obligatorios están correctos
+        # Verificar si puede avanzar (solo "malo" bloquea)
         if len(documentos_problematicos) == 0:
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': True,
-                'mensaje': 'Todos los documentos obligatorios están calificados como "Buenos"',
+                'mensaje': 'No hay documentos calificados como "Malo". Puede avanzar. (Documentos "Pendientes" permiten continuar)',
                 'documentos_pendientes': documentos_pendientes,
                 'total_documentos': len(requisitos_solicitud),
-                'documentos_buenos': len(requisitos_solicitud) - len(documentos_pendientes)
+                'documentos_buenos': documentos_buenos,
+                'documentos_malos': documentos_malos,
+                'documentos_pendientes_count': len(documentos_pendientes)
             })
         else:
-            # Construir mensaje detallado
+            # Construir mensaje detallado para documentos "malo"
             mensajes_detalle = []
             for doc in documentos_problematicos:
-                if doc['problema'] == 'sin_calificar':
+                if doc['problema'] == 'calificado_como_malo':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como 'Malo' - debe cambiar a 'Bueno' o 'Pendiente'")
+                elif doc['problema'] == 'sin_calificar':
                     mensajes_detalle.append(f"• {doc['nombre']}: Sin calificar")
                 elif doc['problema'] == 'mal_calificado':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como '{doc['estado_actual']}' (debe ser 'bueno')")
-                elif doc['problema'] == 'no_existe':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Documento no encontrado")
+                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como '{doc['estado_actual']}' - debe cambiar")
             
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': False,
                 'documentos_problematicos': documentos_problematicos,
                 'documentos_pendientes': documentos_pendientes,
-                'mensaje': 'Algunos documentos obligatorios no están calificados como "Buenos"',
+                'mensaje': f'No puede avanzar: {len(documentos_problematicos)} documento(s) calificado(s) como "Malo"',
                 'detalle': mensajes_detalle,
                 'total_documentos': len(requisitos_solicitud),
-                'documentos_buenos': len([req for req in requisitos_solicitud if CalificacionDocumentoBackoffice.objects.filter(requisito_solicitud=req, estado='bueno').exists()])
+                'documentos_buenos': documentos_buenos,
+                'documentos_malos': documentos_malos,
+                'documentos_pendientes_count': len(documentos_pendientes)
             })
             
     except Exception as e:
-        print(f"❌ Error validando documentos: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': f'Error interno: {str(e)}'
