@@ -39,6 +39,7 @@ urlpatterns += [
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
+    path('agenda-firma/', views_workflow.agenda_firma_view, name='agenda_firma'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitud/<int:solicitud_id>/v2/', views_workflow.detalle_solicitud_v2, name='detalle_solicitud_v2'),
     path('solicitud/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),

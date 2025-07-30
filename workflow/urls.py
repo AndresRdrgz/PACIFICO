@@ -28,6 +28,7 @@ urlpatterns = [
     # Workflow URLs
     path('', dashboard_views.dashboard_operativo, name='dashboard'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
+    path('agenda-firma/', views_workflow.agenda_firma_view, name='agenda_firma'),
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),

@@ -12248,3 +12248,28 @@ def api_eliminar_pendiente_solicitud(request, pendiente_solicitud_id):
             'success': False,
             'error': f'Error al eliminar pendiente: {str(e)}'
         }, status=500)
+
+
+# ==========================================================
+# VISTA PARA AGENDA DE FIRMA
+# ==========================================================
+
+@login_required
+def agenda_firma_view(request):
+    """
+    Vista principal para la Agenda de Firma
+    """
+    try:
+        # Por ahora, simplemente renderizamos un template básico
+        # Más funcionalidad se agregará según las especificaciones
+        
+        context = {
+            'titulo_pagina': 'Agenda de Firma',
+            'usuario': request.user,
+        }
+        
+        return render(request, 'workflow/agenda_firma.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar la agenda de firma: {str(e)}')
+        return redirect('workflow:dashboard')
