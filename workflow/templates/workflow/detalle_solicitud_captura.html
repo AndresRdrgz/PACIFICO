@@ -89,6 +89,63 @@
   margin-bottom: -2rem;
 }
 
+/* Estilos para botones de acción compactos cuadrados */
+.btn-captura-action {
+  width: 120px;
+  height: 100px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-captura-action i {
+  font-size: 1.8rem;
+}
+
+.btn-captura-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Colores específicos siguiendo el patrón del proyecto */
+.btn-devolver {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529;
+}
+
+.btn-devolver:hover {
+  background: linear-gradient(135deg, #e0a800, #d39e00);
+  color: #212529;
+}
+
+.btn-bandeja {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
+}
+
+.btn-bandeja:hover {
+  background: linear-gradient(135deg, #5a6268, #495057);
+  color: white;
+}
+
+.btn-avanzar {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+}
+
+.btn-avanzar:hover {
+  background: linear-gradient(135deg, #1e7e34, #155724);
+  color: white;
+}
+
 /* Estilos específicos para la sección de pendientes */
 .pendientes-card {
   border: none;
@@ -456,28 +513,30 @@
                 </div>
               </div>
 
-            <!-- Botones de Acción -->
+            <!-- Botones de Acción Compactos -->
             <div class="action-buttons">
-              <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
-              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
-                <i class="fas fa-arrow-right me-2"></i>
-                <span id="btn-avanzar-texto">Avanzar</span>
-                          </button>
-              
-              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
-              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: inline-block;" onclick="mostrarModalDevolucion()">
-                <i class="fas fa-arrow-left me-2"></i>
-                <span>Devolver a Oficial</span>
-                          </button>
-              
-              <!-- Indicador de estado de validación -->
-              <div id="validacion-estado" class="mt-2">
-                <small class="text-muted">
-                  <i class="fas fa-check-circle text-success me-1"></i>
-                  <span id="validacion-mensaje">Listo para avanzar</span>
-                </small>
-                        </div>
-                      </div>
+              <div class="d-flex justify-content-center gap-3">
+                
+                <!-- 1. Devolver a Oficial -->
+                <button type="button" class="btn btn-captura-action btn-devolver" onclick="mostrarModalDevolverOficial()" title="Devolver a Oficial">
+                  <i class="fas fa-user-tie"></i>
+                  <span>Devolver a Oficial</span>
+                </button>
+                
+                <!-- 2. Enviar a Bandeja Grupal -->
+                <button type="button" class="btn btn-captura-action btn-bandeja" onclick="mostrarModalEnviarBandeja()" title="Enviar a Bandeja Grupal">
+                  <i class="fas fa-users"></i>
+                  <span>Enviar a Bandeja</span>
+                </button>
+                
+                <!-- 3. Avanzar Subestado -->
+                <button type="button" class="btn btn-captura-action btn-avanzar" onclick="mostrarModalAvanzarSubestado()" title="Avanzar Subestado">
+                  <i class="fas fa-arrow-right"></i>
+                  <span>Avanzar Subestado</span>
+                </button>
+                
+              </div>
+            </div>
 
                     </div>
                   </div>
@@ -2166,6 +2225,549 @@ function createToastContainer() {
     document.body.appendChild(container);
     return container;
 }
+
+// ========================================
+// FUNCIONES ESPECIALIZADAS PARA CAPTURA
+// ========================================
+
+let transicionesNegativasCaptura = [];
+let subestadosDisponiblesCaptura = [];
+let usuariosDisponiblesCaptura = [];
+let siguienteSubestadoSeleccionado = null;
+let usuarioSeleccionadoCaptura = null;
+
+// 1. MODAL DEVOLVER A OFICIAL
+function mostrarModalDevolverOficial() {
+    console.log('🔄 Abriendo modal Devolver a Oficial');
+    
+    // Obtener modal element
+    const modalElement = document.getElementById('modalCapturaDevolver');
+    
+    // Remover aria-hidden antes de mostrar (fix accesibilidad)
+    modalElement.removeAttribute('aria-hidden');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar transiciones negativas
+    cargarTransicionesNegativasCaptura();
+}
+
+function cargarTransicionesNegativasCaptura() {
+    const container = document.getElementById('transiciones-negativas-container');
+    
+    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/transiciones-negativas/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.transiciones && data.transiciones.length > 0) {
+                transicionesNegativasCaptura = data.transiciones;
+                mostrarTransicionesNegativas(container);
+                document.getElementById('btn-confirmar-devolucion').disabled = false;
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay transiciones negativas disponibles para esta solicitud.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando transiciones:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar las opciones de devolución.
+                </div>
+            `;
+        });
+}
+
+function mostrarTransicionesNegativas(container) {
+    let html = '<div class="row g-2">';
+    
+    transicionesNegativasCaptura.forEach((transicion, index) => {
+        html += `
+            <div class="col-md-6">
+                <div class="card border-warning">
+                    <div class="card-body p-3">
+                        <input type="radio" name="transicion-negativa" id="transicion-${index}" 
+                               value="${transicion.etapa_destino_id}" class="form-check-input me-2">
+                        <label for="transicion-${index}" class="form-check-label">
+                            <strong>${transicion.etapa_destino_nombre}</strong>
+                            <br><small class="text-muted">${transicion.descripcion || 'Devolver a esta etapa'}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function confirmarDevolucionOficial() {
+    const transicionSeleccionada = document.querySelector('input[name="transicion-negativa"]:checked');
+    const comentario = document.getElementById('comentario-devolucion').value;
+    
+    if (!transicionSeleccionada) {
+        showToast('Debe seleccionar una etapa de destino', 'warning');
+        return;
+    }
+    
+    const etapaDestinoId = transicionSeleccionada.value;
+    
+    // Preparar datos para enviar
+    const data = {
+        etapa_destino_id: etapaDestinoId,
+        comentario: comentario
+    };
+    
+    // Deshabilitar botón mientras se procesa
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/cambiar-etapa/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Solicitud devuelta al oficial exitosamente', 'success');
+            // Redirigir a bandeja mixta después de un momento
+            setTimeout(() => {
+                window.location.href = '/workflow/bandeja-mixta/';
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.error || data.mensaje), 'error');
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-user-tie me-1"></i> Devolver a Oficial';
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error devolviendo solicitud:', error);
+        showToast('Error al devolver la solicitud', 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-user-tie me-1"></i> Devolver a Oficial';
+    });
+}
+
+// 2. MODAL ENVIAR A BANDEJA GRUPAL
+function mostrarModalEnviarBandeja() {
+    console.log('🔄 Abriendo modal Enviar a Bandeja Grupal');
+    
+    // Obtener modal element
+    const modalElement = document.getElementById('modalCapturaEnviarBandeja');
+    
+    // Remover aria-hidden antes de mostrar (fix accesibilidad)
+    modalElement.removeAttribute('aria-hidden');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+}
+
+function confirmarEnviarBandeja() {
+    const data = {
+        solicitud_id: {{ solicitud.id }}
+    };
+    
+    fetch('/workflow/api/devolver-bandeja-grupal/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Solicitud enviada a bandeja grupal exitosamente', 'success');
+            // Redirigir a bandeja mixta
+            setTimeout(() => {
+                window.location.href = '/workflow/bandeja-mixta/';
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.message || 'Error desconocido'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error enviando a bandeja grupal:', error);
+        showToast('Error al enviar a bandeja grupal', 'error');
+    });
+}
+
+// 3. MODAL AVANZAR SUBESTADO  
+function mostrarModalAvanzarSubestado() {
+    console.log('🔄 Abriendo modal Avanzar Subestado');
+    
+    // Obtener modal element
+    const modalElement = document.getElementById('modalCapturaAvanzar');
+    
+    // Remover aria-hidden antes de mostrar (fix accesibilidad)
+    modalElement.removeAttribute('aria-hidden');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar información necesaria
+    cargarSiguientesSubestadosCaptura();
+    configurarEventosAsignacionCaptura();
+}
+
+function cargarSiguientesSubestadosCaptura() {
+    const container = document.getElementById('siguiente-subestado-container');
+    
+    fetch(`/workflow/api/subestados-disponibles/{{ solicitud.id }}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.subestados) {
+                subestadosDisponiblesCaptura = data.subestados;
+                mostrarSiguientesSubestados(container);
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No se pudieron cargar los subestados disponibles.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando subestados:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar los subestados disponibles.
+                </div>
+            `;
+        });
+}
+
+function mostrarSiguientesSubestados(container) {
+    // Filtrar solo los subestados que pueden ser avanzados
+    const subestadosAvanzables = subestadosDisponiblesCaptura.filter(subestado => 
+        subestado.puede_avanzar || subestado.es_completado
+    );
+    
+    if (subestadosAvanzables.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados disponibles para avanzar en este momento.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    subestadosAvanzables.forEach((subestado, index) => {
+        const esActual = subestado.es_actual;
+        const puedeAvanzar = subestado.puede_avanzar;
+        const esCompletado = subestado.es_completado;
+        
+        // Determinar estilo y estado
+        let borderClass = 'border-success';
+        let descripcion = 'Disponible para avanzar';
+        let disabled = '';
+        
+        if (esActual) {
+            borderClass = 'border-primary';
+            descripcion = 'Subestado actual';
+            disabled = 'disabled';
+        } else if (esCompletado) {
+            borderClass = 'border-info';
+            descripcion = 'Ya completado - puede regresar';
+        } else if (!puedeAvanzar) {
+            borderClass = 'border-secondary';
+            descripcion = 'No disponible aún';
+            disabled = 'disabled';
+        }
+        
+        html += `
+            <div class="col-md-6">
+                <div class="card ${borderClass}">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado" id="subestado-${index}" 
+                               value="${subestado.id}" class="form-check-input me-2" 
+                               onchange="seleccionarSiguienteSubestado(${subestado.id}, '${subestado.nombre}')"
+                               ${disabled}>
+                        <label for="subestado-${index}" class="form-check-label">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">${descripcion}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function seleccionarSiguienteSubestado(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionado = { 
+        id: parseInt(subestadoId), // Asegurar que sea número
+        nombre: subestadoNombre 
+    };
+    console.log('🎯 Subestado seleccionado:', siguienteSubestadoSeleccionado);
+    validarFormularioAvanceCaptura();
+}
+
+function configurarEventosAsignacionCaptura() {
+    // Configurar radio buttons de asignación
+    document.querySelectorAll('input[name="opcion-asignacion"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const selectorUsuario = document.getElementById('selector-usuario-container');
+            
+            if (this.value === 'otro') {
+                selectorUsuario.style.display = 'block';
+                cargarUsuariosDisponiblesCaptura();
+            } else {
+                selectorUsuario.style.display = 'none';
+                usuarioSeleccionadoCaptura = null;
+            }
+            
+            validarFormularioAvanceCaptura();
+        });
+    });
+    
+    // Configurar búsqueda de usuarios
+    const inputBusqueda = document.getElementById('buscar-usuario-avance');
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', function() {
+            filtrarUsuariosCaptura(this.value);
+        });
+    }
+}
+
+function cargarUsuariosDisponiblesCaptura() {
+    const container = document.getElementById('lista-usuarios-avance');
+    
+    fetch('/workflow/api/comite/usuarios-disponibles/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.usuarios) {
+                usuariosDisponiblesCaptura = data.usuarios;
+                mostrarUsuariosCaptura(usuariosDisponiblesCaptura);
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No se pudieron cargar los usuarios disponibles.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando usuarios:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar los usuarios.
+                </div>
+            `;
+        });
+}
+
+function mostrarUsuariosCaptura(usuarios) {
+    const container = document.getElementById('lista-usuarios-avance');
+    
+    if (usuarios.length === 0) {
+        container.innerHTML = `
+            <div class="text-center p-3 text-muted">
+                <i class="fas fa-search"></i>
+                <p class="mb-0">No se encontraron usuarios</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    usuarios.forEach(usuario => {
+        html += `
+            <div class="user-item p-2 border-bottom cursor-pointer" 
+                 onclick="seleccionarUsuarioCaptura(${usuario.id}, '${usuario.nombre_completo}')">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-2">
+                        <i class="fas fa-user-circle fa-lg text-secondary"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">${usuario.nombre_completo}</div>
+                        <small class="text-muted">@${usuario.username}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function filtrarUsuariosCaptura(termino) {
+    const usuariosFiltrados = usuariosDisponiblesCaptura.filter(usuario => 
+        usuario.nombre_completo.toLowerCase().includes(termino.toLowerCase()) ||
+        usuario.username.toLowerCase().includes(termino.toLowerCase())
+    );
+    
+    mostrarUsuariosCaptura(usuariosFiltrados);
+}
+
+function seleccionarUsuarioCaptura(usuarioId, usuarioNombre) {
+    usuarioSeleccionadoCaptura = { id: usuarioId, nombre: usuarioNombre };
+    
+    // Actualizar visualmente la selección
+    document.querySelectorAll('.user-item').forEach(item => {
+        item.classList.remove('bg-primary', 'text-white');
+    });
+    
+    event.target.closest('.user-item').classList.add('bg-primary', 'text-white');
+    
+    validarFormularioAvanceCaptura();
+}
+
+function validarFormularioAvanceCaptura() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion"]:checked');
+    
+    let valido = true;
+    
+    // Verificar que hay un subestado seleccionado
+    if (!siguienteSubestadoSeleccionado) {
+        valido = false;
+    }
+    
+    // Verificar que hay una opción de asignación seleccionada
+    if (!opcionSeleccionada) {
+        valido = false;
+    }
+    
+    // Si seleccionó "otro", verificar que hay un usuario seleccionado
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !usuarioSeleccionadoCaptura) {
+        valido = false;
+    }
+    
+    btnConfirmar.disabled = !valido;
+}
+
+function confirmarAvanceCaptura() {
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion"]:checked');
+    
+    if (!siguienteSubestadoSeleccionado || !opcionSeleccionada) {
+        showToast('Complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    console.log('🔍 DEBUG - Datos para enviar:');
+    console.log('  - Siguiente subestado:', siguienteSubestadoSeleccionado);
+    console.log('  - Opción seleccionada:', opcionSeleccionada.value);
+    console.log('  - Usuario seleccionado:', usuarioSeleccionadoCaptura);
+    
+    const data = {
+        opcion: opcionSeleccionada.value,
+        siguiente_subestado_id: siguienteSubestadoSeleccionado.id
+    };
+    
+    if (opcionSeleccionada.value === 'otro' && usuarioSeleccionadoCaptura) {
+        data.usuario_id = parseInt(usuarioSeleccionadoCaptura.id);
+    }
+    
+    console.log('📤 Enviando datos:', JSON.stringify(data, null, 2));
+    
+    // Deshabilitar botón mientras se procesa
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Subestado avanzado exitosamente', 'success');
+            
+            // Redirigir según la opción seleccionada
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (opcionSeleccionada.value === 'yo') {
+                    // Recargar la página para mostrar el nuevo subestado
+                    window.location.reload();
+                } else {
+                    // Ir a bandeja mixta
+                    window.location.href = '/workflow/bandeja-mixta/';
+                }
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.error || data.mensaje), 'error');
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-arrow-right me-1"></i> Confirmar Avance';
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error avanzando subestado:', error);
+        showToast('Error al avanzar el subestado', 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-arrow-right me-1"></i> Confirmar Avance';
+    });
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+    const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenInput) {
+        return tokenInput.value;
+    }
+    
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    return '';
+}
+
 </script>
 
 <!-- Modal para Asociar Entrevista -->
@@ -2618,6 +3220,210 @@ function createToastContainer() {
         <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucion()">
           <i class="fas fa-arrow-left me-1"></i>
           Confirmar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALES ESPECIALIZADOS PARA CAPTURA -->
+<!-- ========================================== -->
+
+<!-- Modal Devolver a Oficial -->
+<div class="modal fade" id="modalCapturaDevolver" tabindex="-1" aria-labelledby="modalCapturaDevolverLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529;">
+        <h5 class="modal-title" id="modalCapturaDevolverLabel">
+          <i class="fas fa-user-tie me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>¿Está seguro de devolver esta solicitud al Oficial?</strong>
+          <p class="mb-0 mt-2">Seleccione la etapa a la que desea devolver la solicitud:</p>
+        </div>
+        
+        <div id="transiciones-negativas-container">
+          <div class="d-flex justify-content-center p-3">
+            <div class="spinner-border text-warning" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-3">
+          <label for="comentario-devolucion" class="form-label">Comentario (opcional):</label>
+          <textarea id="comentario-devolucion" class="form-control" rows="3" placeholder="Indique el motivo de la devolución..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-warning" id="btn-confirmar-devolucion" onclick="confirmarDevolucionOficial()" disabled>
+          <i class="fas fa-user-tie me-1"></i>
+          Devolver a Oficial
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Enviar a Bandeja Grupal -->
+<div class="modal fade" id="modalCapturaEnviarBandeja" tabindex="-1" aria-labelledby="modalCapturaEnviarBandejaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white;">
+        <h5 class="modal-title" id="modalCapturaEnviarBandejaLabel">
+          <i class="fas fa-users me-2"></i>
+          Enviar a Bandeja Grupal
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center p-4">
+          <i class="fas fa-users fa-3x text-secondary mb-3"></i>
+          <h6 class="mb-3">¿Enviar solicitud a Bandeja Grupal?</h6>
+          <p class="text-muted">La solicitud quedará disponible para que cualquier usuario del equipo pueda tomarla y continuar con el siguiente subestado.</p>
+          
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Su trabajo en Captura se marcará como completado</strong> y será redirigido a la bandeja mixta para tomar otra solicitud.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="confirmarEnviarBandeja()">
+          <i class="fas fa-users me-1"></i>
+          Confirmar Envío
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Avanzar Subestado -->
+<div class="modal fade" id="modalCapturaAvanzar" tabindex="-1" aria-labelledby="modalCapturaAvanzarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white;">
+        <h5 class="modal-title" id="modalCapturaAvanzarLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar Subestado
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Selector de Siguiente Subestado -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">
+            <i class="fas fa-tasks me-2"></i>
+            Seleccionar siguiente subestado:
+          </label>
+          <div id="siguiente-subestado-container">
+            <div class="d-flex justify-content-center p-3">
+              <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Opciones de Asignación -->
+        <div class="mb-4">
+          <label class="form-label fw-bold">
+            <i class="fas fa-user-cog me-2"></i>
+            ¿Cómo desea proceder?
+          </label>
+          <div class="row g-3">
+            
+            <!-- Opción 1: Yo continúo -->
+            <div class="col-md-4">
+              <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                  <input type="radio" name="opcion-asignacion" id="opcion-yo" value="yo" class="form-check-input mb-2">
+                  <label for="opcion-yo" class="form-check-label d-block">
+                    <i class="fas fa-user fa-2x text-success mb-2"></i>
+                    <h6>Yo continúo</h6>
+                    <small class="text-muted">Seguir con el siguiente subestado</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Opción 2: Asignar a otro -->
+            <div class="col-md-4">
+              <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                  <input type="radio" name="opcion-asignacion" id="opcion-otro" value="otro" class="form-check-input mb-2">
+                  <label for="opcion-otro" class="form-check-label d-block">
+                    <i class="fas fa-user-plus fa-2x text-primary mb-2"></i>
+                    <h6>Asignar a otro</h6>
+                    <small class="text-muted">Reasignar a usuario específico</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Opción 3: Bandeja grupal -->
+            <div class="col-md-4">
+              <div class="card h-100 border-secondary">
+                <div class="card-body text-center">
+                  <input type="radio" name="opcion-asignacion" id="opcion-bandeja" value="bandeja" class="form-check-input mb-2">
+                  <label for="opcion-bandeja" class="form-check-label d-block">
+                    <i class="fas fa-users fa-2x text-secondary mb-2"></i>
+                    <h6>Bandeja grupal</h6>
+                    <small class="text-muted">Disponible para el equipo</small>
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+        <!-- Selector de Usuario (solo cuando se selecciona "otro") -->
+        <div id="selector-usuario-container" class="mb-4" style="display: none;">
+          <label class="form-label fw-bold">
+            <i class="fas fa-search me-2"></i>
+            Seleccionar usuario:
+          </label>
+          <div class="input-group mb-3">
+            <span class="input-group-text">
+              <i class="fas fa-search"></i>
+            </span>
+            <input type="text" id="buscar-usuario-avance" class="form-control" placeholder="Buscar por nombre o usuario...">
+          </div>
+          
+          <div id="lista-usuarios-avance" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+            <div class="text-center p-3">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando usuarios...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-captura" onclick="confirmarAvanceCaptura()" disabled>
+          <i class="fas fa-arrow-right me-1"></i>
+          Confirmar Avance
         </button>
       </div>
     </div>
