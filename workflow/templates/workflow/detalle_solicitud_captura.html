@@ -2481,12 +2481,15 @@ function configurarEventosAsignacionCaptura() {
     // Configurar radio buttons de asignación
     document.querySelectorAll('input[name="opcion-asignacion"]').forEach(radio => {
         radio.addEventListener('change', function() {
+            console.log(`🔘 Opción de asignación cambiada a: ${this.value}`);
             const selectorUsuario = document.getElementById('selector-usuario-container');
             
             if (this.value === 'otro') {
+                console.log('👥 Mostrando selector de usuarios...');
                 selectorUsuario.style.display = 'block';
                 cargarUsuariosDisponiblesCaptura();
             } else {
+                console.log('🚫 Ocultando selector de usuarios...');
                 selectorUsuario.style.display = 'none';
                 usuarioSeleccionadoCaptura = null;
             }
@@ -2506,18 +2509,30 @@ function configurarEventosAsignacionCaptura() {
 
 function cargarUsuariosDisponiblesCaptura() {
     const container = document.getElementById('lista-usuarios-avance');
+    console.log('🔄 Iniciando carga de usuarios disponibles...');
     
     fetch('/workflow/api/comite/usuarios-disponibles/')
-        .then(response => response.json())
+        .then(response => {
+            console.log('📡 Respuesta recibida, status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('📊 Datos recibidos:', data);
+            
             if (data.success && data.usuarios) {
+                console.log(`✅ ${data.usuarios.length} usuarios cargados correctamente`);
                 usuariosDisponiblesCaptura = data.usuarios;
                 mostrarUsuariosCaptura(usuariosDisponiblesCaptura);
             } else {
+                console.warn('⚠️ Respuesta sin usuarios:', data);
                 container.innerHTML = `
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         No se pudieron cargar los usuarios disponibles.
+                        <br><small>Respuesta: ${JSON.stringify(data)}</small>
                     </div>
                 `;
             }
@@ -2527,7 +2542,8 @@ function cargarUsuariosDisponiblesCaptura() {
             container.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error al cargar los usuarios.
+                    Error al cargar los usuarios: ${error.message}
+                    <br><small>Revise la consola para más detalles</small>
                 </div>
             `;
         });
@@ -2535,8 +2551,15 @@ function cargarUsuariosDisponiblesCaptura() {
 
 function mostrarUsuariosCaptura(usuarios) {
     const container = document.getElementById('lista-usuarios-avance');
+    console.log(`🎭 Mostrando ${usuarios.length} usuarios en la interfaz`);
+    
+    if (!container) {
+        console.error('❌ Container lista-usuarios-avance no encontrado');
+        return;
+    }
     
     if (usuarios.length === 0) {
+        console.log('⚠️ No hay usuarios para mostrar');
         container.innerHTML = `
             <div class="text-center p-3 text-muted">
                 <i class="fas fa-search"></i>
@@ -2547,10 +2570,16 @@ function mostrarUsuariosCaptura(usuarios) {
     }
     
     let html = '';
-    usuarios.forEach(usuario => {
+    usuarios.forEach((usuario, index) => {
+        console.log(`👤 Usuario ${index + 1}: ${usuario.nombre_completo} (ID: ${usuario.id})`);
+        
+        // Escapar comillas en el nombre para evitar errores de JavaScript
+        const nombreEscapado = usuario.nombre_completo.replace(/'/g, "\\'");
+        
         html += `
             <div class="user-item p-2 border-bottom cursor-pointer" 
-                 onclick="seleccionarUsuarioCaptura(${usuario.id}, '${usuario.nombre_completo}')">
+                 onclick="seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')"
+                 style="cursor: pointer;">
                 <div class="d-flex align-items-center">
                     <div class="avatar-sm me-2">
                         <i class="fas fa-user-circle fa-lg text-secondary"></i>
@@ -2564,7 +2593,9 @@ function mostrarUsuariosCaptura(usuarios) {
         `;
     });
     
+    console.log('✅ HTML generado para usuarios:', html.length, 'caracteres');
     container.innerHTML = html;
+    console.log('✅ Usuarios renderizados correctamente en el DOM');
 }
 
 function filtrarUsuariosCaptura(termino) {
@@ -2577,14 +2608,28 @@ function filtrarUsuariosCaptura(termino) {
 }
 
 function seleccionarUsuarioCaptura(usuarioId, usuarioNombre) {
-    usuarioSeleccionadoCaptura = { id: usuarioId, nombre: usuarioNombre };
+    console.log(`👆 Usuario seleccionado: ${usuarioNombre} (ID: ${usuarioId})`);
     
-    // Actualizar visualmente la selección
+    usuarioSeleccionadoCaptura = { 
+        id: parseInt(usuarioId), 
+        nombre: usuarioNombre 
+    };
+    
+    console.log('✅ Usuario guardado en variable:', usuarioSeleccionadoCaptura);
+    
+    // Actualizar visualmente la selección  
     document.querySelectorAll('.user-item').forEach(item => {
         item.classList.remove('bg-primary', 'text-white');
     });
     
-    event.target.closest('.user-item').classList.add('bg-primary', 'text-white');
+    // Encontrar el elemento clicado y marcarlo
+    const elementoClicado = event.target.closest('.user-item');
+    if (elementoClicado) {
+        elementoClicado.classList.add('bg-primary', 'text-white');
+        console.log('✅ Usuario marcado visualmente');
+    } else {
+        console.warn('⚠️ No se pudo encontrar el elemento para marcar visualmente');
+    }
     
     validarFormularioAvanceCaptura();
 }
