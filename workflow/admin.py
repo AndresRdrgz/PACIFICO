@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud, AgendaFirma
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud, AgendaFirma, OrdenExpediente, PlantillaOrdenExpediente
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -999,3 +999,107 @@ class AgendaFirmaAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'{count} citas duplicadas exitosamente.')
     duplicar_citas.short_description = "Duplicar citas seleccionadas"
+
+
+# --------------------------------------
+# ADMIN - ORDEN DE EXPEDIENTE
+# --------------------------------------
+
+class OrdenExpedienteInline(admin.TabularInline):
+    """Inline para mostrar orden de expediente en la solicitud"""
+    model = OrdenExpediente
+    extra = 0
+    fields = ('seccion', 'nombre_documento', 'orden', 'tiene_documento', 'obligatorio', 'comentarios')
+    readonly_fields = ('calificado_por', 'fecha_calificacion')
+    ordering = ('seccion', 'orden')
+
+
+@admin.register(OrdenExpediente)
+class OrdenExpedienteAdmin(admin.ModelAdmin):
+    """Administración de orden de expediente"""
+    list_display = ('solicitud', 'seccion', 'nombre_documento', 'orden', 'tiene_documento', 'obligatorio', 'calificado_por', 'fecha_calificacion')
+    list_filter = ('seccion', 'tiene_documento', 'obligatorio', 'calificado_por', 'fecha_calificacion')
+    search_fields = ('solicitud__codigo', 'nombre_documento', 'seccion', 'comentarios')
+    list_editable = ('orden', 'tiene_documento', 'obligatorio')
+    readonly_fields = ('calificado_por', 'fecha_calificacion', 'creado_en', 'actualizado_en')
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('solicitud', 'seccion', 'nombre_documento', 'orden')
+        }),
+        ('Estado del Documento', {
+            'fields': ('tiene_documento', 'obligatorio', 'activo')
+        }),
+        ('Calificación', {
+            'fields': ('calificado_por', 'fecha_calificacion', 'comentarios'),
+            'classes': ('collapse',)
+        }),
+        ('Auditoría', {
+            'fields': ('creado_en', 'actualizado_en'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        """Optimizar consultas con select_related"""
+        return super().get_queryset(request).select_related('solicitud', 'calificado_por')
+
+
+@admin.register(PlantillaOrdenExpediente)
+class PlantillaOrdenExpedienteAdmin(admin.ModelAdmin):
+    """Administración de plantillas de orden de expediente"""
+    list_display = ('pipeline', 'orden_seccion', 'seccion', 'nombre_documento', 'orden', 'obligatorio', 'activo', 'creado_por', 'creado_en')
+    list_filter = ('pipeline', 'seccion', 'orden_seccion', 'obligatorio', 'activo', 'creado_por')
+    search_fields = ('pipeline__nombre', 'nombre_documento', 'seccion', 'descripcion')
+    list_editable = ('orden_seccion', 'orden', 'obligatorio', 'activo')
+    readonly_fields = ('creado_por', 'creado_en', 'actualizado_en')
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('pipeline', 'seccion', 'orden_seccion', 'nombre_documento', 'orden')
+        }),
+        ('Configuración', {
+            'fields': ('obligatorio', 'activo', 'descripcion')
+        }),
+        ('Auditoría', {
+            'fields': ('creado_por', 'creado_en', 'actualizado_en'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        """Asignar el usuario creador automáticamente"""
+        if not change:  # Si es nuevo objeto
+            obj.creado_por = request.user
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        """Optimizar consultas con select_related"""
+        return super().get_queryset(request).select_related('pipeline', 'creado_por')
+    
+    actions = ['aplicar_plantillas_a_solicitudes']
+    
+    def aplicar_plantillas_a_solicitudes(self, request, queryset):
+        """Aplicar plantillas seleccionadas a todas las solicitudes del pipeline"""
+        count = 0
+        for plantilla in queryset:
+            # Buscar solicitudes del mismo pipeline que no tengan este documento
+            solicitudes_pipeline = Solicitud.objects.filter(
+                pipeline=plantilla.pipeline
+            ).exclude(
+                orden_expediente__seccion=plantilla.seccion,
+                orden_expediente__orden=plantilla.orden
+            )
+            
+            for solicitud in solicitudes_pipeline:
+                OrdenExpediente.objects.create(
+                    solicitud=solicitud,
+                    seccion=plantilla.seccion,
+                    nombre_documento=plantilla.nombre_documento,
+                    orden=plantilla.orden,
+                    obligatorio=plantilla.obligatorio
+                )
+                count += 1
+                
+        self.message_user(request, f'Plantillas aplicadas a {count} solicitudes.')
+    aplicar_plantillas_a_solicitudes.short_description = "Aplicar plantillas a solicitudes del pipeline"

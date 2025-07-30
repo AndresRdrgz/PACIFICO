@@ -186,4 +186,11 @@ urlpatterns = [
     path('api/agenda-firma/solicitud/<int:solicitud_id>/', views_workflow.api_obtener_citas_solicitud, name='api_obtener_citas_solicitud'),
     path('api/agenda-firma/editar-cita/<int:cita_id>/', views_workflow.api_editar_cita_firma, name='api_editar_cita_firma'),
     path('api/agenda-firma/eliminar-cita/<int:cita_id>/', views_workflow.api_eliminar_cita_firma, name='api_eliminar_cita_firma'),
+    
+    # APIs para Orden de Expediente
+    path('api/orden-expediente/actualizar-documento/', views_workflow.actualizar_documento_orden, name='actualizar_documento_orden'),
+    path('api/orden-expediente/actualizar-orden/', views_workflow.actualizar_orden_documentos, name='actualizar_orden_documentos'),
+    path('api/orden-expediente/agregar-comentario/', views_workflow.agregar_comentario_documento, name='agregar_comentario_documento'),
+    path('api/orden-expediente/obtener-comentario/<int:documento_id>/', views_workflow.obtener_comentario_documento, name='obtener_comentario_documento'),
+    path('api/orden-expediente/marcar-todos/', views_workflow.marcar_todos_documentos, name='marcar_todos_documentos'),
 ]

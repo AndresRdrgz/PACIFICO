@@ -1099,3 +1099,112 @@ class AgendaFirma(models.Model):
             pass
         
         super().save(*args, **kwargs)
+
+
+# --------------------------------------
+# ORDEN DE EXPEDIENTE
+# --------------------------------------
+
+class OrdenExpediente(models.Model):
+    """
+    Modelo para gestionar el orden y estado de documentos en el expediente.
+    Permite crear secciones dinámicas y marcar si cada documento está presente.
+    """
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='orden_expediente')
+    seccion = models.CharField(max_length=200, help_text="Sección del expediente (ej: Documentos Personales)")
+    nombre_documento = models.CharField(max_length=300, help_text="Nombre del documento")
+    orden = models.PositiveIntegerField(help_text="Orden del documento dentro de su sección")
+    tiene_documento = models.BooleanField(default=False, help_text="Indica si el documento está presente")
+    obligatorio = models.BooleanField(default=True, help_text="Indica si el documento es obligatorio")
+    
+    # Campos de auditoría
+    calificado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                                     related_name='documentos_calificados', 
+                                     help_text="Usuario que calificó este documento")
+    fecha_calificacion = models.DateTimeField(null=True, blank=True, 
+                                            help_text="Fecha de última calificación")
+    comentarios = models.TextField(blank=True, null=True, 
+                                 help_text="Comentarios sobre el documento")
+    
+    # Campos de sistema
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    activo = models.BooleanField(default=True, help_text="Si está inactivo, no se muestra en la interfaz")
+    
+    class Meta:
+        ordering = ['seccion', 'orden', 'nombre_documento']
+        unique_together = ['solicitud', 'seccion', 'orden']
+        verbose_name = "Orden de Expediente"
+        verbose_name_plural = "Orden de Expedientes"
+    
+    def __str__(self):
+        return f"{self.solicitud.codigo} - {self.seccion}: {self.nombre_documento} (#{self.orden})"
+    
+    @property
+    def estado_display(self):
+        """Retorna el estado para mostrar en la interfaz"""
+        if self.tiene_documento:
+            return "Presente"
+        elif self.obligatorio:
+            return "Faltante"
+        else:
+            return "No aplica"
+    
+    @property
+    def css_class(self):
+        """Retorna la clase CSS según el estado del documento"""
+        if self.tiene_documento:
+            return "table-success"
+        elif self.obligatorio:
+            return "table-danger"
+        else:
+            return "table-secondary"
+    
+    def marcar_calificado(self, usuario):
+        """Marca el documento como calificado por un usuario específico"""
+        self.calificado_por = usuario
+        self.fecha_calificacion = timezone.now()
+        self.save(update_fields=['calificado_por', 'fecha_calificacion'])
+
+
+class PlantillaOrdenExpediente(models.Model):
+    """
+    Plantilla base para crear orden de expediente en nuevas solicitudes.
+    Solo administradores pueden modificar estas plantillas.
+    """
+    pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, 
+                               related_name='plantillas_orden',
+                               help_text="Pipeline al que aplica esta plantilla")
+    seccion = models.CharField(max_length=200, help_text="Sección del expediente")
+    orden_seccion = models.PositiveIntegerField(default=1, help_text="Orden de la sección en el expediente")
+    nombre_documento = models.CharField(max_length=300, help_text="Nombre del documento")
+    orden = models.PositiveIntegerField(help_text="Orden del documento dentro de su sección")
+    obligatorio = models.BooleanField(default=True, help_text="Indica si el documento es obligatorio")
+    descripcion = models.TextField(blank=True, null=True, 
+                                 help_text="Descripción adicional del documento")
+    
+    # Campos de auditoría
+    creado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='plantillas_creadas')
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    activo = models.BooleanField(default=True, help_text="Si está inactivo, no se aplica a nuevas solicitudes")
+    
+    class Meta:
+        ordering = ['pipeline', 'orden_seccion', 'seccion', 'orden', 'nombre_documento']
+        unique_together = ['pipeline', 'seccion', 'orden']
+        verbose_name = "Plantilla de Orden de Expediente"
+        verbose_name_plural = "Plantillas de Orden de Expediente"
+    
+    def __str__(self):
+        return f"{self.pipeline.nombre} - {self.seccion} ({self.orden_seccion}): {self.nombre_documento} (#{self.orden})"
+    
+    def aplicar_a_solicitud(self, solicitud):
+        """Crea un registro de OrdenExpediente basado en esta plantilla"""
+        return OrdenExpediente.objects.create(
+            solicitud=solicitud,
+            seccion=self.seccion,
+            nombre_documento=self.nombre_documento,
+            orden=self.orden,
+            obligatorio=self.obligatorio
+        )

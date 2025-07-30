@@ -11508,6 +11508,9 @@ def backoffice_firma(request, solicitud_id):
 @login_required
 def backoffice_orden(request, solicitud_id):
     """Vista específica para el subestado Orden del expediente del Back Office"""
+    from .modelsWorkflow import OrdenExpediente, PlantillaOrdenExpediente
+    from collections import defaultdict
+    
     solicitud = get_object_or_404(Solicitud, id=solicitud_id)
     
     # Verificar que estamos en Back Office
@@ -11524,10 +11527,88 @@ def backoffice_orden(request, solicitud_id):
         messages.error(request, 'El subestado Orden del expediente no existe.')
         return redirect('detalle_solicitud', solicitud_id=solicitud_id)
     
-    # Usar la misma lógica que detalle_solicitud pero con template específico
-    request.GET = request.GET.copy()
-    request.GET['subestado'] = 'Orden del expediente'
-    return detalle_solicitud(request, solicitud_id)
+    # Función auxiliar para ordenar documentos por sección
+    def ordenar_documentos_por_seccion(documentos_qs, pipeline):
+        # Crear un diccionario de orden de secciones desde las plantillas
+        orden_secciones = {}
+        plantillas_orden_seccion = PlantillaOrdenExpediente.objects.filter(
+            pipeline=pipeline,
+            activo=True
+        ).values('seccion', 'orden_seccion').distinct().order_by('orden_seccion')
+        
+        for plantilla in plantillas_orden_seccion:
+            if plantilla['seccion'] not in orden_secciones:
+                orden_secciones[plantilla['seccion']] = plantilla['orden_seccion']
+        
+        # Ordenar documentos usando el orden de sección
+        return sorted(
+            documentos_qs, 
+            key=lambda doc: (orden_secciones.get(doc.seccion, 999), doc.orden)
+        )
+
+    # Obtener o crear documentos de orden de expediente para esta solicitud
+    documentos_orden_qs = OrdenExpediente.objects.filter(
+        solicitud=solicitud, 
+        activo=True
+    ).select_related('calificado_por')
+    
+    # Si no hay documentos, crear desde plantillas del pipeline
+    if not documentos_orden_qs.exists():
+        plantillas = PlantillaOrdenExpediente.objects.filter(
+            pipeline=solicitud.pipeline,
+            activo=True
+        ).order_by('orden_seccion', 'seccion', 'orden')
+        
+        documentos_creados = []
+        for plantilla in plantillas:
+            documento = OrdenExpediente.objects.create(
+                solicitud=solicitud,
+                seccion=plantilla.seccion,
+                nombre_documento=plantilla.nombre_documento,
+                orden=plantilla.orden,
+                obligatorio=plantilla.obligatorio
+            )
+            documentos_creados.append(documento)
+        
+        if documentos_creados:
+            messages.info(request, f'Se crearon {len(documentos_creados)} documentos desde las plantillas del pipeline.')
+    
+    # Aplicar ordenamiento personalizado a todos los documentos (nuevos o existentes)
+    documentos_orden = ordenar_documentos_por_seccion(documentos_orden_qs, solicitud.pipeline)
+    
+    # Agrupar documentos por sección
+    documentos_por_seccion = defaultdict(list)
+    for documento in documentos_orden:
+        documentos_por_seccion[documento.seccion].append(documento)
+    
+    # Estadísticas
+    total_documentos = len(documentos_orden)
+    documentos_presentes = len([doc for doc in documentos_orden if doc.tiene_documento])
+    documentos_faltantes = len([doc for doc in documentos_orden if not doc.tiene_documento and doc.obligatorio])
+    documentos_opcionales_faltantes = len([doc for doc in documentos_orden if not doc.tiene_documento and not doc.obligatorio])
+    
+    # Calcular porcentaje de completitud
+    porcentaje_completitud = 0
+    if total_documentos > 0:
+        porcentaje_completitud = round((documentos_presentes / total_documentos) * 100)
+    
+    # Transiciones negativas - no necesarias para esta vista específica
+    transiciones_negativas = []
+    
+    context = {
+        'solicitud': solicitud,
+        'documentos_por_seccion': dict(documentos_por_seccion),
+        'total_documentos': total_documentos,
+        'documentos_presentes': documentos_presentes,
+        'documentos_faltantes': documentos_faltantes,
+        'documentos_opcionales_faltantes': documentos_opcionales_faltantes,
+        'porcentaje_completitud': porcentaje_completitud,
+        'transiciones_negativas': transiciones_negativas,
+        'tiene_transiciones_negativas': len(transiciones_negativas) > 0,
+        'puede_modificar': True,  # El usuario de backoffice puede modificar
+    }
+    
+    return render(request, 'workflow/detalle_solicitud_orden.html', context)
 
 
 @login_required
@@ -12845,4 +12926,196 @@ def pendientes_errores_view(request):
     except Exception as e:
         messages.error(request, f'Error al cargar pendientes y errores: {str(e)}')
         return redirect('workflow:dashboard')
+
+
+# ==========================================================
+# VISTAS AJAX PARA ORDEN DE EXPEDIENTE
+# ==========================================================
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_documento_orden(request):
+    """Vista AJAX para actualizar el estado de un documento en el orden de expediente"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documento_id = data.get('documento_id')
+        tiene_documento = data.get('tiene_documento', False)
+        
+        print(f"📝 Actualizando documento ID: {documento_id}, Estado: {tiene_documento}")
+        
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos (usuario debe tener acceso a la solicitud)
+        if not documento.solicitud.asignada_a == request.user:
+            # Verificar si es bandeja grupal y el usuario tiene permisos
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar documento - CRÍTICO: Guardar ambos cambios
+        documento.tiene_documento = tiene_documento
+        documento.calificado_por = request.user
+        documento.fecha_calificacion = timezone.now()
+        documento.save()  # Guardar TODOS los cambios
+        
+        print(f"✅ Documento guardado: ID {documento_id}, tiene_documento={documento.tiene_documento}")
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'tiene_documento': documento.tiene_documento,
+            'estado_display': documento.estado_display,
+            'css_class': documento.css_class,
+            'message': f'Documento {"marcado como presente" if tiene_documento else "marcado como faltante"}'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error al actualizar documento: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_orden_documentos(request):
+    """Vista AJAX para actualizar el orden de los documentos mediante drag & drop"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documentos_orden = data.get('documentos_orden', [])
+        
+        if not documentos_orden:
+            return JsonResponse({'success': False, 'error': 'No se recibieron datos'})
+        
+        # Actualizar orden de cada documento
+        for idx, documento_data in enumerate(documentos_orden):
+            documento_id = documento_data.get('id')
+            nuevo_orden = idx + 1
+            
+            documento = get_object_or_404(OrdenExpediente, id=documento_id)
+            
+            # Verificar permisos
+            if not documento.solicitud.asignada_a == request.user:
+                if not (documento.solicitud.etapa_actual and 
+                       documento.solicitud.etapa_actual.es_bandeja_grupal):
+                    return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+            
+            documento.orden = nuevo_orden
+            documento.marcar_calificado(request.user)
+        
+        return JsonResponse({'success': True, 'message': 'Orden actualizado correctamente'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def agregar_comentario_documento(request):
+    """Vista AJAX para agregar comentario a un documento"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documento_id = data.get('documento_id')
+        comentario = data.get('comentario', '').strip()
+        
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos
+        if not documento.solicitud.asignada_a == request.user:
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar comentario
+        documento.comentarios = comentario
+        documento.marcar_calificado(request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'comentario': documento.comentarios,
+            'calificado_por': documento.calificado_por.get_full_name() if documento.calificado_por else None,
+            'fecha_calificacion': documento.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if documento.fecha_calificacion else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+@csrf_exempt
+def obtener_comentario_documento(request, documento_id):
+    """Vista AJAX para obtener el comentario de un documento"""
+    from .modelsWorkflow import OrdenExpediente
+    
+    try:
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos de lectura
+        if not documento.solicitud.asignada_a == request.user:
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'nombre_documento': documento.nombre_documento,
+            'comentario': documento.comentarios or '',
+            'calificado_por': documento.calificado_por.get_full_name() if documento.calificado_por else None,
+            'fecha_calificacion': documento.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if documento.fecha_calificacion else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def marcar_todos_documentos(request):
+    """Vista AJAX para marcar o desmarcar todos los documentos de una vez"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        marcar_todos = data.get('marcar_todos', True)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not solicitud.asignada_a == request.user:
+            if not (solicitud.etapa_actual and 
+                   solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar todos los documentos
+        documentos = OrdenExpediente.objects.filter(solicitud=solicitud, activo=True)
+        count = 0
+        for documento in documentos:
+            documento.tiene_documento = marcar_todos
+            documento.marcar_calificado(request.user)
+            count += 1
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'{"Marcados" if marcar_todos else "Desmarcados"} {count} documentos',
+            'documentos_actualizados': count
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
