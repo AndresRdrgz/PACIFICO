@@ -7989,6 +7989,10 @@ def api_solicitud_brief(request, solicitud_id):
                 solicitud.creada_por.get_full_name() or solicitud.creada_por.username
             ) if solicitud.creada_por else 'N/A',
             'es_etapa_grupal': solicitud.etapa_actual.es_bandeja_grupal if solicitud.etapa_actual else False,
+            'resultado_consulta': solicitud.resultado_consulta if hasattr(solicitud, 'resultado_consulta') else 'Pendiente',
+            'es_reconsideracion': solicitud.es_reconsideracion if hasattr(solicitud, 'es_reconsideracion') else False,
+            'propietario_id': solicitud.propietario.id if solicitud.propietario else (solicitud.creada_por.id if solicitud.creada_por else None),
+            'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
         }
 
         # Cliente info

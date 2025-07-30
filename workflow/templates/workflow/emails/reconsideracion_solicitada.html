@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Reconsideración - {{ solicitud.codigo }}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fc;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .alert {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        
+        .info-section {
+            background: #f8f9fc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-section h3 {
+            margin-top: 0;
+            color: #4e73df;
+            font-size: 18px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            min-width: 150px;
+            color: #5a5c69;
+        }
+        
+        .info-value {
+            flex: 1;
+            color: #6c757d;
+        }
+        
+        .motivo-section {
+            background: #e8f0fe;
+            border: 1px solid #4285f4;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .motivo-section h4 {
+            margin-top: 0;
+            color: #1565c0;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4e73df 0%, #36b9cc 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+        }
+        
+        .btn-primary:hover {
+            text-decoration: none;
+            color: white;
+        }
+        
+        .footer {
+            background: #f8f9fc;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e3e6f0;
+            font-size: 14px;
+            color: #858796;
+        }
+        
+        .badge {
+            background: #e74a3b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge.nueva-cotizacion {
+            background: #f6c23e;
+            color: #5a5c69;
+        }
+        
+        .timeline-item {
+            border-left: 4px solid #e3e6f0;
+            padding-left: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+        }
+        
+        .timeline-item.reconsideracion {
+            border-left-color: #f093fb;
+        }
+        
+        .timeline-date {
+            font-size: 12px;
+            color: #858796;
+            font-weight: 600;
+        }
+        
+        .timeline-title {
+            font-weight: 600;
+            color: #5a5c69;
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                box-shadow: none;
+            }
+            
+            .header, .content, .footer {
+                padding: 20px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .info-label {
+                min-width: auto;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔄 Nueva Reconsideración</h1>
+            <p>Solicitud {{ solicitud.codigo }} requiere revisión</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Alert principal -->
+            <div class="alert">
+                <strong>📋 Reconsideración #{{ numero_reconsideracion }}</strong><br>
+                Se ha solicitado una nueva reconsideración para la solicitud <strong>{{ solicitud.codigo }}</strong> 
+                que requiere análisis del equipo de consulta.
+            </div>
+            
+            <!-- Información de la solicitud -->
+            <div class="info-section">
+                <h3>📄 Información de la Solicitud</h3>
+                <div class="info-row">
+                    <div class="info-label">Código:</div>
+                    <div class="info-value">{{ solicitud.codigo }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Cliente:</div>
+                    <div class="info-value">{{ solicitud.cliente_nombre_completo }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Propietario:</div>
+                    <div class="info-value">{{ solicitante.get_full_name|default:solicitante.username }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Pipeline:</div>
+                    <div class="info-value">{{ solicitud.pipeline.nombre }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Resultado Anterior:</div>
+                    <div class="info-value">
+                        <span class="badge">{{ resultado_anterior }}</span>
+                    </div>
+                </div>
+                {% if usar_nueva_cotizacion %}
+                <div class="info-row">
+                    <div class="info-label">Cotización:</div>
+                    <div class="info-value">
+                        <span class="badge nueva-cotizacion">Nueva cotización adjunta</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Motivo de la reconsideración -->
+            <div class="motivo-section">
+                <h4>💬 Motivo de la Reconsideración</h4>
+                <p>{{ motivo }}</p>
+            </div>
+            
+            <!-- Información adicional -->
+            {% if usar_nueva_cotizacion %}
+            <div class="alert alert-warning">
+                <strong>⚠️ Atención:</strong> El oficial ha adjuntado una nueva cotización para esta reconsideración. 
+                Revise los nuevos términos y condiciones antes de tomar una decisión.
+            </div>
+            {% endif %}
+            
+            <!-- Timeline resumido -->
+            <div class="info-section">
+                <h3>📅 Detalles de la Reconsideración</h3>
+                <div class="timeline-item reconsideracion">
+                    <div class="timeline-date">{{ reconsideracion.fecha_solicitud|date:"d/m/Y H:i" }}</div>
+                    <div class="timeline-title">Reconsideración #{{ numero_reconsideracion }} Solicitada</div>
+                    <div>Por: {{ solicitante.get_full_name|default:solicitante.username }}</div>
+                </div>
+            </div>
+            
+            <!-- Botón de acción -->
+            <div class="button-container">
+                <a href="{{ site_url }}{% url 'workflow:detalle_reconsideracion_analista' solicitud.id %}" class="btn-primary">
+                    🔍 Revisar Reconsideración
+                </a>
+            </div>
+            
+            <!-- Instrucciones -->
+            <div class="info-section">
+                <h3>📝 Próximos Pasos</h3>
+                <ol>
+                    <li>Revisar el motivo de la reconsideración</li>
+                    <li>Analizar los cambios propuestos (si aplica)</li>
+                    <li>Comparar con el análisis anterior</li>
+                    <li>Tomar una decisión: Aprobar, Rechazar o Enviar a Comité</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                Este email fue generado automáticamente por el Sistema de Workflow de Pacífico.<br>
+                No responda a este email. Para consultas, contacte al administrador del sistema.
+            </p>
+            <p>
+                <strong>Fecha de envío:</strong> {{ "now"|date:"d/m/Y H:i" }}<br>
+                <strong>Sistema:</strong> Workflow Pacífico v2.0
+            </p>
+        </div>
+    </div>
+</body>
+</html>

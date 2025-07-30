@@ -247,9 +247,60 @@ class Solicitud(models.Model):
         blank=True, 
         help_text="Fecha cuando se subió el archivo de Registro Público"
     )
+    
+    # Campo para resultado de consulta y reconsideraciones
+    RESULTADO_CONSULTA_CHOICES = [
+        ('Pendiente', 'Pendiente'),
+        ('Aprobado', 'Aprobado'),
+        ('Rechazado', 'Rechazado'),
+        ('Alternativa', 'Alternativa'),
+        ('En Comité', 'En Comité'),
+    ]
+    
+    resultado_consulta = models.CharField(
+        max_length=20, 
+        choices=RESULTADO_CONSULTA_CHOICES, 
+        default='Pendiente',
+        help_text="Resultado de la consulta de crédito"
+    )
+    es_reconsideracion = models.BooleanField(
+        default=False,
+        help_text="Indica si esta solicitud está en proceso de reconsideración"
+    )
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
+    
+    def update_resultado_consulta_from_subestado(self):
+        """
+        Actualiza automáticamente el campo resultado_consulta basado en el subestado actual.
+        Esto asegura que las reconsideraciones funcionen correctamente.
+        """
+        if not self.subestado_actual:
+            return
+        
+        subestado_nombre = str(self.subestado_actual.nombre).lower()
+        
+        # Mapeo de palabras clave en subestado a resultado_consulta
+        estado_mapping = {
+            'rechazado': 'Rechazado',
+            'rechaza': 'Rechazado',
+            'negado': 'Rechazado',
+            'alternativa': 'Alternativa',
+            'aprobado': 'Aprobado',
+            'aprueba': 'Aprobado',
+            'autorizado': 'Aprobado',
+            'comité': 'En Comité',
+            'comite': 'En Comité',
+        }
+        
+        # Buscar coincidencias y actualizar resultado_consulta
+        for keyword, resultado in estado_mapping.items():
+            if keyword in subestado_nombre:
+                if self.resultado_consulta != resultado:
+                    self.resultado_consulta = resultado
+                    # Solo guardar si llamamos explícitamente save()
+                break
     
     def generar_codigo(self):
         """
@@ -276,6 +327,10 @@ class Solicitud(models.Model):
         # Si no tiene código y ya tiene ID, generarlo
         if not self.codigo and self.id:
             self.codigo = self.generar_codigo()
+        
+        # Actualizar resultado_consulta basado en subestado antes de guardar
+        self.update_resultado_consulta_from_subestado()
+        
         super().save(*args, **kwargs)
     
     @property
@@ -359,6 +414,77 @@ class HistorialSolicitud(models.Model):
         if not self.fecha_fin:
             return timezone.now() > self.fecha_inicio + self.etapa.sla
         return self.fecha_fin > self.fecha_inicio + self.etapa.sla
+
+    def __str__(self):
+        return f"{self.solicitud.codigo} - {self.etapa.nombre} ({self.fecha_inicio.strftime('%d/%m/%Y')})"
+
+
+# --------------------------------------
+# RECONSIDERACIONES
+# --------------------------------------
+
+class ReconsideracionSolicitud(models.Model):
+    """
+    Modelo para trackear las reconsideraciones de una solicitud
+    """
+    ESTADO_CHOICES = [
+        ('enviada', 'Enviada'),
+        ('en_revision', 'En Revisión'),
+        ('aprobada', 'Aprobada'),
+        ('rechazada', 'Rechazada'),
+        ('enviada_comite', 'Enviada a Comité'),
+    ]
+    
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='reconsideraciones')
+    numero_reconsideracion = models.PositiveIntegerField(help_text="Número secuencial de reconsideración")
+    
+    # Información de quien solicita la reconsideración
+    solicitada_por = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reconsideraciones_solicitadas')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    motivo = models.TextField(help_text="Motivo de la reconsideración")
+    
+    # Cotización relacionada (puede ser nueva o la misma)
+    cotizacion_original = models.ForeignKey('pacifico.Cotizacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='reconsideraciones_original')
+    cotizacion_nueva = models.ForeignKey('pacifico.Cotizacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='reconsideraciones_nueva')
+    usar_nueva_cotizacion = models.BooleanField(default=False)
+    
+    # Estado de la reconsideración
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='enviada')
+    
+    # Información del análisis
+    analizada_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reconsideraciones_analizadas')
+    fecha_analisis = models.DateTimeField(null=True, blank=True)
+    comentario_analisis = models.TextField(blank=True)
+    
+    # Resultado de la consulta anterior para comparación
+    resultado_consulta_anterior = models.CharField(max_length=100, blank=True, help_text="Resultado de la consulta anterior")
+    comentario_consulta_anterior = models.TextField(blank=True, help_text="Comentario de la consulta anterior")
+    
+    # Metadatos
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('solicitud', 'numero_reconsideracion')
+        ordering = ['-numero_reconsideracion']
+        verbose_name = "Reconsideración de Solicitud"
+        verbose_name_plural = "Reconsideraciones de Solicitudes"
+    
+    def __str__(self):
+        return f"Reconsideración #{self.numero_reconsideracion} - {self.solicitud.codigo}"
+    
+    @property
+    def cotizacion_activa(self):
+        """Retorna la cotización que debe usarse para esta reconsideración"""
+        if self.usar_nueva_cotizacion and self.cotizacion_nueva:
+            return self.cotizacion_nueva
+        return self.cotizacion_original
+    
+    @property
+    def es_primera_reconsideracion(self):
+        """Indica si es la primera reconsideración de la solicitud"""
+        return self.numero_reconsideracion == 1
+
 
 # --------------------------------------
 # REQUISITOS CONFIGURABLES

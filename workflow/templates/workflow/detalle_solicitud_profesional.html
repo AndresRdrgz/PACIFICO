@@ -940,6 +940,20 @@ body.detalle-view {
                         {{ solicitud.etapa_actual.nombre|default:"Sin etapa" }}
                     </div>
                     
+                    <!-- Botón de Reconsideración -->
+                    {% if solicitud.resultado_consulta in 'Rechazado,Alternativa' and solicitud.propietario == request.user and not solicitud.es_reconsideracion %}
+                    <a href="{% url 'workflow:solicitar_reconsideracion' solicitud.id %}" 
+                       class="btn btn-outline-warning btn-sm d-flex align-items-center gap-2 px-3 py-2">
+                        <i class="fas fa-redo"></i>
+                        <span>Solicitar Reconsideración</span>
+                    </a>
+                    {% elif solicitud.es_reconsideracion %}
+                    <div class="status-badge bg-info">
+                        <i class="fas fa-redo me-1"></i>
+                        En Reconsideración
+                    </div>
+                    {% endif %}
+                    
                     {% if sla_info.estado != 'sin_sla' %}
                     <div class="sla-indicator">
                         <div class="sla-info">
