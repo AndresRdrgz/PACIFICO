@@ -171,4 +171,11 @@ urlpatterns = [
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
+    
+    # APIs para Pendientes Antes de Firma
+    path('api/pendientes/catalogo/', views_workflow.api_buscar_pendientes_catalogo, name='api_buscar_pendientes_catalogo'),
+    path('api/solicitudes/<int:solicitud_id>/pendientes/', views_workflow.api_obtener_pendientes_solicitud, name='api_obtener_pendientes_solicitud'),
+    path('api/solicitudes/<int:solicitud_id>/pendientes/agregar/', views_workflow.api_agregar_pendiente_solicitud, name='api_agregar_pendiente_solicitud'),
+    path('api/pendientes/<int:pendiente_solicitud_id>/cambiar-estado/', views_workflow.api_cambiar_estado_pendiente, name='api_cambiar_estado_pendiente'),
+    path('api/pendientes/<int:pendiente_solicitud_id>/eliminar/', views_workflow.api_eliminar_pendiente_solicitud, name='api_eliminar_pendiente_solicitud'),
 ]

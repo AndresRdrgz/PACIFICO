@@ -25,7 +25,7 @@ from .modelsWorkflow import (
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
     RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja,
-    NivelComite, UsuarioNivelComite
+    NivelComite, UsuarioNivelComite, CatalogoPendienteAntesFirma, PendienteSolicitud
 )
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -11967,4 +11967,284 @@ def api_obtener_transiciones_negativas(request, solicitud_id):
         return JsonResponse({
             'success': False,
             'error': f'Error al obtener transiciones negativas: {str(e)}'
+        }, status=500)
+
+
+# ==========================================================
+# APIS PARA PENDIENTES ANTES DE FIRMA
+# ==========================================================
+
+@login_required
+@require_http_methods(["GET"])
+def api_buscar_pendientes_catalogo(request):
+    """
+    API para buscar pendientes en el catálogo
+    """
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        # Filtrar pendientes activos
+        pendientes = CatalogoPendienteAntesFirma.objects.filter(activo=True)
+        
+        # Si hay término de búsqueda, filtrar
+        if query:
+            pendientes = pendientes.filter(
+                Q(nombre__icontains=query) |
+                Q(descripcion__icontains=query)
+            )
+        
+        # Ordenar por orden y nombre
+        pendientes = pendientes.order_by('orden', 'nombre')[:20]  # Limitar a 20 resultados
+        
+        pendientes_data = []
+        for pendiente in pendientes:
+            pendientes_data.append({
+                'id': pendiente.id,
+                'nombre': pendiente.nombre,
+                'descripcion': pendiente.descripcion,
+                'orden': pendiente.orden
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pendientes': pendientes_data,
+            'total': len(pendientes_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al buscar pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_pendientes_solicitud(request, solicitud_id):
+    """
+    API para obtener los pendientes de una solicitud específica
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        pendientes = PendienteSolicitud.objects.filter(
+            solicitud=solicitud
+        ).select_related(
+            'pendiente', 'agregado_por', 'completado_por', 'ultima_modificacion_por'
+        ).order_by('-fecha_agregado')
+        
+        pendientes_data = []
+        for pendiente in pendientes:
+            pendientes_data.append({
+                'id': pendiente.id,
+                'pendiente': {
+                    'id': pendiente.pendiente.id,
+                    'nombre': pendiente.pendiente.nombre,
+                    'descripcion': pendiente.pendiente.descripcion
+                },
+                'estado': pendiente.estado,
+                'estado_display': pendiente.get_estado_display(),
+                'agregado_por': {
+                    'id': pendiente.agregado_por.id,
+                    'username': pendiente.agregado_por.username,
+                    'nombre_completo': f"{pendiente.agregado_por.first_name} {pendiente.agregado_por.last_name}".strip() or pendiente.agregado_por.username
+                },
+                'fecha_agregado': pendiente.fecha_agregado.isoformat(),
+                'fecha_agregado_display': pendiente.fecha_agregado.strftime('%d/%m/%Y %H:%M'),
+                'completado_por': {
+                    'id': pendiente.completado_por.id,
+                    'username': pendiente.completado_por.username,
+                    'nombre_completo': f"{pendiente.completado_por.first_name} {pendiente.completado_por.last_name}".strip() or pendiente.completado_por.username
+                } if pendiente.completado_por else None,
+                'fecha_completado': pendiente.fecha_completado.isoformat() if pendiente.fecha_completado else None,
+                'fecha_completado_display': pendiente.fecha_completado.strftime('%d/%m/%Y %H:%M') if pendiente.fecha_completado else None,
+                'etapa_agregado': pendiente.etapa_agregado,
+                'subestado_agregado': pendiente.subestado_agregado,
+                'notas': pendiente.notas,
+                'esta_completado': pendiente.esta_completado
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pendientes': pendientes_data,
+            'total': len(pendientes_data),
+            'solicitud_codigo': solicitud.codigo
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_agregar_pendiente_solicitud(request, solicitud_id):
+    """
+    API para agregar uno o varios pendientes a una solicitud
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        pendientes_ids = data.get('pendientes_ids', [])
+        
+        if not pendientes_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe seleccionar al menos un pendiente'
+            }, status=400)
+        
+        # Verificar que los pendientes existan y estén activos
+        pendientes = CatalogoPendienteAntesFirma.objects.filter(
+            id__in=pendientes_ids, 
+            activo=True
+        )
+        
+        if len(pendientes) != len(pendientes_ids):
+            return JsonResponse({
+                'success': False,
+                'error': 'Algunos pendientes seleccionados no existen o no están activos'
+            }, status=400)
+        
+        agregados = []
+        duplicados = []
+        
+        for pendiente in pendientes:
+            # Verificar si ya existe esta combinación
+            if PendienteSolicitud.objects.filter(
+                solicitud=solicitud, 
+                pendiente=pendiente
+            ).exists():
+                duplicados.append(pendiente.nombre)
+                continue
+            
+            # Crear el nuevo pendiente de solicitud
+            pendiente_solicitud = PendienteSolicitud.objects.create(
+                solicitud=solicitud,
+                pendiente=pendiente,
+                agregado_por=request.user,
+                etapa_agregado=solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+                subestado_agregado=solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado',
+                ultima_modificacion_por=request.user
+            )
+            
+            agregados.append({
+                'id': pendiente_solicitud.id,
+                'nombre': pendiente.nombre
+            })
+        
+        mensaje = f"Se agregaron {len(agregados)} pendiente(s) correctamente."
+        if duplicados:
+            mensaje += f" Se omitieron {len(duplicados)} pendiente(s) ya existente(s): {', '.join(duplicados)}"
+        
+        return JsonResponse({
+            'success': True,
+            'message': mensaje,
+            'agregados': agregados,
+            'duplicados': duplicados
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error en el formato de datos enviados'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al agregar pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_cambiar_estado_pendiente(request, pendiente_solicitud_id):
+    """
+    API para cambiar el estado de un pendiente de solicitud
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        pendiente_solicitud = get_object_or_404(PendienteSolicitud, id=pendiente_solicitud_id)
+        nuevo_estado = data.get('estado')
+        notas = data.get('notas', '')
+        
+        # Validar el nuevo estado
+        estados_validos = dict(PendienteSolicitud.ESTADO_CHOICES).keys()
+        if nuevo_estado not in estados_validos:
+            return JsonResponse({
+                'success': False,
+                'error': f'Estado inválido. Estados válidos: {list(estados_validos)}'
+            }, status=400)
+        
+        # Actualizar el pendiente
+        pendiente_solicitud.estado = nuevo_estado
+        pendiente_solicitud.ultima_modificacion_por = request.user
+        
+        if notas:
+            pendiente_solicitud.notas = notas
+        
+        # Si se marca como listo, establecer completado_por
+        if nuevo_estado == 'listo':
+            pendiente_solicitud.completado_por = request.user
+        else:
+            # Si cambia de listo a otro estado, limpiar datos de completado
+            pendiente_solicitud.completado_por = None
+            pendiente_solicitud.fecha_completado = None
+        
+        pendiente_solicitud.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Estado cambiado a "{pendiente_solicitud.get_estado_display()}" correctamente',
+            'nuevo_estado': nuevo_estado,
+            'nuevo_estado_display': pendiente_solicitud.get_estado_display(),
+            'fecha_completado': pendiente_solicitud.fecha_completado.isoformat() if pendiente_solicitud.fecha_completado else None,
+            'completado_por': {
+                'username': pendiente_solicitud.completado_por.username,
+                'nombre_completo': f"{pendiente_solicitud.completado_por.first_name} {pendiente_solicitud.completado_por.last_name}".strip() or pendiente_solicitud.completado_por.username
+            } if pendiente_solicitud.completado_por else None
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error en el formato de datos enviados'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al cambiar estado: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_pendiente_solicitud(request, pendiente_solicitud_id):
+    """
+    API para eliminar un pendiente de una solicitud
+    """
+    try:
+        pendiente_solicitud = get_object_or_404(PendienteSolicitud, id=pendiente_solicitud_id)
+        
+        # Guardar información antes de eliminar
+        pendiente_nombre = pendiente_solicitud.pendiente.nombre
+        solicitud_codigo = pendiente_solicitud.solicitud.codigo
+        
+        # Eliminar el pendiente
+        pendiente_solicitud.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Pendiente "{pendiente_nombre}" eliminado correctamente de la solicitud {solicitud_codigo}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar pendiente: {str(e)}'
         }, status=500)

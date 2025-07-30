@@ -17,16 +17,7 @@
   margin: 1rem 0;
 }
 
-.firma-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
 
-.firma-icon {
-  font-size: 3rem;
-  color: #ff9800;
-  margin-bottom: 1rem;
-}
 
 .signature-pad {
   border: 2px solid #ff9800;
@@ -104,6 +95,62 @@
   padding: 0.5rem;
   background: white;
 }
+
+/* Estilos para el indicador de progreso */
+.process-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.step-indicator {
+  display: flex;
+  align-items: baseline;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 2rem;
+  color: #2196f3;
+  font-weight: 700;
+}
+
+.step-total {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-left: 2px;
+}
+
+.subestado-icon {
+  font-size: 2.5rem;
+  color: #2196f3;
+  opacity: 0.8;
+}
+
+.step-status .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* Estilos para botones de acción */
+.action-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 0 15px 15px;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -2rem;
+}
 </style>
 {% endblock %}
 
@@ -113,25 +160,53 @@
     <div class="col-12">
       <!-- Header de la Solicitud -->
       <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-gradient-warning text-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 class="mb-0">
-                <i class="fas fa-signature me-2"></i>
-                Back Office - Gestión de Firmas
-              </h4>
-              <small class="opacity-75">Solicitud: {{ solicitud.codigo }}</small>
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
             </div>
-            <div class="text-end">
-              <span class="badge bg-light text-dark fs-6">
-                <i class="fas fa-user me-1"></i>
-                {% if solicitud.cliente %}
-                  {{ solicitud.cliente.nombreCompleto }}
-                {% elif solicitud.cotizacion %}
-                  {{ solicitud.cotizacion.nombreCompleto }}
-                {% else %}
-                  Sin cliente asignado
-                {% endif %}
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ solicitud.etapa_actual.subestados.count }} Etapas
               </span>
             </div>
           </div>
@@ -206,23 +281,29 @@
 
           <!-- Contenido Principal - Firma -->
           <div class="firma-container">
-            <div class="firma-header">
-              <div class="firma-icon">
+            <!-- Indicador de Progreso -->
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">3</span>
+                <span class="step-total">/ 4</span>
+              </div>
+              <div class="subestado-icon">
                 <i class="fas fa-signature"></i>
               </div>
-              <h3>Gestión de Firmas Digitales</h3>
-              <p class="text-muted">Solicite, valide y gestione las firmas requeridas para esta solicitud</p>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
             </div>
+
+
 
             <!-- Navegación de Tipos de Firma -->
             <ul class="nav nav-pills nav-pills-modern justify-content-center mb-4" id="pills-tab" role="tablist">
+
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="pills-documents-tab" data-bs-toggle="pill" data-bs-target="#pills-documents" type="button" role="tab" aria-controls="pills-documents" aria-selected="true">
-                  <i class="fas fa-file-signature me-2"></i>Documentos por Firmar
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pills-digital-tab" data-bs-toggle="pill" data-bs-target="#pills-digital" type="button" role="tab" aria-controls="pills-digital" aria-selected="false">
+                <button class="nav-link active" id="pills-digital-tab" data-bs-toggle="pill" data-bs-target="#pills-digital" type="button" role="tab" aria-controls="pills-digital" aria-selected="true">
                   <i class="fas fa-pen-fancy me-2"></i>Firma Digital
                 </button>
               </li>
@@ -234,97 +315,10 @@
             </ul>
 
             <div class="tab-content" id="pills-tabContent">
-              <!-- Pestaña de Documentos por Firmar -->
-              <div class="tab-pane fade show active" id="pills-documents" role="tabpanel" aria-labelledby="pills-documents-tab">
-                <h5 class="mb-4">
-                  <i class="fas fa-list-check me-2"></i>Documentos Pendientes de Firma
-                </h5>
-                
-                <!-- Lista de documentos que requieren firma -->
-                <div class="document-signature-item">
-                  <div class="row align-items-center">
-                    <div class="col-md-6">
-                      <div class="d-flex align-items-center">
-                        <i class="fas fa-file-contract fa-2x text-warning me-3"></i>
-                        <div>
-                          <h6 class="mb-1">Contrato de Crédito</h6>
-                          <small class="text-muted">Documento principal - Requerido</small>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-3">
-                      <span class="signature-status pending">
-                        <i class="fas fa-clock me-1"></i>Pendiente
-                      </span>
-                    </div>
-                    <div class="col-md-3 text-end">
-                      <button class="btn btn-primary btn-sm me-2">
-                        <i class="fas fa-eye me-1"></i>Ver
-                      </button>
-                      <button class="btn btn-warning btn-sm">
-                        <i class="fas fa-signature me-1"></i>Firmar
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
-                <div class="document-signature-item">
-                  <div class="row align-items-center">
-                    <div class="col-md-6">
-                      <div class="d-flex align-items-center">
-                        <i class="fas fa-file-shield fa-2x text-info me-3"></i>
-                        <div>
-                          <h6 class="mb-1">Autorización de Información</h6>
-                          <small class="text-muted">Documento de consentimiento</small>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-3">
-                      <span class="signature-status signed">
-                        <i class="fas fa-check me-1"></i>Firmado
-                      </span>
-                    </div>
-                    <div class="col-md-3 text-end">
-                      <button class="btn btn-outline-primary btn-sm me-2">
-                        <i class="fas fa-eye me-1"></i>Ver
-                      </button>
-                      <button class="btn btn-outline-success btn-sm">
-                        <i class="fas fa-certificate me-1"></i>Validar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="document-signature-item">
-                  <div class="row align-items-center">
-                    <div class="col-md-6">
-                      <div class="d-flex align-items-center">
-                        <i class="fas fa-file-invoice fa-2x text-success me-3"></i>
-                        <div>
-                          <h6 class="mb-1">Pagaré</h6>
-                          <small class="text-muted">Documento de garantía</small>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-3">
-                      <span class="signature-status pending">
-                        <i class="fas fa-clock me-1"></i>Pendiente
-                      </span>
-                    </div>
-                    <div class="col-md-3 text-end">
-                      <button class="btn btn-primary btn-sm me-2">
-                        <i class="fas fa-eye me-1"></i>Ver
-                      </button>
-                      <button class="btn btn-warning btn-sm">
-                        <i class="fas fa-signature me-1"></i>Firmar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <!-- Pestaña de Firma Digital -->
-              <div class="tab-pane fade" id="pills-digital" role="tabpanel" aria-labelledby="pills-digital-tab">
+              <div class="tab-pane fade show active" id="pills-digital" role="tabpanel" aria-labelledby="pills-digital-tab">
                 <h5 class="mb-4">
                   <i class="fas fa-pen-fancy me-2"></i>Crear Firma Digital
                 </h5>
@@ -449,16 +443,26 @@
             </div>
 
             <!-- Botones de Acción -->
-            <div class="text-center mt-4">
-              <button class="btn btn-success btn-lg me-3">
-                <i class="fas fa-check-double me-2"></i>Completar Proceso de Firmas
+            <div class="action-buttons">
+              <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span id="btn-avanzar-texto">Avanzar</span>
               </button>
-              <button class="btn btn-warning btn-lg me-3">
-                <i class="fas fa-paper-plane me-2"></i>Enviar para Firma Externa
+              
+              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: inline-block;" onclick="mostrarModalDevolucion()">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Devolver a Oficial</span>
               </button>
-              <button class="btn btn-secondary btn-lg">
-                <i class="fas fa-save me-2"></i>Guardar Progreso
-              </button>
+              
+              <!-- Indicador de estado de validación -->
+              <div id="validacion-estado" class="mt-2">
+                <small class="text-muted">
+                  <i class="fas fa-check-circle text-success me-1"></i>
+                  <span id="validacion-mensaje">Listo para avanzar</span>
+                </small>
+              </div>
             </div>
           </div>
         </div>
@@ -556,5 +560,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Funciones para botones de acción
+function validarDocumentosYAvanzar() {
+    alert('Funcionalidad de validación y avance - En desarrollo');
+    console.log('Validando documentos para solicitud:', '{{ solicitud.id }}');
+}
+
+function mostrarModalDevolucion() {
+    alert('Funcionalidad de devolución a oficial - En desarrollo');
+    console.log('Mostrando modal de devolución para solicitud:', '{{ solicitud.id }}');
+}
 </script>
 {% endblock %}

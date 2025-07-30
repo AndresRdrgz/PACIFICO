@@ -160,14 +160,59 @@
   cursor: grabbing;
 }
 
-.orden-actions {
-  position: sticky;
-  bottom: 0;
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 1rem;
-  margin: 0 -2rem -2rem -2rem;
+.action-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 0 0 15px 15px;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -2rem;
+}
+
+/* Estilos para el indicador de progreso */
+.process-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.step-indicator {
+  display: flex;
+  align-items: baseline;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 2rem;
+  color: #2196f3;
+  font-weight: 700;
+}
+
+.step-total {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-left: 2px;
+}
+
+.subestado-icon {
+  font-size: 2.5rem;
+  color: #2196f3;
+  opacity: 0.8;
+}
+
+.step-status .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
 }
 </style>
 {% endblock %}
@@ -178,25 +223,53 @@
     <div class="col-12">
       <!-- Header de la Solicitud -->
       <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-gradient-success text-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <h4 class="mb-0">
-                <i class="fas fa-folder-tree me-2"></i>
-                Back Office - Orden del Expediente
-              </h4>
-              <small class="opacity-75">Solicitud: {{ solicitud.codigo }}</small>
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
             </div>
-            <div class="text-end">
-              <span class="badge bg-light text-dark fs-6">
-                <i class="fas fa-user me-1"></i>
-                {% if solicitud.cliente %}
-                  {{ solicitud.cliente.nombreCompleto }}
-                {% elif solicitud.cotizacion %}
-                  {{ solicitud.cotizacion.nombreCompleto }}
-                {% else %}
-                  Sin cliente asignado
-                {% endif %}
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ solicitud.etapa_actual.subestados.count }} Etapas
               </span>
             </div>
           </div>
@@ -271,6 +344,22 @@
 
           <!-- Contenido Principal - Orden del Expediente -->
           <div class="orden-container">
+            <!-- Indicador de Progreso -->
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">4</span>
+                <span class="step-total">/ 4</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-folder-tree"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
+            </div>
+
             <div class="orden-header">
               <div class="orden-icon">
                 <i class="fas fa-folder-tree"></i>
@@ -529,18 +618,26 @@
               </div>
             </div>
 
-            <!-- Botones de Acción Principales -->
-            <div class="orden-actions">
-              <div class="text-center">
-                <button class="btn btn-success btn-lg me-3">
-                  <i class="fas fa-check-double me-2"></i>Aprobar Expediente
-                </button>
-                <button class="btn btn-warning btn-lg me-3">
-                  <i class="fas fa-exclamation-triangle me-2"></i>Marcar Observaciones
-                </button>
-                <button class="btn btn-secondary btn-lg">
-                  <i class="fas fa-save me-2"></i>Guardar Orden
-                </button>
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+              <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span id="btn-avanzar-texto">Avanzar</span>
+              </button>
+              
+              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: inline-block;" onclick="mostrarModalDevolucion()">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Devolver a Oficial</span>
+              </button>
+              
+              <!-- Indicador de estado de validación -->
+              <div id="validacion-estado" class="mt-2">
+                <small class="text-muted">
+                  <i class="fas fa-check-circle text-success me-1"></i>
+                  <span id="validacion-mensaje">Listo para avanzar</span>
+                </small>
               </div>
             </div>
           </div>
@@ -691,5 +788,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar progress ring
     updateProgressRing();
 });
+
+// Funciones para botones de acción
+function validarDocumentosYAvanzar() {
+    alert('Funcionalidad de validación y avance - En desarrollo');
+    console.log('Validando documentos para solicitud:', '{{ solicitud.id }}');
+}
+
+function mostrarModalDevolucion() {
+    alert('Funcionalidad de devolución a oficial - En desarrollo');
+    console.log('Mostrando modal de devolución para solicitud:', '{{ solicitud.id }}');
+}
 </script>
 {% endblock %}

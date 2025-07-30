@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -688,7 +688,187 @@ class ComentarioDocumentoBackofficeAdmin(admin.ModelAdmin):
     comentario_preview.short_description = 'Comentario'
 
 
-# Agregar inlines a RequisitoSolicitudAdmin si existe
+# ==========================================================
+# ADMIN PARA PENDIENTES ANTES DE FIRMA
+# ==========================================================
+
+@admin.register(CatalogoPendienteAntesFirma)
+class CatalogoPendienteAntesFirmaAdmin(admin.ModelAdmin):
+    """
+    Administración del catálogo de pendientes antes de firma
+    """
+    list_display = ('orden', 'nombre', 'activo', 'fecha_creacion', 'solicitudes_count')
+    list_filter = ('activo', 'fecha_creacion')
+    search_fields = ('nombre', 'descripcion')
+    ordering = ('orden', 'nombre')
+    list_editable = ('orden', 'activo')
+    list_display_links = ('nombre',)  # Hacer el nombre clickeable en lugar del orden
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('nombre', 'descripcion')
+        }),
+        ('Configuración', {
+            'fields': ('orden', 'activo')
+        }),
+        ('Auditoría', {
+            'fields': ('fecha_creacion', 'fecha_actualizacion'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    
+    def solicitudes_count(self, obj):
+        """Muestra cuántas solicitudes tienen este pendiente asignado"""
+        count = obj.solicitudes_asignadas.count()
+        return f"{count} solicitud{'es' if count != 1 else ''}"
+    solicitudes_count.short_description = "Solicitudes Asignadas"
+    
+    actions = ['activar_pendientes', 'desactivar_pendientes']
+    
+    def activar_pendientes(self, request, queryset):
+        updated = queryset.update(activo=True)
+        self.message_user(request, f'{updated} pendiente(s) activado(s) correctamente.')
+    activar_pendientes.short_description = "Activar pendientes seleccionados"
+    
+    def desactivar_pendientes(self, request, queryset):
+        updated = queryset.update(activo=False)
+        self.message_user(request, f'{updated} pendiente(s) desactivado(s) correctamente.')
+    desactivar_pendientes.short_description = "Desactivar pendientes seleccionados"
+
+
+class PendienteSolicitudInline(admin.TabularInline):
+    """
+    Inline para mostrar pendientes de una solicitud en el admin de Solicitud
+    """
+    model = PendienteSolicitud
+    extra = 0
+    readonly_fields = ('fecha_agregado', 'etapa_agregado', 'subestado_agregado', 'fecha_completado', 'fecha_ultima_modificacion')
+    fields = ('pendiente', 'estado', 'agregado_por', 'fecha_agregado', 'completado_por', 'fecha_completado', 'notas')
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('pendiente', 'agregado_por', 'completado_por')
+
+
+@admin.register(PendienteSolicitud)
+class PendienteSolicitudAdmin(admin.ModelAdmin):
+    """
+    Administración de pendientes asignados a solicitudes
+    """
+    list_display = ('solicitud_codigo', 'pendiente_nombre', 'estado_display', 'agregado_por', 'fecha_agregado', 'completado_por', 'fecha_completado', 'tiempo_transcurrido_display')
+    list_filter = ('estado', 'fecha_agregado', 'fecha_completado', 'etapa_agregado', 'subestado_agregado', 'pendiente__nombre')
+    search_fields = ('solicitud__codigo', 'pendiente__nombre', 'agregado_por__username', 'completado_por__username', 'notas')
+    ordering = ('-fecha_agregado',)
+    
+    fieldsets = (
+        ('Información Principal', {
+            'fields': ('solicitud', 'pendiente', 'estado')
+        }),
+        ('Auditoría de Creación', {
+            'fields': ('agregado_por', 'fecha_agregado', 'etapa_agregado', 'subestado_agregado')
+        }),
+        ('Auditoría de Finalización', {
+            'fields': ('completado_por', 'fecha_completado'),
+            'classes': ('collapse',)
+        }),
+        ('Información Adicional', {
+            'fields': ('notas', 'fecha_ultima_modificacion', 'ultima_modificacion_por'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('fecha_agregado', 'fecha_completado', 'fecha_ultima_modificacion')
+    
+    def solicitud_codigo(self, obj):
+        """Muestra el código de la solicitud"""
+        return obj.solicitud.codigo
+    solicitud_codigo.short_description = "Código Solicitud"
+    solicitud_codigo.admin_order_field = 'solicitud__codigo'
+    
+    def pendiente_nombre(self, obj):
+        """Muestra el nombre del pendiente"""
+        return obj.pendiente.nombre
+    pendiente_nombre.short_description = "Pendiente"
+    pendiente_nombre.admin_order_field = 'pendiente__nombre'
+    
+    def estado_display(self, obj):
+        """Muestra el estado con colores"""
+        colors = {
+            'por_hacer': 'red',
+            'haciendo': 'orange', 
+            'listo': 'green'
+        }
+        color = colors.get(obj.estado, 'black')
+        return f'<span style="color: {color}; font-weight: bold;">{obj.get_estado_display()}</span>'
+    estado_display.short_description = "Estado"
+    estado_display.allow_tags = True
+    estado_display.admin_order_field = 'estado'
+    
+    def tiempo_transcurrido_display(self, obj):
+        """Muestra el tiempo transcurrido de forma legible"""
+        tiempo = obj.tiempo_transcurrido
+        days = tiempo.days
+        hours, remainder = divmod(tiempo.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        
+        if days > 0:
+            return f"{days}d {hours}h {minutes}m"
+        elif hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+    tiempo_transcurrido_display.short_description = "Tiempo Transcurrido"
+    
+    actions = ['marcar_como_listo', 'marcar_como_por_hacer', 'marcar_como_haciendo']
+    
+    def marcar_como_listo(self, request, queryset):
+        updated = 0
+        for obj in queryset:
+            if obj.estado != 'listo':
+                obj.estado = 'listo'
+                obj.completado_por = request.user
+                obj.ultima_modificacion_por = request.user
+                obj.save()
+                updated += 1
+        self.message_user(request, f'{updated} pendiente(s) marcado(s) como "Listo".')
+    marcar_como_listo.short_description = "Marcar como Listo"
+    
+    def marcar_como_por_hacer(self, request, queryset):
+        updated = queryset.update(estado='por_hacer', completado_por=None, fecha_completado=None)
+        # Actualizar ultima_modificacion_por manualmente
+        for obj in queryset:
+            obj.ultima_modificacion_por = request.user
+            obj.save(update_fields=['ultima_modificacion_por'])
+        self.message_user(request, f'{updated} pendiente(s) marcado(s) como "Por Hacer".')
+    marcar_como_por_hacer.short_description = "Marcar como Por Hacer"
+    
+    def marcar_como_haciendo(self, request, queryset):
+        updated = queryset.update(estado='haciendo', completado_por=None, fecha_completado=None)
+        # Actualizar ultima_modificacion_por manualmente
+        for obj in queryset:
+            obj.ultima_modificacion_por = request.user
+            obj.save(update_fields=['ultima_modificacion_por'])
+        self.message_user(request, f'{updated} pendiente(s) marcado(s) como "Haciendo".')
+    marcar_como_haciendo.short_description = "Marcar como Haciendo"
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('solicitud', 'pendiente', 'agregado_por', 'completado_por', 'ultima_modificacion_por')
+
+
+# Agregar el inline de pendientes al admin de Solicitud existente
+try:
+    # Intentar modificar el admin existente
+    existing_admin = admin.site._registry.get(Solicitud)
+    if existing_admin:
+        if hasattr(existing_admin, 'inlines'):
+            existing_admin.inlines.append(PendienteSolicitudInline)
+        else:
+            existing_admin.inlines = [PendienteSolicitudInline]
+except Exception:
+    pass  # Si hay algún problema, continuar sin modificar
+
+# Bloque try/except existente para RequisitoSolicitud
 try:
     # Intentar encontrar el admin existente de RequisitoSolicitud
     from django.contrib.admin.sites import site

@@ -813,3 +813,161 @@ class ConfiguracionCanalDigital(models.Model):
         if pipeline:
             return pipeline.etapas.first()
         return None
+
+
+# --------------------------------------
+# PENDIENTES ANTES DE FIRMA
+# --------------------------------------
+
+class CatalogoPendienteAntesFirma(models.Model):
+    """
+    Catálogo de pendientes que pueden ser asignados a solicitudes antes de la firma.
+    Administrable desde Django Admin.
+    """
+    nombre = models.CharField(
+        max_length=200, 
+        unique=True,
+        help_text="Nombre del pendiente (ej: Re/investigación de empresa)"
+    )
+    descripcion = models.TextField(
+        blank=True, 
+        help_text="Descripción detallada del pendiente"
+    )
+    orden = models.PositiveIntegerField(
+        default=0,
+        help_text="Orden de aparición en listas (menor número = mayor prioridad)"
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Si está activo, aparecerá en el buscador de pendientes"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Pendiente Antes de Firma - Catálogo"
+        verbose_name_plural = "Pendientes Antes de Firma - Catálogo"
+        ordering = ['orden', 'nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class PendienteSolicitud(models.Model):
+    """
+    Relación entre una solicitud y los pendientes asignados antes de firma.
+    Incluye seguimiento completo y auditoría.
+    """
+    ESTADO_CHOICES = [
+        ('por_hacer', 'Por Hacer'),
+        ('haciendo', 'Haciendo'),
+        ('listo', 'Listo'),
+    ]
+
+    # Relaciones principales
+    solicitud = models.ForeignKey(
+        Solicitud, 
+        on_delete=models.CASCADE, 
+        related_name='pendientes_antes_firma'
+    )
+    pendiente = models.ForeignKey(
+        CatalogoPendienteAntesFirma, 
+        on_delete=models.CASCADE,
+        related_name='solicitudes_asignadas'
+    )
+
+    # Estado y seguimiento
+    estado = models.CharField(
+        max_length=20, 
+        choices=ESTADO_CHOICES, 
+        default='por_hacer',
+        help_text="Estado actual del pendiente"
+    )
+
+    # Auditoría de creación
+    agregado_por = models.ForeignKey(
+        User, 
+        related_name='pendientes_agregados', 
+        on_delete=models.PROTECT,
+        help_text="Usuario que agregó este pendiente"
+    )
+    fecha_agregado = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Cuándo se agregó el pendiente"
+    )
+    etapa_agregado = models.CharField(
+        max_length=100,
+        help_text="Etapa en la que se agregó el pendiente"
+    )
+    subestado_agregado = models.CharField(
+        max_length=100,
+        help_text="Subestado en el que se agregó el pendiente"
+    )
+
+    # Auditoría de finalización
+    completado_por = models.ForeignKey(
+        User, 
+        related_name='pendientes_completados', 
+        on_delete=models.PROTECT,
+        null=True, 
+        blank=True,
+        help_text="Usuario que marcó el pendiente como completado"
+    )
+    fecha_completado = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Cuándo se completó el pendiente"
+    )
+
+    # Auditoría de última modificación
+    ultima_modificacion_por = models.ForeignKey(
+        User, 
+        related_name='pendientes_modificados', 
+        on_delete=models.PROTECT,
+        help_text="Usuario que hizo la última modificación"
+    )
+    fecha_ultima_modificacion = models.DateTimeField(
+        auto_now=True,
+        help_text="Última modificación del pendiente"
+    )
+
+    # Notas adicionales
+    notas = models.TextField(
+        blank=True,
+        help_text="Notas adicionales sobre el pendiente"
+    )
+
+    class Meta:
+        verbose_name = "Pendiente Antes de Firma - Solicitud"
+        verbose_name_plural = "Pendientes Antes de Firma - Solicitudes"
+        unique_together = ('solicitud', 'pendiente')
+        ordering = ['-fecha_agregado']
+
+    def __str__(self):
+        return f"{self.solicitud.codigo} - {self.pendiente.nombre} ({self.get_estado_display()})"
+
+    def save(self, *args, **kwargs):
+        """Override save para actualizar campos de auditoría"""
+        # Si el estado cambió a 'listo' y no tenemos fecha de completado
+        if self.estado == 'listo' and not self.fecha_completado:
+            self.fecha_completado = timezone.now()
+            # El completado_por se debe establecer desde la vista
+        
+        # Si el estado ya no es 'listo', limpiar datos de completado
+        elif self.estado != 'listo' and self.fecha_completado:
+            self.fecha_completado = None
+            self.completado_por = None
+
+        super().save(*args, **kwargs)
+
+    @property
+    def esta_completado(self):
+        """Indica si el pendiente está completado"""
+        return self.estado == 'listo'
+
+    @property
+    def tiempo_transcurrido(self):
+        """Tiempo transcurrido desde que se agregó el pendiente"""
+        if self.fecha_completado:
+            return self.fecha_completado - self.fecha_agregado
+        return timezone.now() - self.fecha_agregado
