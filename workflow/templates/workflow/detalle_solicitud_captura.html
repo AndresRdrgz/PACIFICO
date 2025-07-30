@@ -89,25 +89,24 @@
   margin-bottom: -2rem;
 }
 
-/* Estilos para botones de acción compactos cuadrados */
+/* Estilos para botones de acción rectangulares */
 .btn-captura-action {
-  width: 120px;
-  height: 100px;
+  width: 200px;
+  height: 60px;
   border-radius: 12px;
   border: none;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 1rem;
   transition: all 0.3s ease;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .btn-captura-action i {
-  font-size: 1.8rem;
+  font-size: 1.2rem;
 }
 
 .btn-captura-action:hover {
@@ -124,16 +123,6 @@
 .btn-devolver:hover {
   background: linear-gradient(135deg, #e0a800, #d39e00);
   color: #212529;
-}
-
-.btn-bandeja {
-  background: linear-gradient(135deg, #6c757d, #5a6268);
-  color: white;
-}
-
-.btn-bandeja:hover {
-  background: linear-gradient(135deg, #5a6268, #495057);
-  color: white;
 }
 
 .btn-avanzar {
@@ -513,25 +502,19 @@
                 </div>
               </div>
 
-            <!-- Botones de Acción Compactos -->
+            <!-- Botones de Acción Rectangulares -->
             <div class="action-buttons">
               <div class="d-flex justify-content-center gap-3">
                 
                 <!-- 1. Devolver a Oficial -->
                 <button type="button" class="btn btn-captura-action btn-devolver" onclick="mostrarModalDevolverOficial()" title="Devolver a Oficial">
-                  <i class="fas fa-user-tie"></i>
+                  <i class="fas fa-user-tie me-2"></i>
                   <span>Devolver a Oficial</span>
                 </button>
                 
-                <!-- 2. Enviar a Bandeja Grupal -->
-                <button type="button" class="btn btn-captura-action btn-bandeja" onclick="mostrarModalEnviarBandeja()" title="Enviar a Bandeja Grupal">
-                  <i class="fas fa-users"></i>
-                  <span>Enviar a Bandeja</span>
-                </button>
-                
-                <!-- 3. Avanzar Subestado -->
+                <!-- 2. Avanzar Subestado -->
                 <button type="button" class="btn btn-captura-action btn-avanzar" onclick="mostrarModalAvanzarSubestado()" title="Avanzar Subestado">
-                  <i class="fas fa-arrow-right"></i>
+                  <i class="fas fa-arrow-right me-2"></i>
                   <span>Avanzar Subestado</span>
                 </button>
                 
@@ -2228,6 +2211,7 @@ function createToastContainer() {
 
 // ========================================
 // FUNCIONES ESPECIALIZADAS PARA CAPTURA
+// 2 BOTONES RECTANGULARES: Devolver a Oficial + Avanzar Subestado
 // ========================================
 
 let transicionesNegativasCaptura = [];
@@ -2365,58 +2349,7 @@ function confirmarDevolucionOficial() {
     });
 }
 
-// 2. MODAL ENVIAR A BANDEJA GRUPAL
-function mostrarModalEnviarBandeja() {
-    console.log('🔄 Abriendo modal Enviar a Bandeja Grupal');
-    
-    // Obtener modal element
-    const modalElement = document.getElementById('modalCapturaEnviarBandeja');
-    
-    // Remover aria-hidden antes de mostrar (fix accesibilidad)
-    modalElement.removeAttribute('aria-hidden');
-    
-    // Mostrar modal
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
-    
-    // Event listener para restaurar aria-hidden cuando se cierre
-    modalElement.addEventListener('hidden.bs.modal', function() {
-        modalElement.setAttribute('aria-hidden', 'true');
-    }, { once: true });
-}
-
-function confirmarEnviarBandeja() {
-    const data = {
-        solicitud_id: {{ solicitud.id }}
-    };
-    
-    fetch('/workflow/api/devolver-bandeja-grupal/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Solicitud enviada a bandeja grupal exitosamente', 'success');
-            // Redirigir a bandeja mixta
-            setTimeout(() => {
-                window.location.href = '/workflow/bandeja-mixta/';
-            }, 1500);
-        } else {
-            showToast('Error: ' + (data.message || 'Error desconocido'), 'error');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error enviando a bandeja grupal:', error);
-        showToast('Error al enviar a bandeja grupal', 'error');
-    });
-}
-
-// 3. MODAL AVANZAR SUBESTADO  
+// 2. MODAL AVANZAR SUBESTADO  
 function mostrarModalAvanzarSubestado() {
     console.log('🔄 Abriendo modal Avanzar Subestado');
     
@@ -3275,42 +3208,7 @@ function getCsrfToken() {
   </div>
 </div>
 
-<!-- Modal Enviar a Bandeja Grupal -->
-<div class="modal fade" id="modalCapturaEnviarBandeja" tabindex="-1" aria-labelledby="modalCapturaEnviarBandejaLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white;">
-        <h5 class="modal-title" id="modalCapturaEnviarBandejaLabel">
-          <i class="fas fa-users me-2"></i>
-          Enviar a Bandeja Grupal
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="text-center p-4">
-          <i class="fas fa-users fa-3x text-secondary mb-3"></i>
-          <h6 class="mb-3">¿Enviar solicitud a Bandeja Grupal?</h6>
-          <p class="text-muted">La solicitud quedará disponible para que cualquier usuario del equipo pueda tomarla y continuar con el siguiente subestado.</p>
-          
-          <div class="alert alert-info mt-3">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Su trabajo en Captura se marcará como completado</strong> y será redirigido a la bandeja mixta para tomar otra solicitud.
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i>
-          Cancelar
-        </button>
-        <button type="button" class="btn btn-primary" onclick="confirmarEnviarBandeja()">
-          <i class="fas fa-users me-1"></i>
-          Confirmar Envío
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Modal Enviar a Bandeja Grupal eliminado por petición del usuario -->
 
 <!-- Modal Avanzar Subestado -->
 <div class="modal fade" id="modalCapturaAvanzar" tabindex="-1" aria-labelledby="modalCapturaAvanzarLabel" aria-hidden="true">
