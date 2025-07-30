@@ -25,7 +25,8 @@ from .modelsWorkflow import (
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
     RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja,
-    NivelComite, UsuarioNivelComite, CatalogoPendienteAntesFirma, PendienteSolicitud
+    NivelComite, UsuarioNivelComite, CatalogoPendienteAntesFirma, PendienteSolicitud,
+    AgendaFirma
 )
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -616,7 +617,9 @@ def detalle_solicitud(request, solicitud_id):
             'Checklist': 'workflow/detalle_solicitud_backoffice.html',
             'Captura': 'workflow/detalle_solicitud_captura.html', 
             'Firma': 'workflow/detalle_solicitud_firma.html',
-            'Orden del expediente': 'workflow/detalle_solicitud_orden.html'
+            'Orden del expediente': 'workflow/detalle_solicitud_orden.html',
+            'Trámite': 'workflow/detalle_solicitud_tramite.html',
+            'Subsanación de pendientes Trámite': 'workflow/detalle_solicitud_subsanacion.html'
         }
         
         # PRIMERA FUNCIÓN DETALLE_SOLICITUD - AHORA CON AUTO-CREACIÓN TAMBIÉN
@@ -11527,6 +11530,56 @@ def backoffice_orden(request, solicitud_id):
     return detalle_solicitud(request, solicitud_id)
 
 
+@login_required
+def backoffice_tramite(request, solicitud_id):
+    """Vista específica para el subestado Trámite del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Trámite
+    try:
+        tramite_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Trámite')
+        solicitud.subestado_actual = tramite_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Trámite no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Trámite'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_subsanacion(request, solicitud_id):
+    """Vista específica para el subestado Subsanación de pendientes Trámite del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Subsanación de pendientes Trámite
+    try:
+        subsanacion_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Subsanación de pendientes Trámite')
+        solicitud.subestado_actual = subsanacion_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Subsanación de pendientes Trámite no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Subsanación de pendientes Trámite'
+    return detalle_solicitud(request, solicitud_id)
+
+
 def crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado):
     """
     Crear calificaciones automáticas como 'pendiente' para documentos opcionales sin archivo
@@ -12273,3 +12326,407 @@ def agenda_firma_view(request):
     except Exception as e:
         messages.error(request, f'Error al cargar la agenda de firma: {str(e)}')
         return redirect('workflow:dashboard')
+
+
+# ==========================================================
+# APIs PARA AGENDA DE FIRMA
+# ==========================================================
+
+@login_required
+def api_listar_citas_calendario(request):
+    """
+    API para obtener las citas del calendario en formato FullCalendar
+    """
+    try:
+        # Obtener parámetros de fecha del calendario
+        start_date = request.GET.get('start')
+        end_date = request.GET.get('end')
+        
+        # Filtrar citas por rango de fechas si se proporcionan
+        citas = AgendaFirma.objects.select_related('solicitud', 'creado_por').all()
+        if start_date and end_date:
+            citas = citas.filter(
+                fecha_hora__gte=start_date,
+                fecha_hora__lte=end_date
+            )
+        
+        # Convertir a formato FullCalendar
+        eventos = []
+        for cita in citas:
+            try:
+                # Validar que la cita tenga todos los datos necesarios
+                if not cita.solicitud or not cita.creado_por:
+                    continue
+                
+                eventos.append({
+                    'id': cita.id,
+                    'title': f'{cita.cliente_nombre} - {cita.solicitud.codigo}',
+                    'start': cita.fecha_hora.isoformat(),
+                    'end': (cita.fecha_hora + timedelta(hours=1)).isoformat(),  # 1 hora de duración
+                    'backgroundColor': '#28a745',  # Verde para resaltar
+                    'borderColor': '#1e7e34',
+                    'textColor': '#ffffff',
+                    'extendedProps': {
+                        'solicitud_codigo': cita.solicitud.codigo or 'N/A',
+                        'cliente_nombre': cita.cliente_nombre,
+                        'cliente_cedula': cita.cliente_cedula,
+                        'lugar_firma': cita.lugar_firma_display,
+                        'comentarios': cita.comentarios or '',
+                        'creado_por': cita.creado_por.username,
+                        'tiene_pendientes': cita.tiene_pendientes
+                    }
+                })
+            except Exception as item_error:
+                # Si hay error con una cita específica, continuar con las demás
+                print(f"Error procesando cita {cita.id}: {str(item_error)}")
+                continue
+        
+        # FullCalendar siempre espera un array, nunca un objeto
+        return JsonResponse(eventos, safe=False)
+        
+    except Exception as e:
+        print(f"Error en api_listar_citas_calendario: {str(e)}")
+        # IMPORTANTE: Siempre devolver array vacío, nunca un objeto con error
+        # FullCalendar no puede manejar objetos de error
+        return JsonResponse([], safe=False)
+
+
+@login_required
+def api_buscar_solicitudes_agenda(request):
+    """
+    API para buscar solicitudes en el autocomplete del modal
+    """
+    try:
+        termino = request.GET.get('q', '').strip()
+        if len(termino) < 2:
+            return JsonResponse({'solicitudes': []})
+        
+        # Construir consulta más segura
+        q_filters = Q(codigo__icontains=termino)
+        
+        # Agregar filtros solo si los campos existen y no son None
+        try:
+            q_filters |= Q(cliente__nombreCliente__icontains=termino)
+            q_filters |= Q(cliente__cedulaCliente__icontains=termino)
+        except:
+            pass  # Ignorar si el campo no existe o hay error
+            
+        try:
+            q_filters |= Q(cotizacion__nombreCliente__icontains=termino)
+            q_filters |= Q(cotizacion__cedulaCliente__icontains=termino)
+        except:
+            pass  # Ignorar si el campo no existe o hay error
+        
+        # Ejecutar consulta con select_related para optimizar
+        solicitudes = Solicitud.objects.select_related(
+            'cliente', 'cotizacion', 'etapa_actual'
+        ).filter(q_filters).distinct()[:10]
+        
+        resultados = []
+        for solicitud in solicitudes:
+            try:
+                # Obtener información del cliente de forma segura
+                cliente_nombre = "N/A"
+                cliente_cedula = "N/A"
+                
+                # Priorizar información del cliente directo
+                if solicitud.cliente:
+                    if hasattr(solicitud.cliente, 'nombreCliente') and solicitud.cliente.nombreCliente:
+                        cliente_nombre = solicitud.cliente.nombreCliente
+                    if hasattr(solicitud.cliente, 'cedulaCliente') and solicitud.cliente.cedulaCliente:
+                        cliente_cedula = solicitud.cliente.cedulaCliente
+                # Fallback a cotización si no hay cliente directo
+                elif solicitud.cotizacion:
+                    if hasattr(solicitud.cotizacion, 'nombreCliente') and solicitud.cotizacion.nombreCliente:
+                        cliente_nombre = solicitud.cotizacion.nombreCliente
+                    if hasattr(solicitud.cotizacion, 'cedulaCliente') and solicitud.cotizacion.cedulaCliente:
+                        cliente_cedula = solicitud.cotizacion.cedulaCliente
+                
+                # Obtener etapa actual de forma segura
+                etapa_actual = "N/A"
+                if solicitud.etapa_actual and hasattr(solicitud.etapa_actual, 'nombre'):
+                    etapa_actual = solicitud.etapa_actual.nombre
+                
+                resultados.append({
+                    'id': solicitud.id,
+                    'codigo': solicitud.codigo or "N/A",
+                    'cliente_nombre': cliente_nombre,
+                    'cliente_cedula': cliente_cedula,
+                    'etapa_actual': etapa_actual,
+                    'display_text': f'{solicitud.codigo or "N/A"} - {cliente_nombre} ({cliente_cedula})'
+                })
+                
+            except Exception as item_error:
+                # Si hay error con una solicitud específica, continuar con las demás
+                print(f"Error procesando solicitud {solicitud.id}: {str(item_error)}")
+                continue
+        
+        return JsonResponse({'solicitudes': resultados})
+        
+    except Exception as e:
+        print(f"Error en api_buscar_solicitudes_agenda: {str(e)}")
+        # Siempre devolver la estructura esperada, incluso en caso de error
+        return JsonResponse({
+            'solicitudes': [],
+            'error_message': f'Error al buscar solicitudes: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_crear_cita_firma(request):
+    """
+    API para crear una nueva cita de firma
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Validar campos requeridos
+        solicitud_id = data.get('solicitud_id')
+        fecha_hora_str = data.get('fecha_hora')
+        lugar_firma = data.get('lugar_firma')
+        comentarios = data.get('comentarios', '')
+        
+        if not all([solicitud_id, fecha_hora_str, lugar_firma]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Todos los campos son obligatorios'
+            }, status=400)
+        
+        # Validar solicitud
+        try:
+            solicitud = Solicitud.objects.get(id=solicitud_id)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Solicitud no encontrada'
+            }, status=404)
+        
+        # Parsear fecha y hora
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora_str.replace('Z', '+00:00'))
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formato de fecha inválido'
+            }, status=400)
+        
+        # Crear la cita
+        cita = AgendaFirma.objects.create(
+            solicitud=solicitud,
+            fecha_hora=fecha_hora,
+            lugar_firma=lugar_firma,
+            comentarios=comentarios,
+            creado_por=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cita creada exitosamente',
+            'cita': {
+                'id': cita.id,
+                'title': f'{cita.cliente_nombre} - {cita.solicitud.codigo}',
+                'start': cita.fecha_hora.isoformat(),
+                'end': (cita.fecha_hora + timedelta(hours=1)).isoformat(),
+                'backgroundColor': '#28a745',
+                'borderColor': '#1e7e34',
+                'textColor': '#ffffff'
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al crear cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_editar_cita_firma(request, cita_id):
+    """
+    API para editar una cita de firma existente
+    """
+    try:
+        # Solo admins pueden editar
+        if not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para editar citas'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        
+        try:
+            cita = AgendaFirma.objects.get(id=cita_id)
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cita no encontrada'
+            }, status=404)
+        
+        # Actualizar campos si se proporcionan
+        if 'fecha_hora' in data:
+            try:
+                cita.fecha_hora = datetime.fromisoformat(data['fecha_hora'].replace('Z', '+00:00'))
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Formato de fecha inválido'
+                }, status=400)
+        
+        if 'lugar_firma' in data:
+            cita.lugar_firma = data['lugar_firma']
+        
+        if 'comentarios' in data:
+            cita.comentarios = data['comentarios']
+        
+        # Actualizar auditoría
+        cita.modificado_por = request.user
+        cita.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cita actualizada exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al editar cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_cita_firma(request, cita_id):
+    """
+    API para eliminar una cita de firma
+    """
+    try:
+        # Solo admins pueden eliminar
+        if not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para eliminar citas'
+            }, status=403)
+        
+        try:
+            cita = AgendaFirma.objects.get(id=cita_id)
+            cita_info = f'{cita.solicitud.codigo} - {cita.cliente_nombre}'
+            cita.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Cita {cita_info} eliminada exitosamente'
+            })
+            
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cita no encontrada'
+            }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_obtener_cita_firma(request, cita_id):
+    """
+    API para obtener detalles de una cita específica
+    """
+    try:
+        cita = get_object_or_404(AgendaFirma, id=cita_id)
+        
+        return JsonResponse({
+            'success': True,
+            'cita': {
+                'id': cita.id,
+                'solicitud': {
+                    'id': cita.solicitud.id,
+                    'codigo': cita.solicitud.codigo,
+                    'cliente_nombre': cita.cliente_nombre,
+                    'cliente_cedula': cita.cliente_cedula
+                },
+                'fecha_hora': cita.fecha_hora.isoformat(),
+                'lugar_firma': cita.lugar_firma,
+                'lugar_firma_display': cita.lugar_firma_display,
+                'comentarios': cita.comentarios,
+                'creado_por': cita.creado_por.username,
+                'fecha_creacion': cita.fecha_creacion.isoformat(),
+                'tiene_pendientes': cita.tiene_pendientes
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_obtener_citas_solicitud(request, solicitud_id):
+    """
+    API para obtener todas las citas de AgendaFirma de una solicitud específica
+    """
+    try:
+        # Verificar que la solicitud existe
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        
+        # Obtener todas las citas de esta solicitud
+        citas = AgendaFirma.objects.filter(
+            solicitud=solicitud
+        ).select_related('creado_por', 'modificado_por').order_by('-fecha_hora')
+        
+        # Convertir a formato JSON
+        citas_data = []
+        for cita in citas:
+            citas_data.append({
+                'id': cita.id,
+                'fecha_hora': cita.fecha_hora.isoformat(),
+                'fecha_formateada': cita.fecha_formateada,
+                'lugar_firma': cita.lugar_firma,
+                'lugar_firma_display': cita.lugar_firma_display,
+                'comentarios': cita.comentarios,
+                'creado_por': {
+                    'username': cita.creado_por.username,
+                    'nombre_completo': f"{cita.creado_por.first_name} {cita.creado_por.last_name}".strip() or cita.creado_por.username
+                },
+                'fecha_creacion': cita.fecha_creacion.isoformat(),
+                'modificado_por': {
+                    'username': cita.modificado_por.username if cita.modificado_por else None,
+                    'nombre_completo': f"{cita.modificado_por.first_name} {cita.modificado_por.last_name}".strip() if cita.modificado_por else None
+                } if cita.modificado_por else None,
+                'fecha_modificacion': cita.fecha_modificacion.isoformat() if cita.fecha_modificacion else None,
+                'tiene_pendientes': cita.tiene_pendientes,
+                'solicitud_codigo': cita.solicitud_codigo,
+                'cliente_nombre': cita.cliente_nombre,
+                'cliente_cedula': cita.cliente_cedula
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'citas': citas_data,
+            'total': len(citas_data),
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo
+            }
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener las citas: {str(e)}'
+        }, status=500)

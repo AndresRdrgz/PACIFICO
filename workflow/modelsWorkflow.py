@@ -971,3 +971,131 @@ class PendienteSolicitud(models.Model):
         if self.fecha_completado:
             return self.fecha_completado - self.fecha_agregado
         return timezone.now() - self.fecha_agregado
+
+
+# ==========================================================
+# MODELO PARA AGENDA DE FIRMA
+# ==========================================================
+
+class AgendaFirma(models.Model):
+    """
+    Modelo para gestionar las citas de firma de documentos.
+    Permite programar reuniones con clientes para la firma de contratos.
+    """
+    
+    LUGAR_FIRMA_CHOICES = [
+        ('delivery', 'Delivery'),
+        ('apoyo', 'Apoyo'),
+        ('casa_matriz', 'Casa Matriz'),
+    ]
+    
+    # Campo principal: relación con solicitud
+    solicitud = models.ForeignKey(
+        'Solicitud', 
+        on_delete=models.CASCADE, 
+        related_name='agendas_firma',
+        help_text="Solicitud asociada a esta cita de firma"
+    )
+    
+    # Información de la cita
+    fecha_hora = models.DateTimeField(
+        help_text="Fecha y hora programada para la firma"
+    )
+    
+    lugar_firma = models.CharField(
+        max_length=20,
+        choices=LUGAR_FIRMA_CHOICES,
+        help_text="Lugar donde se realizará la firma"
+    )
+    
+    comentarios = models.TextField(
+        help_text="Comentarios adicionales sobre la cita de firma"
+    )
+    
+    # Campos de auditoría
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='agendas_firma_creadas',
+        help_text="Usuario que creó la cita"
+    )
+    
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Fecha y hora de creación de la cita"
+    )
+    
+    modificado_por = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='agendas_firma_modificadas',
+        null=True,
+        blank=True,
+        help_text="Usuario que modificó la cita por última vez"
+    )
+    
+    fecha_modificacion = models.DateTimeField(
+        auto_now=True,
+        help_text="Fecha y hora de la última modificación"
+    )
+    
+    class Meta:
+        verbose_name = "Agenda de Firma"
+        verbose_name_plural = "Agendas de Firma"
+        ordering = ['-fecha_hora']
+        
+    def __str__(self):
+        return f"Firma {self.solicitud.codigo} - {self.fecha_hora.strftime('%d/%m/%Y %I:%M %p')}"
+    
+    @property
+    def solicitud_codigo(self):
+        """Código de la solicitud asociada"""
+        return self.solicitud.codigo if self.solicitud else None
+    
+    @property
+    def cliente_nombre(self):
+        """Nombre del cliente de la solicitud"""
+        if self.solicitud and hasattr(self.solicitud, 'cliente') and self.solicitud.cliente:
+            return self.solicitud.cliente.nombreCliente
+        elif self.solicitud and hasattr(self.solicitud, 'cotizacion') and self.solicitud.cotizacion:
+            return self.solicitud.cotizacion.nombreCliente
+        return "N/A"
+    
+    @property
+    def cliente_cedula(self):
+        """Cédula del cliente de la solicitud"""
+        if self.solicitud and hasattr(self.solicitud, 'cliente') and self.solicitud.cliente:
+            return self.solicitud.cliente.cedulaCliente
+        elif self.solicitud and hasattr(self.solicitud, 'cotizacion') and self.solicitud.cotizacion:
+            return self.solicitud.cotizacion.cedulaCliente
+        return "N/A"
+    
+    @property
+    def lugar_firma_display(self):
+        """Nombre legible del lugar de firma"""
+        return dict(self.LUGAR_FIRMA_CHOICES).get(self.lugar_firma, self.lugar_firma)
+    
+    @property
+    def fecha_formateada(self):
+        """Fecha formateada para mostrar en el calendario"""
+        return self.fecha_hora.strftime('%d de %B del %Y a las %I:%M %p')
+    
+    @property
+    def tiene_pendientes(self):
+        """Indica si la solicitud asociada tiene pendientes activos"""
+        if not self.solicitud:
+            return False
+        return self.solicitud.pendientes_antes_firma.filter(
+            estado__in=['por_hacer', 'haciendo']
+        ).exists()
+    
+    def save(self, *args, **kwargs):
+        """Override save para actualizar campos de auditoría"""
+        if not self.pk:
+            # Nueva cita - el creado_por debe ser establecido desde la vista
+            pass
+        else:
+            # Cita existente - el modificado_por debe ser establecido desde la vista
+            pass
+        
+        super().save(*args, **kwargs)

@@ -1,0 +1,212 @@
+<!-- Modal para Avanzar Subestado -->
+<div class="modal fade" id="modalAvanzarSubestado" tabindex="-1" aria-labelledby="modalAvanzarSubestadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
+        </div>
+
+        <!-- Estado de documentos -->
+        <div id="estado-documentos" class="mb-4" style="display: none;">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Estado de Documentos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              
+              <!-- Resumen de documentos -->
+              <div class="row text-center mb-3">
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                      <i class="fas fa-check" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #059669;" id="documentos-buenos-count">0</div>
+                    <small class="text-muted">Buenos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                      <i class="fas fa-times" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #dc2626;" id="documentos-malos-count">0</div>
+                    <small class="text-muted">Malos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                      <i class="fas fa-clock" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #d97706;" id="documentos-pendientes-count">0</div>
+                    <small class="text-muted">Pendientes</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                      <i class="fas fa-file-alt" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #4b5563;" id="documentos-total-count">0</div>
+                    <small class="text-muted">Total</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de documentos pendientes -->
+              <div id="lista-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2" style="color: #d97706;"></i>
+                    <div>
+                      <strong>Documentos Pendientes Detectados</strong>
+                      <br>
+                      <small>Los siguientes documentos opcionales están marcados como pendientes y avanzarán en este estado:</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="documentos-pendientes-lista" class="mb-3">
+                  <!-- Los documentos pendientes se insertarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Mensaje cuando no hay pendientes -->
+              <div id="sin-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 1px solid #10b981; border-radius: 8px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2" style="color: #10b981;"></i>
+                    <div>
+                      <strong>Todos los documentos están procesados</strong>
+                      <br>
+                      <small>No hay documentos pendientes. Puedes continuar con confianza.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Botones de opción -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
+              <i class="fas fa-user me-2"></i>
+              Continuar Yo
+            </button>
+            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
+              <i class="fas fa-user-plus me-2"></i>
+              Asignar a Otro Usuario
+            </button>
+            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
+              <i class="fas fa-inbox me-2"></i>
+              Devolver a Bandeja Grupal
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
+        <div id="seccion-asignar-usuario" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Barra de búsqueda -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
+              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Busca por nombre, email, grupos o roles (Staff/Admin)
+            </small>
+          </div>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 

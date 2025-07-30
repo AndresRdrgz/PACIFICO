@@ -39,6 +39,8 @@ urlpatterns = [
     path('solicitudes/<int:solicitud_id>/backoffice/captura/', views_workflow.backoffice_captura, name='backoffice_captura'),
     path('solicitudes/<int:solicitud_id>/backoffice/firma/', views_workflow.backoffice_firma, name='backoffice_firma'),
     path('solicitudes/<int:solicitud_id>/backoffice/orden/', views_workflow.backoffice_orden, name='backoffice_orden'),
+    path('solicitudes/<int:solicitud_id>/backoffice/tramite/', views_workflow.backoffice_tramite, name='backoffice_tramite'),
+    path('solicitudes/<int:solicitud_id>/backoffice/subsanacion/', views_workflow.backoffice_subsanacion, name='backoffice_subsanacion'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
@@ -179,4 +181,13 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/pendientes/agregar/', views_workflow.api_agregar_pendiente_solicitud, name='api_agregar_pendiente_solicitud'),
     path('api/pendientes/<int:pendiente_solicitud_id>/cambiar-estado/', views_workflow.api_cambiar_estado_pendiente, name='api_cambiar_estado_pendiente'),
     path('api/pendientes/<int:pendiente_solicitud_id>/eliminar/', views_workflow.api_eliminar_pendiente_solicitud, name='api_eliminar_pendiente_solicitud'),
+    
+    # APIs para Agenda de Firma
+    path('api/agenda-firma/citas/', views_workflow.api_listar_citas_calendario, name='api_listar_citas_calendario'),
+    path('api/agenda-firma/buscar-solicitudes/', views_workflow.api_buscar_solicitudes_agenda, name='api_buscar_solicitudes_agenda'),
+    path('api/agenda-firma/crear-cita/', views_workflow.api_crear_cita_firma, name='api_crear_cita_firma'),
+    path('api/agenda-firma/cita/<int:cita_id>/', views_workflow.api_obtener_cita_firma, name='api_obtener_cita_firma'),
+    path('api/agenda-firma/solicitud/<int:solicitud_id>/', views_workflow.api_obtener_citas_solicitud, name='api_obtener_citas_solicitud'),
+    path('api/agenda-firma/editar-cita/<int:cita_id>/', views_workflow.api_editar_cita_firma, name='api_editar_cita_firma'),
+    path('api/agenda-firma/eliminar-cita/<int:cita_id>/', views_workflow.api_eliminar_cita_firma, name='api_eliminar_cita_firma'),
 ]

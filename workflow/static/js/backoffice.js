@@ -599,16 +599,16 @@ function mostrarUsuariosEnTabla(usuarios) {
   tbody.innerHTML = '';
 
   usuarios.forEach((usuario, index) => {
+    const nombreUsuario = usuario.nombre || usuario.username || 'Usuario';
     const row = document.createElement('tr');
     row.className = 'usuario-item';
     row.setAttribute('data-usuario-id', usuario.id);
-    row.setAttribute('data-usuario-nombre', usuario.nombre);
-    row.setAttribute('data-usuario-email', usuario.email);
-
+    row.setAttribute('data-usuario-nombre', nombreUsuario);
+    row.setAttribute('data-usuario-email', usuario.email || '');
     const avatar = usuario.profile_picture ?
-      `<img src="${usuario.profile_picture}" alt="${usuario.nombre}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+      `<img src="${usuario.profile_picture}" alt="${nombreUsuario}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
       `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
-        ${usuario.nombre.charAt(0).toUpperCase()}
+        ${nombreUsuario.charAt(0).toUpperCase()}
       </div>`;
 
     const badges = [];
@@ -626,18 +626,18 @@ function mostrarUsuariosEnTabla(usuarios) {
       <td class="text-center">${avatar}</td>
       <td>
         <div>
-          <strong class="fw-bold">${usuario.nombre}</strong>
+          <strong class="fw-bold">${nombreUsuario}</strong>
           ${badges.join('')}
         </div>
       </td>
       <td>
-        <small class="text-muted">${usuario.email}</small>
+        <small class="text-muted">${usuario.email || 'Sin email'}</small>
       </td>
       <td>${grupos}</td>
       <td class="text-center">
         <button class="btn btn-success btn-sm asignar-usuario-avance" 
                 data-usuario-id="${usuario.id}" 
-                data-usuario-nombre="${usuario.nombre}">
+                data-usuario-nombre="${nombreUsuario}">
           <i class="fas fa-user-plus me-1"></i>
           Asignar
         </button>
@@ -939,7 +939,7 @@ function diagnosticarBotonAvanzar() {
 let transicionesNegativas = [];
 
 function cargarTransicionesNegativas() {
-  const solicitudId = window.location.pathname.split('/')[3];
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
 
   fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
     .then(response => response.json())
@@ -973,7 +973,7 @@ function mostrarModalDevolucion() {
 }
 
 function cargarDocumentosProblematicos() {
-  const solicitudId = window.location.pathname.split('/')[3];
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
 
   fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
     .then(response => response.json())
@@ -1017,7 +1017,7 @@ function confirmarDevolucion() {
 
   // Usar la primera transición negativa disponible
   const transicion = transicionesNegativas[0];
-  const solicitudId = window.location.pathname.split('/')[3];
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
 
   // Ejecutar transición
   fetch(`/workflow/api/solicitudes/${solicitudId}/ejecutar-transicion/`, {

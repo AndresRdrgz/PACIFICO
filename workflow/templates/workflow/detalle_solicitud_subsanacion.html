@@ -1,0 +1,938 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Subsanación - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Subsanación */
+.subsanacion-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffebee 100%);
+  border: 2px solid #d32f2f;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.document-preview {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.document-preview:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Estilos para el indicador de progreso */
+.process-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.step-indicator {
+  display: flex;
+  align-items: baseline;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 2rem;
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+.step-total {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-left: 2px;
+}
+
+.subestado-icon {
+  font-size: 2.5rem;
+  color: #d32f2f;
+  opacity: 0.8;
+}
+
+.step-status .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* Estilos para botones de acción */
+.action-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 0 15px 15px;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -2rem;
+}
+
+/* Estilos específicos para la sección de pendientes */
+.pendientes-card {
+  border: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pendientes-card .card-header {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  border: none;
+  color: #ffffff;
+}
+
+.filtros-pendientes .btn-check:checked + .btn {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: white;
+}
+
+.filtros-pendientes .btn-outline-danger:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.filtros-pendientes .btn-outline-warning:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+
+.filtros-pendientes .btn-outline-primary:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-primary {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+  color: #ffffff;
+}
+
+.filtros-pendientes .btn-outline-success:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-success {
+  background-color: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+.pendiente-item:hover {
+  background-color: #f8f9fa;
+}
+
+.estado-dropdown {
+  min-width: 120px;
+}
+
+#tabla-pendientes thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#tabla-pendientes tbody tr:hover {
+  background-color: rgba(211,47,47,0.05);
+}
+
+/* Estilos para el modal de agregar pendientes */
+#modalAgregarPendientes .modal-header {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  color: #ffffff;
+  border-bottom: none;
+}
+
+#modalAgregarPendientes .pendiente-item {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+#modalAgregarPendientes .pendiente-item:hover {
+  background-color: #ffebee;
+  transform: translateX(2px);
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+            </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
+            </div>
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+                {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ solicitud.etapa_actual.subestados.count }} Etapas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {% csrf_token %}
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_checklist' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Completado{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_captura' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_firma' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_orden' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_tramite' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_subsanacion' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Subsanación -->
+          <div class="subsanacion-container">
+            <!-- Indicador de Progreso -->
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">6</span>
+                <span class="step-total">/ 6</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-tools"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-danger">
+                  <i class="fas fa-exclamation-triangle me-1"></i>Subsanando
+                </span>
+              </div>
+            </div>
+
+            <!-- Sección de Pendientes de Subsanación -->
+            <div class="mt-4 mb-4">
+              <div class="card pendientes-card">
+                <div class="card-header bg-gradient-primary text-white">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-clipboard-list me-2" style="font-size: 1.2rem;"></i>
+                      <div>
+                        <h6 class="mb-0 fw-bold">Pendientes de Subsanación</h6>
+                        <small class="opacity-75">Gestión de tareas pendientes para esta solicitud</small>
+                        </div>
+                      </div>
+                    <button type="button" class="btn btn-light btn-sm" onclick="mostrarModalAgregarPendientes()">
+                      <i class="fas fa-plus me-1"></i> Agregar Pendientes
+                    </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                  <!-- Filtros de la tabla -->
+                  <div class="px-3 py-2 border-bottom">
+                    <div class="row align-items-center">
+                      <div class="col-md-6">
+                        <div class="btn-group btn-group-sm filtros-pendientes" role="group">
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-todos" value="todos" checked>
+                          <label class="btn btn-outline-secondary" for="filtro-todos">
+                            <i class="fas fa-list me-1"></i>Todos
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-por-hacer" value="por_hacer">
+                          <label class="btn btn-outline-danger" for="filtro-por-hacer">
+                            <i class="fas fa-circle me-1"></i>Por Hacer
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-haciendo" value="haciendo">
+                          <label class="btn btn-outline-warning" for="filtro-haciendo">
+                            <i class="fas fa-circle me-1"></i>Haciendo
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-listo" value="listo">
+                          <label class="btn btn-outline-success" for="filtro-listo">
+                            <i class="fas fa-circle me-1"></i>Listo
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-md-6 text-end">
+                        <span class="badge bg-info" id="contador-pendientes">
+            <i class="fas fa-clipboard-list me-1"></i>
+            1 por hacer, 1 haciendo, 0 listo
+        </span>
+                  </div>
+                </div>
+              </div>
+
+                  <!-- Tabla de pendientes -->
+                  <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-sm mb-0" id="tabla-pendientes">
+                      <thead class="table-light sticky-top">
+                        <tr>
+                          <th style="width: 35%;">Pendiente</th>
+                          <th style="width: 15%;">Estado</th>
+                          <th style="width: 20%;">Agregado Por</th>
+                          <th style="width: 15%;">Fecha</th>
+                          <th style="width: 15%;">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lista-pendientes">
+            <tr data-pendiente-id="2" data-estado="haciendo">
+                <td>
+                    <div>
+                        <span class="fw-bold">Creación de vendedor</span>
+                        <br><small class="text-muted">Crear perfil de vendedor en el sistema</small>
+                    </div>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm estado-dropdown" onchange="cambiarEstadoPendiente(2, this.value)">
+                        <option value="por_hacer">Por Hacer</option>
+                        <option value="haciendo" selected>Haciendo</option>
+                        <option value="listo">Listo</option>
+                    </select>
+                </td>
+                <td>
+                    <div>
+                        <span class="fw-bold">otejeira</span>
+                        <br><small class="text-muted">@otejeira</small>
+                    </div>
+                </td>
+                <td>
+                    <span class="small">30/07/2025 04:46</span>
+                    
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarPendiente(2, 'Creación de vendedor')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        
+            <tr data-pendiente-id="1" data-estado="por_hacer">
+                <td>
+                    <div>
+                        <span class="fw-bold">Re/investigación de empresa</span>
+                        <br><small class="text-muted">Realizar investigación adicional sobre la empresa del cliente</small>
+                    </div>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm estado-dropdown" onchange="cambiarEstadoPendiente(1, this.value)">
+                        <option value="por_hacer" selected>Por Hacer</option>
+                        <option value="haciendo">Haciendo</option>
+                        <option value="listo">Listo</option>
+                    </select>
+                </td>
+                <td>
+                    <div>
+                        <span class="fw-bold">otejeira</span>
+                        <br><small class="text-muted">@otejeira</small>
+                    </div>
+                </td>
+                <td>
+                    <span class="small">30/07/2025 04:46</span>
+                    
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarPendiente(1, 'Re/investigación de empresa')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+                    </table>
+                  </div>
+                  
+                  <!-- Mensaje cuando no hay pendientes -->
+                  <div id="mensaje-sin-pendientes" class="text-center p-4 text-muted" style="display: none;">
+                    <i class="fas fa-clipboard-check fa-2x mb-2 opacity-50"></i>
+                    <p class="mb-0">No hay pendientes asignados a esta solicitud</p>
+                    <small>Utilice el botón "Agregar Pendientes" para comenzar</small>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+              <!-- Botón de avance - siempre habilitado, sin validación de documentos -->
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span id="btn-avanzar-texto">Avanzar</span>
+                          </button>
+              
+              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: inline-block;" onclick="mostrarModalDevolucion()">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Devolver a Oficial</span>
+                          </button>
+              
+              <!-- Indicador de estado de validación -->
+              <div id="validacion-estado" class="mt-2">
+                <small class="text-muted">
+                  <i class="fas fa-check-circle text-success me-1"></i>
+                  <span id="validacion-mensaje">Listo para avanzar</span>
+                </small>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Incluir modales necesarios -->
+{% include "workflow/partials/modal_avanzar_subestado.html" %}
+{% include "workflow/partials/modal_devolver_oficial.html" %}
+{% include "workflow/partials/modal_agregar_pendientes.html" %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- JavaScript de backoffice para funcionalidad base -->
+<script src="{% static 'js/backoffice.js' %}?v=20250730_0255"></script>
+
+<!-- Scripts específicos de Pendientes de Subsanación -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Vista de Subsanación cargada para solicitud:', '{{ solicitud.id }}');
+    
+    // Cargar pendientes al iniciar
+    cargarPendientesSolicitud();
+    
+    // Configurar filtros
+    configurarFiltrosPendientes();
+});
+
+// =======================================================
+// FUNCIONALIDAD DE PENDIENTES DE SUBSANACIÓN
+// =======================================================
+
+function mostrarModalAgregarPendientes() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAgregarPendientes'));
+    modal.show();
+    
+    // Cargar catálogo de pendientes disponibles
+    cargarCatalogoPendientes();
+}
+
+function cargarCatalogoPendientes() {
+    fetch('/workflow/api/pendientes/catalogo/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarCatalogoPendientes(data.pendientes);
+            } else {
+                console.error('Error al cargar catálogo:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function mostrarCatalogoPendientes(pendientes) {
+    const container = document.getElementById('lista-catalogo-pendientes');
+    container.innerHTML = '';
+    
+    pendientes.forEach(pendiente => {
+        const item = document.createElement('div');
+        item.className = 'pendiente-item p-3 border-bottom cursor-pointer';
+        item.onclick = () => seleccionarPendienteCatalogo(pendiente.id, pendiente.nombre, pendiente.descripcion);
+        
+        item.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${pendiente.nombre}</h6>
+                    <p class="mb-0 text-muted small">${pendiente.descripcion || 'Sin descripción'}</p>
+                </div>
+                <div class="ms-2">
+                    <i class="fas fa-plus text-primary"></i>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(item);
+    });
+}
+
+function seleccionarPendienteCatalogo(id, nombre, descripcion) {
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgregarPendientes'));
+    modal.hide();
+    
+    // Agregar pendiente a la solicitud
+    const data = {
+        pendiente_id: id,
+        solicitud_id: {{ solicitud.id }}
+    };
+    
+    fetch('/workflow/api/pendientes/agregar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje('Pendiente agregado correctamente', 'success');
+            cargarPendientesSolicitud();
+        } else {
+            mostrarMensaje('Error al agregar pendiente: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+function cargarPendientesSolicitud() {
+          fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/pendientes/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarPendientesEnTabla(data.pendientes);
+                actualizarContadorPendientes(data.pendientes);
+            } else {
+                console.error('Error al cargar pendientes:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function mostrarPendientesEnTabla(pendientes) {
+    const tbody = document.getElementById('lista-pendientes');
+    tbody.innerHTML = '';
+    
+    if (pendientes.length === 0) {
+        document.getElementById('mensaje-sin-pendientes').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('mensaje-sin-pendientes').style.display = 'none';
+    
+    pendientes.forEach(pendiente => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-pendiente-id', pendiente.id);
+        row.setAttribute('data-estado', pendiente.estado);
+        
+        row.innerHTML = `
+            <td>
+                <div>
+                    <span class="fw-bold">${pendiente.pendiente.nombre}</span>
+                    <br><small class="text-muted">${pendiente.pendiente.descripcion || 'Sin descripción'}</small>
+                </div>
+            </td>
+            <td>
+                <select class="form-select form-select-sm estado-dropdown" onchange="cambiarEstadoPendiente(${pendiente.id}, this.value)">
+                    <option value="por_hacer" ${pendiente.estado === 'por_hacer' ? 'selected' : ''}>Por Hacer</option>
+                    <option value="haciendo" ${pendiente.estado === 'haciendo' ? 'selected' : ''}>Haciendo</option>
+                    <option value="listo" ${pendiente.estado === 'listo' ? 'selected' : ''}>Listo</option>
+                </select>
+            </td>
+            <td>
+                <div>
+                    <span class="fw-bold">${pendiente.agregado_por.nombre_completo}</span>
+                    <br><small class="text-muted">@${pendiente.agregado_por.username}</small>
+                </div>
+            </td>
+            <td>
+                <span class="small">${pendiente.fecha_agregado_display}</span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarPendiente(${pendiente.id}, '${pendiente.pendiente.nombre}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function cambiarEstadoPendiente(pendienteId, nuevoEstado) {
+    const data = {
+        pendiente_id: pendienteId,
+        nuevo_estado: nuevoEstado
+    };
+    
+    fetch('/workflow/api/pendientes/cambiar-estado/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar la fila
+            const row = document.querySelector(`tr[data-pendiente-id="${pendienteId}"]`);
+            if (row) {
+                row.setAttribute('data-estado', nuevoEstado);
+            }
+            
+            // Recargar pendientes para actualizar contador
+            cargarPendientesSolicitud();
+            
+            mostrarMensaje('Estado actualizado correctamente', 'success');
+        } else {
+            mostrarMensaje('Error al cambiar estado: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+function eliminarPendiente(pendienteId, nombre) {
+    if (!confirm(`¿Está seguro de eliminar el pendiente "${nombre}"?`)) {
+        return;
+    }
+    
+    fetch(`/workflow/api/pendientes/eliminar/${pendienteId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            cargarPendientesSolicitud();
+            mostrarMensaje('Pendiente eliminado correctamente', 'success');
+        } else {
+            mostrarMensaje('Error al eliminar pendiente: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+function actualizarContadorPendientes(pendientes) {
+    const contador = {
+        por_hacer: 0,
+        haciendo: 0,
+        listo: 0
+    };
+    
+    pendientes.forEach(p => {
+        contador[p.estado]++;
+    });
+    
+    const elemento = document.getElementById('contador-pendientes');
+    elemento.innerHTML = `
+        <i class="fas fa-clipboard-list me-1"></i>
+        ${contador.por_hacer} por hacer, ${contador.haciendo} haciendo, ${contador.listo} listo
+    `;
+}
+
+function configurarFiltrosPendientes() {
+    const filtros = document.querySelectorAll('input[name="filtro-estado"]');
+    
+    filtros.forEach(filtro => {
+        filtro.addEventListener('change', function() {
+            filtrarPendientesPorEstado(this.value);
+        });
+    });
+}
+
+function filtrarPendientesPorEstado(estado) {
+    const filas = document.querySelectorAll('#lista-pendientes tr');
+    
+    filas.forEach(fila => {
+        const estadoFila = fila.getAttribute('data-estado');
+        
+        if (estado === 'todos' || estadoFila === estado) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+}
+
+// Función para validar documentos consultando la base de datos
+function validarDocumentosYAvanzar() {
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
+}
+
+function mostrarModalDevolucion() {
+    // Cargar documentos problemáticos (opcional para esta etapa)
+    // cargarDocumentosProblematicos();
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+    modal.show();
+}
+
+// Función para obtener CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Función para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    // Usar la función del archivo backoffice.js
+    if (typeof window.mostrarMensaje === 'function') {
+        window.mostrarMensaje(mensaje, tipo);
+    } else {
+        console.log(`${tipo.toUpperCase()}: ${mensaje}`);
+    }
+}
+
+</script>
+{% endblock %} 

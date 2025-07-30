@@ -155,6 +155,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid mt-4">
   <div class="row">
     <div class="col-12">
@@ -206,7 +207,7 @@
             <div class="process-badge">
               <span class="badge bg-success">
                 <i class="fas fa-check-circle me-1"></i>
-                {{ solicitud.etapa_actual.subestados.count }} Etapas
+                6 Etapas
               </span>
             </div>
           </div>
@@ -276,6 +277,36 @@
                   </div>
                 </a>
               </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_tramite' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_subsanacion' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -285,7 +316,7 @@
             <div class="process-step-header">
               <div class="step-indicator">
                 <span class="step-number">3</span>
-                <span class="step-total">/ 4</span>
+                <span class="step-total">/ 6</span>
               </div>
               <div class="subestado-icon">
                 <i class="fas fa-signature"></i>
@@ -299,146 +330,135 @@
 
 
 
-            <!-- Navegación de Tipos de Firma -->
-            <ul class="nav nav-pills nav-pills-modern justify-content-center mb-4" id="pills-tab" role="tablist">
-
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="pills-digital-tab" data-bs-toggle="pill" data-bs-target="#pills-digital" type="button" role="tab" aria-controls="pills-digital" aria-selected="true">
-                  <i class="fas fa-pen-fancy me-2"></i>Firma Digital
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pills-validation-tab" data-bs-toggle="pill" data-bs-target="#pills-validation" type="button" role="tab" aria-controls="pills-validation" aria-selected="false">
-                  <i class="fas fa-certificate me-2"></i>Validación
-                </button>
-              </li>
-            </ul>
-
-            <div class="tab-content" id="pills-tabContent">
 
 
-              <!-- Pestaña de Firma Digital -->
-              <div class="tab-pane fade show active" id="pills-digital" role="tabpanel" aria-labelledby="pills-digital-tab">
-                <h5 class="mb-4">
-                  <i class="fas fa-pen-fancy me-2"></i>Crear Firma Digital
-                </h5>
-                
-                <div class="row">
-                  <div class="col-md-8">
-                    <div class="card">
-                      <div class="card-header">
-                        <h6 class="mb-0">Área de Firma</h6>
-                      </div>
-                      <div class="card-body text-center">
-                        <canvas id="signature-pad" class="signature-pad" width="600" height="200"></canvas>
-                        <div class="signature-tools mt-3">
-                          <button class="btn btn-outline-secondary" id="clear-signature">
-                            <i class="fas fa-eraser me-1"></i>Limpiar
-                          </button>
-                          <button class="btn btn-primary" id="save-signature">
-                            <i class="fas fa-save me-1"></i>Guardar Firma
-                          </button>
-                          <button class="btn btn-success" id="apply-signature" disabled>
-                            <i class="fas fa-stamp me-1"></i>Aplicar a Documento
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="card">
-                      <div class="card-header">
-                        <h6 class="mb-0">Firmas Guardadas</h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="mb-3 text-center">
-                          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" 
-                               alt="Firma guardada" class="signature-preview">
-                          <div class="mt-2">
-                            <small class="text-muted">Firma principal</small>
+            <!-- Contenido de Validación -->
+            <div class="validation-content">
+                                <!-- Contenedor de Citas de Firma -->
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <div class="card signature-appointments-card">
+                      <div class="card-header bg-gradient-success text-white">
+                        <div class="d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-alt me-2" style="font-size: 1.2rem;"></i>
+                            <div>
+                              <h6 class="mb-0 fw-bold">Citas de Firma Programadas</h6>
+                              <small class="opacity-75">Agenda de firmas asociadas a esta solicitud</small>
+                            </div>
                           </div>
-                          <button class="btn btn-sm btn-outline-primary mt-1">
-                            <i class="fas fa-check me-1"></i>Usar esta firma
-                          </button>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark" id="contador-citas">
+                              <i class="fas fa-calendar-check me-1"></i>
+                              <span id="total-citas">0</span> cita(s)
+                            </span>
+                            <button type="button" class="btn btn-light btn-sm" onclick="mostrarModalNuevaCita()">
+                              <i class="fas fa-plus me-1"></i>
+                              Nueva Cita
+                            </button>
+                          </div>
                         </div>
-                        <hr>
-                        <div class="text-center">
-                          <button class="btn btn-outline-warning btn-sm">
-                            <i class="fas fa-upload me-1"></i>Subir Firma
-                          </button>
+                      </div>
+                      <div class="card-body p-0">
+                        <div id="contenedor-citas">
+                          <!-- Contenido dinámico de citas -->
+                        </div>
+                        
+                        <!-- Mensaje cuando no hay citas -->
+                        <div id="mensaje-sin-citas" class="text-center p-4 text-muted">
+                          <i class="fas fa-calendar-times fa-2x mb-2 opacity-50"></i>
+                          <p class="mb-0">No hay citas de firma programadas para esta solicitud</p>
+                          <small>Las citas se pueden crear desde la "Agenda de Firma"</small>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Pestaña de Validación -->
-              <div class="tab-pane fade" id="pills-validation" role="tabpanel" aria-labelledby="pills-validation-tab">
-                <h5 class="mb-4">
-                  <i class="fas fa-certificate me-2"></i>Validación de Firmas
-                </h5>
-                
+                <!-- Contenedor de Pendientes Antes de Firma -->
                 <div class="row">
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header bg-light">
-                        <h6 class="mb-0">Estado de Validación</h6>
+                  <div class="col-12">
+                    <div class="card pendientes-card">
+                      <div class="card-header bg-gradient-primary text-white">
+                        <div class="d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-clipboard-list me-2" style="font-size: 1.2rem;"></i>
+                            <div>
+                              <h6 class="mb-0 fw-bold">Pendientes Antes de Firma</h6>
+                              <small class="opacity-75">Gestión de tareas pendientes para esta solicitud</small>
+                            </div>
+                          </div>
+                          <button type="button" class="btn btn-light btn-sm" onclick="mostrarModalAgregarPendientes()">
+                            <i class="fas fa-plus me-1"></i> Agregar Pendientes
+                          </button>
+                        </div>
                       </div>
-                      <div class="card-body">
-                        <div class="mb-3">
-                          <div class="d-flex justify-content-between align-items-center">
-                            <span>Contrato de Crédito</span>
-                            <span class="badge bg-warning">Pendiente</span>
+                      <div class="card-body p-0">
+                        <!-- Filtros de la tabla -->
+                        <div class="px-3 py-2 border-bottom">
+                          <div class="row align-items-center">
+                            <div class="col-md-6">
+                              <div class="btn-group btn-group-sm filtros-pendientes" role="group">
+                                <input type="radio" class="btn-check" name="filtro-estado" id="filtro-todos" value="todos" checked>
+                                <label class="btn btn-outline-secondary" for="filtro-todos">
+                                  <i class="fas fa-list me-1"></i>Todos
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="filtro-estado" id="filtro-por-hacer" value="por_hacer">
+                                <label class="btn btn-outline-danger" for="filtro-por-hacer">
+                                  <i class="fas fa-circle me-1"></i>Por Hacer
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="filtro-estado" id="filtro-haciendo" value="haciendo">
+                                <label class="btn btn-outline-warning" for="filtro-haciendo">
+                                  <i class="fas fa-circle me-1"></i>Haciendo
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="filtro-estado" id="filtro-listo" value="listo">
+                                <label class="btn btn-outline-success" for="filtro-listo">
+                                  <i class="fas fa-circle me-1"></i>Listo
+                                </label>
+                              </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                              <span class="badge bg-info" id="contador-pendientes">
+                                <i class="fas fa-clipboard-list me-1"></i>
+                                <span id="resumen-pendientes">Cargando...</span>
+                              </span>
+                            </div>
                           </div>
-                          <div class="progress mt-1">
-                            <div class="progress-bar bg-warning" role="progressbar" style="width: 50%"></div>
-                          </div>
+                        </div>
+
+                        <!-- Tabla de pendientes -->
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                          <table class="table table-hover table-sm mb-0" id="tabla-pendientes">
+                            <thead class="table-light sticky-top">
+                              <tr>
+                                <th style="width: 35%;">Pendiente</th>
+                                <th style="width: 15%;">Estado</th>
+                                <th style="width: 20%;">Agregado Por</th>
+                                <th style="width: 15%;">Fecha</th>
+                                <th style="width: 15%;">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody id="lista-pendientes">
+                              <!-- Contenido dinámico -->
+                            </tbody>
+                          </table>
                         </div>
                         
-                        <div class="mb-3">
-                          <div class="d-flex justify-content-between align-items-center">
-                            <span>Autorización de Información</span>
-                            <span class="badge bg-success">Validado</span>
-                          </div>
-                          <div class="progress mt-1">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
-                          </div>
+                        <!-- Mensaje cuando no hay pendientes -->
+                        <div id="mensaje-sin-pendientes" class="text-center p-4 text-muted" style="display: none;">
+                          <i class="fas fa-clipboard-check fa-2x mb-2 opacity-50"></i>
+                          <p class="mb-0">No hay pendientes asignados a esta solicitud</p>
+                          <small>Utilice el botón "Agregar Pendientes" para comenzar</small>
                         </div>
-                        
-                        <div class="mb-3">
-                          <div class="d-flex justify-content-between align-items-center">
-                            <span>Pagaré</span>
-                            <span class="badge bg-secondary">Sin firmar</span>
-                          </div>
-                          <div class="progress mt-1">
-                            <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header bg-light">
-                        <h6 class="mb-0">Certificado Digital</h6>
-                      </div>
-                      <div class="card-body text-center">
-                        <i class="fas fa-certificate fa-3x text-success mb-3"></i>
-                        <h6>Certificado Válido</h6>
-                        <p class="text-muted small">
-                          Emitido por: Autoridad Certificadora Nacional<br>
-                          Válido hasta: 31/12/2025<br>
-                          Serial: ABC123456789
-                        </p>
-                        <button class="btn btn-success btn-sm">
-                          <i class="fas fa-download me-1"></i>Descargar Certificado
-                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
+                
+ 
               </div>
             </div>
 
@@ -473,103 +493,1546 @@
 
 <!-- Scripts específicos para Firma -->
 <script>
+// Variables globales para la sub-etapa Firma
+const SOLICITUD_ID = {{ solicitud.id }};
+let citasFirma = [];
+let pendientesSolicitud = [];
+let catalogoPendientes = [];
+let pendientesSeleccionados = [];
+
+// ========================================
+// INICIALIZACIÓN AL CARGAR LA PÁGINA
+// ========================================
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Variables para firma digital
-    const canvas = document.getElementById('signature-pad');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        // Configurar canvas
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        // Event listeners para mouse
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-
-        // Event listeners para touch
-        canvas.addEventListener('touchstart', handleTouch);
-        canvas.addEventListener('touchmove', handleTouch);
-        canvas.addEventListener('touchend', stopDrawing);
-
-        function startDrawing(e) {
-            isDrawing = true;
-            [lastX, lastY] = getMousePos(e);
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const [currentX, currentY] = getMousePos(e);
-            
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(currentX, currentY);
-            ctx.stroke();
-            
-            [lastX, lastY] = [currentX, currentY];
-        }
-
-        function stopDrawing() {
-            isDrawing = false;
-        }
-
-        function getMousePos(e) {
-            const rect = canvas.getBoundingClientRect();
-            return [
-                e.clientX - rect.left,
-                e.clientY - rect.top
-            ];
-        }
-
-        function handleTouch(e) {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
-                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        }
-
-        // Limpiar firma
-        document.getElementById('clear-signature').addEventListener('click', function() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('apply-signature').disabled = true;
+    console.log('🔥 Sub-etapa Firma inicializada para solicitud:', SOLICITUD_ID);
+    cargarCitasFirma();
+    cargarPendientesAntesFirma();
+    configurarFiltrosPendientes();
+    
+    // 🆕 CARGAR TRANSICIONES NEGATIVAS PARA BOTÓN "DEVOLVER A OFICIAL"
+    cargarTransicionesNegativas();
+    
+    // 🆕 CONFIGURAR EVENT LISTENERS PARA MODALES DE AVANCE
+    const modalAvanzar = document.getElementById('modalAvanzarSubestado');
+    if (modalAvanzar) {
+        modalAvanzar.addEventListener('show.bs.modal', function () {
+            console.log('🚀 Abriendo modal de avance...');
+            // La función cargarInformacionAvance() se llama desde validarDocumentosYAvanzar()
         });
 
-        // Guardar firma
-        document.getElementById('save-signature').addEventListener('click', function() {
-            const imageData = canvas.toDataURL();
-            console.log('Firma guardada:', imageData);
-            document.getElementById('apply-signature').disabled = false;
-            alert('Firma guardada exitosamente');
-        });
+        modalAvanzar.addEventListener('hidden.bs.modal', function () {
+            // Reset estado del modal
+            opcionAvanceSeleccionada = null;
+            usuarioSeleccionadoAvance = null;
+            siguientePaso = null;
 
-        // Aplicar firma
-        document.getElementById('apply-signature').addEventListener('click', function() {
-            alert('Funcionalidad de aplicar firma en desarrollo');
+            document.getElementById('seccion-asignar-usuario').style.display = 'none';
+            document.getElementById('btn-confirmar-avance').disabled = true;
+            document.getElementById('avance-loading').style.display = 'none';
+            document.getElementById('avance-error').style.display = 'none';
         });
     }
 });
 
-// Funciones para botones de acción
-function validarDocumentosYAvanzar() {
-    alert('Funcionalidad de validación y avance - En desarrollo');
-    console.log('Validando documentos para solicitud:', '{{ solicitud.id }}');
+// ========================================
+// GESTIÓN DE CITAS DE FIRMA
+// ========================================
+
+function cargarCitasFirma() {
+    console.log('📅 Cargando citas de firma...');
+    
+    fetch(`/workflow/api/agenda-firma/solicitud/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                citasFirma = data.citas;
+                mostrarCitasFirma(citasFirma);
+                actualizarContadorCitas(citasFirma.length);
+                console.log(`✅ ${citasFirma.length} cita(s) cargada(s)`);
+            } else {
+                console.error('❌ Error al cargar citas:', data.error);
+                mostrarMensajeSinCitas();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de conexión:', error);
+            mostrarMensajeSinCitas();
+        });
 }
 
+function mostrarCitasFirma(citas) {
+    const contenedor = document.getElementById('contenedor-citas');
+    const mensajeSin = document.getElementById('mensaje-sin-citas');
+    
+    if (!citas || citas.length === 0) {
+        mostrarMensajeSinCitas();
+        return;
+    }
+    
+    // Ocultar mensaje "sin citas"
+    mensajeSin.style.display = 'none';
+    
+    // Generar HTML para las citas
+    let html = '<div class="p-3">';
+    
+    citas.forEach((cita, index) => {
+        const fecha = new Date(cita.fecha_hora);
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric', 
+            month: 'long',
+            day: 'numeric'
+        });
+        const horaFormateada = fecha.toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        
+        html += `
+            <div class="cita-item">
+                <div class="cita-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-alt text-success me-2"></i>
+                            <div>
+                                <div class="cita-fecha">${fechaFormateada}</div>
+                                <div class="cita-meta">
+                                    <i class="fas fa-clock me-1"></i>
+                                    ${horaFormateada}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="lugar-badge">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                ${cita.lugar_firma_display}
+                            </span>
+                            ${cita.tiene_pendientes ? '<div class="mt-1"><span class="pendientes-indicator"><i class="fas fa-exclamation-triangle me-1"></i>Pendientes</span></div>' : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="cita-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="cita-comentarios mb-3">
+                                <i class="fas fa-comment-alt me-2 text-muted"></i>
+                                ${cita.comentarios || 'Sin comentarios adicionales'}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="cita-meta">
+                                <div class="mb-2">
+                                    <i class="fas fa-user me-1"></i>
+                                    <strong>Creado por:</strong> ${cita.creado_por.nombre_completo}
+                                </div>
+                                <div>
+                                    <i class="fas fa-calendar-plus me-1"></i>
+                                    <strong>Fecha creación:</strong> ${new Date(cita.fecha_creacion).toLocaleDateString('es-ES')}
+                                </div>
+                                ${cita.modificado_por ? `
+                                    <div class="mt-1">
+                                        <i class="fas fa-edit me-1"></i>
+                                        <strong>Modificado por:</strong> ${cita.modificado_por.nombre_completo}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    contenedor.innerHTML = html;
+}
+
+function mostrarMensajeSinCitas() {
+    const contenedor = document.getElementById('contenedor-citas');
+    const mensajeSin = document.getElementById('mensaje-sin-citas');
+    
+    contenedor.innerHTML = '';
+    mensajeSin.style.display = 'block';
+}
+
+function actualizarContadorCitas(total) {
+    document.getElementById('total-citas').textContent = total;
+}
+
+// ========================================
+// GESTIÓN DE PENDIENTES ANTES DE FIRMA
+// ========================================
+
+function cargarPendientesAntesFirma() {
+    console.log('📋 Cargando pendientes antes de firma...');
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/pendientes/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                pendientesSolicitud = data.pendientes || [];
+                mostrarPendientesEnTabla(pendientesSolicitud);
+                actualizarContadorPendientes();
+                console.log(`✅ ${pendientesSolicitud.length} pendiente(s) cargado(s)`);
+            } else {
+                console.error('❌ Error al cargar pendientes:', data.error);
+                mostrarMensajeSinPendientes();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de conexión:', error);
+            mostrarMensajeSinPendientes();
+        });
+}
+
+function mostrarPendientesEnTabla(pendientes) {
+    const tbody = document.getElementById('lista-pendientes');
+    const mensajeSin = document.getElementById('mensaje-sin-pendientes');
+    
+    if (!pendientes || pendientes.length === 0) {
+        mostrarMensajeSinPendientes();
+        return;
+    }
+    
+    // Ocultar mensaje "sin pendientes"
+    mensajeSin.style.display = 'none';
+    
+    // Generar filas de la tabla
+    let html = '';
+    pendientes.forEach(pendiente => {
+        const estadoClass = {
+            'por_hacer': 'danger',
+            'haciendo': 'warning',
+            'listo': 'success'
+        }[pendiente.estado] || 'secondary';
+        
+        const estadoTexto = {
+            'por_hacer': 'Por Hacer',
+            'haciendo': 'Haciendo', 
+            'listo': 'Listo'
+        }[pendiente.estado] || pendiente.estado;
+        
+        // Usar la fecha ya formateada que viene de la API
+        const fecha = pendiente.fecha_agregado_display || 'N/A';
+        
+        html += `
+            <tr data-pendiente-id="${pendiente.id}" data-estado="${pendiente.estado}">
+                <td>
+                    <div>
+                        <span class="fw-bold">${pendiente.pendiente.nombre}</span>
+                        ${pendiente.pendiente.descripcion ? `<br><small class="text-muted">${pendiente.pendiente.descripcion}</small>` : ''}
+                    </div>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm estado-dropdown" onchange="cambiarEstadoPendiente(${pendiente.id}, this.value)">
+                        <option value="por_hacer" ${pendiente.estado === 'por_hacer' ? 'selected' : ''}>Por Hacer</option>
+                        <option value="haciendo" ${pendiente.estado === 'haciendo' ? 'selected' : ''}>Haciendo</option>
+                        <option value="listo" ${pendiente.estado === 'listo' ? 'selected' : ''}>Listo</option>
+                    </select>
+                </td>
+                <td>
+                    <div>
+                        <span class="fw-bold">${pendiente.agregado_por.nombre_completo}</span>
+                        <br><small class="text-muted">@${pendiente.agregado_por.username}</small>
+                    </div>
+                </td>
+                <td>
+                    <span class="small">${fecha}</span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarPendiente(${pendiente.id}, '${pendiente.pendiente.nombre.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function mostrarMensajeSinPendientes() {
+    const tbody = document.getElementById('lista-pendientes');
+    const mensajeSin = document.getElementById('mensaje-sin-pendientes');
+    
+    tbody.innerHTML = '';
+    mensajeSin.style.display = 'block';
+}
+
+function actualizarContadorPendientes() {
+    const porHacer = pendientesSolicitud.filter(p => p.estado === 'por_hacer').length;
+    const haciendo = pendientesSolicitud.filter(p => p.estado === 'haciendo').length;
+    const listo = pendientesSolicitud.filter(p => p.estado === 'listo').length;
+    
+    document.getElementById('resumen-pendientes').textContent = 
+        `${porHacer} por hacer, ${haciendo} haciendo, ${listo} listo`;
+}
+
+// ========================================
+// FILTROS DE PENDIENTES
+// ========================================
+
+function configurarFiltrosPendientes() {
+    const filtros = document.querySelectorAll('input[name="filtro-estado"]');
+    filtros.forEach(filtro => {
+        filtro.addEventListener('change', function() {
+            filtrarPendientes(this.value);
+        });
+    });
+}
+
+function filtrarPendientes(estado) {
+    const filas = document.querySelectorAll('#lista-pendientes tr[data-pendiente-id]');
+    
+    filas.forEach(fila => {
+        const estadoFila = fila.getAttribute('data-estado');
+        if (estado === 'todos' || estadoFila === estado) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+}
+
+// ========================================
+// ACCIONES DE PENDIENTES
+// ========================================
+
+function cambiarEstadoPendiente(pendienteId, nuevoEstado) {
+    console.log(`🔄 Cambiando estado de pendiente ${pendienteId} a ${nuevoEstado}`);
+    
+    fetch(`/workflow/api/pendientes/${pendienteId}/cambiar-estado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            estado: nuevoEstado
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar el estado local
+            const pendiente = pendientesSolicitud.find(p => p.id === pendienteId);
+            if (pendiente) {
+                pendiente.estado = nuevoEstado;
+            }
+            
+            // Actualizar la fila en la tabla
+            const fila = document.querySelector(`tr[data-pendiente-id="${pendienteId}"]`);
+            if (fila) {
+                fila.setAttribute('data-estado', nuevoEstado);
+            }
+            
+            // Actualizar contador
+            actualizarContadorPendientes();
+            
+            mostrarMensaje('Estado actualizado correctamente', 'success');
+        } else {
+            mostrarMensaje('Error al actualizar estado: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+function eliminarPendiente(pendienteId, nombrePendiente) {
+    if (!confirm(`¿Está seguro que desea eliminar el pendiente "${nombrePendiente}"?`)) {
+        return;
+    }
+    
+    console.log(`🗑️ Eliminando pendiente ${pendienteId}`);
+    
+    fetch(`/workflow/api/pendientes/${pendienteId}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Recargar pendientes
+            cargarPendientesAntesFirma();
+            mostrarMensaje('Pendiente eliminado correctamente', 'success');
+        } else {
+            mostrarMensaje('Error al eliminar pendiente: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+// ========================================
+// MODAL DE NUEVA CITA DE FIRMA
+// ========================================
+
+function mostrarModalNuevaCita() {
+    // Redirigir a la página de Agenda de Firma para crear nueva cita
+    const nuevaCitaUrl = '/workflow/agenda-firma/?solicitud_id=' + SOLICITUD_ID;
+    window.open(nuevaCitaUrl, '_blank');
+    
+    // Alternativamente, mostrar mensaje informativo
+    mostrarMensaje('Redirigiendo a Agenda de Firma para crear nueva cita...', 'info');
+}
+
+// ========================================
+// MODAL DE AGREGAR PENDIENTES
+// ========================================
+
+function mostrarModalAgregarPendientes() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAgregarPendientes'));
+    modal.show();
+    
+    // Limpiar estado al abrir modal
+    pendientesSeleccionados = [];
+    actualizarVistaSeleccionados();
+    
+    // Cargar pendientes automáticamente
+    buscarPendientesEnCatalogo();
+}
+
+// Función para buscar pendientes en el catálogo
+function buscarPendientesEnCatalogo() {
+    const query = document.getElementById('buscarPendientes').value.trim();
+    const resultadosElement = document.getElementById('resultados-pendientes');
+    
+    // Mostrar loading
+    resultadosElement.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Buscando pendientes...</div>';
+    
+    // Realizar búsqueda
+    const url = query ? `/workflow/api/pendientes/catalogo/?q=${encodeURIComponent(query)}` : '/workflow/api/pendientes/catalogo/';
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                catalogoPendientes = data.pendientes;
+                mostrarResultadosPendientes(data.pendientes);
+                document.getElementById('contador-resultados').textContent = `${data.pendientes.length} resultado${data.pendientes.length !== 1 ? 's' : ''}`;
+            } else {
+                resultadosElement.innerHTML = `<div class="text-center p-4 text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultadosElement.innerHTML = '<div class="text-center p-4 text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al cargar pendientes</div>';
+        });
+}
+
+// Función para mostrar los resultados de pendientes
+function mostrarResultadosPendientes(pendientes) {
+    const container = document.getElementById('resultados-pendientes');
+    
+    if (pendientes.length === 0) {
+        container.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-inbox me-2"></i>No se encontraron pendientes</div>';
+        return;
+    }
+    
+    let html = '';
+    pendientes.forEach(pendiente => {
+        const yaSeleccionado = pendientesSeleccionados.some(p => p.id === pendiente.id);
+        const claseBoton = yaSeleccionado ? 'btn-outline-success disabled' : 'btn-outline-primary';
+        const textoBoton = yaSeleccionado ? '<i class="fas fa-check me-1"></i>Seleccionado' : '<i class="fas fa-plus me-1"></i>Seleccionar';
+        
+        html += `
+            <div class="border-bottom p-3 pendiente-item" data-pendiente-id="${pendiente.id}">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-dark">${pendiente.nombre}</h6>
+                        ${pendiente.descripcion ? `<p class="mb-2 text-muted small">${pendiente.descripcion}</p>` : ''}
+                        <div class="d-flex align-items-center text-muted small">
+                            <span class="badge bg-light text-dark me-2">
+                                <i class="fas fa-sort-numeric-up me-1"></i>Orden: ${pendiente.orden}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <button type="button" class="btn btn-sm ${claseBoton}" 
+                                onclick="seleccionarPendiente(${pendiente.id}, '${pendiente.nombre.replace(/'/g, "\\'")}', '${(pendiente.descripcion || '').replace(/'/g, "\\'")}')"
+                                ${yaSeleccionado ? 'disabled' : ''}>
+                            ${textoBoton}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Función para seleccionar un pendiente
+function seleccionarPendiente(id, nombre, descripcion) {
+    // Verificar si ya está seleccionado
+    if (pendientesSeleccionados.some(p => p.id === id)) {
+        return;
+    }
+    
+    // Agregar al array de seleccionados
+    pendientesSeleccionados.push({
+        id: id,
+        nombre: nombre,
+        descripcion: descripcion
+    });
+    
+    // Actualizar vistas
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(catalogoPendientes); // Refrescar lista para mostrar como seleccionado
+}
+
+// Función para quitar un pendiente seleccionado
+function quitarPendienteSeleccionado(id) {
+    pendientesSeleccionados = pendientesSeleccionados.filter(p => p.id !== id);
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(catalogoPendientes); // Refrescar lista
+}
+
+// Función para limpiar todos los seleccionados
+function limpiarSeleccionados() {
+    pendientesSeleccionados = [];
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(catalogoPendientes); // Refrescar lista
+}
+
+// Función para actualizar la vista de seleccionados
+function actualizarVistaSeleccionados() {
+    const seccionSeleccionados = document.getElementById('seccion-seleccionados');
+    const listaSeleccionados = document.getElementById('lista-seleccionados');
+    const contadorSeleccionados = document.getElementById('contador-seleccionados');
+    const btnConfirmar = document.getElementById('btn-confirmar-pendientes');
+    
+    if (pendientesSeleccionados.length === 0) {
+        seccionSeleccionados.style.display = 'none';
+        btnConfirmar.disabled = true;
+        return;
+    }
+    
+    seccionSeleccionados.style.display = 'block';
+    btnConfirmar.disabled = false;
+    contadorSeleccionados.textContent = `${pendientesSeleccionados.length} seleccionado${pendientesSeleccionados.length !== 1 ? 's' : ''}`;
+    
+    let html = '';
+    pendientesSeleccionados.forEach(pendiente => {
+        html += `
+            <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-white border rounded">
+                <div>
+                    <span class="fw-bold text-success">${pendiente.nombre}</span>
+                    ${pendiente.descripcion ? `<br><small class="text-muted">${pendiente.descripcion}</small>` : ''}
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="quitarPendienteSeleccionado(${pendiente.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    });
+    
+    listaSeleccionados.innerHTML = html;
+}
+
+// Función para confirmar agregar pendientes
+function confirmarAgregarPendientes() {
+    if (pendientesSeleccionados.length === 0) {
+        return;
+    }
+    
+    const pendientesIds = pendientesSeleccionados.map(p => p.id);
+    const btnConfirmar = document.getElementById('btn-confirmar-pendientes');
+    
+    // Mostrar loading
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agregando...';
+    btnConfirmar.disabled = true;
+    
+    // Realizar petición
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/pendientes/agregar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            pendientes_ids: pendientesIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('modalAgregarPendientes')).hide();
+            
+            // Mostrar mensaje de éxito
+            mostrarMensaje(data.message, 'success');
+            
+            // Recargar lista de pendientes
+            cargarPendientesAntesFirma();
+        } else {
+            mostrarMensaje(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al agregar pendientes', 'error');
+    })
+    .finally(() => {
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+}
+
+// ========================================
+// FUNCIONES UTILITARIAS
+// ========================================
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function mostrarMensaje(mensaje, tipo) {
+    // Crear toast notification
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${mensaje}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1055';
+    document.body.appendChild(container);
+    return container;
+}
+
+// ========================================
+// VARIABLES GLOBALES PARA AVANCE
+// ========================================
+
+let transicionesNegativas = [];
+let opcionAvanceSeleccionada = null;
+let usuarioSeleccionadoAvance = null;
+let siguientePaso = null;
+
+// ========================================
+// FUNCIONES DE AVANCE - ADAPTADAS PARA FIRMA
+// ========================================
+
+// Función para validar documentos consultando la base de datos
+function validarDocumentosYAvanzar() {
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
+}
+
+// Función para cargar información del modal cuando se abre
+function cargarInformacionAvance() {
+    console.log('🔄 Cargando información de avance...');
+    
+    // Mostrar loading
+    document.getElementById('avance-loading').style.display = 'block';
+    document.getElementById('avance-error').style.display = 'none';
+    document.getElementById('estado-documentos').style.display = 'none';
+    
+    // Solo cargar siguiente subestado (sin validación de documentos)
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/siguiente-subestado/`)
+        .then(response => response.json())
+        .then(subestadoData => {
+            console.log('📊 Información de subestado:', subestadoData);
+            
+            // Actualizar información del siguiente paso
+            if (subestadoData.success) {
+                window.siguientePaso = subestadoData;
+                
+                if (subestadoData.siguiente_subestado) {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_subestado.nombre;
+                } else if (subestadoData.siguiente_etapa) {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_etapa.nombre;
+                } else {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = 'Orden del expediente';
+                }
+            } else {
+                document.getElementById('avanzar-siguiente-subestado').textContent = 'Error al cargar';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('avanzar-siguiente-subestado').textContent = 'Error de conexión';
+        })
+        .finally(() => {
+            document.getElementById('avance-loading').style.display = 'none';
+        });
+    
+    // Cargar usuarios disponibles
+    cargarUsuariosDisponiblesAvance();
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvance() {
+    return fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTabla(data.usuarios);
+                return Promise.resolve();
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        });
+}
+
+// Función para mostrar usuarios en la tabla
+function mostrarUsuariosEnTabla(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance');
+    const contador = document.getElementById('contador-usuarios-avance');
+    
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.className = 'usuario-item';
+        row.setAttribute('data-usuario-id', usuario.id);
+        row.setAttribute('data-usuario-nombre', usuario.nombre);
+        row.setAttribute('data-usuario-email', usuario.email);
+        
+        const avatar = usuario.profile_picture ?
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                ${usuario.nombre.charAt(0).toUpperCase()}
+            </div>`;
+        
+        const badges = [];
+        if (usuario.is_staff) badges.push('<span class="badge bg-info ms-1">Staff</span>');
+        if (usuario.is_superuser) badges.push('<span class="badge bg-danger ms-1">Admin</span>');
+        
+        const grupos = usuario.grupos && usuario.grupos.length > 0 ?
+            usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') :
+            '<span class="text-muted">Sin grupos</span>';
+        
+        row.innerHTML = `
+            <td class="text-center">
+                <span class="badge bg-secondary">${index + 1}</span>
+            </td>
+            <td class="text-center">${avatar}</td>
+            <td>
+                <div>
+                    <strong class="fw-bold">${usuario.nombre}</strong>
+                    ${badges.join('')}
+                </div>
+            </td>
+            <td>
+                <small class="text-muted">${usuario.email}</small>
+            </td>
+            <td>${grupos}</td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance" 
+                        data-usuario-id="${usuario.id}" 
+                        data-usuario-nombre="${usuario.nombre}">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Asignar
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    // Agregar event listeners a los botones de asignar
+    document.querySelectorAll('.asignar-usuario-avance').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const usuarioId = this.getAttribute('data-usuario-id');
+            const usuarioNombre = this.getAttribute('data-usuario-nombre');
+            seleccionarUsuarioAvance(usuarioId, usuarioNombre);
+        });
+    });
+    
+    // Configurar funcionalidad de búsqueda
+    configurarBusquedaUsuarios();
+}
+
+// Función para configurar la búsqueda de usuarios
+function configurarBusquedaUsuarios() {
+    const inputBusqueda = document.getElementById('buscar-usuario-avance');
+    const btnLimpiar = document.getElementById('limpiar-busqueda-avance');
+    
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', function () {
+            filtrarUsuarios(this.value.toLowerCase());
+        });
+    }
+    
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function () {
+            inputBusqueda.value = '';
+            filtrarUsuarios('');
+        });
+    }
+}
+
+// Función para filtrar usuarios en la tabla
+function filtrarUsuarios(termino) {
+    const filas = document.querySelectorAll('#lista-usuarios-avance .usuario-item');
+    const contador = document.getElementById('contador-usuarios-avance');
+    let usuariosVisibles = 0;
+    
+    filas.forEach(fila => {
+        const nombre = fila.getAttribute('data-usuario-nombre').toLowerCase();
+        const email = fila.getAttribute('data-usuario-email').toLowerCase();
+        const grupos = fila.querySelector('td:nth-child(5)').textContent.toLowerCase();
+        
+        // Buscar en nombre, email o grupos
+        const coincide = termino === '' ||
+            nombre.includes(termino) ||
+            email.includes(termino) ||
+            grupos.includes(termino);
+        
+        if (coincide) {
+            fila.style.display = '';
+            usuariosVisibles++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+    
+    if (contador) {
+        contador.textContent = usuariosVisibles;
+    }
+}
+
+// Función para seleccionar opción de avance (yo vs otro)
+function seleccionarOpcionAvance(opcion) {
+    console.log('👤 Opción seleccionada:', opcion);
+    
+    opcionAvanceSeleccionada = opcion;
+    
+    const btnContinuarYo = document.getElementById('btn-continuar-yo');
+    const btnAsignarOtro = document.getElementById('btn-asignar-otro');
+    const btnBandejaGrupal = document.getElementById('btn-bandeja-grupal');
+    const seccionAsignar = document.getElementById('seccion-asignar-usuario');
+    const btnConfirmar = document.getElementById('btn-confirmar-avance');
+    
+    // Resetear estilos
+    btnContinuarYo.classList.remove('btn-primary', 'btn-outline-primary');
+    btnAsignarOtro.classList.remove('btn-success', 'btn-outline-success');
+    btnBandejaGrupal.classList.remove('btn-warning', 'btn-outline-warning');
+    
+    if (opcion === 'yo') {
+        btnContinuarYo.classList.add('btn-primary');
+        btnAsignarOtro.classList.add('btn-outline-success');
+        btnBandejaGrupal.classList.add('btn-outline-warning');
+        seccionAsignar.style.display = 'none';
+        btnConfirmar.disabled = false;
+        usuarioSeleccionadoAvance = null;
+    } else if (opcion === 'otro') {
+        btnContinuarYo.classList.add('btn-outline-primary');
+        btnAsignarOtro.classList.add('btn-success');
+        btnBandejaGrupal.classList.add('btn-outline-warning');
+        seccionAsignar.style.display = 'block';
+        btnConfirmar.disabled = true; // Se habilitará cuando seleccione usuario
+        usuarioSeleccionadoAvance = null;
+    } else if (opcion === 'bandeja') {
+        btnContinuarYo.classList.add('btn-outline-primary');
+        btnAsignarOtro.classList.add('btn-outline-success');
+        btnBandejaGrupal.classList.add('btn-warning');
+        seccionAsignar.style.display = 'none';
+        btnConfirmar.disabled = false;
+        usuarioSeleccionadoAvance = null;
+    }
+}
+
+// Función para seleccionar usuario para asignar
+function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
+    console.log('👥 Usuario seleccionado:', usuarioNombre);
+    
+    usuarioSeleccionadoAvance = {
+        id: usuarioId,
+        nombre: usuarioNombre
+    };
+    
+    // Actualizar estilos de botones
+    document.querySelectorAll('.asignar-usuario-avance').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"]`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    // Habilitar botón de confirmar
+    document.getElementById('btn-confirmar-avance').disabled = false;
+}
+
+// Función para confirmar el avance
+function confirmarAvance() {
+    console.log('✅ Confirmando avance...');
+    
+    if (!opcionAvanceSeleccionada) {
+        mostrarMensaje('Debe seleccionar una opción de avance', 'error');
+        return;
+    }
+    
+    if (opcionAvanceSeleccionada === 'otro' && !usuarioSeleccionadoAvance) {
+        mostrarMensaje('Debe seleccionar un usuario para asignar', 'error');
+        return;
+    }
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-avance');
+    
+    // Deshabilitar botón y mostrar loading
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    const data = {
+        opcion: opcionAvanceSeleccionada,
+        usuario_id: usuarioSeleccionadoAvance?.id || null,
+        siguiente_subestado_id: siguientePaso?.siguiente_subestado?.id || null
+    };
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestado'));
+            modal.hide();
+            
+            // Mostrar mensaje de éxito
+            const mensaje = opcionAvanceSeleccionada === 'yo' ?
+                'Avanzando al siguiente subestado...' :
+                opcionAvanceSeleccionada === 'otro' ?
+                `Solicitud asignada a ${usuarioSeleccionadoAvance.nombre}` :
+                'Solicitud devuelta a bandeja grupal';
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Redirigir según la opción
+            setTimeout(() => {
+                if (opcionAvanceSeleccionada === 'yo') {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = '/workflow/bandeja-mixta/';
+                }
+            }, 1500);
+            
+        } else {
+            throw new Error(data.error || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        
+        // Restaurar botón
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
+// ========================================
+// FUNCIONES DE DEVOLUCIÓN A OFICIAL
+// ========================================
+
+// Función para mostrar modal de devolución
 function mostrarModalDevolucion() {
-    alert('Funcionalidad de devolución a oficial - En desarrollo');
-    console.log('Mostrando modal de devolución para solicitud:', '{{ solicitud.id }}');
+    console.log('📋 Mostrando modal de devolución...');
+    
+    if (transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
+    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+    
+    // En Firma no hay documentos problemáticos, mostrar mensaje genérico
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    listaContainer.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Devolución desde Firma</strong>
+            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
+        </div>
+    `;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+    modal.show();
+}
+
+// Función para confirmar la devolución
+function confirmarDevolucion() {
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    
+    if (!motivo) {
+        mostrarMensaje('Debes proporcionar un motivo para la devolución', 'error');
+        return;
+    }
+    
+    if (transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles', 'error');
+        return;
+    }
+    
+    // Usar la primera transición negativa disponible
+    const transicion = transicionesNegativas[0];
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    btnConfirmar.disabled = true;
+    
+    // Ejecutar transición
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/ejecutar-transicion/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            transicion_id: transicion.id,
+            comentario: `Devuelto desde Firma: ${motivo}`
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje('Solicitud devuelta al oficial exitosamente', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+            modal.hide();
+            
+            // Recargar página después de un momento
+            setTimeout(() => {
+                window.location.href = '/workflow/bandeja-mixta/';
+            }, 2000);
+        } else {
+            mostrarMensaje(`Error al devolver solicitud: ${data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error al devolver solicitud:', error);
+        mostrarMensaje('Error al devolver solicitud', 'error');
+    })
+    .finally(() => {
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+}
+
+// Función para cargar transiciones negativas al inicializar
+function cargarTransicionesNegativas() {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                transicionesNegativas = data.transiciones_negativas || [];
+                
+                // Mostrar/ocultar botón "Devolver a Oficial"
+                const btnDevolver = document.getElementById('btn-devolver-oficial');
+                if (btnDevolver) {
+                    if (data.tiene_transiciones_negativas) {
+                        btnDevolver.style.display = 'inline-block';
+                    } else {
+                        btnDevolver.style.display = 'none';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar transiciones negativas:', error);
+        });
 }
 </script>
+
+<!-- Modal para Agregar Pendientes Antes de Firma -->
+<div class="modal fade" id="modalAgregarPendientes" tabindex="-1" aria-labelledby="modalAgregarPendientesLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <div>
+          <h5 class="modal-title fw-bold" id="modalAgregarPendientesLabel">
+            <i class="fas fa-clipboard-list me-2"></i>Agregar Pendientes Antes de Firma
+          </h5>
+          <small class="d-block mt-1 opacity-75">Seleccione uno o varios pendientes para agregar a esta solicitud</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Buscador de pendientes -->
+        <div class="mb-4">
+          <label for="buscarPendientes" class="form-label fw-bold">
+            <i class="fas fa-search me-1"></i>Buscar Pendientes
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control" id="buscarPendientes" 
+                   placeholder="Escriba el nombre del pendiente que desea buscar..."
+                   oninput="buscarPendientesEnCatalogo()">
+          </div>
+          <small class="form-text text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Los resultados se actualizan automáticamente mientras escribe
+          </small>
+        </div>
+
+        <!-- Resultados de la búsqueda -->
+        <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-bold text-secondary">
+              <i class="fas fa-list me-1"></i>Pendientes Disponibles
+            </h6>
+            <span class="badge bg-info" id="contador-resultados">0 resultados</span>
+          </div>
+          
+          <!-- Lista de pendientes disponibles -->
+          <div id="resultados-pendientes" class="border rounded" style="max-height: 300px; overflow-y: auto;">
+            <div class="text-center p-4 text-muted" id="loading-pendientes">
+              <i class="fas fa-spinner fa-spin me-2"></i>Cargando pendientes...
+            </div>
+          </div>
+        </div>
+
+        <!-- Pendientes seleccionados -->
+        <div id="seccion-seleccionados" style="display: none;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-bold text-success">
+              <i class="fas fa-check-square me-1"></i>Pendientes Seleccionados
+            </h6>
+            <div>
+              <span class="badge bg-success" id="contador-seleccionados">0 seleccionados</span>
+              <button type="button" class="btn btn-outline-danger btn-sm ms-2" onclick="limpiarSeleccionados()">
+                <i class="fas fa-trash me-1"></i>Limpiar
+              </button>
+            </div>
+          </div>
+          
+          <div id="lista-seleccionados" class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+            <!-- Los pendientes seleccionados aparecerán aquí -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-confirmar-pendientes" onclick="confirmarAgregarPendientes()" disabled>
+          <i class="fas fa-plus me-1"></i>Agregar Pendientes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Avanzar Subestado -->
+<div class="modal fade" id="modalAvanzarSubestado" tabindex="-1" aria-labelledby="modalAvanzarSubestadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
+        </div>
+
+        <!-- Estado de documentos (oculto para Firma) -->
+        <div id="estado-documentos" class="mb-4" style="display: none;">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Estado de Documentos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              
+              <!-- Resumen de documentos -->
+              <div class="row text-center mb-3">
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                      <i class="fas fa-check" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #059669;" id="documentos-buenos-count">0</div>
+                    <small class="text-muted">Buenos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                      <i class="fas fa-times" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #dc2626;" id="documentos-malos-count">0</div>
+                    <small class="text-muted">Malos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                      <i class="fas fa-clock" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #d97706;" id="documentos-pendientes-count">0</div>
+                    <small class="text-muted">Pendientes</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                      <i class="fas fa-file-alt" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #4b5563;" id="documentos-total-count">0</div>
+                    <small class="text-muted">Total</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de documentos pendientes -->
+              <div id="lista-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2" style="color: #d97706;"></i>
+                    <div>
+                      <strong>Documentos Pendientes Detectados</strong>
+                      <br>
+                      <small>Los siguientes documentos opcionales están marcados como pendientes y avanzarán en este estado:</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="documentos-pendientes-lista" class="mb-3">
+                  <!-- Los documentos pendientes se insertarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Mensaje cuando no hay pendientes -->
+              <div id="sin-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 1px solid #10b981; border-radius: 8px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2" style="color: #10b981;"></i>
+                    <div>
+                      <strong>Todos los documentos están procesados</strong>
+                      <br>
+                      <small>No hay documentos pendientes. Puedes continuar con confianza.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Botones de opción -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
+              <i class="fas fa-user me-2"></i>
+              Continuar Yo
+            </button>
+            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
+              <i class="fas fa-user-plus me-2"></i>
+              Asignar a Otro Usuario
+            </button>
+            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
+              <i class="fas fa-inbox me-2"></i>
+              Devolver a Bandeja Grupal
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
+        <div id="seccion-asignar-usuario" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Barra de búsqueda -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
+              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Busca por nombre, email, grupos o roles (Staff/Admin)
+            </small>
+          </div>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Devolver a Oficial -->
+<div class="modal fade" id="modalDevolverOficial" tabindex="-1" aria-labelledby="modalDevolverOficialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #fff;">
+        <h5 class="modal-title" id="modalDevolverOficialLabel">
+          <i class="fas fa-arrow-left me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%); color: #dc2626; border: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Solicitud:</strong> <span>{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span>{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Se devolverá a:</strong> <span id="devolver-etapa-destino">Cargando...</span>
+        </div>
+
+        <!-- Resumen de documentos problemáticos -->
+        <div id="documentos-problematicos" class="mb-4">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Información de Devolución
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div id="lista-documentos-problematicos">
+                <!-- Se llenará dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de devolución -->
+        <div class="mb-3">
+          <label for="motivo-devolucion" class="form-label fw-bold">
+            <i class="fas fa-comment-alt me-2"></i>
+            Motivo de la devolución
+          </label>
+          <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucion()">
+          <i class="fas fa-arrow-left me-1"></i>
+          Confirmar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

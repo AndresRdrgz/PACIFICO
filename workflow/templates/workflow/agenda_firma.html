@@ -4,6 +4,9 @@
 {% block title %}{{ titulo_pagina }} - Sistema de Workflow{% endblock %}
 
 {% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+
 <style>
 /* Estilos específicos para Agenda de Firma */
 .agenda-header {
@@ -27,78 +30,213 @@
   margin-bottom: 0;
 }
 
-.coming-soon-container {
-  text-align: center;
-  padding: 4rem 2rem;
+.agenda-header .btn-nueva-cita {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.agenda-header .btn-nueva-cita:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.calendar-container {
   background: white;
   border-radius: 15px;
+  padding: 2rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.coming-soon-icon {
-  font-size: 4rem;
-  color: #28a745;
-  margin-bottom: 2rem;
+/* Personalización de FullCalendar */
+#calendar {
+  font-family: inherit;
 }
 
-.coming-soon-title {
-  font-size: 2rem;
-  font-weight: 600;
+.fc-toolbar {
+  margin-bottom: 1.5rem !important;
+}
+
+.fc-toolbar-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
   color: #2c3e50;
-  margin-bottom: 1rem;
 }
 
-.coming-soon-description {
-  font-size: 1.1rem;
+.fc-button {
+  background: #28a745 !important;
+  border-color: #28a745 !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+}
+
+.fc-button:hover {
+  background: #218838 !important;
+  border-color: #1e7e34 !important;
+}
+
+.fc-button:focus {
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+.fc-button-active {
+  background: #1e7e34 !important;
+  border-color: #1c7430 !important;
+}
+
+.fc-today-button {
+  background: #17a2b8 !important;
+  border-color: #17a2b8 !important;
+}
+
+.fc-today-button:hover {
+  background: #138496 !important;
+  border-color: #117a8b !important;
+}
+
+.fc-event {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+.fc-event:hover {
+  filter: brightness(1.1) !important;
+  transform: scale(1.02) !important;
+}
+
+.fc-daygrid-day-number {
+  color: #495057 !important;
+  font-weight: 600 !important;
+}
+
+.fc-col-header-cell {
+  background: #f8f9fa !important;
+  font-weight: 700 !important;
+  color: #495057 !important;
+}
+
+.fc-timegrid-slot {
+  height: 40px !important;
+}
+
+.fc-timegrid-axis {
+  font-weight: 600 !important;
+  color: #6c757d !important;
+}
+
+/* Modal personalizado */
+.modal-cita .modal-header {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border-bottom: none;
+}
+
+.modal-cita .modal-title {
+  font-weight: 700;
+}
+
+.modal-cita .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.form-floating label {
   color: #6c757d;
-  margin-bottom: 2rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+  font-weight: 600;
 }
 
-.feature-preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-top: 3rem;
-}
-
-.feature-card {
-  background: white;
+.solicitud-item {
+  padding: 12px;
   border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 2rem;
-  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 8px;
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.solicitud-item:hover {
+  background-color: #f8f9fa;
+  border-color: #28a745;
+  transform: translateX(4px);
 }
 
-.feature-icon {
-  font-size: 3rem;
-  color: #28a745;
-  margin-bottom: 1.5rem;
+.solicitud-item.selected {
+  background-color: #e8f5e8;
+  border-color: #28a745;
+  color: #155724;
 }
 
-.feature-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #2c3e50;
+.autocomplete-container {
+  position: relative;
+}
+
+.autocomplete-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ced4da;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1050;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.no-results {
+  padding: 12px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(40, 167, 69, 0.3);
+  border-radius: 50%;
+  border-top-color: #28a745;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Estilos para el sistema de pendientes reutilizado */
+.pendientes-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.pendientes-section h6 {
+  color: #495057;
+  font-weight: 700;
   margin-bottom: 1rem;
 }
 
-.feature-description {
-  color: #6c757d;
-  line-height: 1.6;
+.btn-agregar-pendientes {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+  font-weight: 600;
 }
 
-.back-button {
-  margin-top: 2rem;
+.btn-agregar-pendientes:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+  color: #212529;
 }
 </style>
 {% endblock %}
@@ -109,98 +247,166 @@
     <div class="col-12">
       <!-- Header -->
       <div class="agenda-header">
-        <div class="d-flex align-items-center">
-          <i class="fas fa-calendar-alt me-3" style="font-size: 3rem;"></i>
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-calendar-alt me-3" style="font-size: 3rem;"></i>
+            <div>
+              <h1>{{ titulo_pagina }}</h1>
+              <p>Gestión y programación de citas para firma de documentos</p>
+            </div>
+          </div>
           <div>
-            <h1>{{ titulo_pagina }}</h1>
-            <p>Gestión y programación de citas para firma de documentos</p>
+            <button type="button" class="btn btn-nueva-cita" data-bs-toggle="modal" data-bs-target="#modalNuevaCita">
+              <i class="fas fa-plus me-2"></i>
+              Nueva Cita
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Main Content -->
-      <div class="coming-soon-container">
-        <div class="coming-soon-icon">
-          <i class="fas fa-tools"></i>
+      <!-- Calendario -->
+      <div class="calendar-container">
+        <div id="calendar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Nueva Cita -->
+<div class="modal fade modal-cita" id="modalNuevaCita" tabindex="-1" aria-labelledby="modalNuevaCitaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="modalNuevaCitaLabel">
+            <i class="fas fa-calendar-plus me-2"></i>
+            Nueva Cita de Firma
+          </h5>
+          <small class="d-block mt-1 opacity-75">Programa una cita para firma de documentos</small>
         </div>
-        
-        <h2 class="coming-soon-title">Funcionalidad en Desarrollo</h2>
-        
-        <p class="coming-soon-description">
-          La <strong>Agenda de Firma</strong> está siendo desarrollada y estará disponible próximamente. 
-          Esta funcionalidad permitirá gestionar de manera eficiente las citas y horarios para la firma de documentos.
-        </p>
-
-        <!-- Feature Preview -->
-        <div class="feature-preview">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-calendar-check"></i>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevaCita">
+          {% csrf_token %}
+          <div class="row">
+            <!-- Búsqueda de Solicitud -->
+            <div class="col-12 mb-4">
+              <label class="form-label fw-bold">
+                <i class="fas fa-search me-1"></i>
+                Buscar Solicitud *
+              </label>
+              <div class="autocomplete-container">
+                <input type="text" class="form-control" id="buscarSolicitud" 
+                       placeholder="Escriba código, nombre o cédula del cliente..." 
+                       autocomplete="off">
+                <div class="autocomplete-results" id="resultadosBusqueda" style="display: none;"></div>
+              </div>
+              <small class="text-muted">Busque por código de solicitud, nombre del cliente o cédula</small>
+              <input type="hidden" id="solicitudSeleccionada" name="solicitud_id">
             </div>
-            <h3 class="feature-title">Programación de Citas</h3>
-            <p class="feature-description">
-              Programa y gestiona citas para firma de documentos con clientes de manera organizada.
-            </p>
-          </div>
 
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-user-clock"></i>
+            <!-- Fecha y Hora -->
+            <div class="col-md-6 mb-3">
+              <div class="form-floating">
+                <input type="datetime-local" class="form-control" id="fechaHora" name="fecha_hora" required>
+                <label for="fechaHora">
+                  <i class="fas fa-clock me-1"></i>
+                  Fecha y Hora *
+                </label>
+              </div>
             </div>
-            <h3 class="feature-title">Gestión de Horarios</h3>
-            <p class="feature-description">
-              Controla la disponibilidad de horarios y evita conflictos en las programaciones.
-            </p>
-          </div>
 
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-bell"></i>
+            <!-- Lugar de Firma -->
+            <div class="col-md-6 mb-3">
+              <div class="form-floating">
+                <select class="form-select" id="lugarFirma" name="lugar_firma" required>
+                  <option value="">Seleccione lugar...</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="apoyo">Apoyo</option>
+                  <option value="casa_matriz">Casa Matriz</option>
+                </select>
+                <label for="lugarFirma">
+                  <i class="fas fa-map-marker-alt me-1"></i>
+                  Lugar de Firma *
+                </label>
+              </div>
             </div>
-            <h3 class="feature-title">Notificaciones</h3>
-            <p class="feature-description">
-              Recibe recordatorios automáticos sobre las citas programadas y próximas firmas.
-            </p>
-          </div>
 
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-file-signature"></i>
+            <!-- Comentarios -->
+            <div class="col-12 mb-3">
+              <div class="form-floating">
+                <textarea class="form-control" id="comentarios" name="comentarios" 
+                          style="height: 100px" required></textarea>
+                <label for="comentarios">
+                  <i class="fas fa-comment me-1"></i>
+                  Comentarios *
+                </label>
+              </div>
             </div>
-            <h3 class="feature-title">Tracking de Documentos</h3>
-            <p class="feature-description">
-              Rastrea el estado de los documentos pendientes de firma y completados.
-            </p>
-          </div>
 
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-chart-line"></i>
+            <!-- Sección de Pendientes -->
+            <div class="col-12 pendientes-section" id="seccionPendientes" style="display: none;">
+              <h6>
+                <i class="fas fa-clipboard-list me-2"></i>
+                Pendientes Asociados
+              </h6>
+              <p class="text-muted mb-3">Esta solicitud tiene pendientes que pueden ser relevantes para la firma:</p>
+              <div id="listaPendientesAsociados"></div>
+              <button type="button" class="btn btn-agregar-pendientes btn-sm" onclick="mostrarModalAgregarPendientes()">
+                <i class="fas fa-plus me-1"></i>
+                Agregar Más Pendientes
+              </button>
             </div>
-            <h3 class="feature-title">Reportes y Estadísticas</h3>
-            <p class="feature-description">
-              Genera reportes sobre el rendimiento y estadísticas de las firmas realizadas.
-            </p>
           </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btnGuardarCita">
+          <i class="fas fa-save me-1"></i>
+          Guardar Cita
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-mobile-alt"></i>
-            </div>
-            <h3 class="feature-title">Acceso Móvil</h3>
-            <p class="feature-description">
-              Accede y gestiona la agenda desde cualquier dispositivo móvil o tablet.
-            </p>
-          </div>
+<!-- Modal para Ver/Editar Cita -->
+<div class="modal fade modal-cita" id="modalVerCita" tabindex="-1" aria-labelledby="modalVerCitaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="modalVerCitaLabel">
+            <i class="fas fa-calendar-check me-2"></i>
+            Detalles de la Cita
+          </h5>
+          <small class="d-block mt-1 opacity-75" id="citaSubtitulo">Información de la cita de firma</small>
         </div>
-
-        <!-- Back Button -->
-        <div class="back-button">
-          <a href="{% url 'workflow:dashboard' %}" class="btn btn-success btn-lg">
-            <i class="fas fa-arrow-left me-2"></i>
-            Volver al Dashboard
-          </a>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="contenidoCita">
+          <!-- Contenido dinámico -->
         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-danger" id="btnEliminarCita" style="display: none;">
+          <i class="fas fa-trash me-1"></i>
+          Eliminar
+        </button>
+        <button type="button" class="btn btn-primary" id="btnEditarCita" style="display: none;">
+          <i class="fas fa-edit me-1"></i>
+          Editar
+        </button>
       </div>
     </div>
   </div>
@@ -208,22 +414,515 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
 <script>
+// Variables globales
+let calendar;
+let solicitudSeleccionada = null;
+let citaActual = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Agenda de Firma - Vista cargada');
     
-    // Agregar animación de entrada a las cards
-    const cards = document.querySelectorAll('.feature-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
+    // Inicializar calendario
+    inicializarCalendario();
+    
+    // Inicializar event listeners
+    inicializarEventListeners();
 });
+
+// ===============================
+// INICIALIZACIÓN DEL CALENDARIO
+// ===============================
+
+function inicializarCalendario() {
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Hoy',
+            week: 'Semana',
+            day: 'Día'
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '17:00:00',
+        slotDuration: '00:30:00',
+        slotLabelInterval: '01:00:00',
+        slotLabelFormat: {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        },
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5, 6], // Lunes a Sábado
+            startTime: '08:00',
+            endTime: '17:00'
+        },
+        height: 'auto',
+        expandRows: true,
+        nowIndicator: true,
+        selectable: true,
+        selectMirror: true,
+        editable: false,
+        eventResizableFromStart: false,
+        eventDurationEditable: false,
+        
+        // Cargar eventos del servidor
+        events: function(fetchInfo, successCallback, failureCallback) {
+            fetch(`/workflow/api/agenda-firma/citas/?start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`)
+                .then(response => response.json())
+                .then(data => {
+                    successCallback(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar citas:', error);
+                    mostrarMensaje('Error al cargar las citas del calendario', 'danger');
+                    failureCallback(error);
+                });
+        },
+        
+        // Seleccionar slot para crear nueva cita
+        select: function(selectionInfo) {
+            const fechaHora = selectionInfo.start;
+            
+            // Validar horario de trabajo
+            const hora = fechaHora.getHours();
+            if (hora < 8 || hora >= 17) {
+                mostrarMensaje('Solo puede programar citas entre 8:00 AM y 5:00 PM', 'warning');
+                calendar.unselect();
+                return;
+            }
+            
+            // Pre-llenar el modal con la fecha seleccionada
+            const fechaInput = document.getElementById('fechaHora');
+            fechaInput.value = fechaHora.toISOString().slice(0, 16);
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalNuevaCita'));
+            modal.show();
+            
+            calendar.unselect();
+        },
+        
+        // Click en evento existente
+        eventClick: function(clickInfo) {
+            const citaId = clickInfo.event.id;
+            verDetallesCita(citaId);
+        },
+        
+        // Personalizar apariencia de eventos
+        eventDidMount: function(info) {
+            // Tooltip con información adicional
+            const tooltip = `
+                <strong>${info.event.title}</strong><br>
+                <i class="fas fa-map-marker-alt"></i> ${info.event.extendedProps.lugar_firma}<br>
+                <i class="fas fa-user"></i> ${info.event.extendedProps.creado_por}<br>
+                <i class="fas fa-comment"></i> ${info.event.extendedProps.comentarios}
+            `;
+            
+            info.el.setAttribute('title', '');
+            info.el.setAttribute('data-bs-toggle', 'tooltip');
+            info.el.setAttribute('data-bs-html', 'true');
+            info.el.setAttribute('data-bs-title', tooltip);
+            
+            // Inicializar tooltip
+            new bootstrap.Tooltip(info.el);
+        }
+    });
+    
+    calendar.render();
+}
+
+// ===============================
+// EVENT LISTENERS
+// ===============================
+
+function inicializarEventListeners() {
+    // Búsqueda de solicitudes (autocomplete)
+    const inputBusqueda = document.getElementById('buscarSolicitud');
+    let timeoutBusqueda;
+    
+    inputBusqueda.addEventListener('input', function() {
+        const termino = this.value.trim();
+        
+        clearTimeout(timeoutBusqueda);
+        
+        if (termino.length < 2) {
+            ocultarResultadosBusqueda();
+            return;
+        }
+        
+        timeoutBusqueda = setTimeout(() => {
+            buscarSolicitudes(termino);
+        }, 300);
+    });
+    
+    // Ocultar resultados cuando se hace click fuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-container')) {
+            ocultarResultadosBusqueda();
+        }
+    });
+    
+    // Guardar nueva cita
+    document.getElementById('btnGuardarCita').addEventListener('click', guardarNuevaCita);
+    
+    // Limpiar modal al cerrarse
+    document.getElementById('modalNuevaCita').addEventListener('hidden.bs.modal', limpiarModalNuevaCita);
+}
+
+// ===============================
+// BÚSQUEDA DE SOLICITUDES
+// ===============================
+
+function buscarSolicitudes(termino) {
+    const resultadosDiv = document.getElementById('resultadosBusqueda');
+    
+    // Mostrar loading
+    resultadosDiv.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+    resultadosDiv.style.display = 'block';
+    
+    fetch(`/workflow/api/agenda-firma/buscar-solicitudes/?q=${encodeURIComponent(termino)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Verificar que la respuesta tenga la estructura esperada
+            if (data && typeof data === 'object') {
+                // Si hay un mensaje de error pero aún así tenemos la estructura
+                if (data.error_message) {
+                    console.warn('API warning:', data.error_message);
+                }
+                
+                // Asegurar que solicitudes sea un array
+                const solicitudes = Array.isArray(data.solicitudes) ? data.solicitudes : [];
+                mostrarResultadosSolicitudes(solicitudes);
+            } else {
+                throw new Error('Respuesta de API inválida');
+            }
+        })
+        .catch(error => {
+            console.error('Error en búsqueda:', error);
+            resultadosDiv.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Error al buscar solicitudes: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function mostrarResultadosSolicitudes(solicitudes) {
+    const resultadosDiv = document.getElementById('resultadosBusqueda');
+    
+    // Verificar que solicitudes sea un array válido
+    if (!Array.isArray(solicitudes)) {
+        console.error('solicitudes no es un array:', solicitudes);
+        resultadosDiv.innerHTML = '<div class="no-results">Error: datos inválidos recibidos</div>';
+        return;
+    }
+    
+    if (solicitudes.length === 0) {
+        resultadosDiv.innerHTML = '<div class="no-results">No se encontraron solicitudes</div>';
+        return;
+    }
+    
+    let html = '';
+    solicitudes.forEach((solicitud, index) => {
+        try {
+            // Validar que la solicitud tenga los campos necesarios
+            const id = solicitud.id || 0;
+            const codigo = solicitud.codigo || 'N/A';
+            const cliente_nombre = solicitud.cliente_nombre || 'N/A';
+            const cliente_cedula = solicitud.cliente_cedula || 'N/A';
+            const etapa_actual = solicitud.etapa_actual || 'N/A';
+            const display_text = solicitud.display_text || `${codigo} - ${cliente_nombre}`;
+            
+            // Escapar comillas para evitar problemas en el onclick
+            const displayTextEscaped = display_text.replace(/'/g, "\\'");
+            
+            html += `
+                <div class="solicitud-item" onclick="seleccionarSolicitud(${id}, '${displayTextEscaped}')">
+                    <div class="fw-bold">${codigo}</div>
+                    <div class="text-muted small">
+                        ${cliente_nombre} - ${cliente_cedula}
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-layer-group me-1"></i>
+                        ${etapa_actual}
+                    </div>
+                </div>
+            `;
+        } catch (itemError) {
+            console.error(`Error procesando solicitud ${index}:`, itemError);
+            // Continuar con el siguiente elemento
+        }
+    });
+    
+    if (html.trim() === '') {
+        resultadosDiv.innerHTML = '<div class="no-results">No se pudieron mostrar los resultados</div>';
+    } else {
+        resultadosDiv.innerHTML = html;
+    }
+}
+
+function seleccionarSolicitud(id, texto) {
+    document.getElementById('buscarSolicitud').value = texto;
+    document.getElementById('solicitudSeleccionada').value = id;
+    solicitudSeleccionada = id;
+    
+    ocultarResultadosBusqueda();
+    
+    // Cargar pendientes asociados (opcional)
+    cargarPendientesAsociados(id);
+}
+
+function ocultarResultadosBusqueda() {
+    document.getElementById('resultadosBusqueda').style.display = 'none';
+}
+
+// ===============================
+// GESTIÓN DE PENDIENTES
+// ===============================
+
+function cargarPendientesAsociados(solicitudId) {
+    // Esta función se puede expandir para mostrar pendientes
+    // Por ahora solo muestra la sección si es necesario
+    const seccion = document.getElementById('seccionPendientes');
+    // seccion.style.display = 'block';
+}
+
+// ===============================
+// CREAR NUEVA CITA
+// ===============================
+
+function guardarNuevaCita() {
+    const form = document.getElementById('formNuevaCita');
+    const formData = new FormData(form);
+    
+    // Validaciones
+    if (!solicitudSeleccionada) {
+        mostrarMensaje('Debe seleccionar una solicitud', 'warning');
+        return;
+    }
+    
+    const fechaHora = formData.get('fecha_hora');
+    const lugarFirma = formData.get('lugar_firma');
+    const comentarios = formData.get('comentarios');
+    
+    if (!fechaHora || !lugarFirma || !comentarios.trim()) {
+        mostrarMensaje('Todos los campos son obligatorios', 'warning');
+        return;
+    }
+    
+    // Preparar datos
+    const data = {
+        solicitud_id: solicitudSeleccionada,
+        fecha_hora: new Date(fechaHora).toISOString(),
+        lugar_firma: lugarFirma,
+        comentarios: comentarios.trim()
+    };
+    
+    // Deshabilitar botón
+    const btnGuardar = document.getElementById('btnGuardarCita');
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<span class="loading-spinner me-2"></span>Guardando...';
+    
+    // Crear cita
+    fetch('/workflow/api/agenda-firma/crear-cita/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje('Cita creada exitosamente', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNuevaCita'));
+            modal.hide();
+            
+            // Recargar calendario
+            calendar.refetchEvents();
+        } else {
+            mostrarMensaje('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al crear la cita', 'danger');
+    })
+    .finally(() => {
+        // Restaurar botón
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Cita';
+    });
+}
+
+// ===============================
+// VER DETALLES DE CITA
+// ===============================
+
+function verDetallesCita(citaId) {
+    fetch(`/workflow/api/agenda-firma/cita/${citaId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarModalDetallesCita(data.cita);
+            } else {
+                mostrarMensaje('Error al cargar detalles de la cita', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarMensaje('Error al cargar detalles de la cita', 'danger');
+        });
+}
+
+function mostrarModalDetallesCita(cita) {
+    citaActual = cita;
+    
+    // Actualizar subtítulo
+    const fecha = new Date(cita.fecha_hora);
+    document.getElementById('citaSubtitulo').textContent = 
+        fecha.toLocaleDateString('es-ES', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    
+    // Contenido del modal
+    const contenido = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted">SOLICITUD</label>
+                <div class="p-3 bg-light rounded">
+                    <div class="fw-bold">${cita.solicitud.codigo}</div>
+                    <div class="text-muted">${cita.solicitud.cliente_nombre}</div>
+                    <div class="text-muted small">${cita.solicitud.cliente_cedula}</div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted">LUGAR DE FIRMA</label>
+                <div class="p-3 bg-light rounded">
+                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                    ${cita.lugar_firma_display}
+                </div>
+            </div>
+            <div class="col-12 mb-3">
+                <label class="form-label fw-bold text-muted">COMENTARIOS</label>
+                <div class="p-3 bg-light rounded">
+                    ${cita.comentarios}
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted">CREADO POR</label>
+                <div class="p-3 bg-light rounded">
+                    <i class="fas fa-user me-2 text-success"></i>
+                    ${cita.creado_por}
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold text-muted">PENDIENTES</label>
+                <div class="p-3 bg-light rounded">
+                    ${cita.tiene_pendientes ? 
+                        '<i class="fas fa-exclamation-triangle me-2 text-warning"></i>Tiene pendientes activos' : 
+                        '<i class="fas fa-check-circle me-2 text-success"></i>Sin pendientes activos'
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('contenidoCita').innerHTML = contenido;
+    
+    // Mostrar botones según permisos
+    const btnEliminar = document.getElementById('btnEliminarCita');
+    const btnEditar = document.getElementById('btnEditarCita');
+    
+    // Solo admins pueden editar/eliminar (esto se puede ajustar según necesidades)
+    if ({{ user.is_superuser|yesno:"true,false" }}) {
+        btnEliminar.style.display = 'inline-block';
+        btnEditar.style.display = 'inline-block';
+    }
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalVerCita'));
+    modal.show();
+}
+
+// ===============================
+// UTILIDADES
+// ===============================
+
+function limpiarModalNuevaCita() {
+    document.getElementById('formNuevaCita').reset();
+    document.getElementById('solicitudSeleccionada').value = '';
+    document.getElementById('seccionPendientes').style.display = 'none';
+    solicitudSeleccionada = null;
+    ocultarResultadosBusqueda();
+}
+
+function mostrarMensaje(mensaje, tipo) {
+    // Crear toast
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${tipo} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Agregar al contenedor de toasts
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1055';
+        document.body.appendChild(container);
+    }
+    
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Mostrar toast
+    const toastElement = container.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Limpiar después de ocultarse
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Hacer funciones globales para el modal de pendientes (si se implementa)
+window.mostrarModalAgregarPendientes = function() {
+    // Esta función se puede expandir para integrar con el sistema de pendientes
+    mostrarMensaje('Funcionalidad de pendientes en desarrollo', 'info');
+};
 </script>
 {% endblock %} 

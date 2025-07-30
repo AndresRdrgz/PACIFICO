@@ -269,7 +269,7 @@
             <div class="process-badge">
               <span class="badge bg-success">
                 <i class="fas fa-check-circle me-1"></i>
-                {{ solicitud.etapa_actual.subestados.count }} Etapas
+                6 Etapas
               </span>
             </div>
           </div>
@@ -339,6 +339,36 @@
                   </div>
                 </a>
               </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_tramite' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'backoffice_subsanacion' solicitud.id %}" 
+                   class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -348,7 +378,7 @@
             <div class="process-step-header">
               <div class="step-indicator">
                 <span class="step-number">4</span>
-                <span class="step-total">/ 4</span>
+                <span class="step-total">/ 6</span>
               </div>
               <div class="subestado-icon">
                 <i class="fas fa-folder-tree"></i>
@@ -790,14 +820,317 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Funciones para botones de acción
+// Función para validar documentos consultando la base de datos
 function validarDocumentosYAvanzar() {
-    alert('Funcionalidad de validación y avance - En desarrollo');
-    console.log('Validando documentos para solicitud:', '{{ solicitud.id }}');
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
 }
 
 function mostrarModalDevolucion() {
-    alert('Funcionalidad de devolución a oficial - En desarrollo');
-    console.log('Mostrando modal de devolución para solicitud:', '{{ solicitud.id }}');
+     console.log('📋 Mostrando modal de devolución...');
+     
+     if (transicionesNegativas.length === 0) {
+         mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
+         return;
+     }
+     
+     // Cargar información de la transición
+     cargarDocumentosProblematicos();
+     
+     // Mostrar modal
+     const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+     modal.show();
 }
+
+// ========================================
+// FUNCIONES AUXILIARES NECESARIAS
+// ========================================
+
+// Variable global para transiciones negativas
+let transicionesNegativas = [];
+
+// Función para obtener el token CSRF
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+// Función para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+  // Crear elemento de alerta
+  const alertDiv = document.createElement('div');
+  let alertClass = 'alert alert-dismissible fade show';
+  let iconClass = '';
+  
+  switch(tipo) {
+    case 'success':
+      alertClass += ' alert-success';
+      iconClass = 'fas fa-check-circle';
+      break;
+    case 'warning':
+      alertClass += ' alert-warning';
+      iconClass = 'fas fa-exclamation-triangle';
+      break;
+    case 'info':
+      alertClass += ' alert-info';
+      iconClass = 'fas fa-info-circle';
+      break;
+    case 'error':
+    default:
+      alertClass += ' alert-danger';
+      iconClass = 'fas fa-exclamation-circle';
+      break;
+  }
+  
+  alertDiv.className = alertClass;
+  alertDiv.style.position = 'fixed';
+  alertDiv.style.top = '20px';
+  alertDiv.style.right = '20px';
+  alertDiv.style.zIndex = '9999';
+  alertDiv.style.maxWidth = '400px';
+  alertDiv.innerHTML = `
+      <i class="${iconClass} me-2"></i>${mensaje}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+
+  document.body.appendChild(alertDiv);
+
+  // Auto-remover después de 5 segundos para warnings, 3 para otros
+  const timeout = tipo === 'warning' ? 5000 : 3000;
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, timeout);
+}
+
+// Función para cargar información del modal cuando se abre
+function cargarInformacionAvance() {
+  console.log('📂 Cargando información de avance...');
+
+  const loading = document.getElementById('avance-loading');
+  const error = document.getElementById('avance-error');
+
+  // Mostrar loading
+  loading.style.display = 'block';
+  error.style.display = 'none';
+
+  // Obtener siguiente subestado y usuarios disponibles
+  const solicitudId = {{ solicitud.id }};
+
+  if (!solicitudId) {
+    mostrarErrorAvance('No se pudo obtener el ID de la solicitud');
+    return;
+  }
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/siguiente-subestado/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        siguienteSubestado = data.siguiente_subestado;
+        document.getElementById('avanzar-siguiente-subestado').textContent =
+          siguienteSubestado ? siguienteSubestado.nombre : 'Finalizar Back Office';
+
+        // Cargar usuarios disponibles
+        return cargarUsuariosDisponiblesAvance();
+      } else {
+        throw new Error(data.error || 'Error al obtener siguiente subestado');
+      }
+    })
+    .then(() => {
+      loading.style.display = 'none';
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarErrorAvance(error.message);
+      loading.style.display = 'none';
+    });
+}
+
+// Función para cargar documentos problemáticos
+function cargarDocumentosProblematicos() {
+  const solicitudId = {{ solicitud.id }};
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('lista-documentos-problematicos');
+      if (container && data.documentos_problematicos) {
+        let html = '<h6>Documentos con problemas:</h6><ul class="list-unstyled">';
+
+        data.documentos_problematicos.forEach(doc => {
+          let problema = '';
+          if (doc.problema === 'sin_calificar') {
+            problema = 'Sin calificar';
+          } else if (doc.problema === 'mal_calificado') {
+            problema = `Calificado como "${doc.estado_actual}"`;
+          }
+
+          html += `<li class="text-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>${doc.nombre}:</strong> ${problema}</li>`;
+        });
+
+        html += '</ul>';
+        container.innerHTML = html;
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar documentos problemáticos:', error);
+    });
+}
+
+// Variables para el flujo de avance
+let opcionAvanceSeleccionada = null;
+let usuarioSeleccionadoAvance = null;
+let siguienteSubestado = null;
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvance() {
+  return fetch('/workflow/api/usuarios/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // mostrarUsuariosEnTabla(data.usuarios);
+        return Promise.resolve();
+      } else {
+        throw new Error(data.error || 'Error al cargar usuarios');
+      }
+    });
+}
+
+// Función para mostrar errores en el modal
+function mostrarErrorAvance(mensaje) {
+  const errorDiv = document.getElementById('avance-error');
+  const errorMensaje = document.getElementById('avance-error-mensaje');
+
+  if (errorMensaje) {
+    errorMensaje.textContent = mensaje;
+  }
+  if (errorDiv) {
+    errorDiv.style.display = 'block';
+  }
+}
+
+// Cargar transiciones negativas al cargar la página
+document.addEventListener('DOMContentLoaded', function () {
+  cargarTransicionesNegativas();
+});
+
+// Función para cargar transiciones negativas
+function cargarTransicionesNegativas() {
+  const solicitudId = {{ solicitud.id }};
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        transicionesNegativas = data.transiciones_negativas || [];
+
+        // Mostrar/ocultar botón "Devolver a Oficial"
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          if (data.tiene_transiciones_negativas) {
+            btnDevolver.style.display = 'inline-block';
+          } else {
+            btnDevolver.style.display = 'none';
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar transiciones negativas:', error);
+    });
+}
+
 </script>
 {% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud, AgendaFirma
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -887,3 +887,115 @@ except Exception:
         list_filter = ('cumplido', 'fecha_subida')
         search_fields = ('solicitud__id', 'requisito__nombre')
         inlines = [CalificacionDocumentoInline, ComentarioDocumentoInline]
+
+
+# ==========================================================
+# ADMIN PARA AGENDA DE FIRMA
+# ==========================================================
+
+@admin.register(AgendaFirma)
+class AgendaFirmaAdmin(admin.ModelAdmin):
+    """
+    Configuración del admin para AgendaFirma.
+    Permite gestionar las citas de firma desde el panel de administración.
+    """
+    
+    list_display = (
+        'id',
+        'solicitud_codigo_display',
+        'cliente_nombre_display', 
+        'fecha_hora_display',
+        'lugar_firma_display',
+        'creado_por',
+        'tiene_pendientes_display',
+        'fecha_creacion'
+    )
+    
+    list_filter = (
+        'lugar_firma',
+        'fecha_hora',
+        'creado_por',
+        'fecha_creacion'
+    )
+    
+    search_fields = (
+        'solicitud__codigo',
+        'solicitud__cliente__nombreCliente',
+        'solicitud__cotizacion__nombreCliente',
+        'solicitud__cliente__cedula',
+        'solicitud__cotizacion__cedulaCliente',
+        'comentarios'
+    )
+    
+    ordering = ('-fecha_hora',)
+    
+    fieldsets = (
+        ('Información de la Cita', {
+            'fields': ('solicitud', 'fecha_hora', 'lugar_firma')
+        }),
+        ('Detalles', {
+            'fields': ('comentarios',)
+        }),
+        ('Auditoría', {
+            'fields': ('creado_por', 'fecha_creacion', 'modificado_por', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    
+    # Métodos personalizados para list_display
+    def solicitud_codigo_display(self, obj):
+        """Muestra el código de la solicitud"""
+        return obj.solicitud.codigo if obj.solicitud else 'N/A'
+    solicitud_codigo_display.short_description = 'Solicitud'
+    solicitud_codigo_display.admin_order_field = 'solicitud__codigo'
+    
+    def cliente_nombre_display(self, obj):
+        """Muestra el nombre del cliente"""
+        return obj.cliente_nombre
+    cliente_nombre_display.short_description = 'Cliente'
+    
+    def fecha_hora_display(self, obj):
+        """Muestra la fecha y hora formateada"""
+        return obj.fecha_hora.strftime('%d/%m/%Y %I:%M %p')
+    fecha_hora_display.short_description = 'Fecha y Hora'
+    fecha_hora_display.admin_order_field = 'fecha_hora'
+    
+    def lugar_firma_display(self, obj):
+        """Muestra el lugar de firma legible"""
+        return obj.lugar_firma_display
+    lugar_firma_display.short_description = 'Lugar'
+    lugar_firma_display.admin_order_field = 'lugar_firma'
+    
+    def tiene_pendientes_display(self, obj):
+        """Indica si tiene pendientes activos"""
+        if obj.tiene_pendientes:
+            return "⚠️ Sí"
+        return "✅ No"
+    tiene_pendientes_display.short_description = 'Pendientes'
+    
+    # Acciones personalizadas
+    actions = ['marcar_completadas', 'duplicar_citas']
+    
+    def marcar_completadas(self, request, queryset):
+        """Acción para marcar citas como completadas (ejemplo)"""
+        # Esta funcionalidad se puede expandir según necesidades futuras
+        self.message_user(request, f'{queryset.count()} citas procesadas.')
+    marcar_completadas.short_description = "Procesar citas seleccionadas"
+    
+    def duplicar_citas(self, request, queryset):
+        """Acción para duplicar citas seleccionadas"""
+        count = 0
+        for cita in queryset:
+            # Crear una nueva cita basada en la existente
+            nueva_cita = AgendaFirma.objects.create(
+                solicitud=cita.solicitud,
+                fecha_hora=cita.fecha_hora,
+                lugar_firma=cita.lugar_firma,
+                comentarios=f"Duplicado de cita #{cita.id}: {cita.comentarios}",
+                creado_por=request.user
+            )
+            count += 1
+        self.message_user(request, f'{count} citas duplicadas exitosamente.')
+    duplicar_citas.short_description = "Duplicar citas seleccionadas"

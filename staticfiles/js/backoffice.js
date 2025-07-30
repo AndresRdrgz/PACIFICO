@@ -31,11 +31,20 @@ function validarYAbrirModal() {
         estadoCalificacion: null
       };
 
-      // Verificar si tiene calificación "bueno"
+      // Verificar el estado de calificación actual
       const botonBueno = card.querySelector('.calificar-btn-backoffice[data-estado="bueno"]');
+      const botonMalo = card.querySelector('.calificar-btn-backoffice[data-estado="malo"]');
+      const botonPendiente = card.querySelector('.calificar-btn-backoffice[data-estado="pendiente"]');
+
       if (botonBueno && botonBueno.classList.contains('activo')) {
         documentoInfo.calificado = true;
         documentoInfo.estadoCalificacion = 'bueno';
+      } else if (botonMalo && botonMalo.classList.contains('activo')) {
+        documentoInfo.calificado = true;
+        documentoInfo.estadoCalificacion = 'malo';
+      } else if (botonPendiente && botonPendiente.classList.contains('activo')) {
+        documentoInfo.calificado = true;
+        documentoInfo.estadoCalificacion = 'pendiente';
       }
 
       if (obligatorio) {
@@ -48,12 +57,14 @@ function validarYAbrirModal() {
     console.log('📋 Documentos obligatorios:', documentosObligatorios);
 
     // Verificar si todos los obligatorios están calificados como "buenos"
-    const obligatoriosPendientes = documentosObligatorios.filter(doc => !doc.calificado);
-    const todosObligatoriosCalificados = obligatoriosPendientes.length === 0;
+    const obligatoriosNoBuenos = documentosObligatorios.filter(doc =>
+      !doc.calificado || doc.estadoCalificacion !== 'bueno'
+    );
+    const todosObligatoriosCalificados = obligatoriosNoBuenos.length === 0;
 
     console.log(`🔍 Total obligatorios: ${documentosObligatorios.length}`);
-    console.log(`🔍 Obligatorios pendientes: ${obligatoriosPendientes.length}`);
-    console.log(`🔍 Todos calificados: ${todosObligatoriosCalificados}`);
+    console.log(`🔍 Obligatorios no "buenos": ${obligatoriosNoBuenos.length}`);
+    console.log(`🔍 Todos calificados como "buenos": ${todosObligatoriosCalificados}`);
 
     if (todosObligatoriosCalificados) {
       // ✅ Todos los obligatorios están calificados - Abrir modal
@@ -61,28 +72,34 @@ function validarYAbrirModal() {
       const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
       modal.show();
     } else {
-      // ❌ Faltan documentos por calificar - Mostrar error
-      console.log('❌ Validación fallida - Faltan documentos');
+      // ❌ Hay documentos obligatorios que no están calificados como "buenos"
+      console.log('❌ Validación fallida - Documentos obligatorios no están todos como "buenos"');
 
-      const documentosFaltantes = obligatoriosPendientes.map(doc => doc.nombre).join(', ');
+      const documentosProblematicos = obligatoriosNoBuenos.map(doc => {
+        if (!doc.calificado) {
+          return `${doc.nombre} (sin calificar)`;
+        } else {
+          return `${doc.nombre} (calificado como "${doc.estadoCalificacion}")`;
+        }
+      }).join(', ');
 
       mostrarMensaje(
-        `Debe calificar como "Buenos" todos los documentos obligatorios antes de avanzar. Faltan: ${documentosFaltantes}`,
+        `Todos los documentos obligatorios deben estar calificados como "Buenos" para poder avanzar. Documentos problemáticos: ${documentosProblematicos}`,
         'error'
       );
 
-      // Opcional: resaltar los documentos pendientes
-      obligatoriosPendientes.forEach(doc => {
+      // Resaltar los documentos problemáticos
+      obligatoriosNoBuenos.forEach(doc => {
         const card = document.querySelector(`[data-requisito-id="${doc.requisitoId}"]`);
         if (card) {
           card.style.border = '2px solid #dc3545';
           card.style.backgroundColor = '#fff5f5';
 
-          // Quitar el resaltado después de 3 segundos
+          // Quitar el resaltado después de 5 segundos
           setTimeout(() => {
             card.style.border = '';
             card.style.backgroundColor = '';
-          }, 3000);
+          }, 5000);
         }
       });
     }
@@ -97,9 +114,9 @@ function validarYAbrirModal() {
 function calificarDocumento(requisitoId, estado, opcionId = null) {
   const csrfToken = getCsrfToken();
   const data = {
-    requisito_id: requisitoId,
+    requisito_solicitud_id: requisitoId,
     estado: estado,
-    opcion_id: opcionId
+    opcion_desplegable_id: opcionId
   };
 
   fetch('/workflow/api/documento/calificar/', {
@@ -366,7 +383,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const boton = e.target.closest('.calificar-btn-backoffice');
       const requisitoId = boton.getAttribute('data-requisito');
       const estado = boton.getAttribute('data-estado');
-      calificarDocumento(requisitoId, estado);
+
+      // Solo calificar automáticamente si NO es el botón "malo"
+      // El botón "malo" abre el modal y califica solo cuando se selecciona una opción
+      if (estado !== 'malo') {
+        calificarDocumento(requisitoId, estado);
+      }
     }
 
     if (e.target.closest('.comentario-btn-backoffice')) {
@@ -577,16 +599,16 @@ function mostrarUsuariosEnTabla(usuarios) {
   tbody.innerHTML = '';
 
   usuarios.forEach((usuario, index) => {
+    const nombreUsuario = usuario.nombre || usuario.username || 'Usuario';
     const row = document.createElement('tr');
     row.className = 'usuario-item';
     row.setAttribute('data-usuario-id', usuario.id);
-    row.setAttribute('data-usuario-nombre', usuario.nombre);
-    row.setAttribute('data-usuario-email', usuario.email);
-
+    row.setAttribute('data-usuario-nombre', nombreUsuario);
+    row.setAttribute('data-usuario-email', usuario.email || '');
     const avatar = usuario.profile_picture ?
-      `<img src="${usuario.profile_picture}" alt="${usuario.nombre}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+      `<img src="${usuario.profile_picture}" alt="${nombreUsuario}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
       `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
-        ${usuario.nombre.charAt(0).toUpperCase()}
+        ${nombreUsuario.charAt(0).toUpperCase()}
       </div>`;
 
     const badges = [];
@@ -604,18 +626,18 @@ function mostrarUsuariosEnTabla(usuarios) {
       <td class="text-center">${avatar}</td>
       <td>
         <div>
-          <strong class="fw-bold">${usuario.nombre}</strong>
+          <strong class="fw-bold">${nombreUsuario}</strong>
           ${badges.join('')}
         </div>
       </td>
       <td>
-        <small class="text-muted">${usuario.email}</small>
+        <small class="text-muted">${usuario.email || 'Sin email'}</small>
       </td>
       <td>${grupos}</td>
       <td class="text-center">
         <button class="btn btn-success btn-sm asignar-usuario-avance" 
                 data-usuario-id="${usuario.id}" 
-                data-usuario-nombre="${usuario.nombre}">
+                data-usuario-nombre="${nombreUsuario}">
           <i class="fas fa-user-plus me-1"></i>
           Asignar
         </button>
@@ -829,6 +851,9 @@ function mostrarErrorAvance(mensaje) {
 
 // Event listener para cuando se abre el modal
 document.addEventListener('DOMContentLoaded', function () {
+  // Cargar transiciones negativas al cargar la página
+  cargarTransicionesNegativas();
+
   const modalAvanzar = document.getElementById('modalAvanzarSubestado');
   if (modalAvanzar) {
     modalAvanzar.addEventListener('show.bs.modal', function () {
@@ -910,6 +935,125 @@ function diagnosticarBotonAvanzar() {
   };
 }
 
+// Funciones para transiciones negativas
+let transicionesNegativas = [];
+
+function cargarTransicionesNegativas() {
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        transicionesNegativas = data.transiciones_negativas || [];
+
+        // Mostrar/ocultar botón "Devolver a Oficial"
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          if (data.tiene_transiciones_negativas) {
+            btnDevolver.style.display = 'inline-block';
+          } else {
+            btnDevolver.style.display = 'none';
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar transiciones negativas:', error);
+    });
+}
+
+function mostrarModalDevolucion() {
+  // Cargar documentos problemáticos
+  cargarDocumentosProblematicos();
+
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+  modal.show();
+}
+
+function cargarDocumentosProblematicos() {
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
+
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('lista-documentos-problematicos');
+      if (container && data.documentos_problematicos) {
+        let html = '<h6>Documentos con problemas:</h6><ul class="list-unstyled">';
+
+        data.documentos_problematicos.forEach(doc => {
+          let problema = '';
+          if (doc.problema === 'sin_calificar') {
+            problema = 'Sin calificar';
+          } else if (doc.problema === 'mal_calificado') {
+            problema = `Calificado como "${doc.estado_actual}"`;
+          }
+
+          html += `<li class="text-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>${doc.nombre}:</strong> ${problema}</li>`;
+        });
+
+        html += '</ul>';
+        container.innerHTML = html;
+      }
+    })
+    .catch(error => {
+      console.error('Error al cargar documentos problemáticos:', error);
+    });
+}
+
+function confirmarDevolucion() {
+  const motivo = document.getElementById('motivo-devolucion').value.trim();
+
+  if (!motivo) {
+    alert('Debes proporcionar un motivo para la devolución');
+    return;
+  }
+
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles');
+    return;
+  }
+
+  // Usar la primera transición negativa disponible
+  const transicion = transicionesNegativas[0];
+  const solicitudId = window.location.pathname.match(/solicitudes\/(\d+)\//)?.[1];
+
+  // Ejecutar transición
+  fetch(`/workflow/api/solicitudes/${solicitudId}/ejecutar-transicion/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      transicion_id: transicion.id,
+      comentario: `Devuelto a oficial: ${motivo}`
+    })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarMensaje('Solicitud devuelta al oficial exitosamente', 'success');
+
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+        modal.hide();
+
+        // Recargar página después de un momento
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        mostrarMensaje(`Error al devolver solicitud: ${data.error}`, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error al devolver solicitud:', error);
+      mostrarMensaje('Error al devolver solicitud', 'error');
+    });
+}
+
 // Hacer funciones disponibles globalmente
 window.inicializarValidacionTiempoReal = inicializarValidacionTiempoReal;
 window.validarDocumentosEnTiempoReal = validarDocumentosEnTiempoReal;
@@ -918,4 +1062,7 @@ window.seleccionarUsuarioAvance = seleccionarUsuarioAvance;
 window.confirmarAvance = confirmarAvance;
 window.diagnosticarBotonAvanzar = diagnosticarBotonAvanzar;
 window.habilitarBotonEmergencia = habilitarBotonEmergencia;
-window.validarYAbrirModal = validarYAbrirModal; 
+window.validarYAbrirModal = validarYAbrirModal;
+window.cargarTransicionesNegativas = cargarTransicionesNegativas;
+window.mostrarModalDevolucion = mostrarModalDevolucion;
+window.confirmarDevolucion = confirmarDevolucion; 
