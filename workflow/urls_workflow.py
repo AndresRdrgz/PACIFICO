@@ -263,6 +263,9 @@ urlpatterns += [
     # Testing URLs (remove in production)
     path('test/apc-upload-email/', views_workflow.test_apc_upload_email, name='test_apc_upload_email'),
     path('test/apc-iniciado-email/', views_workflow.test_apc_iniciado_email, name='test_apc_iniciado_email'),
+    path('test/sura-completado-email/', views_workflow.test_sura_completado_email, name='test_sura_completado_email'),
+    path('test/sura-iniciado-email/', views_workflow.test_sura_iniciado_email, name='test_sura_iniciado_email'),
+    path('test/sura-error-email/', views_workflow.test_sura_error_email, name='test_sura_error_email'),
 ]
 
 # Add reportes URLs only if views_reportes imported successfully

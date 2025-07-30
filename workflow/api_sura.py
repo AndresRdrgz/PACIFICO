@@ -92,7 +92,7 @@ def api_sura_list(request):
                 
                 # Datos específicos de SURA
                 'sura_status': solicitud.sura_status,
-                'sura_status_display': solicitud.get_sura_status_display(),
+                'sura_status_display': dict(solicitud.SURA_STATUS_CHOICES).get(solicitud.sura_status, 'N/A') if hasattr(solicitud, 'sura_status') and solicitud.sura_status else 'N/A',
                 'sura_fecha_solicitud': solicitud.sura_fecha_solicitud.isoformat() if solicitud.sura_fecha_solicitud else None,
                 'sura_fecha_inicio': solicitud.sura_fecha_inicio.isoformat() if solicitud.sura_fecha_inicio else None,
                 'sura_fecha_completado': solicitud.sura_fecha_completado.isoformat() if solicitud.sura_fecha_completado else None,
@@ -114,6 +114,8 @@ def api_sura_list(request):
 
     except Exception as e:
         logger.error(f"Error al obtener lista SURA: {str(e)}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
             'error': f'Error interno: {str(e)}'
@@ -135,20 +137,18 @@ def api_sura_detail(request, codigo):
         cliente_datos = {}
         
         if solicitud.cliente:
-            cliente_nombre = f"{solicitud.cliente.primer_nombre or ''} {solicitud.cliente.segundo_nombre or ''} {solicitud.cliente.primer_apellido or ''} {solicitud.cliente.segundo_apellido or ''}".strip()
-            cliente_documento = solicitud.cliente.cedula or ''
+            cliente_nombre = solicitud.cliente.nombreCliente or ''
+            cliente_documento = solicitud.cliente.cedulaCliente or ''
             cliente_datos = {
-                'primer_nombre': solicitud.cliente.primer_nombre,
-                'segundo_nombre': solicitud.cliente.segundo_nombre,
-                'primer_apellido': solicitud.cliente.primer_apellido,
-                'segundo_apellido': solicitud.cliente.segundo_apellido,
-                'cedula': solicitud.cliente.cedula,
-                'telefono': getattr(solicitud.cliente, 'telefono', ''),
-                'email': getattr(solicitud.cliente, 'email', ''),
+                'nombre_completo': solicitud.cliente.nombreCliente,
+                'cedula': solicitud.cliente.cedulaCliente,
+                'fecha_nacimiento': solicitud.cliente.fechaNacimiento.isoformat() if solicitud.cliente.fechaNacimiento else None,
+                'edad': solicitud.cliente.edad,
+                'sexo': solicitud.cliente.sexo,
             }
         elif solicitud.cotizacion:
-            cliente_nombre = getattr(solicitud.cotizacion, 'cliente_nombre', '')
-            cliente_documento = getattr(solicitud.cotizacion, 'cliente_cedula', '')
+            cliente_nombre = getattr(solicitud.cotizacion, 'nombreCliente', '') or getattr(solicitud.cotizacion, 'cliente_nombre', '')
+            cliente_documento = getattr(solicitud.cotizacion, 'cedulaCliente', '') or getattr(solicitud.cotizacion, 'cliente_cedula', '')
 
         # Timeline de eventos SURA
         timeline = []
@@ -201,7 +201,7 @@ def api_sura_detail(request, codigo):
             'sura_segundo_apellido': solicitud.sura_segundo_apellido,
             'sura_no_documento': solicitud.sura_no_documento,
             'sura_status': solicitud.sura_status,
-            'sura_status_display': solicitud.get_sura_status_display(),
+            'sura_status_display': dict(solicitud.SURA_STATUS_CHOICES).get(solicitud.sura_status, 'N/A') if hasattr(solicitud, 'sura_status') and solicitud.sura_status else 'N/A',
             'sura_fecha_solicitud': solicitud.sura_fecha_solicitud.isoformat() if solicitud.sura_fecha_solicitud else None,
             'sura_fecha_inicio': solicitud.sura_fecha_inicio.isoformat() if solicitud.sura_fecha_inicio else None,
             'sura_fecha_completado': solicitud.sura_fecha_completado.isoformat() if solicitud.sura_fecha_completado else None,
@@ -227,6 +227,8 @@ def api_sura_detail(request, codigo):
         }, status=404)
     except Exception as e:
         logger.error(f"Error al obtener detalle SURA {codigo}: {str(e)}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         return JsonResponse({
             'success': False,
             'error': f'Error interno: {str(e)}'
@@ -376,6 +378,28 @@ def api_sura_webhook_status(request, codigo):
                 etapa=solicitud.etapa_actual,
                 fecha_inicio=now
             )
+            
+            # Enviar notificaciones por correo según el estado
+            try:
+                if status == 'in_progress' and old_status != 'in_progress':
+                    # Importar la función de notificación
+                    from .views_workflow import enviar_correo_sura_iniciado
+                    enviar_correo_sura_iniciado(solicitud)
+                    
+                elif status == 'completed' and old_status != 'completed':
+                    # Importar la función de notificación
+                    from .views_workflow import enviar_correo_sura_completado
+                    enviar_correo_sura_completado(solicitud)
+                    
+                elif status == 'error':
+                    # Importar la función de notificación de error
+                    from .views_workflow import enviar_correo_sura_error
+                    mensaje_error = observaciones or "Error no especificado durante el procesamiento"
+                    enviar_correo_sura_error(solicitud, mensaje_error)
+                    
+            except Exception as email_error:
+                # No romper el flujo si falla el envío de correo
+                logger.warning(f"Error al enviar notificación SURA para solicitud {codigo}: {email_error}")
         
         logger.info(f"Estado SURA actualizado para solicitud {codigo}: {old_status} -> {status}")
         
@@ -450,6 +474,7 @@ def api_sura_webhook_upload(request, codigo):
             solicitud.sura_archivo.save(file_name, uploaded_file)
             
             # Actualizar estado si no está completado
+            old_status = solicitud.sura_status
             if solicitud.sura_status != 'completed':
                 solicitud.sura_status = 'completed'
                 if not solicitud.sura_fecha_completado:
@@ -464,6 +489,15 @@ def api_sura_webhook_upload(request, codigo):
                 etapa=solicitud.etapa_actual,
                 fecha_inicio=now
             )
+            
+            # Enviar notificación de completado si cambió el estado
+            if old_status != 'completed':
+                try:
+                    from .views_workflow import enviar_correo_sura_completado
+                    enviar_correo_sura_completado(solicitud)
+                except Exception as email_error:
+                    # No romper el flujo si falla el envío de correo
+                    logger.warning(f"Error al enviar notificación SURA completado para solicitud {codigo}: {email_error}")
         
         logger.info(f"Archivo SURA subido para solicitud {codigo}: {file_name}")
         

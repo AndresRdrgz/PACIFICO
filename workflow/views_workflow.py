@@ -11287,6 +11287,402 @@ Este es un correo automático, por favor no responder a esta dirección.
         print(f"❌ Traceback: {traceback.format_exc()}")
 
 
+# ==========================================
+# SURA EMAIL NOTIFICATIONS
+# ==========================================
+
+def enviar_correo_sura_completado(solicitud):
+    """
+    Función para enviar correo automático cuando la cotización SURA es completada por Makito.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre solicitud SURA {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # URL para ver el tracking de Makito SURA
+        solicitud_url = f"{base_url}/workflow/makito-tracking/"
+        
+        # URL para descargar el archivo SURA (si está disponible)
+        archivo_url = None
+        if solicitud.sura_archivo:
+            try:
+                archivo_url = f"{base_url}{solicitud.sura_archivo.url}"
+            except:
+                archivo_url = "Archivo disponible en el sistema"
+        
+        # Crear el asunto
+        subject = f'✅ Cotización SURA Completada - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano
+        text_content = f"""
+Cotización SURA Completada Exitosamente
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+La cotización SURA para la solicitud {solicitud.codigo} ha sido completada exitosamente por Makito RPA.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha de completado: {solicitud.sura_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_completado else 'Recién completado'}
+
+INFORMACIÓN DEL CLIENTE PARA SURA:
+• Primer Nombre: {solicitud.sura_primer_nombre or 'N/A'}
+• Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+• Primer Apellido: {solicitud.sura_primer_apellido or 'N/A'}
+• Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+• Número de Documento: {solicitud.sura_no_documento or 'N/A'}
+
+INFORMACIÓN DEL VEHÍCULO:
+• Valor del Auto: ${solicitud.sura_valor_auto or 'N/A'}
+• Año del Auto: {solicitud.sura_ano_auto or 'N/A'}
+• Marca: {solicitud.sura_marca or 'N/A'}
+• Modelo: {solicitud.sura_modelo or 'N/A'}
+
+ARCHIVO DE COTIZACIÓN:
+{f'• Archivo disponible: {archivo_url}' if archivo_url else '• El archivo está disponible en el sistema'}
+
+OBSERVACIONES:
+{solicitud.sura_observaciones or 'Sin observaciones adicionales'}
+
+Para ver el tracking de todas las solicitudes SURA:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Render HTML content using template
+        from django.template.loader import render_to_string
+        html_content = render_to_string('workflow/emails/sura_completado_notification.html', {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+            'archivo_url': archivo_url,
+        })
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Attach HTML version
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo SURA completado enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo SURA completado enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo SURA completado: {str(e)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo SURA completado para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_sura_iniciado(solicitud):
+    """
+    Función para enviar correo automático cuando la cotización SURA es iniciada (in_progress) por Makito.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre solicitud SURA {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # URL para ver el tracking de Makito SURA
+        solicitud_url = f"{base_url}/workflow/makito-tracking/"
+        
+        # Crear el asunto
+        subject = f'🔄 Cotización SURA En Proceso - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano
+        text_content = f"""
+Cotización SURA En Proceso
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+La cotización SURA para la solicitud {solicitud.codigo} ha sido iniciada por Makito RPA y se encuentra actualmente en proceso.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha de inicio del proceso: {solicitud.sura_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_inicio else 'En proceso'}
+
+INFORMACIÓN DEL CLIENTE PARA SURA:
+• Primer Nombre: {solicitud.sura_primer_nombre or 'N/A'}
+• Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+• Primer Apellido: {solicitud.sura_primer_apellido or 'N/A'}
+• Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+• Número de Documento: {solicitud.sura_no_documento or 'N/A'}
+
+INFORMACIÓN DEL VEHÍCULO:
+• Valor del Auto: ${solicitud.sura_valor_auto or 'N/A'}
+• Año del Auto: {solicitud.sura_ano_auto or 'N/A'}
+• Marca: {solicitud.sura_marca or 'N/A'}
+• Modelo: {solicitud.sura_modelo or 'N/A'}
+
+ESTADO ACTUAL:
+• El proceso de cotización SURA está en curso
+• Recibirás una notificación adicional cuando el proceso se complete
+• El archivo de cotización estará disponible una vez finalizado el proceso
+
+OBSERVACIONES:
+{solicitud.sura_observaciones or 'Sin observaciones adicionales'}
+
+Para ver el tracking de todas las solicitudes SURA:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Render HTML content using template
+        from django.template.loader import render_to_string
+        html_content = render_to_string('workflow/emails/sura_iniciado_notification.html', {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+        })
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Attach HTML version
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo SURA iniciado enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo SURA iniciado enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo SURA iniciado: {str(e)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo SURA iniciado para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_sura_error(solicitud, mensaje_error="Error en el procesamiento"):
+    """
+    Función para enviar correo automático cuando hay un error en la cotización SURA.
+    """
+    try:
+        # Obtener usuarios a notificar
+        usuarios_notificar = [solicitud.creada_por]
+        if solicitud.asignada_a and solicitud.asignada_a != solicitud.creada_por:
+            usuarios_notificar.append(solicitud.asignada_a)
+        
+        # Obtener emails válidos
+        destinatarios = []
+        for usuario in usuarios_notificar:
+            if usuario.email:
+                destinatarios.append(usuario.email)
+        
+        if not destinatarios:
+            print(f"⚠️ No se encontraron emails válidos para notificar sobre error SURA {solicitud.codigo}")
+            return
+        
+        # Obtener nombre del cliente usando las propiedades del modelo
+        cliente_nombre = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Obtener la URL base dinámicamente
+        from django.conf import settings
+        
+        # Try to get base URL from settings, fallback to request if available
+        base_url = getattr(settings, 'SITE_URL', 'https://pacifico.com')
+        
+        # URL para ver el tracking de Makito SURA
+        solicitud_url = f"{base_url}/workflow/makito-tracking/"
+        
+        # Crear el asunto
+        subject = f'❌ Error en Cotización SURA - Solicitud {solicitud.codigo} - {cliente_nombre}'
+        
+        # Mensaje de texto plano
+        text_content = f"""
+Error en Cotización SURA
+
+Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username},
+
+Se ha producido un error durante el procesamiento de la cotización SURA para la solicitud {solicitud.codigo}.
+
+DETALLES DE LA SOLICITUD:
+• Código: {solicitud.codigo}
+• Cliente: {cliente_nombre}
+• Pipeline: {solicitud.pipeline.nombre}
+• Fecha del error: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+
+INFORMACIÓN DEL CLIENTE PARA SURA:
+• Primer Nombre: {solicitud.sura_primer_nombre or 'N/A'}
+• Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+• Primer Apellido: {solicitud.sura_primer_apellido or 'N/A'}
+• Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+• Número de Documento: {solicitud.sura_no_documento or 'N/A'}
+
+INFORMACIÓN DEL VEHÍCULO:
+• Valor del Auto: ${solicitud.sura_valor_auto or 'N/A'}
+• Año del Auto: {solicitud.sura_ano_auto or 'N/A'}
+• Marca: {solicitud.sura_marca or 'N/A'}
+• Modelo: {solicitud.sura_modelo or 'N/A'}
+
+DESCRIPCIÓN DEL ERROR:
+{mensaje_error}
+
+OBSERVACIONES ADICIONALES:
+{solicitud.sura_observaciones or 'Sin observaciones adicionales'}
+
+ACCIONES RECOMENDADAS:
+• Verifique que los datos del cliente y vehículo sean correctos
+• Revise el estado de la solicitud en el sistema
+• Contacte al equipo de soporte si el problema persiste
+
+Para ver el tracking de todas las solicitudes SURA:
+{solicitud_url}
+
+Saludos,
+Sistema de Workflow - Financiera Pacífico
+
+---
+Este es un correo automático, por favor no responder a esta dirección.
+        """
+        
+        # Render HTML content using template
+        from django.template.loader import render_to_string
+        html_content = render_to_string('workflow/emails/sura_error_notification.html', {
+            'solicitud': solicitud,
+            'cliente_nombre': cliente_nombre,
+            'solicitud_url': solicitud_url,
+            'mensaje_error': mensaje_error,
+        })
+        
+        # Crear el correo usando EmailMultiAlternatives
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
+            to=destinatarios,
+        )
+        
+        # Attach HTML version
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo con manejo de SSL personalizado
+        try:
+            email.send()
+            print(f"✅ Correo SURA error enviado correctamente para solicitud {solicitud.codigo}")
+            print(f"✅ Destinatarios: {', '.join(destinatarios)}")
+        except ssl.SSLCertVerificationError as ssl_error:
+            print(f"⚠️ Error SSL detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+            print(f"✅ Correo SURA error enviado correctamente (con SSL personalizado) para solicitud {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Error específico al enviar correo SURA error: {str(e)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo SURA error para solicitud {solicitud.codigo}: {str(e)}")
+
+
 @login_required
 def test_apc_upload_email(request):
     """
@@ -11392,6 +11788,193 @@ def test_apc_iniciado_email(request):
                     'email_destinatario': solicitud.creada_por.email,
                     'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
                     'status_simulado': 'in_progress'
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
+@login_required
+def test_sura_completado_email(request):
+    """
+    Vista para probar el envío de correo de SURA completado
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con SURA habilitado para testing
+        solicitud = Solicitud.objects.filter(cotizar_sura_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con SURA habilitado para testing'
+            })
+        
+        # Simular que se completó la cotización SURA
+        from django.utils import timezone
+        solicitud.sura_status = 'completed'
+        solicitud.sura_fecha_completado = timezone.now()
+        solicitud.sura_observaciones = 'Cotización SURA completada - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo SURA completado para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            enviar_correo_sura_completado(solicitud)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo SURA completado enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente'
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
+@login_required
+def test_sura_iniciado_email(request):
+    """
+    Vista para probar el envío de correo de SURA iniciado (in_progress)
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con SURA habilitado para testing
+        solicitud = Solicitud.objects.filter(cotizar_sura_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con SURA habilitado para testing'
+            })
+        
+        # Simular que se inició el proceso SURA
+        from django.utils import timezone
+        solicitud.sura_status = 'in_progress'
+        solicitud.sura_fecha_inicio = timezone.now()
+        solicitud.sura_observaciones = 'Proceso SURA iniciado - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo SURA iniciado para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            enviar_correo_sura_iniciado(solicitud)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo SURA iniciado enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente'
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al enviar correo de test: {str(e)}',
+                'traceback': traceback.format_exc()
+            })
+    
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en test: {str(e)}',
+            'traceback': traceback.format_exc()
+        })
+
+
+@login_required
+def test_sura_error_email(request):
+    """
+    Vista para probar el envío de correo de SURA error
+    Solo para testing - eliminar en producción
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    try:
+        # Buscar una solicitud con SURA habilitado para testing
+        solicitud = Solicitud.objects.filter(cotizar_sura_makito=True).first()
+        
+        if not solicitud:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró ninguna solicitud con SURA habilitado para testing'
+            })
+        
+        # Simular que hubo un error en el proceso SURA
+        from django.utils import timezone
+        solicitud.sura_status = 'error'
+        solicitud.sura_observaciones = 'Error en cotización SURA - TEST'
+        
+        # No guardar en la base de datos, solo simular
+        
+        print(f"🧪 Testing envío de correo SURA error para solicitud: {solicitud.codigo}")
+        print(f"🧪 Usuario creador: {solicitud.creada_por.username} ({solicitud.creada_por.email})")
+        
+        # Probar el envío del correo
+        try:
+            mensaje_error = "Error de prueba: No se pudo procesar la cotización debido a datos incompletos del vehículo"
+            enviar_correo_sura_error(solicitud, mensaje_error)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Test de correo SURA error enviado para solicitud {solicitud.codigo}',
+                'details': {
+                    'solicitud_codigo': solicitud.codigo,
+                    'usuario_destinatario': solicitud.creada_por.username,
+                    'email_destinatario': solicitud.creada_por.email,
+                    'cliente_nombre': solicitud.cliente_nombre_completo or 'Sin cliente',
+                    'mensaje_error': mensaje_error
                 }
             })
             
