@@ -2520,8 +2520,21 @@ function configurarEventosAsignacionCaptura() {
 }
 
 function cargarUsuariosDisponiblesCaptura() {
-    const container = document.getElementById('lista-usuarios-avance');
     console.log('🔄 Iniciando carga de usuarios disponibles...');
+    
+    // Obtener elementos
+    const tbody = document.getElementById('lista-usuarios-avance');
+    const spinner = document.getElementById('spinner-usuarios-avance');
+    
+    // Mostrar spinner inicial
+    if (spinner) {
+        spinner.style.display = 'block';
+    }
+    
+    // Limpiar tabla
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
     
     fetch('/workflow/api/comite/usuarios-disponibles/')
         .then(response => {
@@ -2540,43 +2553,74 @@ function cargarUsuariosDisponiblesCaptura() {
                 mostrarUsuariosCaptura(usuariosDisponiblesCaptura);
             } else {
                 console.warn('⚠️ Respuesta sin usuarios:', data);
-                container.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        No se pudieron cargar los usuarios disponibles.
-                        <br><small>Respuesta: ${JSON.stringify(data)}</small>
-                    </div>
-                `;
+                
+                // Ocultar spinner
+                if (spinner) {
+                    spinner.style.display = 'none';
+                }
+                
+                // Mostrar mensaje en tabla
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                          <td colspan="6" class="text-center p-3 text-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No se pudieron cargar los usuarios disponibles.
+                            <br><small>Respuesta: ${JSON.stringify(data)}</small>
+                          </td>
+                        </tr>
+                    `;
+                }
             }
         })
         .catch(error => {
             console.error('❌ Error cargando usuarios:', error);
-            container.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error al cargar los usuarios: ${error.message}
-                    <br><small>Revise la consola para más detalles</small>
-                </div>
-            `;
+            
+            // Ocultar spinner
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+            
+            // Mostrar error en tabla
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                      <td colspan="6" class="text-center p-3 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar los usuarios: ${error.message}
+                        <br><small>Revise la consola para más detalles</small>
+                      </td>
+                    </tr>
+                `;
+            }
         });
 }
 
 function mostrarUsuariosCaptura(usuarios) {
-    const container = document.getElementById('lista-usuarios-avance');
-    console.log(`🎭 Mostrando ${usuarios.length} usuarios en la interfaz`);
+    const tbody = document.getElementById('lista-usuarios-avance');
+    const spinner = document.getElementById('spinner-usuarios-avance');
     
-    if (!container) {
-        console.error('❌ Container lista-usuarios-avance no encontrado');
+    console.log(`🎭 Mostrando ${usuarios.length} usuarios en la tabla`);
+    
+    if (!tbody) {
+        console.error('❌ Tbody lista-usuarios-avance no encontrado');
         return;
+    }
+    
+    // Ocultar spinner cuando se cargan usuarios
+    if (spinner) {
+        spinner.style.display = 'none';
     }
     
     if (usuarios.length === 0) {
         console.log('⚠️ No hay usuarios para mostrar');
-        container.innerHTML = `
-            <div class="text-center p-3 text-muted">
+        tbody.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center p-3 text-muted">
                 <i class="fas fa-search"></i>
                 <p class="mb-0">No se encontraron usuarios</p>
-            </div>
+              </td>
+            </tr>
         `;
         return;
     }
@@ -2589,25 +2633,35 @@ function mostrarUsuariosCaptura(usuarios) {
         const nombreEscapado = usuario.nombre_completo.replace(/'/g, "\\'");
         
         html += `
-            <div class="user-item p-2 border-bottom cursor-pointer" 
-                 onclick="seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')"
-                 style="cursor: pointer;">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-2">
-                        <i class="fas fa-user-circle fa-lg text-secondary"></i>
-                    </div>
-                    <div>
-                        <div class="fw-semibold">${usuario.nombre_completo}</div>
-                        <small class="text-muted">@${usuario.username}</small>
-                    </div>
+            <tr id="usuario-row-${usuario.id}" style="cursor: pointer;" onclick="seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')">
+              <td>${index + 1}</td>
+              <td>
+                <img src="/static/images/profile.png" alt="Avatar" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+              </td>
+              <td>
+                <div>
+                  <strong>${usuario.nombre_completo}</strong>
+                  <div class="small text-muted">@${usuario.username}</div>
                 </div>
-            </div>
+              </td>
+              <td>
+                <div class="small">${usuario.email || ''}</div>
+              </td>
+              <td>
+                <div class="small">Sin información de grupos</div>
+              </td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); seleccionarUsuarioCaptura(${usuario.id}, '${nombreEscapado}')">
+                  <i class="fas fa-check"></i> Seleccionar
+                </button>
+              </td>
+            </tr>
         `;
     });
     
     console.log('✅ HTML generado para usuarios:', html.length, 'caracteres');
-    container.innerHTML = html;
-    console.log('✅ Usuarios renderizados correctamente en el DOM');
+    tbody.innerHTML = html;
+    console.log('✅ Usuarios renderizados correctamente en la tabla');
 }
 
 function filtrarUsuariosCaptura(termino) {
@@ -2622,6 +2676,20 @@ function filtrarUsuariosCaptura(termino) {
 function seleccionarUsuarioCaptura(usuarioId, usuarioNombre) {
     console.log(`👆 Usuario seleccionado: ${usuarioNombre} (ID: ${usuarioId})`);
     
+    // Remover selección anterior
+    const filasUsuarios = document.querySelectorAll('#lista-usuarios-avance tr');
+    filasUsuarios.forEach(fila => {
+        fila.classList.remove('table-success');
+        fila.style.backgroundColor = '';
+    });
+    
+    // Marcar la fila seleccionada
+    const filaSeleccionada = document.getElementById(`usuario-row-${usuarioId}`);
+    if (filaSeleccionada) {
+        filaSeleccionada.classList.add('table-success');
+        filaSeleccionada.style.backgroundColor = '#d1e7dd';
+    }
+    
     usuarioSeleccionadoCaptura = { 
         id: parseInt(usuarioId), 
         nombre: usuarioNombre 
@@ -2629,20 +2697,7 @@ function seleccionarUsuarioCaptura(usuarioId, usuarioNombre) {
     
     console.log('✅ Usuario guardado en variable:', usuarioSeleccionadoCaptura);
     
-    // Actualizar visualmente la selección  
-    document.querySelectorAll('.user-item').forEach(item => {
-        item.classList.remove('bg-primary', 'text-white');
-    });
-    
-    // Encontrar el elemento clicado y marcarlo
-    const elementoClicado = event.target.closest('.user-item');
-    if (elementoClicado) {
-        elementoClicado.classList.add('bg-primary', 'text-white');
-        console.log('✅ Usuario marcado visualmente');
-    } else {
-        console.warn('⚠️ No se pudo encontrar el elemento para marcar visualmente');
-    }
-    
+    // Validar formulario después de seleccionar usuario
     validarFormularioAvanceCaptura();
 }
 
@@ -3357,18 +3412,10 @@ function getCsrfToken() {
             <i class="fas fa-search me-2"></i>
             Seleccionar usuario:
           </label>
-          <div class="input-group mb-3">
-            <span class="input-group-text">
-              <i class="fas fa-search"></i>
-            </span>
-            <input type="text" id="buscar-usuario-avance" class="form-control" placeholder="Buscar por nombre o usuario...">
-          </div>
-          
-          <div id="lista-usuarios-avance" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-            <div class="text-center p-3">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando usuarios...</span>
-              </div>
+          <!-- Spinner inicial -->
+          <div id="spinner-usuarios-avance" class="text-center p-3">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando usuarios...</span>
             </div>
           </div>
         </div>
