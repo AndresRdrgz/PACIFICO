@@ -1,0 +1,297 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Solicitar Reconsideración - {{ solicitud.codigo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reconsideracion-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .form-section {
+        margin-bottom: 25px;
+        padding: 20px;
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        background: #f8f9fc;
+    }
+    
+    .section-title {
+        color: #5a5c69;
+        margin-bottom: 15px;
+        font-weight: 600;
+        border-bottom: 2px solid #e3e6f0;
+        padding-bottom: 8px;
+    }
+    
+    .cotizacion-option {
+        border: 2px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .cotizacion-option:hover {
+        border-color: #4e73df;
+        background-color: #f8f9fc;
+    }
+    
+    .cotizacion-option.selected {
+        border-color: #4e73df;
+        background-color: #e8f0fe;
+    }
+    
+    .cotizacion-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .cotizacion-info {
+        flex: 1;
+    }
+    
+    .cotizacion-badge {
+        background: #1cc88a;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+    
+    .resultado-anterior {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .resultado-anterior h6 {
+        color: #721c24;
+        margin-bottom: 10px;
+    }
+    
+    .btn-enviar {
+        background: linear-gradient(135deg, #1cc88a 0%, #36b9cc 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-enviar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(28, 200, 138, 0.3);
+    }
+    
+    .btn-cancelar {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reconsideracion-container">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h4 class="m-0 font-weight-bold">
+                <i class="fas fa-redo"></i>
+                Solicitar Reconsideración #{{ numero_proxima_reconsideracion }}
+            </h4>
+            <p class="m-0 mt-2">Solicitud: {{ solicitud.codigo }} - {{ solicitud.cliente_nombre_completo }}</p>
+        </div>
+        
+        <div class="card-body">
+            <!-- Mostrar resultado anterior -->
+            <div class="resultado-anterior">
+                <h6><i class="fas fa-info-circle"></i> Resultado Anterior</h6>
+                <p><strong>Estado:</strong> {{ solicitud.resultado_consulta }}</p>
+                <p class="mb-0"><strong>Motivo:</strong> Esta solicitud fue {{ solicitud.resultado_consulta|lower }} en la consulta anterior.</p>
+            </div>
+            
+            <form method="post" id="form-reconsideracion">
+                {% csrf_token %}
+                
+                <!-- Motivo de la reconsideración -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-comment-alt"></i>
+                        Motivo de la Reconsideración
+                    </h5>
+                    <div class="form-group">
+                        <label for="motivo">Explique detalladamente por qué solicita esta reconsideración:</label>
+                        <textarea 
+                            class="form-control" 
+                            id="motivo" 
+                            name="motivo" 
+                            rows="5" 
+                            required
+                            placeholder="Ej: El cliente ha decidido aumentar su prima inicial de $5,000 a $10,000, lo que mejora su capacidad de pago..."></textarea>
+                        <small class="form-text text-muted">
+                            Incluya información sobre cambios en la situación del cliente, nueva documentación, modificaciones en la propuesta, etc.
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Selección de cotización -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        Cotización a Utilizar
+                    </h5>
+                    
+                    <div class="form-group">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="cotizacion_opcion" id="usar_actual" value="actual" checked>
+                            <label class="form-check-label font-weight-bold" for="usar_actual">
+                                Usar la cotización actual
+                            </label>
+                        </div>
+                        
+                        {% if cotizaciones_disponibles|length > 1 %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="cotizacion_opcion" id="usar_nueva" value="nueva">
+                            <label class="form-check-label font-weight-bold" for="usar_nueva">
+                                Seleccionar una cotización diferente
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Cotización actual -->
+                    <div id="cotizacion-actual" class="cotizacion-option selected">
+                        <div class="cotizacion-details">
+                            <div class="cotizacion-info">
+                                <strong>Cotización Actual</strong>
+                                {% if solicitud.cotizacion %}
+                                <br>
+                                <small class="text-muted">
+                                    Monto: ${{ solicitud.cotizacion.montoPrestamo|floatformat:2 }}
+                                    | Plazo: {{ solicitud.cotizacion.plazo }} meses
+                                    | Tipo: {{ solicitud.cotizacion.tipoPrestamo|capfirst }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <span class="cotizacion-badge">Actual</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Cotizaciones disponibles -->
+                    {% if cotizaciones_disponibles|length > 1 %}
+                    <div id="cotizaciones-disponibles" style="display: none;">
+                        <h6 class="mt-3 mb-2">Seleccione una cotización:</h6>
+                        {% for cotizacion in cotizaciones_disponibles %}
+                        {% if cotizacion.id != solicitud.cotizacion.id %}
+                        <div class="cotizacion-option" data-cotizacion-id="{{ cotizacion.id }}">
+                            <div class="cotizacion-details">
+                                <div class="cotizacion-info">
+                                    <input type="radio" name="nueva_cotizacion_id" value="{{ cotizacion.id }}" class="mr-2">
+                                    <strong>Cotización #{{ cotizacion.id }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Monto: ${{ cotizacion.montoPrestamo|floatformat:2 }}
+                                        | Plazo: {{ cotizacion.plazo }} meses
+                                        | Tipo: {{ cotizacion.tipoPrestamo|capfirst }}
+                                        | Creada: {{ cotizacion.fecha_creacion|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}" class="btn btn-cancelar">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-enviar">
+                        <i class="fas fa-paper-plane"></i> Enviar Reconsideración
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Manejar cambio entre cotización actual y nueva
+    $('input[name="cotizacion_opcion"]').change(function() {
+        if ($(this).val() === 'actual') {
+            $('#cotizacion-actual').show();
+            $('#cotizaciones-disponibles').hide();
+            $('input[name="usar_nueva_cotizacion"]').remove();
+        } else {
+            $('#cotizacion-actual').hide();
+            $('#cotizaciones-disponibles').show();
+            // Agregar campo hidden para indicar que se usa nueva cotización
+            if (!$('input[name="usar_nueva_cotizacion"]').length) {
+                $('#form-reconsideracion').append('<input type="hidden" name="usar_nueva_cotizacion" value="on">');
+            }
+        }
+    });
+    
+    // Manejar selección de cotización
+    $('.cotizacion-option').click(function() {
+        if ($(this).data('cotizacion-id')) {
+            $('.cotizacion-option').removeClass('selected');
+            $(this).addClass('selected');
+            $(this).find('input[type="radio"]').prop('checked', true);
+        }
+    });
+    
+    // Validación del formulario
+    $('#form-reconsideracion').submit(function(e) {
+        var motivo = $('#motivo').val().trim();
+        
+        if (motivo.length < 50) {
+            e.preventDefault();
+            alert('El motivo debe tener al menos 50 caracteres para una explicación adecuada.');
+            $('#motivo').focus();
+            return false;
+        }
+        
+        if ($('input[name="cotizacion_opcion"]:checked').val() === 'nueva') {
+            if (!$('input[name="nueva_cotizacion_id"]:checked').length) {
+                e.preventDefault();
+                alert('Debe seleccionar una cotización.');
+                return false;
+            }
+        }
+        
+        // Confirmar envío
+        if (!confirm('¿Está seguro de que desea enviar esta reconsideración? Una vez enviada, será revisada por el equipo de consulta.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

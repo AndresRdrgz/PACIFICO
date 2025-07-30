@@ -8,6 +8,7 @@ from . import views_calificacion
 from . import views_formulario
 from . import views_comite
 from . import apicomite
+from . import views_reconsideraciones
 #from . import api_appx_conexion
 
 urlpatterns = [
@@ -36,6 +37,10 @@ urlpatterns = [
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
     path('solicitudes/<int:solicitud_id>/campos-personalizados/', views_workflow.actualizar_campo_personalizado, name='actualizar_campo_personalizado'),
+    
+    # Reconsideración URLs
+    path('solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.solicitar_reconsideracion, name='solicitar_reconsideracion'),
+    path('api/cotizaciones-cliente/<int:solicitud_id>/', views_reconsideraciones.api_cotizaciones_cliente, name='api_cotizaciones_cliente'),
     
     # Admin URLs
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),

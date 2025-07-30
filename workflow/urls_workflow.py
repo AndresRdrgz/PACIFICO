@@ -12,6 +12,7 @@ from . import api_documentos
 from . import views_comite
 from . import apicomite
 from . import dashboard_views
+from . import views_reconsideraciones
 
 # Import reportes views with error handling
 try:
@@ -92,6 +93,16 @@ urlpatterns += [
     
     # Document List API URL
     path('api/solicitud/<int:solicitud_id>/documentos/', api_documentos.api_obtener_documentos_solicitud, name='api_obtener_documentos_solicitud'),
+    
+    # Reconsideraciones URLs
+    path('solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.solicitar_reconsideracion, name='solicitar_reconsideracion'),
+    path('solicitud/<int:solicitud_id>/reconsideracion/analista/', views_reconsideraciones.detalle_reconsideracion_analista, name='detalle_reconsideracion_analista'),
+    path('solicitud/<int:solicitud_id>/reconsideracion/comite/', views_reconsideraciones.detalle_reconsideracion_comite, name='detalle_reconsideracion_comite'),
+    
+    # APIs para Reconsideraciones
+    path('api/solicitud/<int:solicitud_id>/reconsideracion/procesar/', views_reconsideraciones.api_procesar_reconsideracion_analista, name='api_procesar_reconsideracion_analista'),
+    path('api/solicitud/<int:solicitud_id>/reconsideracion/historial/', views_reconsideraciones.api_historial_reconsideraciones, name='api_historial_reconsideraciones'),
+    path('api/solicitud/<int:solicitud_id>/cotizaciones/', views_reconsideraciones.api_cotizaciones_cliente, name='api_cotizaciones_cliente'),
     
     # Solicitud brief API
     path('api/solicitud_brief/<int:solicitud_id>/', views_workflow.api_solicitud_brief, name='api_solicitud_brief'),

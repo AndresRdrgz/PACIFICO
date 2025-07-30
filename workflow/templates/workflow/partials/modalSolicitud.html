@@ -17,6 +17,10 @@
                                 title="Ver Detalle">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            <button class="action-btn-header warning" id="modalBtnReconsideracion" data-solicitud-id=""
+                                title="Solicitar Reconsideración" style="display: none;" onclick="abrirModalReconsideracion(document.getElementById('modalBtnReconsideracion').dataset.solicitudId)">>
+                                <i class="fas fa-redo"></i>
+                            </button>
                         </div>
                         <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
@@ -56,6 +60,12 @@
                         <button class="nav-link" id="notas-tab" data-bs-toggle="tab" data-bs-target="#notas"
                             type="button" role="tab" aria-controls="notas" aria-selected="false">
                             <i class="fas fa-sticky-note me-2"></i>Notas y Recordatorios
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation" id="reconsideracion-tab-item">
+                        <button class="nav-link" id="reconsideracion-tab" data-bs-toggle="tab" data-bs-target="#reconsideracion"
+                            type="button" role="tab" aria-controls="reconsideracion" aria-selected="false">
+                            <i class="fas fa-redo me-2"></i>Reconsideración
                         </button>
                     </li>
                 </ul>
@@ -222,6 +232,51 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Reconsideración Tab -->
+                    <div class="tab-pane fade" id="reconsideracion" role="tabpanel" aria-labelledby="reconsideracion-tab">
+                        <div class="reconsideracion-section">
+                            <div class="section-header">
+                                <div class="section-title">
+                                    <i class="fas fa-redo me-2"></i>
+                                    Reconsideración
+                                </div>
+                                <div class="header-actions-group">
+                                    <button class="btn-reconsideracion-primary" id="btnSolicitarReconsideracion" onclick="abrirModalReconsideracion(currentSolicitudId)" style="display: none;">
+                                        <i class="fas fa-plus me-1"></i>Solicitar Reconsideración
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Estado de Reconsideración -->
+                            <div class="reconsideracion-status mb-4" id="reconsideracionStatus">
+                                <div class="alert alert-info" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <span id="reconsideracionStatusText">Verificando estado de reconsideración...</span>
+                                </div>
+                            </div>
+
+                            <!-- Historial de Reconsideraciones -->
+                            <div class="reconsideracion-historial" id="reconsideracionHistorial">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-history me-2"></i>
+                                    Historial de Reconsideraciones
+                                </h6>
+                                <div class="historial-container" id="modalSolicitudReconsideraciones">
+                                    <!-- Reconsideraciones content will be rendered here -->
+                                    <div class="loading-placeholder" style="display: none;">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando historial...</span>
+                                        </div>
+                                    </div>
+                                    <div class="empty-state" style="display: none;">
+                                        <i class="fas fa-redo mb-3 text-muted" style="font-size: 3rem;"></i>
+                                        <p class="text-muted">No hay reconsideraciones para esta solicitud</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,6 +288,42 @@
         --verde-pacifico: #009c3c;
         --verde-pacifico-hover: #007e31;
         --verde-pacifico-light: #22a650;
+        --verde-pacifico-ultra-light: #e8f5e8;
+        
+        /* Enhanced Color Palette */
+        --primary-blue: #0066cc;
+        --primary-blue-hover: #0052a3;
+        --secondary-blue: #4285f4;
+        --accent-teal: #00bcd4;
+        --accent-teal-hover: #00acc1;
+        
+        --success-green: #28a745;
+        --success-green-light: #d4edda;
+        --warning-orange: #fd7e14;
+        --warning-orange-light: #fff3cd;
+        --danger-red: #dc3545;
+        --danger-red-light: #f8d7da;
+        --info-cyan: #17a2b8;
+        --info-cyan-light: #d1ecf1;
+        
+        --neutral-100: #f8f9fa;
+        --neutral-200: #e9ecef;
+        --neutral-300: #dee2e6;
+        --neutral-400: #ced4da;
+        --neutral-500: #adb5bd;
+        --neutral-600: #6c757d;
+        --neutral-700: #495057;
+        --neutral-800: #343a40;
+        --neutral-900: #212529;
+        
+        --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.12);
+        --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.15);
+        --border-radius-sm: 6px;
+        --border-radius-md: 8px;
+        --border-radius-lg: 12px;
+        --transition-fast: 0.2s ease;
+        --transition-medium: 0.3s ease;
     }
 
     /* === MODERN MODAL STYLES === */
@@ -341,6 +432,17 @@
 
     .action-btn-header.info:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.3);
+    }
+
+    .action-btn-header.warning {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .action-btn-header.warning:hover:not(:disabled) {
+        background: rgba(255, 193, 7, 0.3);
+        transform: translateY(-1px);
     }
 
     .solicitud-header {
@@ -486,6 +588,601 @@
         margin-bottom: 20px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         border-left: 4px solid var(--verde-pacifico);
+    }
+
+    .diligencia-container {
+        min-height: 200px;
+    }
+
+    /* === RECONSIDERACIÓN SECTION === */
+    .reconsideracion-section {
+        background: white;
+        border-radius: var(--border-radius-md);
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-medium);
+        border-left: 4px solid var(--warning-orange);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .header-actions-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* === ENHANCED BUTTON STYLES === */
+    .btn-cotizaciones {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: var(--border-radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all var(--transition-medium);
+        box-shadow: var(--shadow-light);
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-cotizaciones:hover {
+        background: linear-gradient(135deg, var(--primary-blue-hover) 0%, var(--primary-blue) 100%);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-medium);
+        color: white;
+    }
+
+    .btn-cotizaciones:active {
+        transform: translateY(0);
+    }
+
+    .btn-reconsideracion-primary {
+        background: linear-gradient(135deg, var(--verde-pacifico) 0%, var(--verde-pacifico-light) 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: var(--border-radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all var(--transition-medium);
+        box-shadow: var(--shadow-light);
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-reconsideracion-primary:hover {
+        background: linear-gradient(135deg, var(--verde-pacifico-hover) 0%, var(--verde-pacifico) 100%);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-medium);
+        color: white;
+    }
+
+    .btn-reconsideracion-primary:active {
+        transform: translateY(0);
+    }
+
+    /* === COTIZACIONES SECTION === */
+    .cotizaciones-cliente-section {
+        background: var(--neutral-100);
+        border-radius: var(--border-radius-lg);
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 2px solid var(--primary-blue);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    /* === COTIZACIONES SECTION FOR RECONSIDERACION MODAL === */
+    .cotizaciones-cliente-section-reconsideracion {
+        background: var(--neutral-100);
+        border-radius: var(--border-radius-lg);
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 2px solid var(--primary-blue);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .cotizaciones-header-reconsideracion {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--primary-blue);
+    }
+
+    .cotizaciones-title-reconsideracion {
+        margin: 0;
+        color: var(--primary-blue);
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .btn-close-cotizaciones-reconsideracion {
+        background: var(--danger-red);
+        color: white;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-size: 0.75rem;
+    }
+
+    .btn-close-cotizaciones-reconsideracion:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+
+    .cotizaciones-container-reconsideracion {
+        min-height: 100px;
+    }
+
+    .loading-cotizaciones-reconsideracion {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 30px;
+        color: var(--primary-blue);
+        font-size: 0.9rem;
+    }
+
+    .empty-cotizaciones-reconsideracion {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .cotizaciones-grid-reconsideracion {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-card {
+        padding: 12px;
+        font-size: 0.875rem;
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-card:hover {
+        transform: translateY(-1px);
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-header {
+        margin-bottom: 8px;
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-details {
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-actions {
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    .cotizaciones-grid-reconsideracion .btn-ver-cotizacion {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+
+    .cotizaciones-grid-reconsideracion .btn-seleccionar-cotizacion {
+        background: var(--verde-pacifico);
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .cotizaciones-grid-reconsideracion .btn-seleccionar-cotizacion:hover {
+        background: var(--verde-pacifico-hover);
+        color: white;
+    }
+
+    .cotizaciones-grid-reconsideracion .cotizacion-card.selected {
+        border: 2px solid var(--verde-pacifico);
+        background: var(--verde-pacifico-ultra-light);
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .cotizaciones-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--primary-blue);
+    }
+
+    .cotizaciones-title {
+        margin: 0;
+        color: var(--primary-blue);
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .btn-close-cotizaciones {
+        background: var(--danger-red);
+        color: white;
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-size: 0.875rem;
+    }
+
+    .btn-close-cotizaciones:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+
+    .cotizaciones-container {
+        min-height: 120px;
+    }
+
+    .loading-cotizaciones {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: var(--primary-blue);
+        font-size: 0.95rem;
+    }
+
+    .empty-cotizaciones {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .cotizaciones-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+    }
+
+    .cotizacion-card {
+        background: white;
+        border-radius: var(--border-radius-md);
+        padding: 16px;
+        border: 1px solid var(--neutral-300);
+        box-shadow: var(--shadow-light);
+        transition: all var(--transition-medium);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cotizacion-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, var(--accent-teal) 0%, var(--primary-blue) 100%);
+    }
+
+    .cotizacion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+        border-color: var(--primary-blue);
+    }
+
+    .cotizacion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .cotizacion-numero {
+        font-weight: 600;
+        color: var(--primary-blue);
+        font-size: 0.95rem;
+    }
+
+    .cotizacion-tipo {
+        background: var(--info-cyan-light);
+        color: var(--info-cyan);
+        padding: 4px 8px;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .cotizacion-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .cotizacion-detail {
+        font-size: 0.875rem;
+    }
+
+    .cotizacion-detail strong {
+        color: var(--neutral-700);
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+
+    .cotizacion-detail span {
+        color: var(--neutral-900);
+        font-weight: 500;
+    }
+
+    .cotizacion-monto {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 8px;
+        background: var(--verde-pacifico-ultra-light);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--verde-pacifico-light);
+    }
+
+    .cotizacion-monto strong {
+        color: var(--verde-pacifico);
+        font-size: 1.1rem;
+    }
+
+    .cotizacion-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--neutral-200);
+    }
+
+    .cotizacion-fecha {
+        font-size: 0.75rem;
+        color: var(--neutral-600);
+    }
+
+    .btn-ver-cotizacion {
+        background: var(--accent-teal);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .btn-ver-cotizacion:hover {
+        background: var(--accent-teal-hover);
+        color: white;
+    }
+
+    .cotizacion-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+        grid-column: 1 / -1;
+    }
+
+    /* === RESPONSIVE DESIGN === */
+    @media (max-width: 768px) {
+        .header-actions-group {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .btn-cotizaciones,
+        .btn-reconsideracion-primary {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .cotizaciones-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cotizacion-details {
+            grid-template-columns: 1fr;
+        }
+
+        .cotizaciones-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .section-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .cotizacion-card {
+            margin: 0 -8px;
+        }
+
+        .cotizaciones-cliente-section {
+            margin: 0 -8px;
+            border-radius: var(--border-radius-md);
+        }
+
+        .modal-tab-content .tab-pane {
+            padding: 1rem;
+        }
+    }
+
+    .reconsideracion-status .alert {
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .reconsideracion-historial {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid #e9ecef;
+    }
+
+    .historial-container {
+        min-height: 100px;
+    }
+
+    .loading-placeholder, .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .reconsideracion-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 4px solid #007bff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .reconsideracion-item.aprobada {
+        border-left-color: #28a745;
+    }
+
+    .reconsideracion-item.rechazada {
+        border-left-color: #dc3545;
+    }
+
+    .reconsideracion-item.en_revision {
+        border-left-color: #ffc107;
+    }
+
+    .reconsideracion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .reconsideracion-numero {
+        font-weight: bold;
+        color: #495057;
+    }
+
+    .reconsideracion-fecha {
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+
+    .reconsideracion-estado {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .estado-enviada {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .estado-en_revision {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .estado-aprobada {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .estado-rechazada {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .estado-enviada_comite {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .reconsideracion-motivo {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 3px solid #6c757d;
+        margin: 10px 0;
+        font-style: italic;
+    }
+
+    .reconsideracion-details {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+
+    .reconsideracion-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
 
     .diligencia-container {
@@ -2537,9 +3234,639 @@
         text-align: center;
         padding: 2rem;
     }
+
+    /* === MODERN RECONSIDERACIÓN MODAL STYLES === */
+    .modern-modal-reconsideracion {
+        border: none;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-heavy);
+        overflow: hidden;
+        max-height: 90vh;
+    }
+
+    .modal-header-modern-reconsideracion {
+        background: linear-gradient(135deg, var(--warning-orange) 0%, #ff8c00 50%, #ff6b35 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .modal-header-modern-reconsideracion::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        pointer-events: none;
+    }
+
+    .reconsideracion-header-info {
+        flex: 1;
+    }
+
+    .reconsideracion-title-section {
+        position: relative;
+        z-index: 1;
+    }
+
+    .reconsideracion-title-section h5 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.5px;
+    }
+
+    .reconsideracion-subtitle {
+        font-size: 0.95rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .modal-body-modern-reconsideracion {
+        padding: 2rem;
+        background: var(--neutral-100);
+        max-height: calc(90vh - 140px);
+        overflow-y: auto;
+    }
+
+    /* === INSTRUCTIONS SECTION === */
+    .instructions-section {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: var(--border-radius-md);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--primary-blue);
+        box-shadow: var(--shadow-light);
+    }
+
+    .instructions-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .instructions-icon {
+        color: var(--primary-blue);
+        font-size: 1.25rem;
+        margin-right: 0.75rem;
+    }
+
+    .instructions-title {
+        color: var(--primary-blue);
+        font-weight: 600;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .instructions-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .instructions-column {
+        flex: 1;
+    }
+
+    .instructions-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .instructions-list li {
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+        color: var(--neutral-700);
+        line-height: 1.5;
+        position: relative;
+        padding-left: 1.25rem;
+    }
+
+    .instructions-list li::before {
+        content: '•';
+        color: var(--primary-blue);
+        font-weight: bold;
+        position: absolute;
+        left: 0;
+    }
+
+    /* === RESULTADO ANTERIOR SECTION === */
+    .resultado-anterior-section {
+        background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+        border-radius: var(--border-radius-md);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--danger-red);
+        box-shadow: var(--shadow-light);
+    }
+
+    .resultado-anterior-content {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .resultado-icon {
+        color: var(--danger-red);
+        font-size: 1.1rem;
+        margin-right: 0.75rem;
+        margin-top: 0.125rem;
+    }
+
+    .resultado-text {
+        flex: 1;
+        font-size: 0.9rem;
+        color: var(--neutral-700);
+    }
+
+    .resultado-text strong {
+        color: var(--danger-red);
+    }
+
+    /* === FORM STYLES === */
+    .reconsideracion-form {
+        background: white;
+        border-radius: var(--border-radius-md);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-light);
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-label-modern {
+        display: block;
+        font-weight: 600;
+        color: var(--neutral-800);
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .required-mark {
+        color: var(--danger-red);
+        font-weight: 700;
+    }
+
+    .form-control-modern {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--neutral-300);
+        border-radius: var(--border-radius-md);
+        font-size: 0.95rem;
+        transition: all var(--transition-medium);
+        background: white;
+        color: var(--neutral-800);
+    }
+
+    .form-control-modern:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .form-control-modern::placeholder {
+        color: var(--neutral-500);
+    }
+
+    .form-helper-text {
+        margin-top: 0.5rem;
+    }
+
+    .character-counter {
+        color: var(--neutral-600);
+        font-size: 0.85rem;
+    }
+
+    /* === SECTION TITLES === */
+    .section-title-modern {
+        font-weight: 600;
+        color: var(--primary-blue);
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+    }
+
+    /* === COTIZACION OPTIONS === */
+    .cotizacion-options {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .cotizacion-option-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: var(--border-radius-md);
+        transition: all var(--transition-medium);
+        cursor: pointer;
+    }
+
+    .cotizacion-option-item:hover {
+        background: var(--neutral-100);
+    }
+
+    .form-check-input-modern {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-right: 0.75rem;
+        accent-color: var(--primary-blue);
+        cursor: pointer;
+    }
+
+    .form-check-label-modern {
+        font-weight: 500;
+        color: var(--neutral-800);
+        cursor: pointer;
+        flex: 1;
+    }
+
+    /* === COTIZACION CURRENT CARD === */
+    .cotizacion-current-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid var(--primary-blue);
+        border-radius: var(--border-radius-md);
+        padding: 1.25rem;
+        margin-top: 0.75rem;
+        box-shadow: var(--shadow-light);
+        transition: all var(--transition-medium);
+    }
+
+    .cotizacion-current-card:hover {
+        box-shadow: var(--shadow-medium);
+        transform: translateY(-1px);
+    }
+
+    .cotizacion-current-content {
+        width: 100%;
+    }
+
+    .cotizacion-current-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .cotizacion-current-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cotizacion-current-label {
+        color: var(--neutral-600);
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .cotizacion-current-value {
+        color: var(--neutral-900);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* === COTIZACIONES DISPONIBLES === */
+    .cotizaciones-disponibles-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--neutral-100);
+        border-radius: var(--border-radius-md);
+        border: 1px solid var(--neutral-300);
+    }
+
+    .cotizaciones-disponibles-title {
+        color: var(--neutral-700);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .cotizaciones-action-section {
+        margin-bottom: 1rem;
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: var(--primary-blue);
+    }
+
+    .loading-text {
+        margin-top: 0.75rem;
+        color: var(--neutral-600);
+        font-size: 0.9rem;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 2rem;
+        color: var(--neutral-400);
+        margin-bottom: 0.75rem;
+    }
+
+    .empty-text {
+        color: var(--neutral-600);
+        font-size: 0.9rem;
+    }
+
+    .cotizaciones-legacy-container {
+        border: 1px solid var(--neutral-300);
+        border-radius: var(--border-radius-md);
+        padding: 1rem;
+        background: white;
+    }
+
+    /* === MODAL FOOTER === */
+    .modal-footer-modern {
+        background: white;
+        border-top: 1px solid var(--neutral-200);
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .footer-actions {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .btn-cancel-modern {
+        background: var(--neutral-300);
+        color: var(--neutral-700);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-md);
+        font-weight: 500;
+        transition: all var(--transition-medium);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-cancel-modern:hover {
+        background: var(--neutral-400);
+        color: var(--neutral-800);
+        transform: translateY(-1px);
+    }
+
+    .btn-submit-modern {
+        background: linear-gradient(135deg, var(--warning-orange) 0%, #ff8c00 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-md);
+        font-weight: 600;
+        transition: all var(--transition-medium);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: var(--shadow-light);
+    }
+
+    .btn-submit-modern:hover {
+        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-medium);
+        color: white;
+    }
+
+    .btn-submit-modern:disabled {
+        background: var(--neutral-400);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* === RESPONSIVE DESIGN === */
+    @media (max-width: 768px) {
+        .modal-header-modern-reconsideracion {
+            padding: 1rem 1.5rem;
+        }
+
+        .modal-body-modern-reconsideracion {
+            padding: 1.5rem;
+        }
+
+        .instructions-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .cotizacion-current-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .footer-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .btn-cancel-modern,
+        .btn-submit-modern {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .reconsideracion-title-section h5 {
+            font-size: 1.25rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .modal-header-modern-reconsideracion {
+            padding: 1rem;
+        }
+
+        .modal-body-modern-reconsideracion {
+            padding: 1rem;
+        }
+
+        .instructions-section {
+            padding: 1rem;
+        }
+
+        .reconsideracion-form {
+            padding: 1rem;
+        }
+    }
+
+    .cotizacion-option {
+        border: 2px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .cotizacion-option:hover {
+        border-color: #007bff;
+        background: #f0f8ff;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .cotizacion-option input[type="radio"]:checked + .cotizacion-info {
+        background: #e3f2fd;
+    }
+
+    .cotizacion-option input[type="radio"]:checked {
+        accent-color: #007bff;
+    }
+
+    .cotizacion-info {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .cotizacion-monto {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 0.25rem;
+    }
+
+    .cotizacion-fecha {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+
+    .cotizacion-cliente {
+        font-size: 0.9rem;
+        color: #495057;
+        font-weight: 500;
+    }
+
+    .form-floating {
+        position: relative;
+    }
+
+    .form-floating > .form-control {
+        padding: 1rem 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-floating > .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .btn-reconsideracion {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 2rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+    }
+
+    .btn-reconsideracion:hover {
+        background: linear-gradient(135deg, #218838, #1e7e34);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+
+    .btn-reconsideracion:disabled {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    .alert-warning {
+        border-left: 4px solid #ffc107;
+        border-radius: 0.5rem;
+        background: #fff8e1;
+        color: #8a6d3b;
+    }
+
+    .no-cotizaciones {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .no-cotizaciones i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    .loading-cotizaciones {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #modalReconsideracion .modal-dialog {
+            max-width: 95%;
+            margin: 1rem auto;
+        }
+        
+        .reconsideracion-header {
+            padding: 1rem;
+            margin: -1rem -1rem 1rem -1rem;
+        }
+        
+        .cotizacion-option {
+            padding: 0.75rem;
+        }
+        
+        .btn-reconsideracion {
+            width: 100%;
+            margin-top: 1rem;
+        }
+    }
 </style>
 <script>
-
+    // Set current user ID globally
+    window.currentUserId = {{ request.user.id|default:0 }};
 
     window.mostrarModalSolicitud = function (solicitudId, activeTab = 'info') {
         // Test if Bootstrap is available
@@ -2561,6 +3888,7 @@
 
         // Store the solicitudId and activeTab globally for use in the modal
         window.currentSolicitudId = solicitudId;
+        window.currentModalSolicitudId = solicitudId;
         window.currentActiveTab = activeTab;
 
         // Set the solicitudId on the Ver Detalle button
@@ -2787,6 +4115,12 @@
                 btnVerDetalle.setAttribute('data-solicitud-id', solicitudId);
             }
 
+            // Set the solicitudId on the Reconsideración button
+            const btnReconsideracion = document.getElementById('modalBtnReconsideracion');
+            if (btnReconsideracion) {
+                btnReconsideracion.setAttribute('data-solicitud-id', solicitudId);
+            }
+
             // Populate the unified summary card
             populateUnifiedSummaryCard(data);
 
@@ -2908,6 +4242,18 @@
                     switchToTab(window.currentActiveTab);
                 }, 500); // Delay to ensure modal is fully loaded
             }
+
+            // Configure reconsideración functionality
+            const solicitudData = {
+                ...data.general,
+                resultado_consulta: data.general.resultado_consulta,
+                es_reconsideracion: data.general.es_reconsideracion,
+                propietario_id: data.general.propietario_id
+            };
+            console.log('Full API response data:', data);
+            console.log('General data:', data.general);
+            console.log('Data for reconsideración:', solicitudData);
+            configurarTabReconsideracion(solicitudData);
 
             console.log('Modal populated successfully');
 
@@ -5916,6 +7262,1283 @@
             });
         }
     });
+
+    // ===== RECONSIDERACIÓN FUNCTIONALITY =====
+
+    // Function to check if solicitud can be reconsidered
+    function puedeSerReconsiderada(solicitud) {
+        if (!solicitud) {
+            console.log('❌ No solicitud data provided');
+            return { canRequest: false, reason: 'no_data', message: 'No hay datos de la solicitud' };
+        }
+        
+        console.log('🔍 Checking if solicitud can be reconsidered:', solicitud);
+        
+        // Check if solicitud is "Rechazado" or "Alternativa"
+        const estadosReconsiderables = ['Rechazado', 'Alternativa'];
+        
+        // Use multiple fallback sources for estado
+        const resultadoConsulta = solicitud.resultado_consulta || '';
+        const subestadoActual = solicitud.subestado_actual || '';
+        const estado = solicitud.estado || '';
+        
+        // Try to extract estado from subestado text (e.g., "Resultado Consulta - Rechazado" -> "Rechazado")
+        let estadoExtraido = resultadoConsulta;
+        if (!estadoExtraido && subestadoActual && subestadoActual.includes(' - ')) {
+            estadoExtraido = subestadoActual.split(' - ').pop() || '';
+        }
+        if (!estadoExtraido) {
+            estadoExtraido = estado;
+        }
+        
+        console.log('📊 Estado Analysis:');
+        console.log('   resultado_consulta:', resultadoConsulta);
+        console.log('   subestado_actual:', subestadoActual);
+        console.log('   estado:', estado);
+        console.log('   estado_extraido:', estadoExtraido);
+        console.log('   estados_reconsiderables:', estadosReconsiderables);
+        
+        const estadoEsReconsiderable = estadosReconsiderables.includes(estadoExtraido);
+        console.log('   ¿Estado es reconsiderable?:', estadoEsReconsiderable ? '✅' : '❌');
+        
+        // Check if user is the owner
+        const propietarioId = solicitud.propietario_id || solicitud.propietario?.id;
+        const currentUserId = parseInt(window.currentUserId || '0');
+        const esProps = propietarioId === currentUserId;
+        
+        console.log('👤 Ownership Analysis:');
+        console.log('   propietario_id:', propietarioId);
+        console.log('   current_user_id:', currentUserId);
+        console.log('   es_propietario:', esProps ? '✅' : '❌');
+        
+        // Check for active reconsideración
+        const tieneReconsideracionActiva = solicitud.es_reconsideracion || false;
+        console.log('🔄 Reconsideración activa:', tieneReconsideracionActiva ? '✅' : '❌');
+        
+        // Determine result and reason
+        let canRequest = false;
+        let reason = '';
+        let message = '';
+        
+        if (!estadoEsReconsiderable) {
+            reason = 'estado_no_reconsiderable';
+            message = `La solicitud debe estar en estado "Rechazado" o "Alternativa". Estado actual: "${estadoExtraido || 'No definido'}"`;
+        } else if (!esProps) {
+            reason = 'no_propietario';
+            message = 'Solo el propietario de la solicitud puede solicitar una reconsideración';
+        } else if (tieneReconsideracionActiva) {
+            reason = 'reconsideracion_activa';
+            message = 'Esta solicitud ya tiene una reconsideración en proceso';
+        } else {
+            canRequest = true;
+            reason = 'puede_reconsiderar';
+            message = 'Esta solicitud puede ser reconsiderada';
+        }
+        
+        console.log('🎯 Final Result:', canRequest ? '✅ PUEDE' : '❌ NO PUEDE');
+        console.log('📝 Reason:', reason);
+        console.log('💬 Message:', message);
+        
+        return { canRequest, reason, message, estadoExtraido };
+    }
+
+    // Function to load reconsideraciones history
+    function cargarHistorialReconsideraciones(solicitudId) {
+        // Validate solicitudId
+        if (!solicitudId || solicitudId === 'undefined' || solicitudId === 'null') {
+            console.error('Invalid solicitudId provided to cargarHistorialReconsideraciones:', solicitudId);
+            return;
+        }
+        
+        const container = document.getElementById('modalSolicitudReconsideraciones');
+        if (!container) {
+            console.error('Reconsideraciones container not found');
+            return;
+        }
+        
+        const loadingPlaceholder = container.querySelector('.loading-placeholder');
+        const emptyState = container.querySelector('.empty-state');
+        
+        if (!loadingPlaceholder || !emptyState) {
+            console.error('Loading placeholder or empty state not found');
+            return;
+        }
+        
+        // Show loading
+        loadingPlaceholder.style.display = 'flex';
+        emptyState.style.display = 'none';
+        
+        console.log('Fetching reconsideraciones for solicitud:', solicitudId);
+        
+        fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/historial/`)
+        .then(response => {
+            console.log('Reconsideraciones API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`Error al cargar historial: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Reconsideraciones API data:', data);
+            loadingPlaceholder.style.display = 'none';
+            
+            if (data.success && data.reconsideraciones && data.reconsideraciones.length > 0) {
+                renderHistorialReconsideraciones(data.reconsideraciones);
+            } else {
+                emptyState.style.display = 'flex';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading reconsideraciones:', error);
+            loadingPlaceholder.style.display = 'none';
+            emptyState.style.display = 'flex';
+            emptyState.innerHTML = `
+                <i class="fas fa-exclamation-triangle mb-3 text-warning" style="font-size: 3rem;"></i>
+                <p class="text-muted">Error al cargar el historial de reconsideraciones</p>
+                <small class="text-muted">${error.message}</small>
+            `;
+        });
+    }
+
+    // Function to render reconsideraciones history
+    function renderHistorialReconsideraciones(reconsideraciones) {
+        const container = document.getElementById('modalSolicitudReconsideraciones');
+        const emptyState = container.querySelector('.empty-state');
+        
+        emptyState.style.display = 'none';
+        
+        const historialHtml = reconsideraciones.map(recon => {
+            const estadoClass = `estado-${recon.estado}`;
+            const itemClass = `reconsideracion-item ${recon.estado}`;
+            
+            return `
+                <div class="${itemClass}">
+                    <div class="reconsideracion-header">
+                        <div>
+                            <span class="reconsideracion-numero">Reconsideración #${recon.numero || recon.id}</span>
+                            <span class="reconsideracion-fecha">${formatDateTime(recon.fecha_solicitud)}</span>
+                        </div>
+                        <span class="reconsideracion-estado ${estadoClass}">${getEstadoDisplayName(recon.estado)}</span>
+                    </div>
+                    
+                    <div class="reconsideracion-motivo">
+                        <strong>Motivo:</strong> ${recon.motivo || 'No especificado'}
+                    </div>
+                    
+                    <div class="reconsideracion-details">
+                        <div class="reconsideracion-detail-item">
+                            <i class="fas fa-user"></i>
+                            <span>Solicitado por: ${recon.solicitada_por?.nombre || 'N/A'}</span>
+                        </div>
+                        ${recon.cotizacion_nueva_id ? `
+                        <div class="reconsideracion-detail-item">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>Nueva cotización: ${recon.cotizacion_nueva_id}</span>
+                        </div>
+                        ` : ''}
+                        ${recon.fecha_analisis ? `
+                        <div class="reconsideracion-detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Analizado: ${formatDateTime(recon.fecha_analisis)}</span>
+                        </div>
+                        ` : ''}
+                        ${recon.analizada_por?.nombre ? `
+                        <div class="reconsideracion-detail-item">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Analizado por: ${recon.analizada_por.nombre}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${recon.comentario_analisis ? `
+                    <div class="reconsideracion-motivo">
+                        <strong>Comentario del Analista:</strong> ${recon.comentario_analisis}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        // Replace empty state with history
+        emptyState.outerHTML = historialHtml;
+    }
+
+    // Function to get display name for estado
+    function getEstadoDisplayName(estado) {
+        const estados = {
+            'enviada': 'Enviada',
+            'en_revision': 'En Revisión',
+            'aprobada': 'Aprobada',
+            'rechazada': 'Rechazada',
+            'enviada_comite': 'Enviada a Comité'
+        };
+        return estados[estado] || estado;
+    }
+
+    // Function to format date and time
+    function formatDateTime(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Function to show/hide reconsideracion tab and content
+    function configurarTabReconsideracion(solicitud) {
+        console.log('🚀 Configurando tab de reconsideración con solicitud:', solicitud);
+        
+        const tabItem = document.getElementById('reconsideracion-tab-item');
+        const btnSolicitar = document.getElementById('btnSolicitarReconsideracion');
+        const statusDiv = document.getElementById('reconsideracionStatus');
+        const statusText = document.getElementById('reconsideracionStatusText');
+        
+        if (!tabItem || !btnSolicitar || !statusDiv || !statusText) {
+            console.error('❌ Reconsideración elements not found');
+            return;
+        }
+        
+        // Get the current solicitud ID from the global context
+        const solicitudId = window.currentSolicitudId || window.currentModalSolicitudId;
+        
+        console.log('🔑 Solicitud ID for reconsideración:', solicitudId);
+        
+        if (!solicitudId) {
+            console.error('❌ No solicitud ID available for reconsideración');
+            statusText.innerHTML = `
+                <strong>Error de configuración:</strong><br>
+                No se pudo identificar la solicitud actual.
+            `;
+            statusDiv.className = 'alert alert-danger';
+            btnSolicitar.style.display = 'none';
+            return;
+        }
+        
+        // Use enhanced logic with detailed feedback
+        const result = puedeSerReconsiderada(solicitud);
+        const { canRequest, reason, message, estadoExtraido } = result;
+        
+        console.log('📊 Enhanced reconsideración result:', result);
+        
+        if (canRequest) {
+            // Check if there's an active reconsideration in the solicitud data
+            const tieneReconsideracionActiva = solicitud.es_reconsideracion || false;
+            
+            console.log('🔄 Tiene reconsideración activa:', tieneReconsideracionActiva);
+            
+            if (tieneReconsideracionActiva) {
+                statusText.innerHTML = `
+                    <strong><i class="fas fa-hourglass-half"></i> Reconsideración en Proceso</strong><br>
+                    Esta solicitud tiene una reconsideración actualmente en revisión.
+                `;
+                statusDiv.className = 'alert alert-warning';
+                btnSolicitar.style.display = 'none';
+            } else {
+                statusText.innerHTML = `
+                    <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                    Esta solicitud puede ser reconsiderada porque está en estado "<strong>${estadoExtraido}</strong>" y usted es el propietario.
+                    <br><small class="text-muted mt-1">
+                        <i class="fas fa-info-circle"></i> 
+                        Las reconsideraciones están disponibles para solicitudes "Rechazadas" o con "Alternativa".
+                    </small>
+                `;
+                statusDiv.className = 'alert alert-success';
+                btnSolicitar.style.display = 'inline-block';
+            }
+        } else {
+            // Provide specific feedback based on the reason
+            let alertClass = 'alert alert-secondary';
+            let iconClass = 'fas fa-info-circle';
+            let detailedMessage = message;
+            
+            switch (reason) {
+                case 'estado_no_reconsiderable':
+                    alertClass = 'alert alert-info';
+                    iconClass = 'fas fa-exclamation-triangle text-warning';
+                    detailedMessage = `
+                        <strong>Estado No Elegible</strong><br>
+                        ${message}
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-lightbulb"></i> 
+                            Las reconsideraciones solo están disponibles para solicitudes "Rechazadas" o con "Alternativa".
+                        </small>
+                    `;
+                    break;
+                    
+                case 'no_propietario':
+                    alertClass = 'alert alert-warning';
+                    iconClass = 'fas fa-user-times text-warning';
+                    detailedMessage = `
+                        <strong><i class="fas fa-lock"></i> Permisos Insuficientes</strong><br>
+                        ${message}
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-info-circle"></i> 
+                            Solo el oficial que creó la solicitud puede solicitar una reconsideración.
+                        </small>
+                    `;
+                    break;
+                    
+                case 'reconsideracion_activa':
+                    alertClass = 'alert alert-warning';
+                    iconClass = 'fas fa-hourglass-half text-warning';
+                    detailedMessage = `
+                        <strong>Reconsideración en Proceso</strong><br>
+                        ${message}
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-clock"></i> 
+                            Debe esperar a que se complete la reconsideración actual antes de solicitar una nueva.
+                        </small>
+                    `;
+                    break;
+                    
+                case 'no_data':
+                    alertClass = 'alert alert-danger';
+                    iconClass = 'fas fa-exclamation-triangle text-danger';
+                    detailedMessage = `
+                        <strong>Error de Datos</strong><br>
+                        ${message}
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-refresh"></i> 
+                            Intente recargar la página o contacte al administrador.
+                        </small>
+                    `;
+                    break;
+                    
+                default:
+                    detailedMessage = `
+                        <strong>No Disponible</strong><br>
+                        ${message}
+                    `;
+            }
+            
+            statusText.innerHTML = detailedMessage;
+            statusDiv.className = alertClass;
+            btnSolicitar.style.display = 'none';
+        }
+        
+        // Load history using the correct solicitud ID
+        console.log('📚 Loading reconsideraciones history for solicitud:', solicitudId);
+        cargarHistorialReconsideraciones(solicitudId);
+    }
+
+    // Function to request reconsideration
+    function solicitarReconsideracion() {
+        const solicitudId = window.currentModalSolicitudId;
+        if (!solicitudId) {
+            showNotification('Error: No se pudo identificar la solicitud', 'error');
+            return;
+        }
+        
+        // Redirect to reconsideration form
+        window.location.href = `/workflow/solicitud/${solicitudId}/reconsideracion/solicitar/`;
+    }
+
+    // ===== COTIZACIONES FUNCTIONALITY =====
+
+    /**
+     * Show cotizaciones for the current cliente in the reconsideración modal
+     */
+    function mostrarCotizacionesClienteReconsideracion() {
+        console.log('🚀 mostrarCotizacionesClienteReconsideracion called');
+        
+        const modalElement = document.getElementById('modalReconsideracion');
+        const solicitudId = modalElement?.dataset?.solicitudId;
+        
+        if (!solicitudId) {
+            console.error('❌ No solicitud ID available in reconsideración modal');
+            showNotification('Error: No se pudo identificar la solicitud', 'error');
+            return;
+        }
+
+        const section = document.getElementById('cotizacionesClienteSectionReconsideracion');
+        if (!section) {
+            console.error('❌ Cotizaciones section not found in reconsideración modal');
+            return;
+        }
+
+        // Show the section
+        section.style.display = 'block';
+        
+        // Load cotizaciones
+        cargarCotizacionesClienteReconsideracion(solicitudId);
+    }
+
+    /**
+     * Hide cotizaciones section in reconsideración modal
+     */
+    function ocultarCotizacionesClienteReconsideracion() {
+        console.log('🔄 ocultarCotizacionesClienteReconsideracion called');
+        
+        const section = document.getElementById('cotizacionesClienteSectionReconsideracion');
+        if (section) {
+            section.style.display = 'none';
+        }
+    }
+
+    /**
+     * Load cotizaciones for the cliente in reconsideración modal
+     */
+    async function cargarCotizacionesClienteReconsideracion(solicitudId) {
+        console.log('📊 cargarCotizacionesClienteReconsideracion called with solicitudId:', solicitudId);
+        
+        const container = document.getElementById('cotizacionesContainerReconsideracion');
+        const loadingDiv = container?.querySelector('.loading-cotizaciones-reconsideracion');
+        const emptyDiv = container?.querySelector('.empty-cotizaciones-reconsideracion');
+        const gridDiv = document.getElementById('cotizacionesGridReconsideracion');
+
+        if (!container || !loadingDiv || !emptyDiv || !gridDiv) {
+            console.error('❌ Required cotizaciones elements not found in reconsideración modal');
+            return;
+        }
+
+        // Show loading state
+        loadingDiv.style.display = 'flex';
+        emptyDiv.style.display = 'none';
+        gridDiv.innerHTML = '';
+
+        try {
+            // Fetch cotizaciones from the API
+            const response = await fetch(`/workflow/api/cotizaciones-cliente/${solicitudId}/`);
+            const data = await response.json();
+
+            console.log('📊 Cotizaciones API response for reconsideración:', data);
+
+            // Add detailed debugging for the issue
+            if (data.debug_info) {
+                console.log('🔍 DEBUG INFO:');
+                console.log('  - Solicitud ID:', data.debug_info.solicitud_id);
+                console.log('  - Total cotizaciones in DB:', data.debug_info.total_cotizaciones_db);
+                console.log('  - Filtered count:', data.debug_info.filtered_count);
+                console.log('  - Cliente cedula:', data.debug_info.cliente_cedula);
+            }
+            
+            if (data.cotizaciones && data.cotizaciones.length > 0) {
+                console.log('📋 Cotizaciones details:');
+                data.cotizaciones.forEach((cot, index) => {
+                    if (index < 3) { // Log first 3 cotizaciones
+                        console.log(`  Cotización ${index + 1}:`, {
+                            id: cot.id,
+                            cedula: cot.cedulaCliente,
+                            cliente: cot.nombreCliente,
+                            monto: cot.monto
+                        });
+                    }
+                });
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al cargar cotizaciones');
+            }
+
+            // Hide loading
+            loadingDiv.style.display = 'none';
+
+            if (!data.cotizaciones || data.cotizaciones.length === 0) {
+                // Show empty state
+                emptyDiv.style.display = 'flex';
+                return;
+            }
+
+            // Render cotizaciones
+            renderCotizacionesReconsideracion(data.cotizaciones, gridDiv);
+
+        } catch (error) {
+            console.error('❌ Error loading cotizaciones for reconsideración:', error);
+            loadingDiv.style.display = 'none';
+            
+            // Show error state
+            gridDiv.innerHTML = `
+                <div class="cotizacion-error">
+                    <i class="fas fa-exclamation-triangle text-danger mb-2" style="font-size: 2rem;"></i>
+                    <p class="text-danger mb-0">Error al cargar las cotizaciones</p>
+                    <small class="text-muted">${error.message}</small>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Render cotizaciones in the reconsideración modal grid
+     */
+    function renderCotizacionesReconsideracion(cotizaciones, gridDiv) {
+        console.log('🎨 renderCotizacionesReconsideracion called with', cotizaciones.length, 'cotizaciones');
+        
+        gridDiv.innerHTML = '';
+        
+        cotizaciones.forEach((cotizacion, index) => {
+            const card = createCotizacionCardReconsideracion(cotizacion, index);
+            gridDiv.appendChild(card);
+        });
+    }
+
+    /**
+     * Create a cotizacion card element for the reconsideración modal
+     */
+    function createCotizacionCardReconsideracion(cotizacion, index) {
+        const card = document.createElement('div');
+        card.className = 'cotizacion-card';
+        card.dataset.cotizacionId = cotizacion.id;
+        
+        // Format date
+        const fecha = cotizacion.fecha_creacion ? 
+            new Date(cotizacion.fecha_creacion).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            }) : 'N/A';
+
+        // Format monto
+        const monto = cotizacion.auxMonto2 || cotizacion.monto || 0;
+        const montoFormateado = monto > 0 ? `$${Number(monto).toLocaleString('es-ES')}` : 'N/A';
+
+        // Format tipo
+        let tipoFormateado = 'Personal';
+        if (cotizacion.tipoPrestamo === 'auto') {
+            tipoFormateado = 'Auto';
+        } else if (cotizacion.tipoPrestamo === 'personal') {
+            tipoFormateado = 'Personal';
+        }
+
+        card.innerHTML = `
+            <div class="cotizacion-header">
+                <div class="cotizacion-numero">
+                    <i class="fas fa-calculator me-1"></i>
+                    Cotización #${cotizacion.id || (index + 1)}
+                </div>
+                <span class="cotizacion-tipo">${tipoFormateado}</span>
+            </div>
+            
+            <div class="cotizacion-details">
+                <div class="cotizacion-detail">
+                    <strong>Oficial</strong>
+                    <span>${cotizacion.oficial || 'N/A'}</span>
+                </div>
+                <div class="cotizacion-detail">
+                    <strong>Sucursal</strong>
+                    <span>${cotizacion.sucursal || 'N/A'}</span>
+                </div>
+                <div class="cotizacion-detail">
+                    <strong>Plazo</strong>
+                    <span>${cotizacion.plazo ? `${cotizacion.plazo} meses` : 'N/A'}</span>
+                </div>
+                <div class="cotizacion-detail">
+                    <strong>Tasa</strong>
+                    <span>${cotizacion.tasa ? `${cotizacion.tasa}%` : 'N/A'}</span>
+                </div>
+                <div class="cotizacion-monto">
+                    <strong>Monto: ${montoFormateado}</strong>
+                </div>
+            </div>
+            
+            <div class="cotizacion-actions">
+                <span class="cotizacion-fecha">
+                    <i class="fas fa-calendar me-1"></i>
+                    ${fecha}
+                </span>
+                <div class="d-flex gap-1">
+                    <button class="btn-ver-cotizacion" onclick="verDetalleCotizacion(${cotizacion.id})" title="Ver detalles">
+                        <i class="fas fa-eye me-1"></i>Ver
+                    </button>
+                    <button class="btn-seleccionar-cotizacion" onclick="seleccionarCotizacionReconsideracion(${cotizacion.id})" title="Seleccionar para reconsideración">
+                        <i class="fas fa-check me-1"></i>Seleccionar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    /**
+     * Select a cotizacion for the reconsideración
+     */
+    function seleccionarCotizacionReconsideracion(cotizacionId) {
+        console.log('✅ seleccionarCotizacionReconsideracion called with ID:', cotizacionId);
+        
+        // Mark cotización nueva radio as selected
+        const cotizacionNueva = document.getElementById('cotizacionNueva');
+        if (cotizacionNueva) {
+            cotizacionNueva.checked = true;
+        }
+        
+        // Set the hidden field
+        const nuevaCotizacionId = document.getElementById('nuevaCotizacionId');
+        if (nuevaCotizacionId) {
+            nuevaCotizacionId.value = cotizacionId;
+        }
+        
+        // Visual feedback: highlight selected card
+        const allCards = document.querySelectorAll('#cotizacionesGridReconsideracion .cotizacion-card');
+        allCards.forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        const selectedCard = document.querySelector(`#cotizacionesGridReconsideracion .cotizacion-card[data-cotizacion-id="${cotizacionId}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+        
+        // Close the cotizaciones section
+        ocultarCotizacionesClienteReconsideracion();
+        
+        // Show success message
+        showNotification(`Cotización #${cotizacionId} seleccionada para la reconsideración`, 'success');
+        
+        // Trigger validation if available
+        if (typeof validarFormularioReconsideracion === 'function') {
+            validarFormularioReconsideracion();
+        }
+    }
+
+    /**
+     * View cotizacion details
+     */
+    function verDetalleCotizacion(cotizacionId) {
+        console.log('👁️ verDetalleCotizacion called with ID:', cotizacionId);
+        
+        // Redirect to cotizacion detail page
+        window.open(`/pacifico/cotizacion/${cotizacionId}/`, '_blank');
+    }
+
+    /**
+     * Check if there are additional cotizaciones available and show/hide the nueva cotización option
+     */
+    async function verificarCotizacionesDisponibles(solicitudId) {
+        console.log('🔍 verificarCotizacionesDisponibles called with solicitudId:', solicitudId);
+        
+        try {
+            // Fetch cotizaciones from the API
+            const response = await fetch(`/workflow/api/cotizaciones-cliente/${solicitudId}/`);
+            const data = await response.json();
+
+            console.log('📊 Cotizaciones verification response:', data);
+
+            if (response.ok && data.cotizaciones && data.cotizaciones.length > 1) {
+                // There are multiple cotizaciones available, show the nueva cotización option
+                const nuevaCotizacionOption = document.getElementById('nuevaCotizacionOption');
+                if (nuevaCotizacionOption) {
+                    nuevaCotizacionOption.style.display = 'block';
+                    console.log('✅ Nueva cotización option shown - found', data.cotizaciones.length, 'cotizaciones');
+                }
+            } else {
+                // Only one or no additional cotizaciones, hide the option
+                const nuevaCotizacionOption = document.getElementById('nuevaCotizacionOption');
+                if (nuevaCotizacionOption) {
+                    nuevaCotizacionOption.style.display = 'none';
+                    console.log('ℹ️ Nueva cotización option hidden - only', data.cotizaciones?.length || 0, 'cotizaciones available');
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Error checking cotizaciones availability:', error);
+            // Hide the option on error
+            const nuevaCotizacionOption = document.getElementById('nuevaCotizacionOption');
+            if (nuevaCotizacionOption) {
+                nuevaCotizacionOption.style.display = 'none';
+            }
+        }
+    }
+
+    // Legacy functions for backward compatibility (now empty)
+    function mostrarCotizacionesCliente() {
+        console.log('⚠️ mostrarCotizacionesCliente called - this function is deprecated, use reconsideración modal instead');
+    }
+
+    function ocultarCotizacionesCliente() {
+        console.log('⚠️ ocultarCotizacionesCliente called - this function is deprecated');
+    }
+
+    // === NEW MODAL RECONSIDERACIÓN FUNCTIONS ===
+    function abrirModalReconsideracion(solicitudId) {
+        console.log('🚀 abrirModalReconsideracion called with solicitudId:', solicitudId);
+        // Validate solicitudId
+        if (!solicitudId) {
+            console.error('❌ solicitudId is required for abrirModalReconsideracion');
+            alert('Error: ID de solicitud requerido');
+            return;
+        }
+        
+        // Check if modal element exists
+        const modalElement = document.getElementById('modalReconsideracion');
+        if (!modalElement) {
+            console.error('❌ modalReconsideracion element not found');
+            alert('Error: Modal de reconsideración no encontrado');
+            return;
+        }
+        
+        try {
+            // Show the modal
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            
+            // Store solicitud ID
+            modalElement.dataset.solicitudId = solicitudId;
+            
+            console.log('✅ Modal opened, populating data...');
+            
+            // Populate current cotización information
+            populateCurrentCotizacionInfo();
+            
+            // Check if we should show the "nueva cotización" option
+            verificarCotizacionesDisponibles(solicitudId);
+            
+            // Ensure validation is triggered after modal is shown
+            setTimeout(() => {
+                if (typeof validarFormularioReconsideracion === 'function') {
+                    console.log('🔄 Triggering validation after modal is shown');
+                    validarFormularioReconsideracion();
+                }
+            }, 100);
+        } catch (error) {
+            console.error('❌ Error opening reconsideración modal:', error);
+            alert('Error al abrir el modal de reconsideración');
+        }
+    }
+
+    function populateCurrentCotizacionInfo() {
+        console.log('🔄 populateCurrentCotizacionInfo called');
+        
+        // Get current modal data
+        const currentData = window.currentModalData;
+        if (!currentData) {
+            console.error('❌ No current modal data available');
+            // Try to get solicitudId from modal dataset
+            const modalElement = document.getElementById('modalReconsideracion');
+            const solicitudId = modalElement?.dataset?.solicitudId;
+            if (solicitudId) {
+                console.log('🔄 Attempting to fetch data for solicitudId:', solicitudId);
+                fetchAndPopulateCotizacionInfo(solicitudId);
+            }
+            return;
+        }
+        
+        console.log('Current modal data:', currentData);
+        
+        // Get cotización data
+        const cotizacion = currentData.cotizacion || {};
+        const general = currentData.general || {};
+        
+        console.log('Cotización data:', cotizacion);
+        
+        // Get DOM elements
+        const numeroActual = document.getElementById('numeroActual');
+        const montoActual = document.getElementById('montoActual');
+        const tipoActual = document.getElementById('tipoActual');
+        const plazoActual = document.getElementById('plazoActual');
+        
+        // Check if elements exist
+        if (!numeroActual || !montoActual || !tipoActual || !plazoActual) {
+            console.error('Required cotización elements not found');
+            return;
+        }
+        
+        // Populate the fields
+        numeroActual.textContent = cotizacion.numero || cotizacion.id || general.codigo || 'N/A';
+        
+        // Also populate the solicitud code in the modal header
+        const codigoSolicitudRecon = document.getElementById('codigoSolicitudRecon');
+        if (codigoSolicitudRecon) {
+            const modalElement = document.getElementById('modalReconsideracion');
+            const solicitudId = modalElement?.dataset?.solicitudId;
+            codigoSolicitudRecon.textContent = general.codigo || solicitudId || 'N/A';
+        }
+        
+        // Format monto
+        const monto = cotizacion.auxMonto2 || cotizacion.monto || 0;
+        montoActual.textContent = monto > 0 ? `$${monto.toLocaleString()}` : 'N/A';
+        
+        // Format tipo
+        const tipo = cotizacion.tipoPrestamo || cotizacion.tipo || 'N/A';
+        tipoActual.textContent = tipo === 'auto' ? 'Préstamo de Auto' : 
+                                tipo === 'personal' ? 'Préstamo Personal' : 
+                                tipo || 'N/A';
+        
+        // Format plazo
+        const plazo = cotizacion.plazo || 0;
+        plazoActual.textContent = plazo > 0 ? `${plazo} meses` : 'N/A';
+        
+        console.log('Cotización info populated:', {
+            numero: numeroActual.textContent,
+            monto: montoActual.textContent,
+            tipo: tipoActual.textContent,
+            plazo: plazoActual.textContent
+        });
+        
+        // Set up radio button event listeners
+        setupCotizacionOptionListeners();
+        
+        // Set up character counter for motivo textarea
+        setupMotivoCharacterCounter();
+        
+        // Trigger validation after populating data
+        setTimeout(() => {
+            if (typeof validarFormularioReconsideracion === 'function') {
+                console.log('🔄 Triggering validation after populating cotización info');
+                validarFormularioReconsideracion();
+            }
+        }, 50);
+    }
+
+    function setupMotivoCharacterCounter() {
+        const motivoTextarea = document.getElementById('motivoReconsideracion');
+        const contadorElement = document.getElementById('contadorCaracteres');
+        
+        if (motivoTextarea && contadorElement) {
+            motivoTextarea.addEventListener('input', function() {
+                const currentLength = this.value.length;
+                const maxLength = 2000;
+                const minLength = 50;
+                
+                contadorElement.textContent = `${currentLength} / ${maxLength} caracteres (mínimo ${minLength})`;
+                
+                // Change color based on length
+                if (currentLength < minLength) {
+                    contadorElement.className = 'text-danger';
+                    motivoTextarea.classList.add('is-invalid');
+                    motivoTextarea.classList.remove('is-valid');
+                } else if (currentLength > maxLength * 0.9) {
+                    contadorElement.className = 'text-warning';
+                    motivoTextarea.classList.remove('is-invalid', 'is-valid');
+                } else {
+                    contadorElement.className = 'text-muted';
+                    motivoTextarea.classList.remove('is-invalid');
+                    motivoTextarea.classList.add('is-valid');
+                }
+                
+                // Trigger validation check
+                if (typeof validarFormularioReconsideracion === 'function') {
+                    validarFormularioReconsideracion();
+                }
+            });
+            
+            // Trigger initial count
+            motivoTextarea.dispatchEvent(new Event('input'));
+        }
+    }
+
+    function setupCotizacionOptionListeners() {
+        const cotizacionActual = document.getElementById('cotizacionActual');
+        const cotizacionNueva = document.getElementById('cotizacionNueva');
+        const cotizacionesDisponibles = document.getElementById('cotizacionesDisponibles');
+        
+        console.log('🔧 Setting up cotización option listeners:', {
+            cotizacionActual: !!cotizacionActual,
+            cotizacionNueva: !!cotizacionNueva,
+            cotizacionesDisponibles: !!cotizacionesDisponibles
+        });
+        
+        if (cotizacionActual && cotizacionNueva && cotizacionesDisponibles) {
+            cotizacionActual.addEventListener('change', function() {
+                console.log('📻 Cotización actual changed, checked:', this.checked);
+                if (this.checked) {
+                    cotizacionesDisponibles.style.display = 'none';
+                    // Clear any previously selected nueva cotización
+                    const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
+                    if (nuevaCotizacionIdField) {
+                        nuevaCotizacionIdField.value = '';
+                    }
+                    // Trigger validation
+                    if (typeof validarFormularioReconsideracion === 'function') {
+                        validarFormularioReconsideracion();
+                    }
+                }
+            });
+            
+            cotizacionNueva.addEventListener('change', function() {
+                console.log('📻 Cotización nueva changed, checked:', this.checked);
+                if (this.checked) {
+                    cotizacionesDisponibles.style.display = 'block';
+                    // Trigger validation
+                    if (typeof validarFormularioReconsideracion === 'function') {
+                        validarFormularioReconsideracion();
+                    }
+                }
+            });
+            
+            // Log initial state
+            console.log('📊 Initial radio button states:', {
+                cotizacionActualChecked: cotizacionActual.checked,
+                cotizacionNuevaChecked: cotizacionNueva.checked
+            });
+        } else {
+            console.error('❌ Required elements not found for setupCotizacionOptionListeners');
+        }
+    }
+
+    async function fetchAndPopulateCotizacionInfo(solicitudId) {
+        console.log('fetchAndPopulateCotizacionInfo called with solicitudId:', solicitudId);
+        
+        try {
+            const response = await fetch(`/workflow/api/solicitud_brief/${solicitudId}/`);
+            const data = await response.json();
+            
+            if (data && data.cotizacion) {
+                // Temporarily set the current modal data
+                window.currentModalData = data;
+                
+                // Populate the cotización info
+                populateCurrentCotizacionInfo();
+            } else {
+                console.error('No cotización data found in API response');
+            }
+        } catch (error) {
+            console.error('Error fetching cotización data:', error);
+        }
+    }
+
+    async function cargarCotizacionesCliente(solicitudId) {
+        console.log('cargarCotizacionesCliente called with solicitudId:', solicitudId);
+        
+        const contenedor = document.getElementById('cotizacionesContainer');
+        const loadingElement = document.getElementById('loadingCotizaciones');
+        const noCotizacionesElement = document.getElementById('noCotizaciones');
+        
+        // Check if elements exist before proceeding
+        if (!contenedor || !loadingElement || !noCotizacionesElement) {
+            console.error('Required elements not found for cargarCotizacionesCliente:', {
+                contenedor: !!contenedor,
+                loadingElement: !!loadingElement,
+                noCotizacionesElement: !!noCotizacionesElement
+            });
+            return;
+        }
+        
+        // Show loading
+        loadingElement.style.display = 'block';
+        contenedor.style.display = 'none';
+        noCotizacionesElement.style.display = 'none';
+        
+        try {
+            const response = await fetch(`/workflow/api/cotizaciones-cliente/${solicitudId}/`);
+            const data = await response.json();
+            
+            if (data.success && data.cotizaciones && data.cotizaciones.length > 0) {
+                mostrarCotizaciones(data.cotizaciones);
+                contenedor.style.display = 'block';
+            } else {
+                noCotizacionesElement.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading cotizaciones:', error);
+            noCotizacionesElement.style.display = 'block';
+        } finally {
+            loadingElement.style.display = 'none';
+        }
+    }
+
+    function mostrarCotizaciones(cotizaciones) {
+        const contenedor = document.getElementById('cotizacionesContainer');
+        
+        // Check if container exists
+        if (!contenedor) {
+            console.error('cotizacionesContainer element not found');
+            return;
+        }
+        
+        contenedor.innerHTML = '';
+        
+        if (!Array.isArray(cotizaciones)) {
+            console.error('cotizaciones is not an array:', cotizaciones);
+            return;
+        }
+        
+        cotizaciones.forEach(cotizacion => {
+            const div = document.createElement('div');
+            div.className = 'cotizacion-option';
+            div.innerHTML = `
+                <label class="d-flex align-items-center cursor-pointer w-100">
+                    <input type="radio" name="cotizacion_id" value="${cotizacion.id || ''}" class="me-3">
+                    <div class="cotizacion-info flex-grow-1">
+                        <div class="cotizacion-monto">$${(cotizacion.monto || 0).toLocaleString()}</div>
+                        <div class="cotizacion-fecha">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            ${cotizacion.fecha_creacion ? new Date(cotizacion.fecha_creacion).toLocaleDateString() : 'N/A'}
+                        </div>
+                        <div class="cotizacion-cliente">
+                            <i class="fas fa-user me-1"></i>
+                            ${cotizacion.cliente_nombre || 'Cliente no especificado'}
+                        </div>
+                    </div>
+                </label>
+            `;
+            contenedor.appendChild(div);
+        });
+        
+        // Enable form validation
+        validarFormularioReconsideracion();
+    }
+
+    function validarFormularioReconsideracion() {
+        const cotizacionActualRadio = document.getElementById('cotizacionActual');
+        const cotizacionNuevaRadio = document.getElementById('cotizacionNueva');
+        const motivoTextarea = document.getElementById('motivoReconsideracion');
+        const submitBtn = document.getElementById('btnEnviarReconsideracion');
+        
+        // Check if required elements exist
+        if (!motivoTextarea || !submitBtn) {
+            console.error('Required form elements not found for validation');
+            return;
+        }
+        
+        function checkValidation() {
+            const motivoFilled = motivoTextarea.value.trim().length > 0; // Just require non-empty text
+            
+            // Check cotización selection
+            let cotizacionSelected = false;
+            
+            if (cotizacionActualRadio && cotizacionActualRadio.checked) {
+                // If "Usar cotización actual" is selected, that's valid
+                cotizacionSelected = true;
+                console.log('✅ Cotización actual seleccionada');
+            } else if (cotizacionNuevaRadio && cotizacionNuevaRadio.checked) {
+                // If "Usar una cotización diferente" is selected, check if a cotización has been selected
+                const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
+                cotizacionSelected = nuevaCotizacionIdField && nuevaCotizacionIdField.value;
+                console.log('🔍 Cotización nueva seleccionada, nueva cotización ID:', nuevaCotizacionIdField?.value);
+            } else {
+                console.log('❌ Ninguna opción de cotización seleccionada');
+            }
+            
+            const isValid = cotizacionSelected && motivoFilled;
+            submitBtn.disabled = !isValid;
+            
+            // Update button styling based on validation
+            if (isValid) {
+                submitBtn.classList.remove('btn-secondary');
+                submitBtn.classList.add('btn-warning');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Reconsideración';
+            } else {
+                submitBtn.classList.remove('btn-warning');
+                submitBtn.classList.add('btn-secondary');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Reconsideración';
+            }
+            
+            console.log('Validation check:', {
+                cotizacionSelected,
+                motivoFilled,
+                motivoLength: motivoTextarea.value.trim().length,
+                isValid,
+                submitBtnDisabled: submitBtn.disabled,
+                cotizacionActualChecked: cotizacionActualRadio?.checked,
+                cotizacionNuevaChecked: cotizacionNuevaRadio?.checked
+            });
+        }
+        
+        // Add event listeners for cotización options
+        if (cotizacionActualRadio) {
+            cotizacionActualRadio.addEventListener('change', checkValidation);
+        }
+        if (cotizacionNuevaRadio) {
+            cotizacionNuevaRadio.addEventListener('change', checkValidation);
+        }
+        
+        // Add event listener for nueva cotización ID field changes
+        const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
+        if (nuevaCotizacionIdField) {
+            nuevaCotizacionIdField.addEventListener('change', checkValidation);
+        }
+        
+        // Add event listener for motivo textarea
+        motivoTextarea.addEventListener('input', checkValidation);
+        
+        // Initial check
+        checkValidation();
+    }
+
+    async function enviarReconsideracion() {
+        const modal = document.getElementById('modalReconsideracion');
+        const motivoTextarea = document.getElementById('motivoReconsideracion');
+        const submitBtn = document.getElementById('btnEnviarReconsideracion');
+        
+        // Check if required elements exist
+        if (!modal || !motivoTextarea || !submitBtn) {
+            console.error('Required elements not found for enviarReconsideracion');
+            alert('Error: Elementos del formulario no encontrados');
+            return;
+        }
+        
+        const solicitudId = modal.dataset.solicitudId;
+        if (!solicitudId) {
+            console.error('solicitudId not found in modal dataset');
+            alert('Error: ID de solicitud no encontrado');
+            return;
+        }
+        
+        // Check which cotización option is selected
+        const cotizacionActualSelected = document.getElementById('cotizacionActual')?.checked;
+        const cotizacionNuevaSelected = document.getElementById('cotizacionNueva')?.checked;
+        
+        console.log('🔍 Enviar reconsideración - Opciones seleccionadas:', {
+            cotizacionActualSelected,
+            cotizacionNuevaSelected
+        });
+        
+        let cotizacionId = null;
+        
+        if (cotizacionActualSelected) {
+            // Use current cotización - get from modal data or hidden field
+            const currentData = window.currentModalData;
+            if (currentData && currentData.cotizacion) {
+                cotizacionId = currentData.cotizacion.id || currentData.cotizacion.numero;
+                console.log('✅ Usando cotización actual desde modal data:', cotizacionId);
+            } else {
+                // Fallback: try to get from a hidden field or use a special value
+                cotizacionId = 'actual'; // Backend will understand this means use current cotización
+                console.log('✅ Usando cotización actual (fallback):', cotizacionId);
+            }
+        } else if (cotizacionNuevaSelected) {
+            // Use selected cotización from the nueva cotización hidden field
+            const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
+            if (nuevaCotizacionIdField && nuevaCotizacionIdField.value) {
+                cotizacionId = nuevaCotizacionIdField.value;
+                console.log('✅ Usando cotización nueva seleccionada:', cotizacionId);
+            } else {
+                console.error('❌ Nueva cotización seleccionada pero no se encontró ID');
+                showAlert('Por favor, selecciona una cotización específica de la lista.', 'warning');
+                return;
+            }
+        } else {
+            console.error('❌ No se seleccionó ninguna opción de cotización');
+            showAlert('Por favor, selecciona una opción de cotización.', 'warning');
+            return;
+        }
+        
+        // Validate motivo
+        if (!motivoTextarea.value.trim()) {
+            showAlert('Por favor, proporciona un motivo para la reconsideración.', 'warning');
+            return;
+        }
+        
+        if (!cotizacionId) {
+            showAlert('Por favor, selecciona una cotización.', 'warning');
+            return;
+        }
+        
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+        
+        const formData = new FormData();
+        formData.append('cotizacion_id', cotizacionId);
+        formData.append('motivo', motivoTextarea.value.trim());
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        try {
+            const response = await fetch(`/workflow/solicitud/${solicitudId}/reconsideracion/solicitar/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showAlert('Reconsideración enviada exitosamente', 'success');
+                
+                // Close modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                
+                // Reset form
+                resetFormularioReconsideracion();
+                
+                // Refresh solicitud data
+                if (typeof cargarDatosSolicitud === 'function') {
+                    cargarDatosSolicitud(solicitudId);
+                }
+                
+            } else {
+                showAlert(data.message || 'Error al enviar la reconsideración', 'danger');
+            }
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Error de conexión. Intenta nuevamente.', 'danger');
+        } finally {
+            // Restore button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Reconsideración';
+        }
+    }
+
+    function resetFormularioReconsideracion() {
+        // Clear cotización selection
+        const cotizacionRadios = document.querySelectorAll('input[name="cotizacion_id"]');
+        cotizacionRadios.forEach(radio => radio.checked = false);
+        
+        // Clear motivo
+        const motivoTextarea = document.getElementById('motivoReconsideracion');
+        if (motivoTextarea) {
+            motivoTextarea.value = '';
+        }
+        
+        // Disable submit button
+        const submitBtn = document.getElementById('btnEnviarReconsideracion');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        
+        // Hide containers with null checks
+        const contenedor = document.getElementById('cotizacionesContainer');
+        const loading = document.getElementById('loadingCotizaciones');
+        const noCotizaciones = document.getElementById('noCotizaciones');
+        
+        if (contenedor) contenedor.style.display = 'none';
+        if (loading) loading.style.display = 'none';
+        if (noCotizaciones) noCotizaciones.style.display = 'none';
+    }
+
+    // Simple alert function if not already defined
+    function showAlert(message, type = 'info') {
+        const alertClass = type === 'success' ? 'alert-success' : 
+                          type === 'warning' ? 'alert-warning' : 
+                          type === 'danger' ? 'alert-danger' : 'alert-info';
+        
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Try to find a container to show the alert
+        const modalBody = document.querySelector('#modalReconsideracion .modal-body');
+        if (modalBody) {
+            const alertDiv = document.createElement('div');
+            alertDiv.innerHTML = alertHtml;
+            modalBody.insertBefore(alertDiv.firstElementChild, modalBody.firstChild);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const alertElement = modalBody.querySelector('.alert');
+                if (alertElement) {
+                    alertElement.remove();
+                }
+            }, 5000);
+        } else {
+            // Fallback to browser alert
+            alert(message);
+        }
+    }
+
+    // Make functions available globally
+    window.solicitarReconsideracion = solicitarReconsideracion;
+    window.configurarTabReconsideracion = configurarTabReconsideracion;
+    window.cargarHistorialReconsideraciones = cargarHistorialReconsideraciones;
+    window.abrirModalReconsideracion = abrirModalReconsideracion;
+    window.enviarReconsideracion = enviarReconsideracion;
+    window.populateCurrentCotizacionInfo = populateCurrentCotizacionInfo;
+    window.fetchAndPopulateCotizacionInfo = fetchAndPopulateCotizacionInfo;
+    window.setupCotizacionOptionListeners = setupCotizacionOptionListeners;
+    window.setupMotivoCharacterCounter = setupMotivoCharacterCounter;
+    window.validarFormularioReconsideracion = validarFormularioReconsideracion;
+    window.showAlert = showAlert;
 </script>
 
 <!-- Modal para Crear/Editar Nota o Recordatorio -->
@@ -5983,6 +8606,213 @@
                 <button type="button" class="btn btn-primary" onclick="guardarNotaRecordatorio()">
                     <i class="fas fa-save me-1"></i>Guardar
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Solicitar Reconsideración -->
+<div class="modal fade" id="modalReconsideracion" tabindex="-1" aria-labelledby="modalReconsideracionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modern-modal-reconsideracion">
+            <div class="modal-header-modern-reconsideracion">
+                <div class="header-content">
+                    <div class="reconsideracion-header-info">
+                        <div class="reconsideracion-title-section">
+                            <h5 class="modal-title mb-0" id="modalReconsideracionLabel">
+                                <i class="fas fa-redo-alt me-2"></i>
+                                Solicitar Reconsideración
+                            </h5>
+                            <small class="reconsideracion-subtitle" id="solicitudReconsideracionInfo">
+                                Solicitud: <span id="codigoSolicitudRecon" class="fw-semibold"></span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body-modern-reconsideracion">
+                <!-- Instructions Section -->
+                <div class="instructions-section">
+                    <div class="instructions-content">
+                        <div class="instructions-header">
+                            <i class="fas fa-lightbulb instructions-icon"></i>
+                            <h6 class="instructions-title">
+                                Instrucciones para Solicitar Reconsideración
+                            </h6>
+                        </div>
+                        <div class="instructions-grid">
+                            <div class="instructions-column">
+                                <ul class="instructions-list">
+                                    <li><strong>Motivo:</strong> Explique detalladamente por qué solicita la reconsideración</li>
+                                    <li><strong>Cotización:</strong> Seleccione si usar la cotización actual o una diferente</li>
+                                    <li><strong>Revisión:</strong> Su solicitud será revisada por el comité correspondiente</li>
+                                </ul>
+                            </div>
+                            <div class="instructions-column">
+                                <ul class="instructions-list">
+                                    <li><strong>Tiempo:</strong> El proceso puede tomar 2-3 días hábiles</li>
+                                    <li><strong>Notificación:</strong> Recibirá una notificación del resultado</li>
+                                    <li><strong>Historial:</strong> Puede consultar el estado en la pestaña "Reconsideración"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mostrar resultado anterior -->
+                <div class="resultado-anterior-section" id="resultadoAnterior">
+                    <div class="resultado-anterior-content">
+                        <i class="fas fa-exclamation-triangle resultado-icon"></i>
+                        <div class="resultado-text">
+                            <strong>Resultado anterior:</strong>
+                            <span id="resultadoAnteriorTexto"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="formReconsideracion" class="reconsideracion-form">
+                    <div class="form-section">
+                        <label for="motivoReconsideracion" class="form-label-modern">
+                            <i class="fas fa-comment-dots me-2"></i>
+                            Motivo de la Reconsideración <span class="required-mark">*</span>
+                        </label>
+                        <textarea 
+                            class="form-control-modern" 
+                            id="motivoReconsideracion" 
+                            name="motivo" 
+                            rows="4" 
+                            required 
+                            placeholder="Explique detalladamente por qué solicita esta reconsideración"
+                            maxlength="2000"></textarea>
+                        <div class="form-helper-text">
+                            <small id="contadorCaracteres" class="character-counter">0 / 2000 caracteres</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Selección de cotización -->
+                    <div class="form-section">
+                        <h6 class="section-title-modern">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>
+                            Cotización a Utilizar
+                        </h6>
+                        
+                        <div class="cotizacion-options">
+                            <div class="cotizacion-option-item">
+                                <input class="form-check-input-modern" type="radio" name="cotizacion_opcion" id="cotizacionActual" value="actual" checked>
+                                <label class="form-check-label-modern" for="cotizacionActual">
+                                    <strong>Usar cotización actual</strong>
+                                </label>
+                            </div>
+                            
+                            <!-- Cotización actual -->
+                            <div class="cotizacion-current-card" id="cotizacionActualCard">
+                                <div class="cotizacion-current-content">
+                                    <div class="cotizacion-current-grid">
+                                        <div class="cotizacion-current-item">
+                                            <small class="cotizacion-current-label">Número de Cotización:</small>
+                                            <div class="cotizacion-current-value" id="numeroActual">-</div>
+                                        </div>
+                                        <div class="cotizacion-current-item">
+                                            <small class="cotizacion-current-label">Monto:</small>
+                                            <div class="cotizacion-current-value" id="montoActual">-</div>
+                                        </div>
+                                        <div class="cotizacion-current-item">
+                                            <small class="cotizacion-current-label">Tipo:</small>
+                                            <div class="cotizacion-current-value" id="tipoActual">-</div>
+                                        </div>
+                                        <div class="cotizacion-current-item">
+                                            <small class="cotizacion-current-label">Plazo:</small>
+                                            <div class="cotizacion-current-value" id="plazoActual">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="cotizacion-option-item" id="nuevaCotizacionOption" style="display: none;">
+                                <input class="form-check-input-modern" type="radio" name="cotizacion_opcion" id="cotizacionNueva" value="nueva">
+                                <label class="form-check-label-modern" for="cotizacionNueva">
+                                    <strong>Usar una cotización diferente</strong>
+                                </label>
+                            </div>
+                        
+                        <!-- Cotizaciones disponibles -->
+                        <div id="cotizacionesDisponibles" class="cotizaciones-disponibles-section" style="display: none;">
+                            <h6 class="cotizaciones-disponibles-title">Seleccione una cotización:</h6>
+                            
+                            <!-- Button to show all cotizaciones -->
+                            <div class="cotizaciones-action-section">
+                                <button type="button" class="btn-cotizaciones" id="btnVerCotizacionesReconsideracion" onclick="mostrarCotizacionesClienteReconsideracion()" title="Ver todas las cotizaciones del cliente">
+                                    <i class="fas fa-calculator me-2"></i>Ver Todas las Cotizaciones del Cliente
+                                </button>
+                            </div>
+                            
+                            <!-- Cotizaciones del Cliente Section -->
+                            <div class="cotizaciones-cliente-section-reconsideracion" id="cotizacionesClienteSectionReconsideracion" style="display: none;">
+                                <div class="cotizaciones-header-reconsideracion">
+                                    <h6 class="cotizaciones-title-reconsideracion">
+                                        <i class="fas fa-calculator me-2"></i>
+                                        Cotizaciones Disponibles del Cliente
+                                    </h6>
+                                    <button class="btn-close-cotizaciones-reconsideracion" onclick="ocultarCotizacionesClienteReconsideracion()" title="Cerrar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="cotizaciones-container-reconsideracion" id="cotizacionesContainerReconsideracion">
+                                    <div class="loading-cotizaciones-reconsideracion" style="display: none;">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Cargando cotizaciones...</span>
+                                        </div>
+                                        <span class="ms-2">Cargando cotizaciones del cliente...</span>
+                                    </div>
+                                    <div class="empty-cotizaciones-reconsideracion" style="display: none;">
+                                        <i class="fas fa-calculator text-muted mb-2" style="font-size: 2rem;"></i>
+                                        <p class="text-muted mb-0">No se encontraron cotizaciones para este cliente</p>
+                                    </div>
+                                    <div class="cotizaciones-grid-reconsideracion" id="cotizacionesGridReconsideracion">
+                                        <!-- Cotizaciones will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Loading state -->
+                            <div id="loadingCotizaciones" class="loading-state" style="display: none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Cargando cotizaciones...</span>
+                                </div>
+                                <div class="loading-text">Cargando cotizaciones disponibles...</div>
+                            </div>
+                            
+                            <!-- No cotizaciones state -->
+                            <div id="noCotizaciones" class="empty-state" style="display: none;">
+                                <i class="fas fa-file-invoice-dollar empty-icon"></i>
+                                <div class="empty-text">No hay cotizaciones adicionales disponibles</div>
+                            </div>
+                            
+                            <!-- Cotizaciones container -->
+                            <div id="cotizacionesContainer" class="cotizaciones-legacy-container" style="display: none;">
+                                <!-- Las cotizaciones se cargarán dinámicamente aquí -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="solicitud_id" id="solicitudIdReconsideracion">
+                    <input type="hidden" name="nueva_cotizacion_id" id="nuevaCotizacionId">
+                </form>
+            </div>
+            <div class="modal-footer-modern">
+                <div class="footer-actions">
+                    <button type="button" class="btn-cancel-modern" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn-submit-modern" id="btnEnviarReconsideracion" onclick="enviarReconsideracion()">
+                        <i class="fas fa-paper-plane me-2"></i>Enviar Reconsideración
+                    </button>
+                </div>
             </div>
         </div>
     </div>

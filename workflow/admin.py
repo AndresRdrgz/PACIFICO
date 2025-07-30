@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, NotaRecordatorio
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, NotaRecordatorio, ReconsideracionSolicitud
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -771,3 +771,101 @@ class NotaRecordatorioAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'solicitud', 'usuario'
         )
+
+
+@admin.register(ReconsideracionSolicitud)
+class ReconsideracionSolicitudAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'solicitud',
+        'numero_reconsideracion',
+        'solicitada_por',
+        'fecha_solicitud',
+        'estado',
+        'analizada_por',
+        'fecha_analisis',
+        'usar_nueva_cotizacion',
+    )
+    
+    list_filter = (
+        'estado',
+        'usar_nueva_cotizacion',
+        'fecha_solicitud',
+        'fecha_analisis',
+    )
+    
+    search_fields = (
+        'solicitud__codigo',
+        'solicitada_por__username',
+        'solicitada_por__first_name',
+        'solicitada_por__last_name',
+        'analizada_por__username',
+        'analizada_por__first_name',
+        'analizada_por__last_name',
+        'motivo',
+    )
+    
+    readonly_fields = (
+        'creado_en',
+        'actualizado_en',
+        'numero_reconsideracion',
+    )
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': (
+                'solicitud',
+                'numero_reconsideracion',
+                'solicitada_por',
+                'fecha_solicitud',
+                'motivo',
+            )
+        }),
+        ('Cotizaciones', {
+            'fields': (
+                'cotizacion_original',
+                'cotizacion_nueva',
+                'usar_nueva_cotizacion',
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Estado y Análisis', {
+            'fields': (
+                'estado',
+                'analizada_por',
+                'fecha_analisis',
+                'comentario_analisis',
+            )
+        }),
+        ('Información de Consulta Anterior', {
+            'fields': (
+                'resultado_consulta_anterior',
+                'comentario_consulta_anterior',
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Metadatos', {
+            'fields': (
+                'creado_en',
+                'actualizado_en',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'solicitud',
+            'solicitada_por',
+            'analizada_por',
+            'cotizacion_original',
+            'cotizacion_nueva'
+        )
+    
+    def has_change_permission(self, request, obj=None):
+        # Solo permitir cambios a usuarios con permisos específicos
+        return request.user.is_superuser or request.user.groups.filter(name__in=['Administradores', 'Consulta']).exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Solo superusuarios pueden eliminar reconsideraciones
+        return request.user.is_superuser
