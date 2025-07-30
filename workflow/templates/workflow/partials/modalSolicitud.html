@@ -52,6 +52,12 @@
                             <i class="fas fa-shield-check me-2"></i>Debida Diligencia
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="notas-tab" data-bs-toggle="tab" data-bs-target="#notas"
+                            type="button" role="tab" aria-controls="notas" aria-selected="false">
+                            <i class="fas fa-sticky-note me-2"></i>Notas y Recordatorios
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Tab Content -->
@@ -147,6 +153,71 @@
                                         <i class="fas fa-shield-alt mb-3 text-muted" style="font-size: 3rem;"></i>
                                         <p class="text-muted">Cargue la información de debida diligencia para mostrar detalles</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notas y Recordatorios Tab -->
+                    <div class="tab-pane fade" id="notas" role="tabpanel" aria-labelledby="notas-tab">
+                        <div class="notas-section">
+                            <div class="section-header">
+                                <div class="section-title">
+                                    <i class="fas fa-sticky-note me-2"></i>
+                                    Notas y Recordatorios
+                                </div>
+                                <button class="btn btn-primary btn-sm" id="btnNuevaNota" onclick="abrirModalNuevaNota()">
+                                    <i class="fas fa-plus me-1"></i>Nueva Nota/Recordatorio
+                                </button>
+                            </div>
+                            
+                            <!-- Filtros -->
+                            <div class="filtros-notas mb-3">
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filtroTipoNota">
+                                            <option value="">Todos los tipos</option>
+                                            <option value="nota">Notas</option>
+                                            <option value="recordatorio">Recordatorios</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filtroEstadoNota">
+                                            <option value="">Todos los estados</option>
+                                            <option value="pendiente">Pendiente</option>
+                                            <option value="completado">Completado</option>
+                                            <option value="vencido">Vencido</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select form-select-sm" id="filtroPrioridadNota">
+                                            <option value="">Todas las prioridades</option>
+                                            <option value="Alta">Alta</option>
+                                            <option value="Media">Media</option>
+                                            <option value="Baja">Baja</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-outline-secondary btn-sm w-100" onclick="limpiarFiltrosNotas()">
+                                            <i class="fas fa-filter-circle-xmark me-1"></i>Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="notas-container" id="modalSolicitudNotas">
+                                <!-- Notas content will be rendered here -->
+                                <div class="loading-placeholder" style="display: none;">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando notas...</span>
+                                    </div>
+                                </div>
+                                <div class="empty-state" style="display: none;">
+                                    <i class="fas fa-sticky-note mb-3 text-muted" style="font-size: 3rem;"></i>
+                                    <p class="text-muted">No hay notas o recordatorios</p>
+                                    <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
+                                        <i class="fas fa-plus me-1"></i>Crear primera nota
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1174,6 +1245,19 @@
     }
 
     .documento-item.apc-procesando {
+        border-left-color: #3b82f6;
+        background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+    }
+
+    .documento-status.sura-procesando {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+        border: 1px solid #3b82f6;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        animation: pulse 2s infinite;
+    }
+
+    .documento-item.sura-procesando {
         border-left-color: #3b82f6;
         background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
     }
@@ -2215,18 +2299,256 @@
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
     }
+
+    /* === NOTAS Y RECORDATORIOS STYLES === */
+    .notas-section {
+        padding: 1.5rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .filtros-notas {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    .notas-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .nota-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .nota-card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .nota-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+
+    .nota-tipo-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .nota-tipo-badge.nota {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .nota-tipo-badge.recordatorio {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .nota-prioridad-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .nota-prioridad-badge.alta {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .nota-prioridad-badge.media {
+        background: #fff8e1;
+        color: #f57f17;
+    }
+
+    .nota-prioridad-badge.baja {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+
+    .nota-titulo {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .nota-contenido {
+        color: #5a6c7d;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        white-space: pre-wrap;
+    }
+
+    .nota-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .nota-fecha {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .nota-acciones {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-nota-accion {
+        padding: 0.25rem 0.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-nota-accion.editar {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .btn-nota-accion.editar:hover {
+        background: #bbdefb;
+    }
+
+    .btn-nota-accion.eliminar {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .btn-nota-accion.eliminar:hover {
+        background: #ffcdd2;
+    }
+
+    .btn-nota-accion.completar {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+
+    .btn-nota-accion.completar:hover {
+        background: #c8e6c9;
+    }
+
+    .recordatorio-vencido {
+        border-left: 4px solid #dc3545;
+        background: #fff5f5;
+    }
+
+    .recordatorio-proximo {
+        border-left: 4px solid #ffc107;
+        background: #fffbf0;
+    }
+
+    .recordatorio-completado {
+        border-left: 4px solid #28a745;
+        background: #f8fff9;
+        opacity: 0.8;
+    }
+
+    .estado-recordatorio {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .estado-recordatorio.pendiente {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .estado-recordatorio.completado {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+
+    .estado-recordatorio.vencido {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .fecha-vencimiento {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+    }
+
+    .fecha-vencimiento.vencida {
+        color: #dc3545;
+    }
+
+    .fecha-vencimiento.proxima {
+        color: #ffc107;
+    }
+
+    .fecha-vencimiento.normal {
+        color: #28a745;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .loading-placeholder {
+        text-align: center;
+        padding: 2rem;
+    }
 </style>
 <script>
 
 
-    window.mostrarModalSolicitud = function (solicitudId) {
+    window.mostrarModalSolicitud = function (solicitudId, activeTab = 'info') {
         // Test if Bootstrap is available
         if (typeof bootstrap === 'undefined' && typeof window.bootstrap === 'undefined') {
             console.error('Bootstrap is not available');
             return;
         }
 
-        console.log('Opening modal for solicitud:', solicitudId);
+        console.log('Opening modal for solicitud:', solicitudId, 'with active tab:', activeTab);
         console.log('Type of solicitudId:', typeof solicitudId);
         console.log('solicitudId is valid:', solicitudId && solicitudId !== 'null' && solicitudId !== 'undefined');
 
@@ -2237,8 +2559,9 @@
             return;
         }
 
-        // Store the solicitudId globally for use in the modal
+        // Store the solicitudId and activeTab globally for use in the modal
         window.currentSolicitudId = solicitudId;
+        window.currentActiveTab = activeTab;
 
         // Set the solicitudId on the Ver Detalle button
         const btnVerDetalle = document.getElementById('modalBtnVerDetalle');
@@ -2579,11 +2902,49 @@
                 }
             }, 100);
 
+            // Switch to the specified tab if provided
+            if (window.currentActiveTab && window.currentActiveTab !== 'info') {
+                setTimeout(() => {
+                    switchToTab(window.currentActiveTab);
+                }, 500); // Delay to ensure modal is fully loaded
+            }
+
             console.log('Modal populated successfully');
 
         } catch (error) {
             console.error('Error populating modal:', error);
             showErrorState('Error al procesar los datos');
+        }
+    }
+
+    // Function to switch to a specific tab in the modal
+    function switchToTab(tabName) {
+        try {
+            console.log('Switching to tab:', tabName);
+            
+            // Find the tab and trigger click
+            const tabButton = document.getElementById(`${tabName}-tab`);
+            if (tabButton) {
+                console.log('Found tab button, clicking:', tabButton);
+                tabButton.click();
+                
+                // Also trigger Bootstrap tab show event
+                const tabInstance = new bootstrap.Tab(tabButton);
+                tabInstance.show();
+                
+                // Special handling for notas tab to load content
+                if (tabName === 'notas') {
+                    setTimeout(() => {
+                        if (typeof cargarNotasRecordatorios === 'function') {
+                            cargarNotasRecordatorios();
+                        }
+                    }, 100);
+                }
+            } else {
+                console.warn('Tab button not found for:', tabName);
+            }
+        } catch (error) {
+            console.error('Error switching to tab:', error);
         }
     }
 
@@ -2765,6 +3126,12 @@
             if (documento.nombre.toLowerCase() === 'apc' && documento.apc_processing) {
                 statusClass = 'apc-procesando';
                 statusText = 'Procesando por Makito RPA';
+            } else if (documento.nombre.toLowerCase() === 'sura' && documento.sura_processing) {
+                statusClass = 'sura-procesando';
+                statusText = 'Procesando por Makito RPA';
+            } else if (documento.nombre.toLowerCase() === 'cotización sura' && documento.sura_processing) {
+                statusClass = 'sura-procesando';
+                statusText = 'Procesando por Makito RPA';
             } else if (documento.cumplido === true) {
                 statusClass = 'cumplido';
                 statusText = 'Cargado';
@@ -2862,6 +3229,26 @@
                         ${documento.apc_fecha_inicio ? `
                         <div class="documento-observaciones" style="margin-top: 4px; font-size: 0.8rem;">
                             <strong>Iniciado:</strong> ${documento.apc_fecha_inicio}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                // Special handling for SURA documents being processed
+                } else if ((documento.nombre.toLowerCase() === 'sura' || documento.nombre.toLowerCase() === 'cotización sura') && documento.sura_processing) {
+                    actionsHtml = `
+                    <div class="documento-actions">
+                        <div class="documento-blocked-info" style="background: #dbeafe; border-color: #3b82f6; color: #1e40af;">
+                            <i class="fas fa-robot me-1"></i>
+                            <span>Procesando por Makito RPA</span>
+                        </div>
+                        ${documento.sura_fecha_solicitud ? `
+                        <div class="documento-observaciones" style="margin-top: 8px; font-size: 0.8rem;">
+                            <strong>Solicitado:</strong> ${documento.sura_fecha_solicitud}
+                        </div>
+                        ` : ''}
+                        ${documento.sura_fecha_inicio ? `
+                        <div class="documento-observaciones" style="margin-top: 4px; font-size: 0.8rem;">
+                            <strong>Iniciado:</strong> ${documento.sura_fecha_inicio}
                         </div>
                         ` : ''}
                     </div>
@@ -4197,32 +4584,46 @@
 
             const data = await response.json();
 
-            if (data.success && data.apc_info) {
+            if (data.success && data.apc_status) {
                 // Check if there are any APC documents that have changed status
                 const currentDocumentos = window.currentModalData?.documentos || [];
                 const currentApcDoc = currentDocumentos.find(doc => doc.nombre.toLowerCase() === 'apc');
 
                 if (currentApcDoc) {
+                    // Determine if APC is being processed
+                    const apcProcessing = ['pending', 'in_progress'].includes(data.apc_status.apc_status);
+                    const apcCompleted = data.apc_status.apc_status === 'completed' && data.apc_status.apc_archivo_disponible;
+                    
                     // Check if APC status has changed
-                    if (currentApcDoc.apc_processing !== data.apc_info.apc_processing ||
-                        currentApcDoc.cumplido !== data.apc_info.cumplido ||
-                        currentApcDoc.apc_status !== data.apc_info.apc_status) {
+                    if (currentApcDoc.apc_processing !== apcProcessing ||
+                        currentApcDoc.cumplido !== apcCompleted ||
+                        currentApcDoc.apc_status !== data.apc_status.apc_status) {
 
                         console.log('APC status change detected:', {
                             old: { processing: currentApcDoc.apc_processing, cumplido: currentApcDoc.cumplido, status: currentApcDoc.apc_status },
-                            new: { processing: data.apc_info.apc_processing, cumplido: data.apc_info.cumplido, status: data.apc_info.apc_status }
+                            new: { processing: apcProcessing, cumplido: apcCompleted, status: data.apc_status.apc_status }
                         });
 
                         // Update the APC document in the current data
-                        Object.assign(currentApcDoc, data.apc_info);
+                        currentApcDoc.apc_processing = apcProcessing;
+                        currentApcDoc.cumplido = apcCompleted;
+                        currentApcDoc.apc_status = data.apc_status.apc_status;
+                        currentApcDoc.apc_fecha_solicitud = data.apc_status.apc_fecha_solicitud;
+                        currentApcDoc.apc_fecha_inicio = data.apc_status.apc_fecha_inicio;
+                        currentApcDoc.apc_fecha_completado = data.apc_status.apc_fecha_completado;
+                        currentApcDoc.apc_observaciones = data.apc_status.apc_observaciones;
+                        
+                        if (apcCompleted) {
+                            currentApcDoc.url = `/media/apc_files/apc_${data.apc_status.codigo}_*.pdf`;
+                        }
 
                         // Refresh the documentos tab
                         populateDocumentosTab(window.currentModalData.documentos);
 
                         // Show a subtle notification
-                        if (data.apc_info.apc_processing === false && data.apc_info.cumplido === true) {
+                        if (apcProcessing === false && apcCompleted === true) {
                             showApcStatusNotification('APC descargado automáticamente por Makito RPA');
-                        } else if (data.apc_info.apc_processing === true) {
+                        } else if (apcProcessing === true) {
                             showApcStatusNotification('APC en proceso por Makito RPA');
                         }
                     }
@@ -4231,6 +4632,111 @@
         } catch (error) {
             console.error('Error checking APC status:', error);
         }
+    }
+
+    // Function to check SURA status updates
+    async function checkSuraStatusUpdate(solicitudId) {
+        try {
+            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/sura-status/`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.sura_status) {
+                // Check if there are any SURA documents that have changed status
+                const currentDocumentos = window.currentModalData?.documentos || [];
+                const currentSuraDoc = currentDocumentos.find(doc => 
+                    doc.nombre.toLowerCase() === 'sura' || doc.nombre.toLowerCase() === 'cotización sura'
+                );
+
+                if (currentSuraDoc) {
+                    // Determine if SURA is being processed
+                    const suraProcessing = ['pending', 'in_progress'].includes(data.sura_status.sura_status);
+                    const suraCompleted = data.sura_status.sura_status === 'completed' && data.sura_status.sura_archivo_disponible;
+                    
+                    // Check if SURA status has changed
+                    if (currentSuraDoc.sura_processing !== suraProcessing ||
+                        currentSuraDoc.cumplido !== suraCompleted ||
+                        currentSuraDoc.sura_status !== data.sura_status.sura_status) {
+
+                        console.log('SURA status change detected:', {
+                            old: { processing: currentSuraDoc.sura_processing, cumplido: currentSuraDoc.cumplido, status: currentSuraDoc.sura_status },
+                            new: { processing: suraProcessing, cumplido: suraCompleted, status: data.sura_status.sura_status }
+                        });
+
+                        // Update the SURA document in the current data
+                        currentSuraDoc.sura_processing = suraProcessing;
+                        currentSuraDoc.cumplido = suraCompleted;
+                        currentSuraDoc.sura_status = data.sura_status.sura_status;
+                        currentSuraDoc.sura_fecha_solicitud = data.sura_status.sura_fecha_solicitud;
+                        currentSuraDoc.sura_fecha_inicio = data.sura_status.sura_fecha_inicio;
+                        currentSuraDoc.sura_fecha_completado = data.sura_status.sura_fecha_completado;
+                        currentSuraDoc.sura_observaciones = data.sura_status.sura_observaciones;
+                        
+                        if (suraCompleted) {
+                            currentSuraDoc.url = `/media/sura_files/sura_${data.sura_status.codigo}_*.pdf`;
+                        }
+
+                        // Refresh the documentos tab
+                        populateDocumentosTab(window.currentModalData.documentos);
+
+                        // Show a subtle notification
+                        if (suraProcessing === false && suraCompleted === true) {
+                            showSuraStatusNotification('Cotización SURA descargada automáticamente por Makito RPA');
+                        } else if (suraProcessing === true) {
+                            showSuraStatusNotification('Cotización SURA en proceso por Makito RPA');
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking SURA status:', error);
+        }
+    }
+
+    // Function to show SURA status notification
+    function showSuraStatusNotification(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            color: #1e40af;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            z-index: 10000;
+            font-weight: 500;
+            max-width: 300px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        `;
+
+        notification.innerHTML = `
+            <i class="fas fa-robot"></i>
+            ${message}
+        `;
+
+        document.body.appendChild(notification);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 
     // Function to show APC status notification
@@ -4273,21 +4779,136 @@
         }, 3000);
     }
 
-    // Auto-refresh APC status every 10 seconds if modal is open and has APC documents
+    // Function to check Debida Diligencia status updates
+    async function checkDebidaDiligenciaStatusUpdate(solicitudId) {
+        try {
+            const response = await fetch(`/workflow/api/solicitud_brief/${solicitudId}/`);
+            if (!response.ok) throw new Error('Failed to fetch debida diligencia status');
+            
+            const data = await response.json();
+            
+            if (data.success && data.debida_diligencia_status) {
+                const currentData = window.currentModalData;
+                if (currentData && currentData.debida_diligencia_status !== data.debida_diligencia_status) {
+                    console.log('Debida diligencia status change detected:', {
+                        old: currentData.debida_diligencia_status,
+                        new: data.debida_diligencia_status
+                    });
+                    
+                    // Update current data
+                    window.currentModalData = data;
+                    
+                    // Show notification
+                    let message = '';
+                    if (data.debida_diligencia_status === 'completado') {
+                        message = 'Debida diligencia completada exitosamente';
+                    } else if (data.debida_diligencia_status === 'error') {
+                        message = 'Error en el procesamiento de debida diligencia';
+                    } else if (data.debida_diligencia_status === 'en_progreso') {
+                        message = 'Debida diligencia en progreso';
+                    }
+                    
+                    if (message) {
+                        showDebidaDiligenciaStatusNotification(message);
+                    }
+                    
+                    // Reload debida diligencia section
+                    loadDebidaDiligenciaStatus();
+                }
+            }
+        } catch (error) {
+            console.error('Error checking debida diligencia status:', error);
+        }
+    }
+
+    // Function to show Debida Diligencia status notification
+    function showDebidaDiligenciaStatusNotification(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            z-index: 10000;
+            font-weight: 500;
+            max-width: 300px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        `;
+
+        notification.innerHTML = `
+            <i class="fas fa-shield-alt"></i>
+            ${message}
+        `;
+
+        document.body.appendChild(notification);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Auto-refresh APC, SURA and Debida Diligencia status every 10 seconds if modal is open and has documents being processed
     setInterval(() => {
         const modal = document.getElementById('modalSolicitud');
         if (modal && modal.style.display !== 'none') {
             const currentSolicitudId = window.currentSolicitudId;
             if (currentSolicitudId && currentSolicitudId !== 'test-123') {
-                // Check if there are any APC documents being processed
+                // Check if there are any documents being processed
                 const currentData = window.currentModalData;
                 if (currentData && currentData.documentos) {
                     const hasApcProcessing = currentData.documentos.some(doc =>
                         doc.nombre.toLowerCase() === 'apc' && doc.apc_processing
                     );
+                    const hasSuraProcessing = currentData.documentos.some(doc =>
+                        (doc.nombre.toLowerCase() === 'sura' || doc.nombre.toLowerCase() === 'cotización sura') && doc.sura_processing
+                    );
 
                     if (hasApcProcessing) {
                         checkApcStatusUpdate(currentSolicitudId);
+                    }
+                    if (hasSuraProcessing) {
+                        checkSuraStatusUpdate(currentSolicitudId);
+                    }
+                }
+                
+                // Check debida diligencia status if it's being processed
+                if (currentData && currentData.debida_diligencia_status && 
+                    ['solicitado', 'en_progreso'].includes(currentData.debida_diligencia_status)) {
+                    checkDebidaDiligenciaStatusUpdate(currentSolicitudId);
+                }
+            }
+        }
+    }, 10000);
+
+    // Auto-refresh SURA status every 10 seconds if modal is open and has SURA documents
+    setInterval(() => {
+        const modal = document.getElementById('modalSolicitud');
+        if (modal && modal.style.display !== 'none') {
+            const currentSolicitudId = window.currentSolicitudId;
+            if (currentSolicitudId && currentSolicitudId !== 'test-123') {
+                // Check if there are any SURA documents being processed
+                const currentData = window.currentModalData;
+                if (currentData && currentData.documentos) {
+                    const hasSuraProcessing = currentData.documentos.some(doc =>
+                        (doc.nombre.toLowerCase() === 'sura' || doc.nombre.toLowerCase() === 'cotización sura') && doc.sura_processing
+                    );
+
+                    if (hasSuraProcessing) {
+                        checkSuraStatusUpdate(currentSolicitudId);
                     }
                 }
             }
@@ -4354,16 +4975,34 @@
             statusBadge = 'completed';
             statusTitle = 'Debida Diligencia Completada';
             statusSubtitle = `Completado el ${formatDate(fecha_completado)}`;
+            actionButton = `
+                <button class="btn-diligencia secondary" onclick="reenviarCorreoDiligencia('ambos')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
+            `;
         } else if (estado === 'solicitado') {
             statusIcon = '<i class="fas fa-hourglass-half text-white"></i>';
             statusBadge = 'pending';
             statusTitle = 'Debida Diligencia Solicitada';
             statusSubtitle = `Solicitado el ${formatDate(fecha_solicitud)}`;
+            actionButton = `
+                <button class="btn-diligencia secondary" onclick="reenviarCorreoDiligencia('ambos')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
+            `;
         } else if (estado === 'en_progreso') {
             statusIcon = '<i class="fas fa-robot text-white"></i>';
             statusBadge = 'makito-processing';
             statusTitle = 'Makito RPA Procesando';
             statusSubtitle = 'Los documentos están siendo generados automáticamente';
+            actionButton = `
+                <button class="btn-diligencia secondary" onclick="reenviarCorreoDiligencia('ambos')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
+            `;
         } else {
             statusIcon = '<i class="fas fa-shield-alt text-white"></i>';
             statusBadge = 'pending';
@@ -4440,12 +5079,40 @@
                     <i class="fas fa-eye"></i>
                     Ver
                 </button>
+                <button class="btn-diligencia warning" onclick="reenviarCorreoDiligencia('${type}')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
             `;
         } else if (estado === 'en_progreso') {
             cardClass = 'makito-processing';
             statusText = 'Procesando...';
             statusClass = 'makito-processing';
+            actions = `
+                <button class="btn-diligencia warning" onclick="reenviarCorreoDiligencia('${type}')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
+            `;
+        } else if (estado !== 'no_iniciado') {
+            // For states like 'solicitado' - show both options
+            actions = `
+                <input type="file" id="upload-${type}" accept=".pdf" style="display: none;" onchange="uploadFile('${type}', this.files[0])">
+                <button class="btn-diligencia primary" onclick="document.getElementById('upload-${type}').click()">
+                    <i class="fas fa-upload"></i>
+                    Subir Archivo
+                </button>
+                <button class="btn-diligencia warning" onclick="solicitarMakito('${type}')">
+                    <i class="fas fa-robot"></i>
+                    Solicitar a Makito
+                </button>
+                <button class="btn-diligencia secondary" onclick="reenviarCorreoDiligencia('${type}')">
+                    <i class="fas fa-envelope"></i>
+                    Reenviar Correo
+                </button>
+            `;
         } else {
+            // For 'no_iniciado' state - only show upload and solicitar options
             actions = `
                 <input type="file" id="upload-${type}" accept=".pdf" style="display: none;" onchange="uploadFile('${type}', this.files[0])">
                 <button class="btn-diligencia primary" onclick="document.getElementById('upload-${type}').click()">
@@ -4499,11 +5166,63 @@
             return;
         }
         
-        if (!confirm('¿Está seguro que desea solicitar la debida diligencia para esta solicitud?')) {
+        if (!confirm('¿Está seguro que desea solicitar la debida diligencia (Búsqueda Google y Registro Público) para esta solicitud? Se enviará un email a Makito RPA con las instrucciones.')) {
             return;
         }
         
-        executeDebidaDiligenciaRequest(currentSolicitudId);
+        // Solicitar ambos documentos simultáneamente
+        solicitarAmbosDocumentosDiligencia(currentSolicitudId);
+    }
+
+    function solicitarAmbosDocumentosDiligencia(solicitudId) {
+        console.log('Solicitando ambos documentos de debida diligencia para solicitud:', solicitudId);
+        
+        // Crear un array de promesas para ambos documentos
+        const promesas = [
+            solicitarDocumentoDiligencia(solicitudId, 'busqueda_google'),
+            solicitarDocumentoDiligencia(solicitudId, 'busqueda_registro_publico')
+        ];
+        
+        // Mostrar indicador de carga
+        showNotification('Enviando solicitudes a Makito RPA...', 'info');
+        
+        // Ejecutar ambas solicitudes
+        Promise.all(promesas)
+            .then(results => {
+                console.log('Ambas solicitudes completadas:', results);
+                showNotification('Solicitudes de debida diligencia enviadas exitosamente a Makito RPA', 'success');
+                // Recargar el estado de diligencia
+                setTimeout(() => {
+                    loadDebidaDiligenciaStatus();
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Error en las solicitudes de diligencia:', error);
+                showNotification('Error al enviar las solicitudes: ' + error.message, 'error');
+            });
+    }
+
+    function solicitarDocumentoDiligencia(solicitudId, tipoDocumento) {
+        return fetch(`/workflow/api/debida-diligencia/solicitar-makito/${solicitudId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                tipo_documento: tipoDocumento
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(`Solicitud ${tipoDocumento} exitosa:`, data);
+            return data;
+        });
     }
 
     function executeDebidaDiligenciaRequest(solicitudId) {
@@ -4667,6 +5386,52 @@
         }
     }
 
+    function reenviarCorreoDiligencia(tipoDocumento = 'ambos') {
+        if (!currentSolicitudId) {
+            console.error('No current solicitud ID available');
+            return;
+        }
+        
+        const tipoText = tipoDocumento === 'ambos' ? 'ambos documentos (Búsqueda Google y Registro Público)' : 
+                        tipoDocumento === 'busqueda_google' ? 'Búsqueda Google' : 'Búsqueda Registro Público';
+        
+        if (!confirm(`¿Está seguro que desea reenviar el correo a Makito RPA para ${tipoText}? Se enviará un nuevo email con las instrucciones.`)) {
+            return;
+        }
+        
+        // Mostrar indicador de carga
+        showNotification('Reenviando correo a Makito RPA...', 'info');
+        
+        fetch(`/workflow/api/debida-diligencia/reenviar-correo/${currentSolicitudId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                tipo_documento: tipoDocumento
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Correo reenviado exitosamente:', data);
+            showNotification(data.message || 'Correo reenviado exitosamente a Makito RPA', 'success');
+            // Recargar el estado de diligencia para reflejar cualquier cambio
+            setTimeout(() => {
+                loadDebidaDiligenciaStatus();
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Error reenviando correo:', error);
+            showNotification('Error al reenviar correo: ' + error.message, 'error');
+        });
+    }
+
     // Event listener for diligencia tab activation
     document.addEventListener('DOMContentLoaded', function() {
         const diligenciaTab = document.getElementById('diligencia-tab');
@@ -4676,5 +5441,549 @@
                 loadDebidaDiligenciaStatus();
             });
         }
+        
+        // Event listener for notas tab activation
+        const notasTab = document.getElementById('notas-tab');
+        if (notasTab) {
+            notasTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('Notas tab activated');
+                cargarNotasRecordatorios();
+            });
+        }
+    });
+
+    // ========================================
+    // FUNCIONES PARA NOTAS Y RECORDATORIOS
+    // ========================================
+
+    function cargarNotasRecordatorios() {
+        if (!currentSolicitudId) {
+            console.error('No current solicitud ID available');
+            return;
+        }
+
+        const container = document.getElementById('modalSolicitudNotas');
+        let loadingPlaceholder = container.querySelector('.loading-placeholder');
+        let emptyState = container.querySelector('.empty-state');
+
+        // Create loading and empty state elements if they don't exist
+        if (!loadingPlaceholder) {
+            loadingPlaceholder = document.createElement('div');
+            loadingPlaceholder.className = 'loading-placeholder';
+            loadingPlaceholder.style.display = 'none';
+            loadingPlaceholder.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando notas...</span>
+                </div>
+            `;
+            container.appendChild(loadingPlaceholder);
+        }
+
+        if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.style.display = 'none';
+            emptyState.innerHTML = `
+                <i class="fas fa-sticky-note mb-3 text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted">No hay notas o recordatorios</p>
+                <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
+                    <i class="fas fa-plus me-1"></i>Crear primera nota
+                </button>
+            `;
+            container.appendChild(emptyState);
+        }
+
+        // Show loading
+        loadingPlaceholder.style.display = 'block';
+        emptyState.style.display = 'none';
+
+        fetch(`/workflow/api/notas-recordatorios/${currentSolicitudId}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Notas cargadas:', data);
+            renderizarNotas(data.notas);
+        })
+        .catch(error => {
+            console.error('Error cargando notas:', error);
+            showNotification('Error al cargar notas: ' + error.message, 'error');
+            emptyState.style.display = 'block';
+        })
+        .finally(() => {
+            loadingPlaceholder.style.display = 'none';
+        });
+    }
+
+    function renderizarNotas(notas) {
+        const container = document.getElementById('modalSolicitudNotas');
+        let emptyState = container.querySelector('.empty-state');
+        let loadingPlaceholder = container.querySelector('.loading-placeholder');
+
+        // Ensure emptyState exists
+        if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.style.display = 'none';
+            emptyState.innerHTML = `
+                <i class="fas fa-sticky-note mb-3 text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted">No hay notas o recordatorios</p>
+                <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
+                    <i class="fas fa-plus me-1"></i>Crear primera nota
+                </button>
+            `;
+            container.appendChild(emptyState);
+        }
+
+        // Remove existing note cards (keep loading and empty state elements)
+        const existingNotes = container.querySelectorAll('.nota-card');
+        existingNotes.forEach(note => note.remove());
+
+        if (!notas || notas.length === 0) {
+            resetEmptyStateToOriginal(emptyState);
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        // Reset empty state to original content in case it was changed by filters
+        resetEmptyStateToOriginal(emptyState);
+        emptyState.style.display = 'none';
+
+        // Aplicar filtros
+        const filtroTipoEl = document.getElementById('filtroTipoNota');
+        const filtroEstadoEl = document.getElementById('filtroEstadoNota');
+        const filtroPrioridadEl = document.getElementById('filtroPrioridadNota');
+        
+        const filtroTipo = filtroTipoEl ? filtroTipoEl.value : '';
+        const filtroEstado = filtroEstadoEl ? filtroEstadoEl.value : '';
+        const filtroPrioridad = filtroPrioridadEl ? filtroPrioridadEl.value : '';
+
+        let notasFiltradas = notas.filter(nota => {
+            if (filtroTipo && nota.tipo !== filtroTipo) return false;
+            if (filtroEstado && nota.estado !== filtroEstado) return false;
+            if (filtroPrioridad && nota.prioridad !== filtroPrioridad) return false;
+            return true;
+        });
+
+        if (notasFiltradas.length === 0) {
+            // Update the empty state content for filtered results
+            emptyState.innerHTML = `
+                <i class="fas fa-filter mb-3 text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted">No hay notas que coincidan con los filtros aplicados</p>
+                <button class="btn btn-outline-primary" onclick="limpiarFiltrosNotas()">
+                    <i class="fas fa-filter-circle-xmark me-1"></i>Limpiar filtros
+                </button>
+            `;
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        // Create and append note elements
+        notasFiltradas.forEach(nota => {
+            const noteElement = document.createElement('div');
+            noteElement.innerHTML = crearNotaHTML(nota);
+            container.appendChild(noteElement.firstElementChild);
+        });
+    }
+
+    function resetEmptyStateToOriginal(emptyState) {
+        emptyState.innerHTML = `
+            <i class="fas fa-sticky-note mb-3 text-muted" style="font-size: 3rem;"></i>
+            <p class="text-muted">No hay notas o recordatorios</p>
+            <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
+                <i class="fas fa-plus me-1"></i>Crear primera nota
+            </button>
+        `;
+    }
+
+    function crearNotaHTML(nota) {
+        const fechaCreacion = new Date(nota.fecha_creacion).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        let fechaVencimientoHTML = '';
+        let estadoHTML = '';
+        let cardClasses = 'nota-card';
+
+        if (nota.tipo === 'recordatorio') {
+            const fechaVencimiento = new Date(nota.fecha_vencimiento);
+            const ahora = new Date();
+            const tiempoRestante = fechaVencimiento - ahora;
+            const diasRestantes = Math.ceil(tiempoRestante / (1000 * 60 * 60 * 24));
+
+            let fechaVencimientoClass = 'normal';
+            let fechaVencimientoText = `Vence en ${diasRestantes} días`;
+
+            if (tiempoRestante < 0) {
+                fechaVencimientoClass = 'vencida';
+                fechaVencimientoText = `Vencido hace ${Math.abs(diasRestantes)} días`;
+                cardClasses += ' recordatorio-vencido';
+            } else if (tiempoRestante <= 24 * 60 * 60 * 1000) { // 24 horas
+                fechaVencimientoClass = 'proxima';
+                fechaVencimientoText = `Vence en ${Math.ceil(tiempoRestante / (1000 * 60 * 60))} horas`;
+                cardClasses += ' recordatorio-proximo';
+            }
+
+            if (nota.estado === 'completado') {
+                cardClasses += ' recordatorio-completado';
+                fechaVencimientoText = 'Completado';
+            }
+
+            fechaVencimientoHTML = `
+                <div class="fecha-vencimiento ${fechaVencimientoClass}">
+                    <i class="fas fa-clock me-1"></i>
+                    ${fechaVencimientoText}
+                </div>
+            `;
+
+            estadoHTML = `
+                <span class="estado-recordatorio ${nota.estado}">
+                    ${nota.estado.charAt(0).toUpperCase() + nota.estado.slice(1)}
+                </span>
+            `;
+        }
+
+        return `
+            <div class="${cardClasses}" data-nota-id="${nota.id}">
+                <div class="nota-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="nota-tipo-badge ${nota.tipo}">
+                            ${nota.tipo === 'nota' ? 'Nota' : 'Recordatorio'}
+                        </span>
+                        <span class="nota-prioridad-badge ${nota.prioridad.toLowerCase()}">
+                            ${nota.prioridad}
+                        </span>
+                        ${estadoHTML}
+                    </div>
+                    <div class="nota-acciones">
+                        <button class="btn-nota-accion editar" onclick="editarNota(${nota.id})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${nota.tipo === 'recordatorio' && nota.estado === 'pendiente' ? `
+                            <button class="btn-nota-accion completar" onclick="completarRecordatorio(${nota.id})" title="Marcar como completado">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        ` : ''}
+                        <button class="btn-nota-accion eliminar" onclick="eliminarNota(${nota.id})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="nota-titulo">${nota.titulo}</div>
+                <div class="nota-contenido">${nota.contenido}</div>
+                <div class="nota-meta">
+                    <div class="nota-fecha">
+                        <i class="fas fa-user me-1"></i>
+                        ${nota.usuario_nombre}
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-calendar me-1"></i>
+                        ${fechaCreacion}
+                    </div>
+                    ${fechaVencimientoHTML}
+                </div>
+            </div>
+        `;
+    }
+
+    function abrirModalNuevaNota() {
+        document.getElementById('modalNotaTitulo').textContent = 'Nueva Nota/Recordatorio';
+        document.getElementById('formNotaRecordatorio').reset();
+        document.getElementById('notaId').value = '';
+        document.getElementById('solicitudIdNota').value = currentSolicitudId;
+        document.getElementById('recordatorioFields').style.display = 'none';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalNotaRecordatorio'));
+        modal.show();
+    }
+
+    function editarNota(notaId) {
+        fetch(`/workflow/api/notas-recordatorios/${currentSolicitudId}/${notaId}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('modalNotaTitulo').textContent = 'Editar Nota/Recordatorio';
+            document.getElementById('notaId').value = data.nota.id;
+            document.getElementById('solicitudIdNota').value = currentSolicitudId;
+            document.getElementById('tipoNota').value = data.nota.tipo;
+            document.getElementById('prioridadNota').value = data.nota.prioridad;
+            document.getElementById('tituloNota').value = data.nota.titulo;
+            document.getElementById('contenidoNota').value = data.nota.contenido;
+            
+            if (data.nota.tipo === 'recordatorio') {
+                document.getElementById('recordatorioFields').style.display = 'flex';
+                document.getElementById('fechaVencimiento').value = data.nota.fecha_vencimiento_local;
+                document.getElementById('estadoRecordatorio').value = data.nota.estado;
+            } else {
+                document.getElementById('recordatorioFields').style.display = 'none';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalNotaRecordatorio'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error cargando nota:', error);
+            showNotification('Error al cargar nota: ' + error.message, 'error');
+        });
+    }
+
+    function guardarNotaRecordatorio() {
+        const form = document.getElementById('formNotaRecordatorio');
+        const formData = new FormData(form);
+        
+        const notaId = formData.get('nota_id');
+        const solicitudId = formData.get('solicitud_id');
+        const tipo = formData.get('tipo');
+        const prioridad = formData.get('prioridad');
+        const titulo = formData.get('titulo');
+        const contenido = formData.get('contenido');
+        
+        if (!titulo.trim() || !contenido.trim()) {
+            showNotification('Por favor complete todos los campos requeridos', 'error');
+            return;
+        }
+        
+        const data = {
+            tipo: tipo,
+            prioridad: prioridad,
+            titulo: titulo.trim(),
+            contenido: contenido.trim()
+        };
+        
+        if (tipo === 'recordatorio') {
+            const fechaVencimiento = formData.get('fecha_vencimiento');
+            const estado = formData.get('estado');
+            
+            if (!fechaVencimiento) {
+                showNotification('Por favor seleccione una fecha de vencimiento', 'error');
+                return;
+            }
+            
+            data.fecha_vencimiento = fechaVencimiento;
+            data.estado = estado;
+        }
+        
+        const url = notaId ? 
+            `/workflow/api/notas-recordatorios/${solicitudId}/${notaId}/actualizar/` :
+            `/workflow/api/notas-recordatorios/${solicitudId}/crear/`;
+        
+        const method = notaId ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            showNotification(data.message || 'Nota guardada exitosamente', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNotaRecordatorio'));
+            modal.hide();
+            cargarNotasRecordatorios();
+        })
+        .catch(error => {
+            console.error('Error guardando nota:', error);
+            showNotification('Error al guardar nota: ' + error.message, 'error');
+        });
+    }
+
+    function completarRecordatorio(notaId) {
+        if (!confirm('¿Está seguro que desea marcar este recordatorio como completado?')) {
+            return;
+        }
+        
+        fetch(`/workflow/api/notas-recordatorios/${currentSolicitudId}/${notaId}/completar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            showNotification(data.message || 'Recordatorio marcado como completado', 'success');
+            cargarNotasRecordatorios();
+        })
+        .catch(error => {
+            console.error('Error completando recordatorio:', error);
+            showNotification('Error al completar recordatorio: ' + error.message, 'error');
+        });
+    }
+
+    function eliminarNota(notaId) {
+        if (!confirm('¿Está seguro que desea eliminar esta nota/recordatorio? Esta acción no se puede deshacer.')) {
+            return;
+        }
+        
+        fetch(`/workflow/api/notas-recordatorios/${currentSolicitudId}/${notaId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            showNotification(data.message || 'Nota eliminada exitosamente', 'success');
+            cargarNotasRecordatorios();
+        })
+        .catch(error => {
+            console.error('Error eliminando nota:', error);
+            showNotification('Error al eliminar nota: ' + error.message, 'error');
+        });
+    }
+
+    function limpiarFiltrosNotas() {
+        const filtroTipoEl = document.getElementById('filtroTipoNota');
+        const filtroEstadoEl = document.getElementById('filtroEstadoNota');
+        const filtroPrioridadEl = document.getElementById('filtroPrioridadNota');
+        
+        if (filtroTipoEl) filtroTipoEl.value = '';
+        if (filtroEstadoEl) filtroEstadoEl.value = '';
+        if (filtroPrioridadEl) filtroPrioridadEl.value = '';
+        
+        cargarNotasRecordatorios();
+    }
+
+    // Event listeners para filtros
+    document.addEventListener('DOMContentLoaded', function() {
+        const filtroTipo = document.getElementById('filtroTipoNota');
+        const filtroEstado = document.getElementById('filtroEstadoNota');
+        const filtroPrioridad = document.getElementById('filtroPrioridadNota');
+        
+        if (filtroTipo) {
+            filtroTipo.addEventListener('change', cargarNotasRecordatorios);
+        }
+        if (filtroEstado) {
+            filtroEstado.addEventListener('change', cargarNotasRecordatorios);
+        }
+        if (filtroPrioridad) {
+            filtroPrioridad.addEventListener('change', cargarNotasRecordatorios);
+        }
+        
+        // Event listener para cambio de tipo en el modal
+        const tipoNota = document.getElementById('tipoNota');
+        if (tipoNota) {
+            tipoNota.addEventListener('change', function() {
+                const recordatorioFields = document.getElementById('recordatorioFields');
+                if (this.value === 'recordatorio') {
+                    recordatorioFields.style.display = 'flex';
+                    document.getElementById('fechaVencimiento').required = true;
+                } else {
+                    recordatorioFields.style.display = 'none';
+                    document.getElementById('fechaVencimiento').required = false;
+                }
+            });
+        }
     });
 </script>
+
+<!-- Modal para Crear/Editar Nota o Recordatorio -->
+<div class="modal fade" id="modalNotaRecordatorio" tabindex="-1" aria-labelledby="modalNotaRecordatorioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNotaRecordatorioLabel">
+                    <i class="fas fa-sticky-note me-2"></i>
+                    <span id="modalNotaTitulo">Nueva Nota/Recordatorio</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNotaRecordatorio">
+                    <input type="hidden" id="notaId" name="nota_id">
+                    <input type="hidden" id="solicitudIdNota" name="solicitud_id">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="tipoNota" class="form-label">Tipo *</label>
+                            <select class="form-select" id="tipoNota" name="tipo" required>
+                                <option value="nota">Nota</option>
+                                <option value="recordatorio">Recordatorio</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="prioridadNota" class="form-label">Prioridad</label>
+                            <select class="form-select" id="prioridadNota" name="prioridad">
+                                <option value="Baja">Baja</option>
+                                <option value="Media" selected>Media</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tituloNota" class="form-label">Título *</label>
+                        <input type="text" class="form-control" id="tituloNota" name="titulo" required maxlength="200">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contenidoNota" class="form-label">Contenido *</label>
+                        <textarea class="form-control" id="contenidoNota" name="contenido" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="row mb-3" id="recordatorioFields" style="display: none;">
+                        <div class="col-md-6">
+                            <label for="fechaVencimiento" class="form-label">Fecha de Vencimiento *</label>
+                            <input type="datetime-local" class="form-control" id="fechaVencimiento" name="fecha_vencimiento">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="estadoRecordatorio" class="form-label">Estado</label>
+                            <select class="form-select" id="estadoRecordatorio" name="estado">
+                                <option value="pendiente" selected>Pendiente</option>
+                                <option value="completado">Completado</option>
+                                <option value="vencido">Vencido</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNotaRecordatorio()">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

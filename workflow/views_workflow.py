@@ -274,6 +274,11 @@ def nueva_solicitud(request):
             sura_primer_apellido = request.POST.get('sura_primer_apellido', '') if cotizar_sura_makito else None
             sura_segundo_apellido = request.POST.get('sura_segundo_apellido', '') if cotizar_sura_makito else None
             sura_no_documento = request.POST.get('sura_no_documento', '') if cotizar_sura_makito else None
+            sura_tipo_documento = request.POST.get('sura_tipo_documento', '') if cotizar_sura_makito else None
+            sura_valor_auto = request.POST.get('sura_valor_auto', '') if cotizar_sura_makito else None
+            sura_ano_auto = request.POST.get('sura_ano_auto', '') if cotizar_sura_makito else None
+            sura_marca = request.POST.get('sura_marca', '') if cotizar_sura_makito else None
+            sura_modelo = request.POST.get('sura_modelo', '') if cotizar_sura_makito else None
             
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
@@ -293,7 +298,12 @@ def nueva_solicitud(request):
                 sura_segundo_nombre=sura_segundo_nombre,
                 sura_primer_apellido=sura_primer_apellido,
                 sura_segundo_apellido=sura_segundo_apellido,
-                sura_no_documento=sura_no_documento
+                sura_no_documento=sura_no_documento,
+                sura_tipo_documento=sura_tipo_documento,
+                sura_valor_auto=sura_valor_auto,
+                sura_ano_auto=sura_ano_auto,
+                sura_marca=sura_marca,
+                sura_modelo=sura_modelo
             )
             
             # Crear historial inicial
@@ -354,7 +364,19 @@ def nueva_solicitud(request):
             
             # Send SURA email if requested
             if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
-                enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request)
+                enviar_correo_sura_makito(
+                    solicitud, 
+                    sura_primer_nombre, 
+                    sura_primer_apellido, 
+                    sura_no_documento,
+                    request,
+                    # Vehicle data
+                    sura_valor_auto=sura_valor_auto,
+                    sura_ano_auto=sura_ano_auto,
+                    sura_marca=sura_marca,
+                    sura_modelo=sura_modelo,
+                    sura_tipo_documento=sura_tipo_documento
+                )
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2260,11 +2282,18 @@ def api_buscar_cotizaciones_drawer(request):
                 'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
                 'oficial': cotizacion.oficial or 'Sin oficial',
                 'observaciones': cotizacion.observaciones or '',  # Campo observaciones
-                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None,
+                # Vehicle data for SURA auto-population
+                'valorAuto': float(cotizacion.valorAuto) if cotizacion.valorAuto else None,
+                'yearCarro': cotizacion.yearCarro,
+                'marca': cotizacion.marca or '',
+                'modelo': cotizacion.modelo or '',
+                'tipoDocumento': cotizacion.tipoDocumento or 'CEDULA'
             }
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} vehicle data: valorAuto={cotizacion.valorAuto}, yearCarro={cotizacion.yearCarro}, marca={cotizacion.marca}, modelo={cotizacion.modelo}")
             resultados.append(resultado)
         
         return JsonResponse({'success': True, 'cotizaciones': resultados})
@@ -2766,6 +2795,11 @@ def nueva_solicitud(request):
             sura_primer_apellido = request.POST.get('sura_primer_apellido', '') if cotizar_sura_makito else None
             sura_segundo_apellido = request.POST.get('sura_segundo_apellido', '') if cotizar_sura_makito else None
             sura_no_documento = request.POST.get('sura_no_documento', '') if cotizar_sura_makito else None
+            sura_tipo_documento = request.POST.get('sura_tipo_documento', '') if cotizar_sura_makito else None
+            sura_valor_auto = request.POST.get('sura_valor_auto', '') if cotizar_sura_makito else None
+            sura_ano_auto = request.POST.get('sura_ano_auto', '') if cotizar_sura_makito else None
+            sura_marca = request.POST.get('sura_marca', '') if cotizar_sura_makito else None
+            sura_modelo = request.POST.get('sura_modelo', '') if cotizar_sura_makito else None
             
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
@@ -2785,7 +2819,12 @@ def nueva_solicitud(request):
                 sura_segundo_nombre=sura_segundo_nombre,
                 sura_primer_apellido=sura_primer_apellido,
                 sura_segundo_apellido=sura_segundo_apellido,
-                sura_no_documento=sura_no_documento
+                sura_no_documento=sura_no_documento,
+                sura_tipo_documento=sura_tipo_documento,
+                sura_valor_auto=sura_valor_auto,
+                sura_ano_auto=sura_ano_auto,
+                sura_marca=sura_marca,
+                sura_modelo=sura_modelo
             )
             
             # Crear historial inicial
@@ -2846,7 +2885,19 @@ def nueva_solicitud(request):
             
             # Send SURA email if requested
             if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
-                enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request)
+                enviar_correo_sura_makito(
+                    solicitud, 
+                    sura_primer_nombre, 
+                    sura_primer_apellido, 
+                    sura_no_documento,
+                    request,
+                    # Vehicle data
+                    sura_valor_auto=sura_valor_auto,
+                    sura_ano_auto=sura_ano_auto,
+                    sura_marca=sura_marca,
+                    sura_modelo=sura_modelo,
+                    sura_tipo_documento=sura_tipo_documento
+                )
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -4628,11 +4679,18 @@ def api_buscar_cotizaciones_drawer(request):
                 'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
                 'oficial': cotizacion.oficial or 'Sin oficial',
                 'observaciones': cotizacion.observaciones or '',  # Campo observaciones
-                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None,
+                # Vehicle data for SURA auto-population
+                'valorAuto': float(cotizacion.valorAuto) if cotizacion.valorAuto else None,
+                'yearCarro': cotizacion.yearCarro,
+                'marca': cotizacion.marca or '',
+                'modelo': cotizacion.modelo or '',
+                'tipoDocumento': cotizacion.tipoDocumento or 'CEDULA'
             }
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
             print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} vehicle data: valorAuto={cotizacion.valorAuto}, yearCarro={cotizacion.yearCarro}, marca={cotizacion.marca}, modelo={cotizacion.modelo}")
             resultados.append(resultado)
         
         return JsonResponse({'success': True, 'cotizaciones': resultados})
@@ -5671,11 +5729,19 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         print(f"❌ Error al enviar correo APC para solicitud {solicitud.codigo}: {str(e)}")
 
 
-def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request=None):
+def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellido, sura_no_documento, request=None, **kwargs):
     """
     Función para enviar correo automático cuando se solicita cotización SURA con Makito.
+    Incluye información del vehículo para la cotización.
     """
     try:
+        # Extraer datos del vehículo de kwargs
+        sura_valor_auto = kwargs.get('sura_valor_auto', '')
+        sura_ano_auto = kwargs.get('sura_ano_auto', '')
+        sura_marca = kwargs.get('sura_marca', '')
+        sura_modelo = kwargs.get('sura_modelo', '')
+        sura_tipo_documento = kwargs.get('sura_tipo_documento', '')
+        
         # Destinatarios específicos para SURA
         destinatarios = [
             "makito@fpacifico.com",
@@ -5696,7 +5762,7 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         base_url = get_site_url(request)
         print(f"🔍 DEBUG: Base URL: {base_url}")
         
-        # Mensaje de texto plano
+        # Mensaje de texto plano con información del vehículo
         text_content = f"""
         Solicitud de Cotización SURA con Makito
         
@@ -5711,21 +5777,35 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         • Primer Apellido: {sura_primer_apellido}
         • Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
         • Número de Documento: {sura_no_documento}
+        • Tipo de Documento: {sura_tipo_documento or 'N/A'}
         • Pipeline: {solicitud.pipeline.nombre}
         • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
         • Correo Solicitante: {correo_solicitante}
         • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         ==========================================
+        INFORMACIÓN DEL VEHÍCULO
+        ==========================================
+        • Valor del Auto: ${sura_valor_auto or 'N/A'}
+        • Año del Auto: {sura_ano_auto or 'N/A'}
+        • Marca: {sura_marca or 'N/A'}
+        • Modelo: {sura_modelo or 'N/A'}
+        
+        ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
         ==========================================
         <codigoSolicitudvar>{solicitud.codigo}</codigoSolicitudvar>
         <numeroDocumentovar>{sura_no_documento}</numeroDocumentovar>
+        <tipoDocumentovar>{sura_tipo_documento or 'cedula'}</tipoDocumentovar>
         <primerNombrevar>{sura_primer_nombre}</primerNombrevar>
         <segundoNombrevar>{solicitud.sura_segundo_nombre or ''}</segundoNombrevar>
         <primerApellidovar>{sura_primer_apellido}</primerApellidovar>
         <segundoApellidovar>{solicitud.sura_segundo_apellido or ''}</segundoApellidovar>
         <clientevar>{cliente_nombre}</clientevar>
+        <valorAutovar>{sura_valor_auto or ''}</valorAutovar>
+        <anoAutovar>{sura_ano_auto or ''}</anoAutovar>
+        <marcaAutovar>{sura_marca or ''}</marcaAutovar>
+        <modeloAutovar>{sura_modelo or ''}</modeloAutovar>
         
         Información para SURA:
         Primer Nombre: {sura_primer_nombre}
@@ -5733,6 +5813,13 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         Primer Apellido: {sura_primer_apellido}
         Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
         Número de Documento: {sura_no_documento}
+        Tipo de Documento: {sura_tipo_documento or 'N/A'}
+        
+        Información del Vehículo:
+        Valor del Auto: ${sura_valor_auto or 'N/A'}
+        Año del Auto: {sura_ano_auto or 'N/A'}
+        Marca: {sura_marca or 'N/A'}
+        Modelo: {sura_modelo or 'N/A'}
         
         ==========================================
         INSTRUCCIONES PARA MAKITO RPA
@@ -6111,6 +6198,88 @@ def api_debida_diligencia_upload(request, solicitud_id):
             'error': 'Error interno del servidor'
         }, status=500)
 
+@login_required
+def api_debida_diligencia_reenviar_correo(request, solicitud_id):
+    """
+    API para reenviar correo de debida diligencia a Makito RPA
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        tipo_documento = data.get('tipo_documento', 'ambos')
+        
+        if tipo_documento not in ['busqueda_google', 'busqueda_registro_publico', 'ambos']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de documento inválido'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        # Asegurar que el estado esté en progreso si no está completado
+        if solicitud.debida_diligencia_status not in ['en_progreso', 'completado']:
+            solicitud.debida_diligencia_status = 'en_progreso'
+            if not solicitud.diligencia_fecha_solicitud:
+                solicitud.diligencia_fecha_solicitud = timezone.now()
+            solicitud.diligencia_fecha_inicio = timezone.now()
+            solicitud.save(update_fields=['debida_diligencia_status', 'diligencia_fecha_solicitud', 'diligencia_fecha_inicio'])
+        
+        # Reenviar correos según el tipo solicitado
+        if tipo_documento == 'ambos':
+            # Enviar ambos correos
+            enviar_correo_debida_diligencia_makito(solicitud, 'busqueda_google', request)
+            enviar_correo_debida_diligencia_makito(solicitud, 'busqueda_registro_publico', request)
+            mensaje = 'Correos reenviados a Makito RPA para búsqueda Google y Registro Público'
+        else:
+            # Enviar correo específico
+            enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request)
+            tipo_legible = tipo_documento.replace('_', ' ').title()
+            mensaje = f'Correo reenviado a Makito RPA para {tipo_legible}'
+        
+        # Crear entrada en el historial
+        historial_entry = HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            observaciones=f'Correo de debida diligencia reenviado ({tipo_documento})',
+            fecha_inicio=timezone.now()
+        )
+        
+        print(f"✅ Correo de debida diligencia reenviado para solicitud {solicitud.codigo} - Tipo: {tipo_documento}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': mensaje
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_debida_diligencia_reenviar_correo: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)
+
 # Makito RPA API endpoints for debida diligencia
 @csrf_exempt
 def api_makito_debida_diligencia_update_status(request, solicitud_codigo):
@@ -6265,6 +6434,8 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         import ssl
         
         # Destinatarios específicos para Debida Diligencia
+        # TO: makito@fpacifico.com (principal)
+        # CC: arodriguez@fpacifico.com (seguimiento)
         destinatarios = [
             "makito@fpacifico.com",
             "arodriguez@fpacifico.com",
@@ -6277,7 +6448,7 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         # Obtener número de documento del cliente
         no_documento = ""
         if solicitud.cliente:
-            no_documento = solicitud.cliente.numeroDocumento or solicitud.cliente_cedula or ""
+            no_documento = getattr(solicitud.cliente, 'cedulaCliente', '') or solicitud.cliente_cedula or ""
         elif solicitud.cliente_cedula:
             no_documento = solicitud.cliente_cedula
         
@@ -6286,7 +6457,7 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         
         # Crear el asunto específico para Debida Diligencia
         tipo_legible = tipo_documento.replace('_', ' ').title()
-        subject = f"workflowDiligencia - {cliente_nombre} - {tipo_legible}"
+        subject = f"workflowDiligencia - {cliente_nombre} - {tipo_legible} - CC: arodriguez@fpacifico.com"
         
         # Obtener la URL base dinámicamente
         base_url = get_site_url(request)
@@ -6307,6 +6478,8 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
         • Correo Solicitante: {correo_solicitante}
         • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        
+        NOTA: Este correo incluye CC a arodriguez@fpacifico.com para seguimiento.
         
         ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
@@ -6344,6 +6517,9 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
            - busqueda_google: [archivo PDF de búsqueda en Google] (opcional)
            - busqueda_registro_publico: [archivo PDF de búsqueda en Registro Público] (opcional)
            - observaciones: "Archivos generados exitosamente"
+           
+           NOTA: Se pueden subir uno o ambos archivos según disponibilidad.
+           El sistema marcará automáticamente como completado cuando ambos archivos estén presentes.
         
         3. MARCAR COMO "ERROR" (si es necesario):
            URL: {base_url}/workflow/api/makito/debida-diligencia/update-status/{solicitud.codigo}/
@@ -7969,6 +8145,26 @@ def api_solicitud_brief(request, solicitud_id):
                         documento_info['apc_completed'] = True
                 else:
                     documento_info['apc_processing'] = False
+            
+            # Special handling for SURA requisito
+            if req.requisito.nombre.lower() == 'sura' or req.requisito.nombre.lower() == 'cotización sura':
+                # Check if SURA is being processed by Makito RPA
+                if solicitud.cotizar_sura_makito and solicitud.sura_status in ['pending', 'in_progress']:
+                    documento_info['sura_status'] = solicitud.sura_status
+                    documento_info['sura_processing'] = True
+                    documento_info['sura_fecha_solicitud'] = solicitud.sura_fecha_solicitud.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_solicitud else None
+                    documento_info['sura_fecha_inicio'] = solicitud.sura_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_inicio else None
+                    documento_info['sura_fecha_completado'] = solicitud.sura_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_completado else None
+                    documento_info['sura_observaciones'] = solicitud.sura_observaciones
+                    
+                    # If SURA is completed, mark the requisito as fulfilled
+                    if solicitud.sura_status == 'completed' and solicitud.sura_archivo:
+                        documento_info['cumplido'] = True
+                        documento_info['url'] = solicitud.sura_archivo.url if solicitud.sura_archivo else ''
+                        documento_info['sura_processing'] = False
+                        documento_info['sura_completed'] = True
+                else:
+                    documento_info['sura_processing'] = False
             
             documentos.append(documento_info)
 
@@ -10581,9 +10777,9 @@ def apc_tracking_view(request):
 @login_required
 def makito_tracking_view(request):
     """
-    Vista unificada para mostrar el tracking de solicitudes APC y SURA con Makito
+    Vista unificada para mostrar el tracking de solicitudes APC, SURA y Debida Diligencia con Makito
     """
-    # Obtener todas las solicitudes que tienen APC o SURA habilitado
+    # Obtener todas las solicitudes que tienen APC, SURA o Debida Diligencia habilitado
     solicitudes_apc = Solicitud.objects.filter(
         descargar_apc_makito=True
     ).select_related(
@@ -10596,9 +10792,16 @@ def makito_tracking_view(request):
         'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
     ).order_by('-sura_fecha_solicitud')
     
+    solicitudes_diligencia = Solicitud.objects.filter(
+        debida_diligencia_status__in=['solicitado', 'en_progreso', 'completado', 'error']
+    ).select_related(
+        'pipeline', 'creada_por', 'etapa_actual', 'cliente', 'cotizacion'
+    ).order_by('-diligencia_fecha_solicitud')
+    
     context = {
         'solicitudes_apc': solicitudes_apc,
         'solicitudes_sura': solicitudes_sura,
+        'solicitudes_diligencia': solicitudes_diligencia,
         'title': 'Tracking Solicitudes Makito',
         'tracking_type': 'unified',
     }
@@ -11378,6 +11581,48 @@ def api_check_apc_status(request, solicitud_id):
         return JsonResponse({
             'success': False,
             'error': f'Error al verificar estado APC: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_check_sura_status(request, solicitud_id):
+    """
+    API para verificar el estado SURA de una solicitud por ID
+    """
+    try:
+        # Buscar la solicitud por ID
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar si la solicitud tiene SURA habilitado
+        if not solicitud.cotizar_sura_makito:
+            return JsonResponse({
+                'success': False,
+                'error': 'SURA no está habilitado para esta solicitud'
+            }, status=400)
+        
+        # Construir respuesta con información del estado SURA
+        data = {
+            'solicitud_id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'sura_status': solicitud.sura_status,
+            'sura_status_display': solicitud.get_sura_status_display(),
+            'sura_fecha_solicitud': solicitud.sura_fecha_solicitud.isoformat() if solicitud.sura_fecha_solicitud else None,
+            'sura_fecha_inicio': solicitud.sura_fecha_inicio.isoformat() if solicitud.sura_fecha_inicio else None,
+            'sura_fecha_completado': solicitud.sura_fecha_completado.isoformat() if solicitud.sura_fecha_completado else None,
+            'sura_observaciones': solicitud.sura_observaciones or '',
+            'sura_archivo_disponible': bool(solicitud.sura_archivo),
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'sura_status': data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al verificar estado SURA: {str(e)}'
         }, status=500)
 
 

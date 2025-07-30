@@ -600,8 +600,9 @@
                                 <th style="width: 120px;">Etapa</th>
                                 <th style="width: 100px;">Estado</th>
                                 <th style="width: 200px;">Fecha SLA</th>
-
-
+                                <th style="width: 80px;">
+                                    <i class="fas fa-bell" title="Recordatorios"></i>
+                                </th>
                                 <th style="width: 120px;">Código</th>
                             </tr>
                         </thead>
@@ -736,6 +737,32 @@
                                     </div>
                                 </td>
 
+                                <!-- Columna de Recordatorios -->
+                                <td>
+                                    <div class="text-center">
+                                        {% if s.recordatorios_info.tiene_recordatorios %}
+                                            <div class="position-relative d-inline-block reminder-indicator">
+                                                <i class="{{ s.recordatorios_icon }} text-{{ s.recordatorios_status }}" 
+                                                   title="{{ s.recordatorios_title }}"
+                                                   style="font-size: 1.1rem; cursor: pointer;"
+                                                   data-bs-toggle="tooltip" 
+                                                   data-bs-placement="top"
+                                                   onclick="event.stopPropagation(); mostrarRecordatorios({{ s.id }})"></i>
+                                                
+                                                {% if s.recordatorios_info.total > 1 %}
+                                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-{{ s.recordatorios_status }} text-white"
+                                                      style="font-size: 0.6rem; padding: 0.15rem 0.3rem;">
+                                                    {{ s.recordatorios_info.total }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted" style="font-size: 0.8rem;">
+                                                <i class="fas fa-minus" title="Sin recordatorios"></i>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
 
                                 <td>
                                     <div class="text-center">
@@ -747,7 +774,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="11" class="text-center py-4">
+                                <td colspan="9" class="text-center py-4">
                                     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">No hay solicitudes para mostrar</p>
                                 </td>
@@ -1313,7 +1340,8 @@
             event.target.closest('button') ||
             event.target.closest('input') ||
             event.target.closest('.dropdown') ||
-            event.target.closest('.menu-dropdown')) {
+            event.target.closest('.menu-dropdown') ||
+            event.target.closest('.reminder-indicator')) {
             return;
         }
 
@@ -1322,6 +1350,25 @@
             window.mostrarModalSolicitud(solicitudId);
         } else {
             // Fallback: navegar directamente al detalle si la función modal no está disponible
+            window.location.href = `/workflow/solicitud/${solicitudId}/`;
+        }
+    }
+
+    // Función para mostrar recordatorios de una solicitud
+    function mostrarRecordatorios(solicitudId) {
+        // Validar que el ID de solicitud sea válido
+        if (!solicitudId || solicitudId === '' || solicitudId === 'None' || solicitudId === 'undefined') {
+            console.warn('⚠️ Cannot show reminders: Invalid solicitud ID:', solicitudId);
+            return;
+        }
+
+        console.log('📝 Showing reminders for solicitud:', solicitudId);
+        
+        // Abrir el modal de solicitud directamente en la pestaña de notas
+        if (typeof window.mostrarModalSolicitud === 'function') {
+            window.mostrarModalSolicitud(solicitudId, 'notas');
+        } else {
+            // Fallback: navegar directamente al detalle
             window.location.href = `/workflow/solicitud/${solicitudId}/`;
         }
     }
@@ -4271,6 +4318,57 @@
         display: none !important;
     }
 
+    /* Reminder Indicators Styles */
+    .reminder-indicator {
+        cursor: pointer !important;
+    }
+
+    .reminder-indicator i {
+        transition: all 0.2s ease;
+    }
+
+    .reminder-indicator i:hover {
+        transform: scale(1.1);
+        filter: brightness(1.2);
+    }
+
+    .reminder-indicator .badge {
+        min-width: 1rem;
+        height: 1rem;
+        line-height: 1;
+        font-size: 0.6rem !important;
+        font-weight: 600;
+    }
+
+    /* Reminder status colors */
+    .text-danger.reminder-icon {
+        color: #dc3545 !important;
+        animation: pulse-danger 2s infinite;
+    }
+
+    .text-warning.reminder-icon {
+        color: #ffc107 !important;
+    }
+
+    .text-info.reminder-icon {
+        color: #0dcaf0 !important;
+    }
+
+    @keyframes pulse-danger {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    /* Tooltip improvements for reminders */
+    .tooltip {
+        font-size: 0.8rem;
+    }
+
+    .tooltip-inner {
+        max-width: 250px;
+        text-align: left;
+    }
+
     /* Clean table layout */
     .workflow-table tbody {
         margin: 0 !important;
@@ -5454,6 +5552,7 @@
                     if (this.checked) {
                         suraCamposAdicionales.style.display = 'block';
                         console.log('✅ SURA campos adicionales shown');
+                        console.log('🔧 SURA checkbox checked - checking for cotización data:', window.selectedCotizacionData);
 
                         // Auto-populate SURA fields if a client is already selected
                         const clienteId = document.getElementById('clienteId')?.value;
@@ -5470,11 +5569,17 @@
                                         if (cedula && cedula !== 'Sin cédula') {
                                             const clienteData = { cedulaCliente: cedula };
                                             if (typeof autoPopulateSuraFields === 'function') {
-                                                autoPopulateSuraFields(clienteData);
+                                                // Pass both cliente data and stored cotización data
+                                                autoPopulateSuraFields(clienteData, window.selectedCotizacionData);
                                             }
                                         }
                                     }
                                 }
+                            }
+                        } else if (window.selectedCotizacionData) {
+                            // If no client is selected but we have cotización data, still auto-populate vehicle fields
+                            if (typeof autoPopulateSuraFields === 'function') {
+                                autoPopulateSuraFields(null, window.selectedCotizacionData);
                             }
                         }
                     } else {
@@ -5705,6 +5810,17 @@
 
                         // Auto-populate cliente from cotización
                         autoPopulateClienteFromCotizacion(item);
+                        
+                        // Store cotización data globally for SURA auto-population
+                        window.selectedCotizacionData = {
+                            tipoDocumento: item.tipoDocumento,
+                            valorAuto: item.valorAuto,
+                            yearCarro: item.yearCarro,
+                            marca: item.marca,
+                            modelo: item.modelo
+                        };
+                        console.log('🔧 Stored cotización data for SURA:', window.selectedCotizacionData);
+                        console.log('🔧 Full cotización item data:', item);
                     } else {
                         detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
                     }
@@ -5808,6 +5924,11 @@
             // Auto-populate APC fields if available
             if (typeof autoPopulateApcFields === 'function') {
                 autoPopulateApcFields(cliente);
+            }
+            
+            // Auto-populate SURA fields if available and we have cotización data
+            if (typeof autoPopulateSuraFields === 'function' && window.selectedCotizacionData) {
+                autoPopulateSuraFields(cliente, window.selectedCotizacionData);
             }
         }
 
@@ -5991,6 +6112,10 @@
             document.getElementById('cotizacionId').value = '';
             document.getElementById('cotizacionSelected').style.display = 'none';
 
+            // Clear stored cotización data for SURA
+            window.selectedCotizacionData = null;
+            console.log('🔧 Cleared stored cotización data');
+
             // Also clear cliente when cotización is cleared
             console.log('🔧 Also clearing cliente due to cotización clear');
             clearCliente();
@@ -6020,6 +6145,11 @@
             // Clear APC fields when client is cleared
             if (typeof clearApcFields === 'function') {
                 clearApcFields();
+            }
+            
+            // Clear SURA fields when client is cleared
+            if (typeof clearSuraFields === 'function') {
+                clearSuraFields();
             }
         };
 

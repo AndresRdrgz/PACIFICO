@@ -98,6 +98,16 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/calificaciones/comentario/', api.api_comentario_compliance, name='api_comentario_compliance'),
     
     # Analista de Crédito API URLs
+    path('api/solicitudes/<int:solicitud_id>/comentarios-analista/', api.api_obtener_comentarios_analista_credito, name='api_obtener_comentarios_analista_credito'),
+    path('api/solicitudes/<int:solicitud_id>/comentarios-analista/crear/', api.api_comentario_analista_credito, name='api_comentario_analista_credito'),
+    
+    # Notas y Recordatorios API URLs
+    path('api/notas-recordatorios/<int:solicitud_id>/', api.api_notas_recordatorios_list, name='api_notas_recordatorios_list'),
+    path('api/notas-recordatorios/<int:solicitud_id>/<int:nota_id>/', api.api_notas_recordatorios_detail, name='api_notas_recordatorios_detail'),
+    path('api/notas-recordatorios/<int:solicitud_id>/crear/', api.api_notas_recordatorios_create, name='api_notas_recordatorios_create'),
+    path('api/notas-recordatorios/<int:solicitud_id>/<int:nota_id>/actualizar/', api.api_notas_recordatorios_update, name='api_notas_recordatorios_update'),
+    path('api/notas-recordatorios/<int:solicitud_id>/<int:nota_id>/eliminar/', api.api_notas_recordatorios_delete, name='api_notas_recordatorios_delete'),
+    path('api/notas-recordatorios/<int:solicitud_id>/<int:nota_id>/completar/', api.api_notas_recordatorios_completar, name='api_notas_recordatorios_completar'),
     path('api/solicitudes/<int:solicitud_id>/comentario-analista-credito/', api.api_comentario_analista_credito, name='api_comentario_analista_credito'),
     path('api/solicitudes/<int:solicitud_id>/comentarios-analista-credito/', api.api_obtener_comentarios_analista_credito, name='api_obtener_comentarios_analista_credito'),
     
@@ -162,6 +172,7 @@ urlpatterns = [
     path('api/debida-diligencia/solicitar/<int:solicitud_id>/', views_workflow.api_debida_diligencia_solicitar, name='api_debida_diligencia_solicitar'),
     path('api/debida-diligencia/solicitar-makito/<int:solicitud_id>/', views_workflow.api_debida_diligencia_solicitar_makito, name='api_debida_diligencia_solicitar_makito'),
     path('api/debida-diligencia/upload/<int:solicitud_id>/', views_workflow.api_debida_diligencia_upload, name='api_debida_diligencia_upload'),
+    path('api/debida-diligencia/reenviar-correo/<int:solicitud_id>/', views_workflow.api_debida_diligencia_reenviar_correo, name='api_debida_diligencia_reenviar_correo'),
     path('api/debida-diligencia-tracking/', views_workflow.api_debida_diligencia_tracking, name='api_debida_diligencia_tracking'),
     
     # Makito RPA API URLs for Debida Diligencia

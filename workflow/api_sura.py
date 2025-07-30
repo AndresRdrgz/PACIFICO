@@ -315,7 +315,7 @@ def api_reenviar_sura_makito(request, codigo):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_sura_webhook_status(request):
+def api_sura_webhook_status(request, codigo):
     """
     Webhook para que Makito RPA actualice el estado de las solicitudes SURA
     """
@@ -323,14 +323,7 @@ def api_sura_webhook_status(request):
         data = json.loads(request.body)
         
         # Validar datos requeridos
-        codigo = data.get('codigo')
         status = data.get('status')
-        
-        if not codigo:
-            return JsonResponse({
-                'success': False,
-                'error': 'Código de solicitud requerido'
-            }, status=400)
         
         if not status:
             return JsonResponse({
@@ -381,8 +374,7 @@ def api_sura_webhook_status(request):
             HistorialSolicitud.objects.create(
                 solicitud=solicitud,
                 etapa=solicitud.etapa_actual,
-                fecha_inicio=now,
-                observaciones=f"Estado SURA actualizado de '{old_status}' a '{status}' por Makito RPA" + (f". {observaciones}" if observaciones else "")
+                fecha_inicio=now
             )
         
         logger.info(f"Estado SURA actualizado para solicitud {codigo}: {old_status} -> {status}")
@@ -410,24 +402,16 @@ def api_sura_webhook_status(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def api_sura_webhook_upload(request):
+def api_sura_webhook_upload(request, codigo):
     """
     Webhook para que Makito RPA suba el archivo de cotización SURA
     """
     try:
         # Validar que se haya enviado un archivo
-        if 'file' not in request.FILES:
+        if 'sura_file' not in request.FILES:
             return JsonResponse({
                 'success': False,
-                'error': 'Archivo requerido'
-            }, status=400)
-        
-        # Obtener datos
-        codigo = request.POST.get('codigo')
-        if not codigo:
-            return JsonResponse({
-                'success': False,
-                'error': 'Código de solicitud requerido'
+                'error': 'Archivo requerido (campo: sura_file)'
             }, status=400)
         
         # Buscar la solicitud
@@ -440,7 +424,7 @@ def api_sura_webhook_upload(request):
             }, status=404)
         
         # Procesar el archivo
-        uploaded_file = request.FILES['file']
+        uploaded_file = request.FILES['sura_file']
         
         # Validar tipo de archivo (opcional)
         allowed_extensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
@@ -478,8 +462,7 @@ def api_sura_webhook_upload(request):
             HistorialSolicitud.objects.create(
                 solicitud=solicitud,
                 etapa=solicitud.etapa_actual,
-                fecha_inicio=now,
-                observaciones=f"Archivo de cotización SURA subido por Makito RPA: {file_name}"
+                fecha_inicio=now
             )
         
         logger.info(f"Archivo SURA subido para solicitud {codigo}: {file_name}")

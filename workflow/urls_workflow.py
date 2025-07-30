@@ -99,6 +99,9 @@ urlpatterns += [
     # APC Status Check API
     path('api/solicitud/<int:solicitud_id>/apc-status/', views_workflow.api_check_apc_status, name='api_check_apc_status'),
     
+    # SURA Status Check API
+    path('api/solicitud/<int:solicitud_id>/sura-status/', views_workflow.api_check_sura_status, name='api_check_sura_status'),
+    
     # Vistas de administración
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
     path('admin/requisitos/', views_workflow.administrar_requisitos, name='admin_requisitos'),
@@ -243,8 +246,8 @@ urlpatterns += [
     path('api/sura/reenviar/<str:codigo>/', api_sura.api_reenviar_sura_makito, name='api_reenviar_sura_makito'),
     
     # SURA Makito Webhooks for RPA
-    path('api/makito/sura/status/', api_sura.api_sura_webhook_status, name='api_sura_webhook_status'),
-    path('api/makito/sura/upload/', api_sura.api_sura_webhook_upload, name='api_sura_webhook_upload'),
+    path('api/sura/update-status/<str:codigo>/', api_sura.api_sura_webhook_status, name='api_sura_webhook_status'),
+    path('api/sura/upload-file/<str:codigo>/', api_sura.api_sura_webhook_upload, name='api_sura_webhook_upload'),
     
     # Testing URLs (remove in production)
     path('test/apc-upload-email/', views_workflow.test_apc_upload_email, name='test_apc_upload_email'),

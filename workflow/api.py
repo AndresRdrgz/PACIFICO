@@ -9,11 +9,15 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models import Q
 from .models import ClienteEntrevista
-from .modelsWorkflow import Solicitud, CalificacionCampo, HistorialSolicitud, PermisoEtapa
+from .modelsWorkflow import Solicitud, CalificacionCampo, HistorialSolicitud, PermisoEtapa, NotaRecordatorio, SolicitudComentario
 from .views_workflow import notify_solicitud_change
 import json
 import logging
 import traceback
+from datetime import datetime
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 def entrevistas_json(request):
     entrevistas = ClienteEntrevista.objects.all()
@@ -719,3 +723,377 @@ def api_calificar_campos_bulk(request, solicitud_id):
             'success': False,
             'error': f'Error interno: {str(e)}'
         })
+
+# ========================================
+# API PARA NOTAS Y RECORDATORIOS
+# ========================================
+
+@login_required
+@require_http_methods(["GET"])
+def api_notas_recordatorios_list(request, solicitud_id):
+    """Obtener lista de notas y recordatorios de una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.has_perm('workflow.view_solicitud', solicitud):
+            return JsonResponse({'error': 'No tiene permisos para ver esta solicitud'}, status=403)
+        
+        notas = NotaRecordatorio.objects.filter(
+            solicitud=solicitud,
+            es_activo=True
+        ).select_related('usuario').order_by('-fecha_creacion')
+        
+        # Actualizar estados de recordatorios vencidos
+        for nota in notas.filter(tipo='recordatorio', estado='pendiente'):
+            nota.actualizar_estado_vencido()
+        
+        notas_data = []
+        for nota in notas:
+            nota_data = {
+                'id': nota.id,
+                'tipo': nota.tipo,
+                'titulo': nota.titulo,
+                'contenido': nota.contenido,
+                'prioridad': nota.prioridad,
+                'estado': nota.estado,
+                'fecha_creacion': nota.fecha_creacion.isoformat(),
+                'fecha_modificacion': nota.fecha_modificacion.isoformat(),
+                'usuario_nombre': f"{nota.usuario.first_name} {nota.usuario.last_name}".strip() or nota.usuario.username,
+                'fecha_vencimiento': nota.fecha_vencimiento.isoformat() if nota.fecha_vencimiento else None,
+                'fecha_vencimiento_local': nota.fecha_vencimiento.strftime('%Y-%m-%dT%H:%M') if nota.fecha_vencimiento else None,
+            }
+            notas_data.append(nota_data)
+        
+        return JsonResponse({
+            'success': True,
+            'notas': notas_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo notas para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def api_notas_recordatorios_detail(request, solicitud_id, nota_id):
+    """Obtener detalles de una nota específica"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
+        
+        # Verificar permisos
+        if not request.user.has_perm('workflow.view_solicitud', solicitud):
+            return JsonResponse({'error': 'No tiene permisos para ver esta solicitud'}, status=403)
+        
+        nota_data = {
+            'id': nota.id,
+            'tipo': nota.tipo,
+            'titulo': nota.titulo,
+            'contenido': nota.contenido,
+            'prioridad': nota.prioridad,
+            'estado': nota.estado,
+            'fecha_creacion': nota.fecha_creacion.isoformat(),
+            'fecha_modificacion': nota.fecha_modificacion.isoformat(),
+            'usuario_nombre': f"{nota.usuario.first_name} {nota.usuario.last_name}".strip() or nota.usuario.username,
+            'fecha_vencimiento': nota.fecha_vencimiento.isoformat() if nota.fecha_vencimiento else None,
+            'fecha_vencimiento_local': nota.fecha_vencimiento.strftime('%Y-%m-%dT%H:%M') if nota.fecha_vencimiento else None,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'nota': nota_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo nota {nota_id} para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_notas_recordatorios_create(request, solicitud_id):
+    """Crear una nueva nota o recordatorio"""
+    try:
+        logger.info(f"Creating nota/recordatorio for solicitud {solicitud_id}")
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos básicos (usuario debe estar autenticado)
+        # Se podría agregar validación más específica aquí según los permisos del usuario
+        
+        # Log request data for debugging
+        logger.info(f"Request body: {request.body}")
+        
+        data = json.loads(request.body)
+        logger.info(f"Parsed data: {data}")
+        
+        # Validar datos requeridos
+        required_fields = ['tipo', 'titulo', 'contenido', 'prioridad']
+        for field in required_fields:
+            if not data.get(field):
+                logger.error(f"Missing required field: {field}")
+                return JsonResponse({'error': f'El campo {field} es requerido'}, status=400)
+        
+        # Validar tipo
+        if data['tipo'] not in ['nota', 'recordatorio']:
+            logger.error(f"Invalid tipo: {data['tipo']}")
+            return JsonResponse({'error': 'Tipo inválido'}, status=400)
+        
+        # Validar prioridad
+        if data['prioridad'] not in ['Alta', 'Media', 'Baja']:
+            logger.error(f"Invalid prioridad: {data['prioridad']}")
+            return JsonResponse({'error': 'Prioridad inválida'}, status=400)
+        
+        # Para recordatorios, validar fecha de vencimiento
+        fecha_vencimiento = None
+        if data['tipo'] == 'recordatorio':
+            if not data.get('fecha_vencimiento'):
+                return JsonResponse({'error': 'La fecha de vencimiento es requerida para recordatorios'}, status=400)
+            
+            try:
+                # Handle datetime-local format (YYYY-MM-DDTHH:MM)
+                fecha_str = data['fecha_vencimiento']
+                logger.info(f"Parsing fecha_vencimiento: {fecha_str}")
+                
+                # If the string doesn't contain timezone info, treat as local time
+                if 'T' in fecha_str and not fecha_str.endswith('Z') and '+' not in fecha_str and '-' not in fecha_str[-6:]:
+                    # datetime-local format: "2023-12-25T14:30" or "2023-12-25T14:30:00"
+                    try:
+                        # Try with seconds first
+                        fecha_vencimiento = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M:%S')
+                    except ValueError:
+                        # Try without seconds
+                        fecha_vencimiento = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M')
+                    
+                    # Convert to timezone-aware datetime using Django's current timezone
+                    fecha_vencimiento = timezone.make_aware(fecha_vencimiento)
+                else:
+                    # Try to parse as ISO format with timezone
+                    fecha_vencimiento = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
+                    # Ensure it's timezone-aware
+                    if fecha_vencimiento.tzinfo is None:
+                        fecha_vencimiento = timezone.make_aware(fecha_vencimiento)
+                
+                logger.info(f"Parsed fecha_vencimiento: {fecha_vencimiento}")
+                
+                # Validate that the date is in the future
+                if fecha_vencimiento <= timezone.now():
+                    return JsonResponse({'error': 'La fecha de vencimiento debe ser futura'}, status=400)
+                    
+            except ValueError as e:
+                logger.error(f"Date parsing error: {e}")
+                logger.error(f"Original fecha_vencimiento string: {data['fecha_vencimiento']}")
+                return JsonResponse({'error': f'Formato de fecha inválido: {str(e)}'}, status=400)
+        
+        # Crear la nota
+        logger.info(f"Creating NotaRecordatorio with data: {data}")
+        nota = NotaRecordatorio.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            tipo=data['tipo'],
+            titulo=data['titulo'],
+            contenido=data['contenido'],
+            prioridad=data['prioridad'],
+            fecha_vencimiento=fecha_vencimiento,
+            estado=data.get('estado', 'pendiente') if data['tipo'] == 'recordatorio' else 'pendiente'
+        )
+        logger.info(f"Created NotaRecordatorio with ID: {nota.pk}")
+        
+        # Crear comentario en el historial
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"Creó una {data['tipo']}: {nota.titulo}",
+            tipo='general'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{data["tipo"].capitalize()} creada exitosamente',
+            'nota_id': nota.pk
+        })
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        logger.error(f"Request body was: {request.body}")
+        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creando nota para solicitud {solicitud_id}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Request body was: {request.body}")
+        logger.error(f"Request user: {request.user}")
+        return JsonResponse({'error': f'Error interno del servidor: {str(e)}'}, status=500)
+
+@login_required
+@require_http_methods(["PUT"])
+@csrf_exempt
+def api_notas_recordatorios_update(request, solicitud_id, nota_id):
+    """Actualizar una nota existente"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
+        
+        # Verificar permisos
+        if not request.user.has_perm('workflow.change_solicitud', solicitud):
+            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        
+        data = json.loads(request.body)
+        
+        # Validar datos requeridos
+        required_fields = ['tipo', 'titulo', 'contenido', 'prioridad']
+        for field in required_fields:
+            if not data.get(field):
+                return JsonResponse({'error': f'El campo {field} es requerido'}, status=400)
+        
+        # Validar tipo
+        if data['tipo'] not in ['nota', 'recordatorio']:
+            return JsonResponse({'error': 'Tipo inválido'}, status=400)
+        
+        # Validar prioridad
+        if data['prioridad'] not in ['Alta', 'Media', 'Baja']:
+            return JsonResponse({'error': 'Prioridad inválida'}, status=400)
+        
+        # Para recordatorios, validar fecha de vencimiento
+        if data['tipo'] == 'recordatorio':
+            if not data.get('fecha_vencimiento'):
+                return JsonResponse({'error': 'La fecha de vencimiento es requerida para recordatorios'}, status=400)
+            
+            try:
+                # Handle datetime-local format (YYYY-MM-DDTHH:MM)
+                fecha_str = data['fecha_vencimiento']
+                logger.info(f"Parsing fecha_vencimiento for update: {fecha_str}")
+                
+                # If the string doesn't contain timezone info, treat as local time
+                if 'T' in fecha_str and not fecha_str.endswith('Z') and '+' not in fecha_str and '-' not in fecha_str[-6:]:
+                    # datetime-local format: "2023-12-25T14:30" or "2023-12-25T14:30:00"
+                    try:
+                        # Try with seconds first
+                        fecha_vencimiento = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M:%S')
+                    except ValueError:
+                        # Try without seconds
+                        fecha_vencimiento = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M')
+                    
+                    # Convert to timezone-aware datetime using Django's current timezone
+                    fecha_vencimiento = timezone.make_aware(fecha_vencimiento)
+                else:
+                    # Try to parse as ISO format with timezone
+                    fecha_vencimiento = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
+                    # Ensure it's timezone-aware
+                    if fecha_vencimiento.tzinfo is None:
+                        fecha_vencimiento = timezone.make_aware(fecha_vencimiento)
+                
+                logger.info(f"Parsed fecha_vencimiento for update: {fecha_vencimiento}")
+                
+                # Validate that the date is in the future
+                if fecha_vencimiento <= timezone.now():
+                    return JsonResponse({'error': 'La fecha de vencimiento debe ser futura'}, status=400)
+                    
+            except ValueError as e:
+                logger.error(f"Date parsing error in update: {e}")
+                logger.error(f"Original fecha_vencimiento string: {data['fecha_vencimiento']}")
+                return JsonResponse({'error': f'Formato de fecha inválido: {str(e)}'}, status=400)
+        
+        # Actualizar la nota
+        nota.tipo = data['tipo']
+        nota.titulo = data['titulo']
+        nota.contenido = data['contenido']
+        nota.prioridad = data['prioridad']
+        
+        if data['tipo'] == 'recordatorio':
+            nota.fecha_vencimiento = fecha_vencimiento
+            nota.estado = data.get('estado', 'pendiente')
+        else:
+            nota.fecha_vencimiento = None
+            nota.estado = 'pendiente'
+        
+        nota.save()
+        
+        # Crear comentario en el historial
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"Editó una {nota.tipo}: {nota.titulo}",
+            tipo='general'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{nota.tipo.capitalize()} actualizada exitosamente'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        logger.error(f"Error actualizando nota {nota_id} para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+@login_required
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def api_notas_recordatorios_delete(request, solicitud_id, nota_id):
+    """Eliminar una nota (marcar como inactiva)"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
+        
+        # Verificar permisos
+        if not request.user.has_perm('workflow.change_solicitud', solicitud):
+            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        
+        # Marcar como inactiva en lugar de eliminar
+        nota.es_activo = False
+        nota.save()
+        
+        # Crear comentario en el historial
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"Eliminó una {nota.tipo}: {nota.titulo}",
+            tipo='general'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{nota.tipo.capitalize()} eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error eliminando nota {nota_id} para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_notas_recordatorios_completar(request, solicitud_id, nota_id):
+    """Marcar un recordatorio como completado"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
+        
+        # Verificar permisos
+        if not request.user.has_perm('workflow.change_solicitud', solicitud):
+            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        
+        # Verificar que sea un recordatorio
+        if nota.tipo != 'recordatorio':
+            return JsonResponse({'error': 'Solo se pueden completar recordatorios'}, status=400)
+        
+        # Marcar como completado
+        nota.marcar_completado()
+        
+        # Crear comentario en el historial
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"Marcó como completado el recordatorio: {nota.titulo}",
+            tipo='general'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Recordatorio marcado como completado exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error completando recordatorio {nota_id} para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({'error': 'Error interno del servidor'}, status=500)

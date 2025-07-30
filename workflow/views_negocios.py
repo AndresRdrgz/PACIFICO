@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.urls import reverse
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, Solicitud, HistorialSolicitud,
-    PermisoPipeline, PermisoEtapa
+    PermisoPipeline, PermisoEtapa, NotaRecordatorio
 )
 from pacifico.models import Cliente, Cotizacion
 from django.contrib.auth.models import User, Group
@@ -92,6 +92,58 @@ def enrich_solicitud_data(solicitud):
     # Agregar todos los datos enriquecidos al objeto solicitud
     for key, value in enriched_data.items():
         setattr(solicitud, f'enriched_{key}', value)
+    
+    # Obtener información de recordatorios
+    recordatorios = solicitud.notas_recordatorios.filter(
+        tipo='recordatorio',
+        es_activo=True
+    )
+    
+    # Calcular estadísticas de recordatorios
+    total_recordatorios = recordatorios.count()
+    recordatorios_pendientes = recordatorios.filter(estado='pendiente').count()
+    recordatorios_vencidos = 0
+    recordatorios_proximos_vencer = 0
+    
+    # Verificar recordatorios vencidos y próximos a vencer usando las propiedades del modelo
+    for recordatorio in recordatorios.filter(estado='pendiente'):
+        if recordatorio.esta_vencido:
+            recordatorios_vencidos += 1
+        elif recordatorio.proximo_a_vencer:
+            recordatorios_proximos_vencer += 1
+    
+    # También contar los que ya tienen estado 'vencido'
+    recordatorios_vencidos += recordatorios.filter(estado='vencido').count()
+    
+    # Agregar datos de recordatorios
+    solicitud.recordatorios_info = {
+        'total': total_recordatorios,
+        'pendientes': recordatorios_pendientes,
+        'vencidos': recordatorios_vencidos,
+        'proximos_vencer': recordatorios_proximos_vencer,
+        'tiene_recordatorios': total_recordatorios > 0,
+        'tiene_pendientes': recordatorios_pendientes > 0,
+        'tiene_vencidos': recordatorios_vencidos > 0,
+        'tiene_proximos_vencer': recordatorios_proximos_vencer > 0
+    }
+    
+    # Determinar el estado visual del indicador de recordatorios
+    if recordatorios_vencidos > 0:
+        solicitud.recordatorios_status = 'danger'  # Rojo para vencidos
+        solicitud.recordatorios_icon = 'fas fa-exclamation-triangle'
+        solicitud.recordatorios_title = f"{recordatorios_vencidos} recordatorio(s) vencido(s)"
+    elif recordatorios_proximos_vencer > 0:
+        solicitud.recordatorios_status = 'warning'  # Amarillo para próximos a vencer
+        solicitud.recordatorios_icon = 'fas fa-clock'
+        solicitud.recordatorios_title = f"{recordatorios_proximos_vencer} recordatorio(s) próximo(s) a vencer"
+    elif recordatorios_pendientes > 0:
+        solicitud.recordatorios_status = 'info'  # Azul para pendientes
+        solicitud.recordatorios_icon = 'fas fa-bell'
+        solicitud.recordatorios_title = f"{recordatorios_pendientes} recordatorio(s) pendiente(s)"
+    else:
+        solicitud.recordatorios_status = None
+        solicitud.recordatorios_icon = None
+        solicitud.recordatorios_title = None
     
     # Agregar propiedades adicionales para el template
     # Cliente information
@@ -221,7 +273,7 @@ def negocios_view(request):
             'pipeline', 'etapa_actual', 'subestado_actual', 
             'creada_por', 'asignada_a'
         ).prefetch_related(
-            'cliente', 'cotizacion'
+            'cliente', 'cotizacion', 'notas_recordatorios'
         ).all()
     else:
         # Usuario regular solo ve sus solicitudes asignadas o creadas
@@ -229,7 +281,7 @@ def negocios_view(request):
             'pipeline', 'etapa_actual', 'subestado_actual', 
             'creada_por', 'asignada_a'
         ).prefetch_related(
-            'cliente', 'cotizacion'
+            'cliente', 'cotizacion', 'notas_recordatorios'
         ).filter(
             Q(asignada_a=request.user) | Q(creada_por=request.user)
         )

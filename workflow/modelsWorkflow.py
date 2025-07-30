@@ -160,6 +160,11 @@ class Solicitud(models.Model):
     sura_primer_apellido = models.CharField(max_length=50, null=True, blank=True, help_text="Primer apellido del cliente para SURA")
     sura_segundo_apellido = models.CharField(max_length=50, null=True, blank=True, help_text="Segundo apellido del cliente para SURA")
     sura_no_documento = models.CharField(max_length=50, null=True, blank=True, help_text="Número de documento para SURA")
+    sura_tipo_documento = models.CharField(max_length=20, choices=[('cedula', 'Cédula'), ('pasaporte', 'Pasaporte')], null=True, blank=True, help_text="Tipo de documento para SURA")
+    sura_valor_auto = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Valor del auto para cotización SURA")
+    sura_ano_auto = models.IntegerField(null=True, blank=True, help_text="Año del auto para cotización SURA")
+    sura_marca = models.CharField(max_length=100, null=True, blank=True, help_text="Marca del auto para cotización SURA")
+    sura_modelo = models.CharField(max_length=100, null=True, blank=True, help_text="Modelo del auto para cotización SURA")
     sura_status = models.CharField(max_length=20, choices=SURA_STATUS_CHOICES, default='pending', help_text="Estado del proceso SURA con Makito")
     sura_fecha_solicitud = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando se solicitó la cotización SURA")
     sura_fecha_inicio = models.DateTimeField(null=True, blank=True, help_text="Fecha cuando Makito inició el proceso SURA")
@@ -713,6 +718,77 @@ class RequisitoTransicion(models.Model):
 
     def __str__(self):
         return f"{self.transicion} - {self.requisito.nombre} ({'Obligatorio' if self.obligatorio else 'Opcional'})"
+
+
+# --------------------------------------
+# NOTAS Y RECORDATORIOS
+# --------------------------------------
+
+class NotaRecordatorio(models.Model):
+    """
+    Modelo para notas y recordatorios de los oficiales sobre solicitudes
+    """
+    TIPO_CHOICES = [
+        ('nota', 'Nota'),
+        ('recordatorio', 'Recordatorio'),
+    ]
+    
+    ESTADO_RECORDATORIO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('completado', 'Completado'),
+        ('vencido', 'Vencido'),
+    ]
+    
+    solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='notas_recordatorios')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notas_recordatorios_creadas')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='nota')
+    titulo = models.CharField(max_length=200, help_text="Título de la nota o recordatorio")
+    contenido = models.TextField(help_text="Contenido de la nota o recordatorio")
+    
+    # Campos específicos para recordatorios
+    fecha_vencimiento = models.DateTimeField(null=True, blank=True, help_text="Fecha de vencimiento del recordatorio")
+    estado = models.CharField(max_length=20, choices=ESTADO_RECORDATORIO_CHOICES, default='pendiente')
+    prioridad = models.CharField(max_length=20, choices=Solicitud.PRIORIDAD_CHOICES, default='Media')
+    
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+    es_activo = models.BooleanField(default=True, help_text="Si la nota/recordatorio está activo")
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = "Nota o Recordatorio"
+        verbose_name_plural = "Notas y Recordatorios"
+    
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.titulo} ({self.solicitud.codigo})"
+    
+    @property
+    def esta_vencido(self):
+        """Verifica si el recordatorio está vencido"""
+        if self.tipo == 'recordatorio' and self.fecha_vencimiento:
+            return timezone.now() > self.fecha_vencimiento and self.estado == 'pendiente'
+        return False
+    
+    @property
+    def proximo_a_vencer(self):
+        """Verifica si el recordatorio está próximo a vencer (24 horas)"""
+        if self.tipo == 'recordatorio' and self.fecha_vencimiento:
+            tiempo_restante = self.fecha_vencimiento - timezone.now()
+            return 0 < tiempo_restante.total_seconds() <= 86400  # 24 horas en segundos
+        return False
+    
+    def marcar_completado(self):
+        """Marca el recordatorio como completado"""
+        if self.tipo == 'recordatorio':
+            self.estado = 'completado'
+            self.save(update_fields=['estado', 'fecha_modificacion'])
+    
+    def actualizar_estado_vencido(self):
+        """Actualiza el estado a vencido si corresponde"""
+        if self.tipo == 'recordatorio' and self.esta_vencido:
+            self.estado = 'vencido'
+            self.save(update_fields=['estado', 'fecha_modificacion'])
 
 
 @receiver(post_save, sender=Solicitud)

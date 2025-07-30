@@ -191,6 +191,7 @@
 
                     <!-- Campos adicionales para SURA (ocultos por defecto) -->
                     <div id="suraCamposAdicionales" style="display: none;">
+                        <!-- Información del Cliente -->
                         <div class="form-group mt-3">
                             <label for="suraPrimerNombre" class="form-label">Primer nombre</label>
                             <input type="text" id="suraPrimerNombre" name="sura_primer_nombre" class="form-control"
@@ -211,6 +212,17 @@
                             <input type="text" id="suraSegundoApellido" name="sura_segundo_apellido" class="form-control"
                                 placeholder="Ingrese el segundo apellido del cliente (opcional)">
                         </div>
+                        
+                        <!-- Tipo de Documento -->
+                        <div class="form-group mt-3">
+                            <label for="suraTipoDocumento" class="form-label">Tipo de documento</label>
+                            <select id="suraTipoDocumento" name="sura_tipo_documento" class="form-control">
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="cedula">Cédula</option>
+                                <option value="pasaporte">Pasaporte</option>
+                            </select>
+                        </div>
+                        
                         <div class="form-group mt-3">
                             <label for="suraNoDocumento" class="form-label">Número de documento</label>
                             <input type="text" id="suraNoDocumento" name="sura_no_documento" class="form-control"
@@ -218,6 +230,53 @@
                             <small class="text-muted mt-1 d-block">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Este campo se completa automáticamente con el documento del cliente seleccionado
+                            </small>
+                        </div>
+
+                        <!-- Información del Vehículo -->
+                        <hr class="my-3">
+                        <h6 class="form-section-title mb-3">
+                            <i class="fas fa-car me-2"></i>
+                            Información del Vehículo
+                        </h6>
+                        
+                        <div class="form-group mt-3">
+                            <label for="suraValorAuto" class="form-label">Valor del auto</label>
+                            <input type="number" id="suraValorAuto" name="sura_valor_auto" class="form-control auto-populated-field"
+                                placeholder="Valor del vehículo">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente desde la cotización seleccionada, pero puedes editarlo si es necesario
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label for="suraAnoAuto" class="form-label">Año del auto</label>
+                            <input type="number" id="suraAnoAuto" name="sura_ano_auto" class="form-control auto-populated-field"
+                                placeholder="Año del vehículo" min="1900" max="2030">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente desde la cotización seleccionada, pero puedes editarlo si es necesario
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label for="suraMarca" class="form-label">Marca</label>
+                            <input type="text" id="suraMarca" name="sura_marca" class="form-control auto-populated-field"
+                                placeholder="Marca del vehículo">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente desde la cotización seleccionada, pero puedes editarlo si es necesario
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <label for="suraModelo" class="form-label">Modelo</label>
+                            <input type="text" id="suraModelo" name="sura_modelo" class="form-control auto-populated-field"
+                                placeholder="Modelo del vehículo">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Este campo se completa automáticamente desde la cotización seleccionada, pero puedes editarlo si es necesario
                             </small>
                         </div>
                     </div>
@@ -759,14 +818,21 @@
 
     /* Auto-populated field styling */
     .auto-populated-field {
-        background-color: #f0f9f0 !important;
+        background-color: #f8fff8 !important;
         border-color: #c3e6c3 !important;
+        border-left: 3px solid #28a745 !important;
     }
 
     .auto-populated-field:focus {
         background-color: #ffffff !important;
         border-color: var(--verde-pacifico) !important;
+        border-left: 3px solid var(--verde-pacifico) !important;
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
+
+    .auto-populated-field:hover {
+        background-color: #f0f9f0 !important;
+        border-color: #a8d5a8 !important;
     }
 
     .session-warning-content {
@@ -967,15 +1033,33 @@
     }
 
     // Function to auto-populate SURA fields when client is selected
-    function autoPopulateSuraFields(clienteData) {
-        console.log('🔧 autoPopulateSuraFields called with:', clienteData);
+    function autoPopulateSuraFields(clienteData, cotizacionData = null) {
+        console.log('🔧 autoPopulateSuraFields called with:', { clienteData, cotizacionData });
 
         const suraPrimerNombre = document.getElementById('suraPrimerNombre');
         const suraSegundoNombre = document.getElementById('suraSegundoNombre');
         const suraPrimerApellido = document.getElementById('suraPrimerApellido');
         const suraSegundoApellido = document.getElementById('suraSegundoApellido');
         const suraNoDocumento = document.getElementById('suraNoDocumento');
+        const suraTipoDocumento = document.getElementById('suraTipoDocumento');
+        
+        // Vehicle fields
+        const suraValorAuto = document.getElementById('suraValorAuto');
+        const suraAnoAuto = document.getElementById('suraAnoAuto');
+        const suraMarca = document.getElementById('suraMarca');
+        const suraModelo = document.getElementById('suraModelo');
 
+        // Function to handle field editing - remove auto-populated styling when user edits
+        function handleFieldEdit(field) {
+            if (field && field.classList.contains('auto-populated-field')) {
+                field.addEventListener('input', function() {
+                    this.classList.remove('auto-populated-field');
+                    this.removeAttribute('data-auto-populated');
+                });
+            }
+        }
+
+        // Auto-populate client document data
         if (clienteData && clienteData.cedulaCliente && suraNoDocumento) {
             // Auto-populate the document number with the client's cedula
             suraNoDocumento.value = clienteData.cedulaCliente;
@@ -985,11 +1069,77 @@
             suraNoDocumento.setAttribute('data-auto-populated', 'true');
             suraNoDocumento.placeholder = 'Auto-completado desde cliente seleccionado';
 
-            console.log('✅ SURA fields auto-populated:', {
+            console.log('✅ SURA client document auto-populated:', {
                 documento: suraNoDocumento.value
             });
-        } else {
-            console.log('⚠️ No client data available for SURA auto-population');
+
+            // Add edit listener to document number field
+            handleFieldEdit(suraNoDocumento);
+        }
+
+        // Auto-populate document type from cotización if available
+        if (cotizacionData && cotizacionData.tipoDocumento && suraTipoDocumento) {
+            // Map from cotización format to SURA format
+            const tipoDocumentoMap = {
+                'CEDULA': 'cedula',
+                'PASAPORTE': 'pasaporte'
+            };
+            const mappedTipo = tipoDocumentoMap[cotizacionData.tipoDocumento] || 'cedula';
+            suraTipoDocumento.value = mappedTipo;
+            
+            suraTipoDocumento.classList.add('auto-populated-field');
+            suraTipoDocumento.setAttribute('data-auto-populated', 'true');
+            
+            console.log('✅ SURA document type auto-populated:', {
+                tipoDocumento: mappedTipo
+            });
+
+            // Add edit listener to document type field
+            handleFieldEdit(suraTipoDocumento);
+        }
+
+        // Auto-populate vehicle data from cotización if available
+        if (cotizacionData) {
+            if (cotizacionData.valorAuto && suraValorAuto) {
+                suraValorAuto.value = cotizacionData.valorAuto;
+                suraValorAuto.classList.add('auto-populated-field');
+                suraValorAuto.setAttribute('data-auto-populated', 'true');
+            }
+            
+            if (cotizacionData.yearCarro && suraAnoAuto) {
+                suraAnoAuto.value = cotizacionData.yearCarro;
+                suraAnoAuto.classList.add('auto-populated-field');
+                suraAnoAuto.setAttribute('data-auto-populated', 'true');
+            }
+            
+            if (cotizacionData.marca && suraMarca) {
+                suraMarca.value = cotizacionData.marca;
+                suraMarca.classList.add('auto-populated-field');
+                suraMarca.setAttribute('data-auto-populated', 'true');
+            }
+            
+            if (cotizacionData.modelo && suraModelo) {
+                suraModelo.value = cotizacionData.modelo;
+                suraModelo.classList.add('auto-populated-field');
+                suraModelo.setAttribute('data-auto-populated', 'true');
+            }
+
+            console.log('✅ SURA vehicle data auto-populated:', {
+                valorAuto: cotizacionData.valorAuto,
+                yearCarro: cotizacionData.yearCarro,
+                marca: cotizacionData.marca,
+                modelo: cotizacionData.modelo
+            });
+
+            // Add edit listeners to vehicle fields
+            handleFieldEdit(suraValorAuto);
+            handleFieldEdit(suraAnoAuto);
+            handleFieldEdit(suraMarca);
+            handleFieldEdit(suraModelo);
+        }
+
+        if (!clienteData && !cotizacionData) {
+            console.log('⚠️ No client or cotización data available for SURA auto-population');
         }
     }
 
@@ -1002,16 +1152,56 @@
         const suraPrimerApellido = document.getElementById('suraPrimerApellido');
         const suraSegundoApellido = document.getElementById('suraSegundoApellido');
         const suraNoDocumento = document.getElementById('suraNoDocumento');
+        const suraTipoDocumento = document.getElementById('suraTipoDocumento');
+        
+        // Vehicle fields
+        const suraValorAuto = document.getElementById('suraValorAuto');
+        const suraAnoAuto = document.getElementById('suraAnoAuto');
+        const suraMarca = document.getElementById('suraMarca');
+        const suraModelo = document.getElementById('suraModelo');
 
+        // Clear client fields
         if (suraPrimerNombre) suraPrimerNombre.value = '';
         if (suraSegundoNombre) suraSegundoNombre.value = '';
         if (suraPrimerApellido) suraPrimerApellido.value = '';
         if (suraSegundoApellido) suraSegundoApellido.value = '';
+        
         if (suraNoDocumento) {
             suraNoDocumento.value = '';
             suraNoDocumento.classList.remove('auto-populated-field');
             suraNoDocumento.removeAttribute('data-auto-populated');
             suraNoDocumento.placeholder = 'Ingrese el número de documento';
+        }
+        
+        if (suraTipoDocumento) {
+            suraTipoDocumento.value = '';
+            suraTipoDocumento.classList.remove('auto-populated-field');
+            suraTipoDocumento.removeAttribute('data-auto-populated');
+        }
+
+        // Clear vehicle fields
+        if (suraValorAuto) {
+            suraValorAuto.value = '';
+            suraValorAuto.classList.remove('auto-populated-field');
+            suraValorAuto.removeAttribute('data-auto-populated');
+        }
+        
+        if (suraAnoAuto) {
+            suraAnoAuto.value = '';
+            suraAnoAuto.classList.remove('auto-populated-field');
+            suraAnoAuto.removeAttribute('data-auto-populated');
+        }
+        
+        if (suraMarca) {
+            suraMarca.value = '';
+            suraMarca.classList.remove('auto-populated-field');
+            suraMarca.removeAttribute('data-auto-populated');
+        }
+        
+        if (suraModelo) {
+            suraModelo.value = '';
+            suraModelo.classList.remove('auto-populated-field');
+            suraModelo.removeAttribute('data-auto-populated');
         }
 
         console.log('✅ SURA fields cleared');

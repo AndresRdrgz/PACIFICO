@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
-from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte
+from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, NotaRecordatorio
 from .forms import SolicitudAdminForm
 
 class EtapaInline(admin.TabularInline):
@@ -707,3 +707,67 @@ except Exception:
         list_filter = ('cumplido', 'fecha_subida')
         search_fields = ('solicitud__id', 'requisito__nombre')
         inlines = [CalificacionDocumentoInline, ComentarioDocumentoInline]
+
+
+@admin.register(NotaRecordatorio)
+class NotaRecordatorioAdmin(admin.ModelAdmin):
+    """Administración para las notas y recordatorios"""
+    
+    list_display = (
+        'id', 'solicitud', 'tipo', 'titulo', 'prioridad', 'estado', 
+        'usuario', 'fecha_creacion', 'fecha_vencimiento', 'es_activo'
+    )
+    
+    list_display_links = ('id', 'titulo')
+    
+    search_fields = (
+        'titulo', 'contenido', 'solicitud__codigo', 
+        'usuario__username', 'usuario__first_name', 'usuario__last_name'
+    )
+    
+    list_filter = (
+        'tipo', 'prioridad', 'estado', 'es_activo', 
+        'fecha_creacion', 'fecha_vencimiento'
+    )
+    
+    readonly_fields = (
+        'fecha_creacion', 'fecha_modificacion'
+    )
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': (
+                'solicitud',
+                'usuario',
+                'tipo',
+                'titulo',
+                'contenido',
+                'prioridad',
+            )
+        }),
+        ('Recordatorio', {
+            'fields': (
+                'fecha_vencimiento',
+                'estado',
+            ),
+            'classes': ('collapse',),
+            'description': 'Campos específicos para recordatorios'
+        }),
+        ('Control', {
+            'fields': (
+                'es_activo',
+                'fecha_creacion',
+                'fecha_modificacion',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    list_per_page = 25
+    date_hierarchy = 'fecha_creacion'
+    ordering = ('-fecha_creacion',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'solicitud', 'usuario'
+        )
