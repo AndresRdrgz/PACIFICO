@@ -11750,9 +11750,31 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'error': 'No tienes permisos para validar esta solicitud'
             }, status=403)
         
-        # Obtener todos los RequisitoSolicitud con información de si son obligatorios
+        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
+        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
+        # (no en las de salida, que son para la siguiente etapa)
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos definidos en RequisitoTransicion de entrada
+        requisitos_definidos = {}
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_definidos:
+                    requisitos_definidos[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'transicion_origen': transicion.etapa_origen.nombre
+                    }
+        
+        # Solo procesar RequisitoSolicitud que estén definidos en RequisitoTransicion de entrada
         requisitos_solicitud = RequisitoSolicitud.objects.filter(
-            solicitud=solicitud
+            solicitud=solicitud,
+            requisito_id__in=requisitos_definidos.keys()  # 🎯 CLAVE: Solo los definidos en RequisitoTransicion
         ).select_related('requisito')
         
         documentos_problematicos = []
@@ -11805,6 +11827,18 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 except Exception:
                     pass  # Ignorar errores de creación automática
         
+        # ✅ NUEVO: Incluir documentos definidos en RequisitoTransicion que NO están en RequisitoSolicitud
+        # Estos son documentos requeridos que el usuario aún no ha subido
+        for req_id, req_info in requisitos_definidos.items():
+            # Si no existe un RequisitoSolicitud para este requisito
+            if not requisitos_solicitud.filter(requisito_id=req_id).exists():
+                documentos_pendientes.append({
+                    'nombre': req_info['requisito'].nombre,
+                    'estado': 'faltante',
+                    'obligatorio': req_info['obligatorio'],
+                    'mensaje_personalizado': req_info['mensaje_personalizado']
+                })
+        
         # Verificar si puede avanzar (solo "malo" bloquea)
         if len(documentos_problematicos) == 0:
             return JsonResponse({
@@ -11812,7 +11846,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'puede_avanzar': True,
                 'mensaje': 'No hay documentos calificados como "Malo". Puede avanzar. (Documentos "Pendientes" permiten continuar)',
                 'documentos_pendientes': documentos_pendientes,
-                'total_documentos': len(requisitos_solicitud),
+                'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
                 'documentos_malos': documentos_malos,
                 'documentos_pendientes_count': len(documentos_pendientes)
@@ -11835,7 +11869,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'documentos_pendientes': documentos_pendientes,
                 'mensaje': f'No puede avanzar: {len(documentos_problematicos)} documento(s) calificado(s) como "Malo"',
                 'detalle': mensajes_detalle,
-                'total_documentos': len(requisitos_solicitud),
+                'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
                 'documentos_malos': documentos_malos,
                 'documentos_pendientes_count': len(documentos_pendientes)
