@@ -4,8 +4,6 @@
 
 {% block title %}Negocios - Sistema de Workflow{% endblock %}
 
-
-
 {% block content %}
 
 {% include 'workflow/partials/modalRequisitos.html' %}
@@ -128,8 +126,6 @@
     </div>
 </div>
 
-
-
 <div class="mt-0 pt-0">
     <div class="workflow-container">
         {% if not no_access %}
@@ -155,6 +151,23 @@
                             </button>
                         </small>
                         {% endif %}
+                        
+                        <!-- Access Level Indicator -->
+                        {% if user_access_info.access_level != 'admin' %}
+                        <small class="text-white-50 d-block mt-1">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Nivel de acceso: 
+                            {% if user_access_info.access_level == 'restricted' %}
+                                <span class="badge bg-warning">Restringido</span>
+                            {% elif user_access_info.access_level == 'direct' %}
+                                <span class="badge bg-info">Directo</span>
+                            {% elif user_access_info.access_level == 'group' %}
+                                <span class="badge bg-primary">Grupo</span>
+                            {% elif user_access_info.access_level == 'stage' %}
+                                <span class="badge bg-secondary">Etapa</span>
+                            {% endif %}
+                        </small>
+                        {% endif %}
                     </div>
                     <div class="d-flex gap-2 align-items-center">
                         <!-- Selector de Pipeline -->
@@ -162,14 +175,26 @@
                             <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownPipeline"
                                 data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-project-diagram me-1"></i>
-                                Pipelines
+                                Pipelines ({{ pipelines|length }})
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownPipeline" style="z-index: 9999;">
                                 {% for p in pipelines %}
                                 <li>
                                     <a class="dropdown-item {% if pipeline and p.id == pipeline.id %}active{% endif %}"
                                         href="?pipeline={{ p.id }}&view={{ request.GET.view|default:'table' }}">
-                                        {{ p.nombre }}
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>{{ p.nombre }}</span>
+                                            <div class="d-flex gap-1">
+                                                {% if p.user_solicitudes_count > 0 %}
+                                                <span class="badge bg-primary">{{ p.user_solicitudes_count }}</span>
+                                                {% endif %}
+                                                {% if p.access_level != 'admin' %}
+                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                                    {% if p.access_level == 'direct' %}D{% elif p.access_level == 'group' %}G{% elif p.access_level == 'stage' %}E{% else %}R{% endif %}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </a>
                                 </li>
                                 {% empty %}
@@ -199,6 +224,8 @@
                             Solicitudes Makito
                         </a>
 
+                        <!-- Botón Nueva Solicitud - Solo si tiene permisos -->
+                        {% if can_create_solicitudes %}
                         {% if pipeline %}
                         <a href="#" class="btn btn-light btn-sm"
                             onclick="openSolicitudDrawerWithContext('{{ pipeline.id }}')">
@@ -208,6 +235,11 @@
                         <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext()">
                             <i class="fas fa-plus me-1"></i>Nueva Solicitud
                         </a>
+                        {% endif %}
+                        {% else %}
+                        <button class="btn btn-light btn-sm" disabled title="No tienes permisos para crear solicitudes">
+                            <i class="fas fa-plus me-1"></i>Nueva Solicitud
+                        </button>
                         {% endif %}
                     </div>
                 </div>
@@ -227,61 +259,37 @@
                     {% else %}
                     <p class="text-muted mb-4">No tienes acceso a ningún pipeline en el sistema de workflow.</p>
                     {% endif %}
-                </div>
-
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card border-info">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>¿Cómo obtener acceso?</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-user-tie me-2 text-primary"></i>Contacta a tu Administrador
-                                        </h6>
-                                        <p class="small text-muted">Solicita que te asignen permisos para acceder a los
-                                            pipelines necesarios para tu trabajo.</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-users me-2 text-success"></i>Únete a un Grupo</h6>
-                                        <p class="small text-muted">Pregunta si existe un grupo de usuarios con acceso a
-                                            los
-                                            pipelines que necesitas.</p>
-                                    </div>
-                                </div>
-                                <hr>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-cog me-2 text-warning"></i>Configuración de Permisos</h6>
-                                        <p class="small text-muted">Los permisos se configuran en la sección de
-                                            administración del sistema.</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-question-circle me-2 text-info"></i>¿Necesitas ayuda?</h6>
-                                        <p class="small text-muted">Contacta al equipo de soporte técnico si tienes
-                                            dudas
-                                            sobre el acceso.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    
+                    <!-- Información adicional para superusuarios -->
+                    {% if is_superuser %}
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="fas fa-info-circle me-2"></i>Información para Administradores</h6>
+                        <p class="mb-2">Como superusuario, deberías tener acceso a todos los pipelines. Si no ves ninguno, verifica:</p>
+                        <ul class="text-start mb-0">
+                            <li>Que existan pipelines creados en el sistema</li>
+                            <li>Que los pipelines estén activos</li>
+                            <li>La configuración de permisos en el admin</li>
+                        </ul>
                     </div>
+                    {% endif %}
                 </div>
-
-                <div class="mt-4">
-                    <a href="{% url 'workflow:dashboard' %}" class="btn btn-primary me-2">
-                        <i class="fas fa-tachometer-alt me-2"></i>Ir al Dashboard
+                
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="{% url 'workflow:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-home me-1"></i>Ir al Dashboard
                     </a>
-                    <a href="{% url 'main_menu' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-home me-2"></i>Menú Principal
+                    {% if is_superuser %}
+                    <a href="{% url 'admin:workflow_pipeline_changelist' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-cog me-1"></i>Administrar Pipelines
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        {% else %}
+        {% endif %}
 
-        {% if pipeline %}
+        {% if not no_access %}
         <!-- KPIs Estáticos en Fila Horizontal -->
         <div class="card mb-1" id="kpis-section" style="border: 1px solid #e0e0e0;">
             <div class="card-body py-2">
@@ -1184,7 +1192,7 @@
         </div>
         {% endif %}
 
-                {% endif %}
+        {% endif %}
 
         {% else %}
                 <!-- Selección de Pipeline - Diseño Simplificado con Tabla -->

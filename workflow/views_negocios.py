@@ -19,6 +19,145 @@ from .modelsWorkflow import (
 from pacifico.models import Cliente, Cotizacion
 from django.contrib.auth.models import User, Group
 
+def get_user_pipeline_access(user):
+    """
+    Utility function to determine user's pipeline access and permissions
+    Returns a dictionary with access information
+    """
+    if user.is_superuser:
+        # Superusers have full access to all pipelines
+        pipelines = Pipeline.objects.all()
+        return {
+            'has_access': True,
+            'pipelines': pipelines,
+            'can_create': True,
+            'can_edit': True,
+            'can_delete': True,
+            'can_admin': True,
+            'access_level': 'admin'
+        }
+    
+    # Get pipelines user has access to through direct permissions
+    direct_pipeline_permissions = PermisoPipeline.objects.filter(
+        usuario=user,
+        puede_ver=True
+    ).select_related('pipeline')
+    
+    # Get pipelines user has access to through group permissions
+    group_pipeline_permissions = PermisoPipeline.objects.filter(
+        grupo__user=user,
+        puede_ver=True
+    ).select_related('pipeline')
+    
+    # Get pipelines user has access to through stage permissions
+    stage_pipeline_permissions = Pipeline.objects.filter(
+        etapas__permisos__grupo__user=user,
+        etapas__permisos__puede_ver=True
+    ).distinct()
+    
+    # Combine all accessible pipelines
+    accessible_pipelines = set()
+    pipeline_permissions = {}
+    
+    # Process direct permissions
+    for perm in direct_pipeline_permissions:
+        accessible_pipelines.add(perm.pipeline)
+        pipeline_permissions[perm.pipeline.id] = {
+            'can_create': perm.puede_crear,
+            'can_edit': perm.puede_editar,
+            'can_delete': perm.puede_eliminar,
+            'can_admin': perm.puede_admin,
+            'access_level': 'direct'
+        }
+    
+    # Process group permissions
+    for perm in group_pipeline_permissions:
+        accessible_pipelines.add(perm.pipeline)
+        if perm.pipeline.id not in pipeline_permissions:
+            pipeline_permissions[perm.pipeline.id] = {
+                'can_create': perm.puede_crear,
+                'can_edit': perm.puede_editar,
+                'can_delete': perm.puede_eliminar,
+                'can_admin': perm.puede_admin,
+                'access_level': 'group'
+            }
+        else:
+            # Merge permissions (take the highest level)
+            existing = pipeline_permissions[perm.pipeline.id]
+            pipeline_permissions[perm.pipeline.id] = {
+                'can_create': existing['can_create'] or perm.puede_crear,
+                'can_edit': existing['can_edit'] or perm.puede_editar,
+                'can_delete': existing['can_delete'] or perm.puede_eliminar,
+                'can_admin': existing['can_admin'] or perm.puede_admin,
+                'access_level': 'mixed'
+            }
+    
+    # Process stage-based access
+    for pipeline in stage_pipeline_permissions:
+        accessible_pipelines.add(pipeline)
+        if pipeline.id not in pipeline_permissions:
+            pipeline_permissions[pipeline.id] = {
+                'can_create': False,  # Stage access doesn't imply creation rights
+                'can_edit': False,    # Stage access doesn't imply edit rights
+                'can_delete': False,  # Stage access doesn't imply delete rights
+                'can_admin': False,   # Stage access doesn't imply admin rights
+                'access_level': 'stage'
+            }
+    
+    # Convert set to list for easier handling
+    pipelines_list = list(accessible_pipelines)
+    
+    return {
+        'has_access': len(pipelines_list) > 0,
+        'pipelines': pipelines_list,
+        'pipeline_permissions': pipeline_permissions,
+        'can_create': any(perm.get('can_create', False) for perm in pipeline_permissions.values()),
+        'can_edit': any(perm.get('can_edit', False) for perm in pipeline_permissions.values()),
+        'can_delete': any(perm.get('can_delete', False) for perm in pipeline_permissions.values()),
+        'can_admin': any(perm.get('can_admin', False) for perm in pipeline_permissions.values()),
+        'access_level': 'restricted'
+    }
+
+def get_user_solicitudes_queryset(user, pipeline_id=None):
+    """
+    Get solicitudes queryset based on user permissions
+    """
+    if user.is_superuser:
+        # Superusers can see all solicitudes
+        queryset = Solicitud.objects.select_related(
+            'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).prefetch_related(
+            'cliente', 'cotizacion', 'notas_recordatorios'
+        )
+    else:
+        # Regular users can only see solicitudes they created or are assigned to
+        # AND have access to the pipeline
+        access_info = get_user_pipeline_access(user)
+        accessible_pipeline_ids = [p.id for p in access_info['pipelines']]
+        
+        queryset = Solicitud.objects.select_related(
+            'pipeline', 'etapa_actual', 'subestado_actual', 
+            'creada_por', 'asignada_a'
+        ).prefetch_related(
+            'cliente', 'cotizacion', 'notas_recordatorios'
+        ).filter(
+            Q(asignada_a=user) | Q(creada_por=user)
+        )
+        
+        # Filter by accessible pipelines
+        if accessible_pipeline_ids:
+            queryset = queryset.filter(pipeline_id__in=accessible_pipeline_ids)
+        else:
+            # If no pipeline access, return empty queryset
+            queryset = queryset.none()
+    
+    # Apply pipeline filter if specified
+    if pipeline_id:
+        queryset = queryset.filter(pipeline_id=pipeline_id)
+    
+    return queryset
+
 def enrich_solicitud_data(solicitud):
     """
     Enriquece los datos de una solicitud para evitar lógica compleja en el template
@@ -223,12 +362,25 @@ def negocios_view(request):
     Vista principal de negocios con tabla de solicitudes y funcionalidad de drawer
     Con redirección automática al último pipeline seleccionado
     """
+    # Get user access information
+    access_info = get_user_pipeline_access(request.user)
+    
+    # Check if user has any pipeline access
+    if not access_info['has_access']:
+        context = {
+            'no_access': True,
+            'error_message': 'No tienes acceso a ningún pipeline en el sistema de workflow.',
+            'user': request.user,
+            'is_superuser': request.user.is_superuser,
+        }
+        return render(request, 'workflow/negocios.html', context)
+    
     # Obtener parámetros de filtrado y búsqueda
     search_query = request.GET.get('search', '')
     pipeline_filter = request.GET.get('pipeline', '')
     etapa_filter = request.GET.get('etapa', '')
     estado_filter = request.GET.get('estado', '')
-    page = request.GET.get('page', '1')  # Keep as string for consistency
+    page = request.GET.get('page', '1')
     
     # NUEVA FUNCIONALIDAD: Redirección automática al último pipeline seleccionado
     session_key = f'negocios_last_pipeline_{request.user.id}'
@@ -239,10 +391,17 @@ def negocios_view(request):
     if session_key in request.session:
         print(f"🔍 DEBUG: saved pipeline: {request.session[session_key]}")
     
-    # Si hay un pipeline_filter, guardarlo en la sesión
+    # Si hay un pipeline_filter, verificar acceso y guardarlo en la sesión
     if pipeline_filter:
-        request.session[session_key] = pipeline_filter
-        print(f"🔄 Guardando pipeline {pipeline_filter} en sesión para usuario {request.user.username}")
+        # Verify user has access to this pipeline
+        accessible_pipeline_ids = [p.id for p in access_info['pipelines']]
+        if int(pipeline_filter) in accessible_pipeline_ids:
+            request.session[session_key] = pipeline_filter
+            print(f"🔄 Guardando pipeline {pipeline_filter} en sesión para usuario {request.user.username}")
+        else:
+            # User doesn't have access to this pipeline, clear filter
+            pipeline_filter = ''
+            print(f"⚠️  Usuario {request.user.username} no tiene acceso al pipeline {pipeline_filter}")
     
     # Si NO hay filtros y existe un pipeline guardado en sesión, redirigir
     elif not any([search_query, etapa_filter, estado_filter, page != '1']) and session_key in request.session:
@@ -250,48 +409,18 @@ def negocios_view(request):
         print(f"🚀 Redirigiendo usuario {request.user.username} al último pipeline: {last_pipeline}")
         
         # Verificar que el pipeline aún existe y el usuario tiene acceso
-        try:
-            if request.user.is_superuser:
-                pipeline_exists = Pipeline.objects.filter(id=last_pipeline).exists()
-            else:
-                pipeline_exists = Pipeline.objects.filter(
-                    Q(id=last_pipeline) &
-                    (Q(permisos_pipeline__usuario=request.user) |
-                     Q(etapas__permisos__grupo__user=request.user))
-                ).exists()
-            
-            if pipeline_exists:
-                # Construir URL con el pipeline filter
-                redirect_url = f"{reverse('workflow:negocios')}?pipeline={last_pipeline}"
-                return redirect(redirect_url)
-            else:
-                # Si el pipeline ya no existe o no tiene acceso, limpiar la sesión
-                del request.session[session_key]
-                print(f"⚠️  Pipeline {last_pipeline} ya no existe o sin acceso - limpiando sesión")
-        except (ValueError, TypeError):
-            # Si el pipeline_id no es válido, limpiar la sesión
+        accessible_pipeline_ids = [p.id for p in access_info['pipelines']]
+        if int(last_pipeline) in accessible_pipeline_ids:
+            # Construir URL con el pipeline filter
+            redirect_url = f"{reverse('workflow:negocios')}?pipeline={last_pipeline}"
+            return redirect(redirect_url)
+        else:
+            # Si el pipeline ya no existe o no tiene acceso, limpiar la sesión
             del request.session[session_key]
-            print(f"⚠️  Pipeline ID inválido en sesión - limpiando")
+            print(f"⚠️  Pipeline {last_pipeline} ya no existe o sin acceso - limpiando sesión")
     
     # Construir queryset base según permisos del usuario
-    if request.user.is_superuser:
-        # Superuser puede ver todas las solicitudes
-        solicitudes = Solicitud.objects.select_related(
-            'pipeline', 'etapa_actual', 'subestado_actual', 
-            'creada_por', 'asignada_a'
-        ).prefetch_related(
-            'cliente', 'cotizacion', 'notas_recordatorios'
-        ).all()
-    else:
-        # Usuario regular solo ve sus solicitudes asignadas o creadas
-        solicitudes = Solicitud.objects.select_related(
-            'pipeline', 'etapa_actual', 'subestado_actual', 
-            'creada_por', 'asignada_a'
-        ).prefetch_related(
-            'cliente', 'cotizacion', 'notas_recordatorios'
-        ).filter(
-            Q(asignada_a=request.user) | Q(creada_por=request.user)
-        )
+    solicitudes = get_user_solicitudes_queryset(request.user, pipeline_filter)
     
     # Aplicar filtros de búsqueda
     if search_query:
@@ -301,9 +430,6 @@ def negocios_view(request):
             Q(cliente__cedula__icontains=search_query) |
             Q(cotizacion__producto__icontains=search_query)
         )
-    
-    if pipeline_filter:
-        solicitudes = solicitudes.filter(pipeline_id=pipeline_filter)
     
     if etapa_filter:
         solicitudes = solicitudes.filter(etapa_actual_id=etapa_filter)
@@ -318,37 +444,30 @@ def negocios_view(request):
     paginator = Paginator(solicitudes, 25)  # 25 solicitudes por página
     solicitudes_page = paginator.get_page(int(page))
     
-    # Obtener pipelines disponibles para el usuario
-    if request.user.is_superuser:
-        pipelines_disponibles = Pipeline.objects.all()
-        print(f"🔍 DEBUG: Superuser {request.user} accessing pipelines")
-        print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines total")
-    else:
-        # Obtener pipelines basado en permisos
-        pipelines_disponibles = Pipeline.objects.filter(
-            Q(permisos_pipeline__usuario=request.user) |
-            Q(etapas__permisos__grupo__user=request.user)
-        ).distinct()
-        print(f"🔍 DEBUG: Regular user {request.user} accessing pipelines")
-        print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines with permissions")
-    
-    # Enriquecer pipelines con conteo de solicitudes del usuario
+    # Enriquecer pipelines con conteo de solicitudes del usuario y permisos
     pipelines_enriched = []
-    for pipeline in pipelines_disponibles:
-        if request.user.is_superuser:
-            user_solicitudes_count = pipeline.solicitud_set.count()
-        else:
-            user_solicitudes_count = pipeline.solicitud_set.filter(
-                Q(asignada_a=request.user) | Q(creada_por=request.user)
-            ).count()
+    for pipeline in access_info['pipelines']:
+        pipeline_permissions = access_info['pipeline_permissions'].get(pipeline.id, {})
         
-        # Agregar el conteo como atributo del pipeline
+        # Get user's solicitudes count for this pipeline
+        user_solicitudes_count = solicitudes.filter(pipeline=pipeline).count()
+        
+        # Add enriched data to pipeline
         pipeline.user_solicitudes_count = user_solicitudes_count
+        pipeline.user_permissions = pipeline_permissions
+        pipeline.can_create = pipeline_permissions.get('can_create', False)
+        pipeline.can_edit = pipeline_permissions.get('can_edit', False)
+        pipeline.can_delete = pipeline_permissions.get('can_delete', False)
+        pipeline.can_admin = pipeline_permissions.get('can_admin', False)
+        pipeline.access_level = pipeline_permissions.get('access_level', 'none')
+        
         pipelines_enriched.append(pipeline)
         print(f"    - {pipeline.nombre}: {user_solicitudes_count} solicitudes para usuario {request.user.username}")
     
-    # Obtener etapas para filtros
-    etapas_disponibles = Etapa.objects.all()
+    # Obtener etapas para filtros (only accessible ones)
+    etapas_disponibles = Etapa.objects.filter(
+        pipeline__in=access_info['pipelines']
+    ).distinct()
     
     # Obtener subestados para filtros
     subestados_disponibles = SubEstado.objects.all()
@@ -377,8 +496,8 @@ def negocios_view(request):
     current_pipeline = None
     if pipeline_filter:
         try:
-            current_pipeline = Pipeline.objects.get(id=pipeline_filter)
-        except Pipeline.DoesNotExist:
+            current_pipeline = next((p for p in access_info['pipelines'] if p.id == int(pipeline_filter)), None)
+        except (ValueError, TypeError):
             pass
     
     # Prepare Kanban-specific data structure
@@ -427,10 +546,15 @@ def negocios_view(request):
         'estado_filter': estado_filter,
         'is_superuser': request.user.is_superuser,
         'user': request.user,
-        'no_access': False,  # Explicitly set to False for access
+        'no_access': False,  # User has access since we checked above
         'view_type': view_type,  # Pass view type to template
         'last_pipeline_saved': session_key in request.session,  # Info for frontend
         'last_pipeline_id': request.session.get(session_key, None),  # ID del último pipeline
+        'user_access_info': access_info,  # Pass access information to template
+        'can_create_solicitudes': access_info['can_create'],
+        'can_edit_solicitudes': access_info['can_edit'],
+        'can_delete_solicitudes': access_info['can_delete'],
+        'can_admin_pipelines': access_info['can_admin'],
     }
     print(f"🔍 DEBUG: Context being passed to template:")
     print(f"    - pipelines_disponibles: {len(context['pipelines_disponibles'])} items")
@@ -438,6 +562,7 @@ def negocios_view(request):
     print(f"    - current pipeline: {context['pipeline']}")
     print(f"    - solicitudes: {len(context['solicitudes'])} items")
     print(f"    - solicitudes_tabla: {len(context['solicitudes_tabla'])} items")
+    print(f"    - user access level: {access_info['access_level']}")
     print(f"Rendering negocios view with {len(solicitudes_enriched)} solicitudes")
     return render(request, 'workflow/negocios.html', context)
 
@@ -454,19 +579,8 @@ def api_solicitudes_tabla(request):
         length = int(request.GET.get('length', 25))
         search_value = request.GET.get('search[value]', '')
         
-        # Obtener solicitudes según permisos
-        if request.user.is_superuser:
-            solicitudes = Solicitud.objects.select_related(
-                'pipeline', 'etapa_actual', 'subestado_actual', 
-                'creada_por', 'asignada_a', 'cliente', 'cotizacion'
-            ).all()
-        else:
-            solicitudes = Solicitud.objects.select_related(
-                'pipeline', 'etapa_actual', 'subestado_actual', 
-                'creada_por', 'asignada_a', 'cliente', 'cotizacion'
-            ).filter(
-                Q(asignada_a=request.user) | Q(creada_por=request.user)
-            )
+        # Obtener solicitudes según permisos del usuario
+        solicitudes = get_user_solicitudes_queryset(request.user)
         
         # Aplicar búsqueda
         if search_value:
@@ -482,6 +596,9 @@ def api_solicitudes_tabla(request):
         
         # Aplicar paginación
         solicitudes_page = solicitudes[start:start + length]
+        
+        # Get user permissions for action buttons
+        access_info = get_user_pipeline_access(request.user)
         
         # Formatear datos para DataTables
         data = []
