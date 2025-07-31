@@ -786,6 +786,30 @@
             font-size: 0.75rem;
             padding: 0.25rem 0.5rem;
         }
+
+        /* PDF resultado consulta button specific styling */
+        #btn-pdf-resultado-consulta {
+            border-color: #0d6efd !important;
+            color: #0d6efd !important;
+            transition: all 0.2s ease-in-out;
+        }
+
+        #btn-pdf-resultado-consulta:hover {
+            background-color: #0d6efd !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+        }
+
+        #btn-pdf-resultado-consulta:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .comentarios-analista-header-compact .d-flex.gap-2 {
+            align-items: center;
+        }
         
         .form-body-compact {
             max-height: 300px;
@@ -1068,7 +1092,7 @@
                                 <div>
                                     <h2 class="mb-1 d-flex align-items-center">
                                         <i class="fas fa-microscope me-2"></i>
-                                        Análisis: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
+                                        Análisis: {{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}
                                     </h2>
                                     <div class="mt-1 d-flex align-items-center gap-4" style="font-size: 0.85em; opacity: 0.9;">
                                         {% if solicitud.creada_por %}
@@ -1722,9 +1746,14 @@
                     <div class="comentarios-analista-header-compact">
                         <div class="d-flex align-items-center justify-content-between w-100">
                             <h6 class="mb-0"><i class="fas fa-user-md me-2"></i>Comentarios de Analista</h6>
-                            <button type="button" class="btn btn-light btn-sm" id="btn-enviar-analista-credito">
-                                <i class="fas fa-save me-1"></i>Guardar Análisis
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-danger btn-sm" id="btn-pdf-resultado-consulta">
+                                    <i class="fas fa-file-pdf me-1"></i>PDF resultado consulta
+                                </button>
+                                <button type="button" class="btn btn-light btn-sm" id="btn-enviar-analista-credito">
+                                    <i class="fas fa-save me-1"></i>Guardar Análisis
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -1780,7 +1809,7 @@
                         </div>
                         <div class="resumen-title">
                             <h3 class="section-title">Solicitudes Relacionadas</h3>
-                            <small>Cédula: {{ solicitud.cliente_cedula|default:"-" }}</small>
+                            <small>Cédula: {{ solicitud.cliente_cedula_completa|default:"-" }}</small>
                         </div>
                     </div>
                     
@@ -1794,7 +1823,7 @@
                             <!-- Búsqueda automática por cédula -->
                             <div class="search-info">
                                 <i class="fas fa-search me-2"></i>
-                                <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula|default:"-" }}</strong></span>
+                                <span>Buscando por cédula: <strong>{{ solicitud.cliente_cedula_completa|default:"-" }}</strong></span>
                             </div>
                             
                             <!-- Lista de solicitudes relacionadas -->
@@ -2746,6 +2775,165 @@
         }
     };
 
+    // PDF Resultado Consulta functionality
+    const generatePdfResultadoConsulta = async () => {
+        // Check if in view mode
+        const isViewMode = document.querySelector('.view-mode-indicator') !== null;
+        if (isViewMode) {
+            showNotification('Modo solo lectura - No se pueden generar reportes en solicitudes no asignadas', 'warning');
+            return;
+        }
+        
+        const btnPdf = document.getElementById('btn-pdf-resultado-consulta');
+        const originalContent = btnPdf.innerHTML;
+        
+        try {
+            // Show loading state
+            btnPdf.disabled = true;
+            btnPdf.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando reporte...';
+            
+            // Get solicitud ID from URL
+            const solicitudId = getSolicitudIdFromUrl();
+            
+            if (!solicitudId) {
+                throw new Error('No se pudo obtener el ID de la solicitud');
+            }
+            
+            console.log('Generating PDF resultado consulta for solicitud:', solicitudId);
+            
+            // Collect current analysis data from the page
+            const analysisData = collectAnalysisData();
+            
+            // Make API call to generate PDF
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/pdf-resultado-consulta/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(analysisData)
+            });
+            
+            if (!response.ok) {
+                // Try to get error message from response
+                let errorMessage = 'Error al generar el reporte PDF';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // If response is not JSON, use status text
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            // Check if response is PDF
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/pdf')) {
+                throw new Error('La respuesta no es un archivo PDF válido');
+            }
+            
+            // Get filename from response headers or use default
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = `Resultado_Consulta_${solicitudId}.pdf`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            // Create blob and download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Show success message
+            showNotification('Reporte PDF generado y descargado exitosamente', 'success');
+            
+        } catch (error) {
+            console.error('Error generating PDF resultado consulta:', error);
+            showNotification(`Error: ${error.message}`, 'error');
+        } finally {
+            // Restore button state
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = originalContent;
+        }
+    };
+
+    // Collect analysis data from the current page
+    const collectAnalysisData = () => {
+        const data = {
+            analyst_comment: '',
+            compliance_ratings: [],
+            compliance_comments: [],
+            field_values: {}
+        };
+        
+        // Get analyst comment
+        const analystTextarea = document.getElementById('comentario-analista-credito-text');
+        if (analystTextarea) {
+            data.analyst_comment = analystTextarea.value.trim();
+        }
+        
+        // Collect compliance ratings and comments
+        const allComplianceButtons = document.querySelectorAll('.btn-compliance[data-action="bueno"], .btn-compliance[data-action="malo"]');
+        const processedFields = new Set();
+        
+        allComplianceButtons.forEach(button => {
+            const field = button.getAttribute('data-field');
+            if (processedFields.has(field)) return;
+            processedFields.add(field);
+            
+            const row = button.closest('.info-row-with-check, .adjunto-item');
+            if (row) {
+                const goodButton = row.querySelector('.btn-compliance.btn-good');
+                const badButton = row.querySelector('.btn-compliance.btn-bad');
+                const commentButton = row.querySelector('.btn-compliance.btn-comment');
+                
+                let rating = null;
+                if (goodButton && goodButton.classList.contains('active')) {
+                    rating = 'bueno';
+                } else if (badButton && badButton.classList.contains('active')) {
+                    rating = 'malo';
+                }
+                
+                if (rating) {
+                    data.compliance_ratings.push({
+                        field: field,
+                        rating: rating
+                    });
+                }
+                
+                // Check for comment
+                if (commentButton && commentButton.classList.contains('has-comment')) {
+                    // This would contain the comment if we could extract it from the modal
+                    // For now, we'll rely on the backend to provide the comment
+                    data.compliance_comments.push({
+                        field: field,
+                        has_comment: true
+                    });
+                }
+                
+                // Get field value from the page
+                const fieldValue = getFieldValue(field);
+                if (fieldValue) {
+                    data.field_values[field] = fieldValue;
+                }
+            }
+        });
+        
+        return data;
+    };
+
     // Notification system
     const showNotification = (message, type = 'info') => {
         // Remove existing notifications
@@ -3240,6 +3428,12 @@
         const btnEnviarAnalista = document.getElementById('btn-enviar-analista-credito');
         if (btnEnviarAnalista) {
             btnEnviarAnalista.addEventListener('click', handleAnalystCommentSubmit);
+        }
+
+        // Add event listener for PDF resultado consulta button
+        const btnPdfResultadoConsulta = document.getElementById('btn-pdf-resultado-consulta');
+        if (btnPdfResultadoConsulta) {
+            btnPdfResultadoConsulta.addEventListener('click', generatePdfResultadoConsulta);
         }
 
         // Load existing analyst comments

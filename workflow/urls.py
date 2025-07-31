@@ -96,6 +96,8 @@ urlpatterns = [
     
     # PDF Download API URLs
     path('api/solicitudes/<int:solicitud_id>/download-merged-pdf/', views_workflow.api_download_merged_pdf, name='api_download_merged_pdf'),
+    path('api/solicitudes/<int:solicitud_id>/pdf-resultado-consulta/', views_workflow.api_pdf_resultado_consulta, name='api_pdf_resultado_consulta'),
+    path('api/solicitudes/<int:solicitud_id>/pdf-resultado-comite/', views_workflow.api_pdf_resultado_comite, name='api_pdf_resultado_comite'),
     
     # Field Califications API URLs
     path('api/solicitudes/<int:solicitud_id>/calificaciones/', api.api_obtener_calificaciones, name='api_obtener_calificaciones'),

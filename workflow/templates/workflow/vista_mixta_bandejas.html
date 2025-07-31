@@ -482,6 +482,102 @@
         animation: fadeInUp 0.6s ease-out;
     }
 
+    /* Processed Requests Section Styling */
+    #solicitudes-procesadas-content {
+        background: var(--card-background);
+    }
+
+    #tabla-procesadas-container {
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .processed-status-badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .processed-status-completada {
+        background: linear-gradient(135deg, var(--success-color), #10b981);
+        color: white;
+    }
+
+    .processed-status-rechazada {
+        background: linear-gradient(135deg, var(--danger-color), #ef4444);
+        color: white;
+    }
+
+    .processed-status-cancelada {
+        background: linear-gradient(135deg, var(--text-muted), #6b7280);
+        color: white;
+    }
+
+    .processed-date {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .processed-row {
+        transition: all 0.2s ease;
+    }
+
+    .processed-row:hover {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Pagination styling */
+    .pagination-sm .page-link {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        transition: all 0.2s ease;
+    }
+
+    .pagination-sm .page-link:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .pagination-sm .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    /* Loading animation */
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        border-width: 0.1em;
+    }
+
+    /* Filter dropdown styling */
+    .dropdown-menu {
+        border: none;
+        box-shadow: var(--shadow-lg);
+        border-radius: var(--border-radius-sm);
+        background: var(--card-background);
+    }
+
+    .dropdown-item {
+        padding: 8px 16px;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        transition: all 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+        background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+        color: white;
+    }
+
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -1334,7 +1430,169 @@
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Solicitudes Procesadas -->
+    <div class="mt-4 mb-3">
+        <div class="modern-card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-history me-2"></i>
+                        Solicitudes Procesadas
+                        {% if user.is_staff or user.is_superuser %}
+                        <span class="badge bg-warning text-dark ms-2">
+                            <i class="fas fa-eye me-1"></i>Supervisor
+                        </span>
+                        {% endif %}
+                        <span class="badge bg-light text-dark ms-2" id="badge-procesadas">0</span>
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-light" id="toggle-procesadas" onclick="toggleSolicitudesProcesadas()">
+                            <i class="fas fa-eye me-1"></i>
+                            <span id="text-toggle-procesadas">Mostrar</span>
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i>
+                                Filtrar
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('todas')">
+                                    <i class="fas fa-list me-1"></i>Todas
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('ultima_semana')">
+                                    <i class="fas fa-calendar-week me-1"></i>Última semana
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('ultimo_mes')">
+                                    <i class="fas fa-calendar-alt me-1"></i>Último mes
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('completadas')">
+                                    <i class="fas fa-check-circle text-success me-1"></i>Completadas
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('rechazadas')">
+                                    <i class="fas fa-times-circle text-danger me-1"></i>Rechazadas
+                                </a></li>
+                                {% if user.is_staff or user.is_superuser %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">
+                                    <i class="fas fa-crown text-warning me-1"></i>Vista Supervisor
+                                </h6></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('por_usuario')">
+                                    <i class="fas fa-users me-1"></i>Por usuario
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="filtrarProcesadas('por_pipeline')">
+                                    <i class="fas fa-project-diagram me-1"></i>Por pipeline
+                                </a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" id="solicitudes-procesadas-content" style="display: none;">
+                <div id="loading-procesadas" class="text-center py-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Cargando solicitudes procesadas...</p>
+                </div>
+                
+                <div id="tabla-procesadas-container" class="modern-table-container table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="modern-table table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: {% if user.is_staff or user.is_superuser %}12%{% else %}15%{% endif %};">
+                                    <i class="fas fa-hashtag me-1"></i>
+                                    Código
+                                </th>
+                                <th style="width: {% if user.is_staff or user.is_superuser %}20%{% else %}25%{% endif %};">
+                                    <i class="fas fa-user me-1"></i>
+                                    Cliente
+                                </th>
+                                {% if user.is_staff or user.is_superuser %}
+                                <th style="width: 15%;">
+                                    <i class="fas fa-project-diagram me-1"></i>
+                                    Pipeline
+                                </th>
+                                <th style="width: 12%;">
+                                    <i class="fas fa-user-tie me-1"></i>
+                                    Procesado por
+                                </th>
+                                {% endif %}
+                                <th style="width: {% if user.is_staff or user.is_superuser %}12%{% else %}15%{% endif %};">
+                                    <i class="fas fa-tasks me-1"></i>
+                                    Etapa Final
+                                </th>
+                                <th style="width: {% if user.is_staff or user.is_superuser %}12%{% else %}15%{% endif %};">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Fecha Procesada
+                                </th>
+                                <th style="width: {% if user.is_staff or user.is_superuser %}8%{% else %}10%{% endif %};">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Estado
+                                </th>
+                                <th style="width: {% if user.is_staff or user.is_superuser %}9%{% else %}20%{% endif %};">
+                                    <i class="fas fa-cogs me-1"></i>
+                                    Acciones
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-procesadas">
+                            <!-- Se llenará dinámicamente con JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="empty-procesadas" class="empty-state text-center py-5" style="display: none;">
+                    <i class="fas fa-inbox text-muted mb-3" style="font-size: 3rem;"></i>
+                    <h6 class="text-muted">No hay solicitudes procesadas</h6>
+                    {% if user.is_staff or user.is_superuser %}
+                    <p class="text-muted small">No se encontraron solicitudes procesadas en el sistema</p>
+                    {% else %}
+                    <p class="text-muted small">Las solicitudes que hayas procesado aparecerán aquí</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Información para supervisores -->
+                {% if user.is_staff or user.is_superuser %}
+                <div class="alert alert-info border-0 mt-3 mb-0" style="background: linear-gradient(135deg, #e7f3ff, #cce7ff); border-radius: 8px;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        <div>
+                            <strong>Vista Supervisor:</strong> 
+                            <span class="text-muted">Puedes ver todas las solicitudes procesadas del sistema, incluyendo información del pipeline y quién las procesó.</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Paginación -->
+                <div id="pagination-procesadas" class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid var(--border-color); display: none !important;">
+                    <div class="text-muted small">
+                        Mostrando <span id="showing-from">1</span> a <span id="showing-to">10</span> de <span id="total-procesadas">0</span> solicitudes
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="prev-page">
+                                <a class="page-link" href="#" onclick="cambiarPaginaProcesadas('prev')">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item active">
+                                <span class="page-link" id="current-page">1</span>
+                            </li>
+                            <li class="page-item" id="next-page">
+                                <a class="page-link" href="#" onclick="cambiarPaginaProcesadas('next')">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal de Confirmación Personalizado -->
@@ -2624,6 +2882,315 @@
 
 
         });
+
+        // =====================================
+        // SOLICITUDES PROCESADAS FUNCTIONALITY
+        // =====================================
+
+        // Variables globales para paginación
+        let currentPageProcesadas = 1;
+        let totalPagesProcesadas = 1;
+        let currentFilterProcesadas = 'todas';
+        let solicitudesProcesadasData = [];
+
+        // Función para alternar la visibilidad de solicitudes procesadas
+        window.toggleSolicitudesProcesadas = function() {
+            const content = document.getElementById('solicitudes-procesadas-content');
+            const toggleButton = document.getElementById('toggle-procesadas');
+            const toggleText = document.getElementById('text-toggle-procesadas');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggleText.textContent = 'Ocultar';
+                toggleButton.innerHTML = '<i class="fas fa-eye-slash me-1"></i><span id="text-toggle-procesadas">Ocultar</span>';
+                cargarSolicitudesProcesadas();
+            } else {
+                content.style.display = 'none';
+                toggleText.textContent = 'Mostrar';
+                toggleButton.innerHTML = '<i class="fas fa-eye me-1"></i><span id="text-toggle-procesadas">Mostrar</span>';
+            }
+        };
+
+        // Función para cargar solicitudes procesadas
+        function cargarSolicitudesProcesadas(filtro = 'todas', pagina = 1) {
+            const loadingElement = document.getElementById('loading-procesadas');
+            const tablaElement = document.getElementById('tabla-procesadas');
+            const emptyElement = document.getElementById('empty-procesadas');
+            const tableContainer = document.getElementById('tabla-procesadas-container');
+            
+            // Mostrar loading
+            loadingElement.style.display = 'block';
+            tableContainer.style.display = 'none';
+            emptyElement.style.display = 'none';
+            
+            // Simular llamada a API - Aquí deberías hacer la llamada real al backend
+            fetch(`/workflow/api/solicitudes-procesadas/?filtro=${filtro}&pagina=${pagina}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingElement.style.display = 'none';
+                
+                if (data.success && data.solicitudes && data.solicitudes.length > 0) {
+                    solicitudesProcesadasData = data.solicitudes;
+                    renderizarTablaProcesadas(data.solicitudes);
+                    actualizarPaginacionProcesadas(data.total_paginas, data.pagina_actual, data.total_solicitudes);
+                    actualizarBadgeProcesadas(data.total_solicitudes);
+                    tableContainer.style.display = 'block';
+                } else {
+                    emptyElement.style.display = 'block';
+                    actualizarBadgeProcesadas(0);
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar solicitudes procesadas:', error);
+                loadingElement.style.display = 'none';
+                emptyElement.style.display = 'block';
+                actualizarBadgeProcesadas(0);
+                // Mostrar datos de ejemplo en caso de error de conexión
+                mostrarDatosEjemplo();
+            });
+        }
+
+        // Función para mostrar datos de ejemplo (para desarrollo)
+        function mostrarDatosEjemplo() {
+            const ejemploData = [
+                {
+                    id: 1,
+                    codigo: 'SOL-2024-001',
+                    cliente_nombre: 'Juan Pérez González',
+                    etapa_final: 'Completada',
+                    fecha_procesada: '2024-01-15 14:30:00',
+                    estado_final: 'completada',
+                    puede_ver_detalle: true,
+                    pipeline: 'Crédito Automotriz',
+                    procesado_por: 'Ana García',
+                    es_supervisor_view: {{ user.is_staff|yesno:"true,false" }}
+                },
+                {
+                    id: 2,
+                    codigo: 'SOL-2024-002',
+                    cliente_nombre: 'María López Rodríguez',
+                    etapa_final: 'Rechazada',
+                    fecha_procesada: '2024-01-14 09:15:00',
+                    estado_final: 'rechazada',
+                    puede_ver_detalle: true,
+                    pipeline: 'Crédito Personal',
+                    procesado_por: 'Carlos Mendoza',
+                    es_supervisor_view: {{ user.is_staff|yesno:"true,false" }}
+                },
+                {
+                    id: 3,
+                    codigo: 'SOL-2024-003',
+                    cliente_nombre: 'Carlos Mendoza Silva',
+                    etapa_final: 'Cancelada',
+                    fecha_procesada: '2024-01-13 16:45:00',
+                    estado_final: 'cancelada',
+                    puede_ver_detalle: false,
+                    pipeline: 'Crédito Hipotecario',
+                    procesado_por: 'Sistema',
+                    es_supervisor_view: {{ user.is_staff|yesno:"true,false" }}
+                }
+            ];
+            
+            renderizarTablaProcesadas(ejemploData);
+            actualizarBadgeProcesadas(ejemploData.length);
+            document.getElementById('tabla-procesadas-container').style.display = 'block';
+        }
+
+        // Función para renderizar la tabla de solicitudes procesadas
+        function renderizarTablaProcesadas(solicitudes) {
+            const tabla = document.getElementById('tabla-procesadas');
+            tabla.innerHTML = '';
+            
+            solicitudes.forEach(solicitud => {
+                const row = document.createElement('tr');
+                row.className = 'processed-row';
+                row.setAttribute('data-solicitud-id', solicitud.id);
+                
+                const estadoBadgeClass = getEstadoBadgeClass(solicitud.estado_final);
+                const fechaFormateada = formatearFecha(solicitud.fecha_procesada);
+                const esSupervisor = solicitud.es_supervisor_view || {{ user.is_staff|yesno:"true,false" }};
+                
+                // Construir las celdas dinámicamente basado en si es supervisor
+                let cellsHTML = `
+                    <td>
+                        <strong class="text-primary">${solicitud.codigo}</strong>
+                    </td>
+                    <td>
+                        ${solicitud.puede_ver_detalle ? 
+                            `<a href="#" class="modern-link ver-detalle-procesada" data-solicitud-id="${solicitud.id}">
+                                <i class="fas fa-user me-1"></i>${solicitud.cliente_nombre}
+                            </a>` : 
+                            `<span class="text-muted">
+                                <i class="fas fa-user me-1"></i>${solicitud.cliente_nombre}
+                            </span>`
+                        }
+                    </td>`;
+                
+                // Agregar columnas adicionales para supervisores
+                if (esSupervisor) {
+                    cellsHTML += `
+                    <td>
+                        <span class="badge bg-info text-white" style="font-size: 0.75rem;">
+                            <i class="fas fa-project-diagram me-1"></i>${solicitud.pipeline || 'N/A'}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            <i class="fas fa-user-tie me-1"></i>${solicitud.procesado_por || 'Sistema'}
+                        </small>
+                    </td>`;
+                }
+                
+                cellsHTML += `
+                    <td>
+                        <span class="badge bg-secondary">${solicitud.etapa_final}</span>
+                    </td>
+                    <td>
+                        <span class="processed-date">${fechaFormateada}</span>
+                    </td>
+                    <td>
+                        <span class="processed-status-badge ${estadoBadgeClass}">
+                            ${solicitud.estado_final}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="modern-btn-group">
+                            ${solicitud.puede_ver_detalle ? 
+                                `<button class="modern-btn modern-btn-primary ver-detalle-procesada" 
+                                    data-solicitud-id="${solicitud.id}" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>` : ''
+                            }
+                            <button class="modern-btn modern-btn-info ver-historial-procesada" 
+                                data-solicitud-id="${solicitud.id}" title="Ver historial">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                row.innerHTML = cellsHTML;
+                tabla.appendChild(row);
+            });
+            
+            // Agregar event listeners para los botones
+            agregarEventListenersProcesadas();
+        }
+
+        // Función para obtener la clase CSS del badge según el estado
+        function getEstadoBadgeClass(estado) {
+            switch (estado) {
+                case 'completada':
+                    return 'processed-status-completada';
+                case 'rechazada':
+                    return 'processed-status-rechazada';
+                case 'cancelada':
+                    return 'processed-status-cancelada';
+                default:
+                    return 'processed-status-completada';
+            }
+        }
+
+        // Función para formatear fecha
+        function formatearFecha(fechaString) {
+            const fecha = new Date(fechaString);
+            return fecha.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Función para agregar event listeners a los botones de solicitudes procesadas
+        function agregarEventListenersProcesadas() {
+            // Ver detalle
+            document.querySelectorAll('.ver-detalle-procesada').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const solicitudId = this.getAttribute('data-solicitud-id');
+                    abrirDetalleProc = this.getAttribute('data-solicitud-id');
+                    // Aquí abrir modal de detalles o redirigir
+                    mostrarNotificacionInfo(`Abriendo detalles de solicitud ${solicitudId}`);
+                });
+            });
+            
+            // Ver historial
+            document.querySelectorAll('.ver-historial-procesada').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const solicitudId = this.getAttribute('data-solicitud-id');
+                    // Aquí abrir modal de historial
+                    mostrarNotificacionInfo(`Abriendo historial de solicitud ${solicitudId}`);
+                });
+            });
+        }
+
+        // Función para filtrar solicitudes procesadas
+        window.filtrarProcesadas = function(filtro) {
+            currentFilterProcesadas = filtro;
+            currentPageProcesadas = 1;
+            cargarSolicitudesProcesadas(filtro, 1);
+        };
+
+        // Función para cambiar página
+        window.cambiarPaginaProcesadas = function(direccion) {
+            if (direccion === 'prev' && currentPageProcesadas > 1) {
+                currentPageProcesadas--;
+            } else if (direccion === 'next' && currentPageProcesadas < totalPagesProcesadas) {
+                currentPageProcesadas++;
+            }
+            cargarSolicitudesProcesadas(currentFilterProcesadas, currentPageProcesadas);
+        };
+
+        // Función para actualizar paginación
+        function actualizarPaginacionProcesadas(totalPaginas, paginaActual, totalSolicitudes) {
+            totalPagesProcesadas = totalPaginas;
+            currentPageProcesadas = paginaActual;
+            
+            const showingFrom = ((paginaActual - 1) * 10) + 1;
+            const showingTo = Math.min(paginaActual * 10, totalSolicitudes);
+            
+            document.getElementById('showing-from').textContent = showingFrom;
+            document.getElementById('showing-to').textContent = showingTo;
+            document.getElementById('total-procesadas').textContent = totalSolicitudes;
+            document.getElementById('current-page').textContent = paginaActual;
+            
+            // Habilitar/deshabilitar botones de paginación
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            
+            if (paginaActual <= 1) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.classList.remove('disabled');
+            }
+            
+            if (paginaActual >= totalPaginas) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.classList.remove('disabled');
+            }
+            
+            // Mostrar paginación si hay más de una página
+            const paginationElement = document.getElementById('pagination-procesadas');
+            if (totalPaginas > 1) {
+                paginationElement.style.display = 'flex !important';
+            } else {
+                paginationElement.style.display = 'none !important';
+            }
+        }
+
+        // Función para actualizar el badge de solicitudes procesadas
+        function actualizarBadgeProcesadas(total) {
+            document.getElementById('badge-procesadas').textContent = total;
+        }
 
         console.log('✅ Sistema de bandejas inicializado correctamente - SIN auto-refresh');
         console.log('✅ Vista de supervisor habilitada para superusers/staff');
