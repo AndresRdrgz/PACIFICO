@@ -1,0 +1,430 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Bandeja de Trabajo - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-inbox fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard Bandeja de Trabajo</h1>
+                            <p class="mb-0 text-white-50">Gestión de bandejas grupales y productividad del equipo</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-list me-2"></i>Ver Bandeja
+                            </a>
+                            {% if user.is_superuser %}
+                            <div class="dropdown">
+                                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog me-2"></i>Cambiar Vista
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=operativo">📊 Operativo</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=negocios">💼 Negocios</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=comite">🏛️ Comité</a></li>
+                                    <li><a class="dropdown-item active" href="{% url 'workflow:dashboard' %}?type=bandeja">📋 Bandeja</a></li>
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    FILTROS
+    ========================================== -->
+    <div class="dashboard-block">
+        <div class="search-section">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-filter me-2"></i>Filtros de Análisis
+                    </h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="submit" form="filtros-form" class="btn btn-pacifico btn-sm">
+                            <i class="fas fa-search me-2"></i>Aplicar Filtros
+                        </button>
+                        <a href="{% url 'workflow:dashboard_bandeja' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-2"></i>Limpiar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="GET" id="filtros-form" class="row g-3">
+                <div class="col-md-3">
+                    <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                           value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                           value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="etapa_id" class="form-label">Etapa</label>
+                    <select class="form-select form-select-sm" id="etapa_id" name="etapa_id">
+                        <option value="">Todas las etapas</option>
+                        {% for etapa in etapas_disponibles %}
+                        <option value="{{ etapa.id }}" {% if filtros_aplicados.etapa_id == etapa.id|stringformat:"s" %}selected{% endif %}>
+                            {{ etapa.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- ==========================================
+        KPIs PRINCIPALES
+        ========================================== -->
+        <div class="row mb-4">
+            <!-- Total Solicitudes en Bandeja -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card primary">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Total en Bandeja</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ total_solicitudes_bandeja }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-primary" style="width: 100%"></div>
+                                </div>
+                                <small class="text-muted">Solicitudes activas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Sin Asignar -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card warning">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Sin Asignar</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-user-clock"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ solicitudes_sin_asignar }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    {% widthratio solicitudes_sin_asignar total_solicitudes_bandeja 100 as porcentaje_sin_asignar %}
+                                    <div class="progress-bar bg-warning" style="width: {{ porcentaje_sin_asignar|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_sin_asignar|default:0 }}% del total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Vencidas -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card danger">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Vencidas</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ solicitudes_vencidas }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    {% widthratio solicitudes_vencidas total_solicitudes_bandeja 100 as porcentaje_vencidas %}
+                                    <div class="progress-bar bg-danger" style="width: {{ porcentaje_vencidas|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_vencidas|default:0 }}% del total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Procesadas (30 días) -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card success">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Procesadas (30d)</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ solicitudes_procesadas_30_dias }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                </div>
+                                <small class="text-muted">Últimos 30 días</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        DISTRIBUCIÓN POR ETAPA
+        ========================================== -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Distribución por Etapa
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if solicitudes_por_etapa %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Etapa</th>
+                                            <th>Total</th>
+                                            <th>Sin Asignar</th>
+                                            <th>Vencidas</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for etapa in solicitudes_por_etapa %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ etapa.etapa }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ etapa.total }}</span>
+                                            </td>
+                                            <td>
+                                                {% if etapa.sin_asignar > 0 %}
+                                                    <span class="badge bg-warning">{{ etapa.sin_asignar }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">0</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if etapa.vencidas > 0 %}
+                                                    <span class="badge bg-danger">{{ etapa.vencidas }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">0</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if etapa.vencidas > 0 %}
+                                                    <span class="badge bg-danger">Crítico</span>
+                                                {% elif etapa.sin_asignar > 0 %}
+                                                    <span class="badge bg-warning">Atención</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Normal</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No hay solicitudes en las bandejas</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        ANÁLISIS DE PRODUCTIVIDAD
+        ========================================== -->
+        <div class="row">
+            <!-- Tiempo Promedio por Etapa -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-stopwatch me-2"></i>Tiempo Promedio por Etapa
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if promedios_por_etapa %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Etapa</th>
+                                            <th>Promedio</th>
+                                            <th>Casos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for promedio in promedios_por_etapa %}
+                                        <tr>
+                                            <td>{{ promedio.etapa }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ promedio.promedio_horas }}h</span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ promedio.casos_procesados }} casos</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No hay datos de tiempo suficientes</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usuarios Más Activos -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-users me-2"></i>Usuarios Más Activos
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if usuarios_activos %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Asignadas</th>
+                                            <th>Actividad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for usuario in usuarios_activos %}
+                                        <tr>
+                                            <td>{{ usuario.full_name }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ usuario.total_asignadas }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 8px;">
+                                                    {% if usuarios_activos.0.total_asignadas > 0 %}
+                                                        {% widthratio usuario.total_asignadas usuarios_activos.0.total_asignadas 100 as actividad %}
+                                                        <div class="progress-bar bg-success" style="width: {{ actividad }}%"></div>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No hay usuarios activos</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        ETAPAS ACCESIBLES
+        ========================================== -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-unlock me-2"></i>Etapas con Acceso
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if etapas_acceso %}
+                            <div class="row">
+                                {% for etapa in etapas_acceso %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title">{{ etapa.nombre }}</h6>
+                                            <p class="card-text small text-muted">
+                                                Pipeline: {{ etapa.pipeline.nombre }}
+                                            </p>
+                                            {% if etapa.sla %}
+                                                <small class="text-info">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    SLA: {{ etapa.sla }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-lock fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No tienes acceso a ninguna bandeja grupal</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh cada 5 minutos para dashboard en tiempo real
+setTimeout(function() {
+    location.reload();
+}, 300000); // 5 minutos
+
+// Resaltar filas con estados críticos
+document.addEventListener('DOMContentLoaded', function() {
+    const criticalRows = document.querySelectorAll('tr:has(.badge.bg-danger)');
+    criticalRows.forEach(row => {
+        row.style.backgroundColor = '#fff5f5';
+    });
+});
+</script>
+{% endblock %}
