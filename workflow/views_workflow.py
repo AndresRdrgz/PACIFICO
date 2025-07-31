@@ -12429,14 +12429,23 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             if calificacion:
                 estado = calificacion.estado
                 
-                # ✅ IGNORAR COMPLETAMENTE LOS DOCUMENTOS "PENDIENTE" - NO BLOQUEAN EL AVANCE
+                # ✅ VERIFICAR DOCUMENTOS "PENDIENTE" - Solo obligatorios bloquean
                 if estado == 'pendiente':
-                    documentos_pendientes.append({
-                        'nombre': req_sol.requisito.nombre,
-                        'estado': 'pendiente',
-                        'es_obligatorio': es_obligatorio
-                    })
-                    # NO contar como problema, NO bloquear avance
+                    if es_obligatorio:
+                        # Documento OBLIGATORIO pendiente → BLOQUEA
+                        documentos_problematicos.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'problema': 'obligatorio_pendiente',
+                            'estado_actual': estado,
+                            'es_obligatorio': True
+                        })
+                    else:
+                        # Documento OPCIONAL pendiente → NO bloquea
+                        documentos_pendientes.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'estado': 'pendiente',
+                            'es_obligatorio': es_obligatorio
+                        })
                     continue
                 
                 # Contar por estado (solo bueno/malo, pendiente se ignora)
@@ -12565,6 +12574,8 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             for doc in documentos_problematicos:
                 if doc['problema'] == 'calificado_como_malo':
                     mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO calificado como 'Malo'")
+                elif doc['problema'] == 'obligatorio_pendiente':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO pendiente - requiere calificación")
             
             # Combinar todos los documentos problemáticos para la respuesta
             todos_problematicos = documentos_obligatorios_sin_calificar + documentos_problematicos
