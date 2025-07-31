@@ -504,7 +504,7 @@
             <!-- Botones de Acción -->
             <div class="action-buttons">
               <!-- Botón de avance - siempre habilitado, sin validación de documentos -->
-              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="mostrarModalAvanzarSubestadoTramite()">
                 <i class="fas fa-arrow-right me-2"></i>
                 <span id="btn-avanzar-texto">Avanzar</span>
                           </button>
@@ -532,7 +532,6 @@
 </div>
 
 <!-- Incluir modales necesarios -->
-{% include "workflow/partials/modal_avanzar_subestado.html" %}
 {% include "workflow/partials/modal_devolver_oficial.html" %}
 {% include "workflow/partials/modal_agregar_pendientes.html" %}
 
@@ -544,8 +543,13 @@
 
 <!-- Scripts específicos de Pendientes Antes de Firma -->
 <script>
+// Variables globales para Trámite
+const SOLICITUD_ID = {{ solicitud.id }};
+let siguienteSubestadoSeleccionadoTramite = null;
+window.usuarioSeleccionadoAvanceTramite = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Vista de Trámite cargada para solicitud:', '{{ solicitud.id }}');
+    console.log('Vista de Trámite cargada para solicitud:', SOLICITUD_ID);
     
     // Cargar pendientes al iniciar
     cargarPendientesSolicitud();
@@ -813,7 +817,34 @@ function filtrarPendientesPorEstado(estado) {
     });
 }
 
-// Función para validar documentos consultando la base de datos
+// ========================================
+// FUNCIONES PARA MODAL AVANZAR SUBESTADO - TRAMITE
+// ========================================
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestadoTramite() {
+    console.log('🚀 Abriendo modal Avanzar Subestado - Trámite');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestadoTramite');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado Trámite no encontrado');
+        mostrarMensaje('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosTramite();
+    
+    // Configurar eventos
+    setTimeout(() => {
+        configurarEventosAsignacionTramite();
+    }, 100);
+}
+
+// Función para validar documentos consultando la base de datos (CONSERVADA)
 function validarDocumentosYAvanzar() {
   console.log('🔍 Validando documentos contra la base de datos...');
   
@@ -843,9 +874,7 @@ function validarDocumentosYAvanzar() {
     if (data.success) {
       if (data.puede_avanzar) {
         console.log('✅ Validación exitosa - Abriendo modal');
-        cargarInformacionAvance();
-        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
-        modal.show();
+        mostrarModalAvanzarSubestadoTramite();
       } else {
         console.log('❌ Validación fallida:', data.documentos_problematicos);
         
@@ -934,5 +963,357 @@ function mostrarMensaje(mensaje, tipo) {
     }
 }
 
+// Funciones adicionales para el modal de Trámite
+function cargarSiguientesSubestadosTramite() {
+    const container = document.getElementById('siguiente-subestado-container-tramite');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando subestados...</p></div>';
+    
+    fetch(`/workflow/api/subestados-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarSubestadosTramite(data.subestados);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function mostrarSubestadosTramite(subestados) {
+    const container = document.getElementById('siguiente-subestado-container-tramite');
+    const subestadosBackOffice = ['checklist', 'captura', 'firma', 'orden del expediente', 'trámite', 'subsanación de pendientes trámite'];
+    const subestadosLegitimos = subestados.filter(s => {
+        const nombre = s.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(valido => nombre.includes(valido) || valido.includes(nombre));
+    });
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No hay subestados disponibles.</div>';
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado-tramite" id="subestado-tramite-${index}" value="${subestado.id}" class="form-check-input me-2">
+                        <label for="subestado-tramite-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">Disponible para avanzar</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Event listeners
+    setTimeout(() => {
+        document.querySelectorAll('.subestado-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const subestado = subestadosLegitimos[cardIndex];
+            
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarSiguienteSubestadoTramite(subestado.id, subestado.nombre);
+                }
+            });
+            
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }, 100);
+}
+
+function seleccionarSiguienteSubestadoTramite(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoTramite = { id: parseInt(subestadoId), nombre: subestadoNombre };
+    const siguienteSpan = document.getElementById('avanzar-siguiente-subestado-tramite');
+    if (siguienteSpan) siguienteSpan.textContent = subestadoNombre;
+    validarFormularioAvanceTramite();
+}
+
+function configurarEventosAsignacionTramite() {
+    document.querySelectorAll('input[name="opcion-asignacion-tramite"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const seccionUsuarios = document.getElementById('seccion-asignar-usuario-tramite');
+            if (this.value === 'otro') {
+                seccionUsuarios.style.display = 'block';
+                if (!window.usuariosTramiteCargados) {
+                    cargarUsuariosDisponiblesAvanceTramite();
+                    window.usuariosTramiteCargados = true;
+                }
+            } else {
+                seccionUsuarios.style.display = 'none';
+            }
+            validarFormularioAvanceTramite();
+        });
+    });
+    
+    const opcionYo = document.getElementById('opcion-yo-tramite');
+    if (opcionYo && !document.querySelector('input[name="opcion-asignacion-tramite"]:checked')) {
+        opcionYo.checked = true;
+        opcionYo.dispatchEvent(new Event('change'));
+    }
+}
+
+function cargarUsuariosDisponiblesAvanceTramite() {
+    fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaTramite(data.usuarios);
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaTramite(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-tramite');
+    const contador = document.getElementById('contador-usuarios-avance-tramite');
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="text-center"><span class="badge bg-secondary">${index + 1}</span></td>
+            <td class="text-center">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                    ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+                </div>
+            </td>
+            <td><strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong></td>
+            <td><small class="text-muted">${usuario.email || ''}</small></td>
+            <td><span class="text-muted">Sin grupos</span></td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-tramite" data-usuario-id="${usuario.id}" data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>Asignar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    document.querySelectorAll('.asignar-usuario-avance-tramite').forEach(btn => {
+        btn.addEventListener('click', function () {
+            seleccionarUsuarioAvanceTramite(this.getAttribute('data-usuario-id'), this.getAttribute('data-usuario-nombre'));
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceTramite(usuarioId, usuarioNombre) {
+    window.usuarioSeleccionadoAvanceTramite = { id: usuarioId, nombre: usuarioNombre };
+    
+    // SELECCIÓN ÚNICA - resetear todos los botones
+    document.querySelectorAll('.asignar-usuario-avance-tramite').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    // Marcar solo el seleccionado
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-tramite`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    validarFormularioAvanceTramite();
+}
+
+function validarFormularioAvanceTramite() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-tramite');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-tramite"]:checked');
+    
+    let valido = !!siguienteSubestadoSeleccionadoTramite && !!opcionSeleccionada;
+    if (opcionSeleccionada?.value === 'otro') {
+        valido = valido && !!window.usuarioSeleccionadoAvanceTramite;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    return valido;
+}
+
+function confirmarAvanceTramite() {
+    if (!validarFormularioAvanceTramite()) {
+        mostrarMensaje('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-tramite"]:checked');
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        opcion: opcionSeleccionada.value,
+        usuario_id: window.usuarioSeleccionadoAvanceTramite?.id || null,
+        siguiente_subestado_id: siguienteSubestadoSeleccionadoTramite?.id || null
+    };
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-tramite');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestadoTramite'));
+            if (modal) modal.hide();
+            
+            mostrarMensaje(`Avanzando a: ${siguienteSubestadoSeleccionadoTramite.nombre}`, 'success');
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
 </script>
+
+<!-- Modal para Avanzar Subestado - Trámite -->
+<div class="modal fade" id="modalAvanzarSubestadoTramite" tabindex="-1" aria-labelledby="modalAvanzarSubestadoTramiteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoTramiteLabel">
+          <i class="fas fa-arrow-right me-2"></i>Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud-tramite">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual-tramite">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado-tramite">Seleccione un subestado</span>
+        </div>
+
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container-tramite">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando subestados disponibles...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <div id="opciones-asignacion-tramite">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-tramite" id="opcion-yo-tramite" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-tramite" class="form-check-label">
+                <i class="fas fa-user me-2"></i><strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-tramite" id="opcion-otro-tramite" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-tramite" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i><strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-tramite" id="opcion-bandeja-tramite" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-tramite" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i><strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario -->
+        <div id="seccion-asignar-usuario-tramite" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>Usuarios Disponibles:
+          </h6>
+
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-tramite" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance-tramite">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance-tramite">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-tramite" onclick="confirmarAvanceTramite()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %} 

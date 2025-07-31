@@ -655,10 +655,11 @@
 // Variables globales
 let currentDocumentoId = null;
 let transicionesNegativas = [];
+const SOLICITUD_ID = {{ solicitud.id }};
 
 // Inicialización  
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Inicializando Orden de Expediente...');
+    console.log('🚀 Inicializando Orden de Expediente para solicitud:', SOLICITUD_ID);
     
     // Inicializar funcionalidades
     cargarTransicionesNegativas();
@@ -743,7 +744,7 @@ function marcarTodosDocumentos(marcarTodos) {
     console.log(`📋 ${marcarTodos ? 'Marcando' : 'Desmarcando'} todos los documentos`);
     
     const data = {
-        solicitud_id: {{ solicitud.id }},
+        solicitud_id: SOLICITUD_ID,
         marcar_todos: marcarTodos
     };
     
@@ -983,16 +984,11 @@ function mostrarMensaje(mensaje, tipo) {
 
 function validarDocumentosYAvanzar() {
     console.log('🔍 Validando documentos para avanzar...');
-    // Por ahora, permitir avanzar siempre
-    cargarInformacionAvance();
-    const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
-    modal.show();
+    mostrarModalAvanzarSubestadoOrden();
 }
 
 function cargarTransicionesNegativas() {
-  const solicitudId = {{ solicitud.id }};
-
-  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+  fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
     .then(response => response.json())
     .then(data => {
       if (data.success) {
@@ -1008,10 +1004,54 @@ function cargarTransicionesNegativas() {
     });
 }
 
+// Función para cargar información del modal cuando se abre - Adaptada para Orden
 function cargarInformacionAvance() {
-    console.log('📂 Cargando información de avance...');
-    // Implementación simplificada
-    document.getElementById('avanzar-siguiente-subestado').textContent = 'Siguiente Subestado';
+    console.log('🔄 Cargando información de avance para Orden...');
+    
+    // Mostrar loading si existe
+    const loadingElement = document.getElementById('avance-loading-orden');
+    const errorElement = document.getElementById('avance-error-orden');
+    
+    if (loadingElement) loadingElement.style.display = 'block';
+    if (errorElement) errorElement.style.display = 'none';
+    
+    // Solo cargar siguiente subestado (sin validación de documentos) - usando SOLICITUD_ID como firma
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/siguiente-subestado/`)
+        .then(response => response.json())
+        .then(subestadoData => {
+            console.log('📊 Información de subestado:', subestadoData);
+            
+            // Actualizar información del siguiente paso
+            if (subestadoData.success) {
+                window.siguientePaso = subestadoData;
+                
+                const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+                if (siguienteElement) {
+                    if (subestadoData.siguiente_subestado) {
+                        siguienteElement.textContent = subestadoData.siguiente_subestado.nombre;
+                    } else if (subestadoData.siguiente_etapa) {
+                        siguienteElement.textContent = subestadoData.siguiente_etapa.nombre;
+                    } else {
+                        siguienteElement.textContent = 'Trámite';
+                    }
+                }
+            } else {
+                const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+                if (siguienteElement) {
+                    siguienteElement.textContent = 'Error al cargar';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+            if (siguienteElement) {
+                siguienteElement.textContent = 'Error de conexión';
+            }
+        })
+        .finally(() => {
+            if (loadingElement) loadingElement.style.display = 'none';
+        });
 }
 
 function mostrarModalDevolucion() {
@@ -1020,5 +1060,646 @@ function mostrarModalDevolucion() {
     modal.show();
 }
 
+// Variables globales para Orden del expediente
+let siguienteSubestadoSeleccionadoOrden = null;
+window.usuarioSeleccionadoAvanceOrden = null;
+
+// ========================================
+// FUNCIONES PARA MODAL AVANZAR SUBESTADO - ORDEN
+// ========================================
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestadoOrden() {
+    console.log('🚀 Abriendo modal Avanzar Subestado - Orden');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestadoOrden');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado Orden no encontrado');
+        mostrarMensaje('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    // Configurar accesibilidad
+    modalElement.removeAttribute('aria-hidden');
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar información necesaria para Orden
+    if (typeof cargarInformacionAvance === 'function') {
+        cargarInformacionAvance();
+    }
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosOrden();
+    
+    // Los radio buttons ya están visibles por defecto
+    
+    // Configurar eventos con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventosAsignacionOrden();
+    }, 100);
+}
+
+function cargarSiguientesSubestadosOrden() {
+    console.log('📋 Cargando subestados disponibles para Orden...');
+    const container = document.getElementById('siguiente-subestado-container-orden');
+    
+    if (!container) {
+        console.error('❌ Container de subestados no encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    container.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando subestados disponibles...</p>
+        </div>
+    `;
+    
+    // Llamada AJAX para obtener subestados - usando la misma URL que firma
+    fetch(`/workflow/api/subestados-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Subestados cargados:', data.subestados);
+                mostrarSubestadosOrden(data.subestados);
+            } else {
+                throw new Error(data.error || 'Error al cargar subestados');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error al cargar subestados:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar subestados: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function mostrarSubestadosOrden(subestados) {
+    const container = document.getElementById('siguiente-subestado-container-orden');
+    
+    if (!subestados || subestados.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados disponibles para avanzar
+            </div>
+        `;
+        return;
+    }
+    
+    // Filtrar subestados de Back Office como hace firma
+    const subestadosBackOffice = [
+        'checklist', 'captura', 'firma', 'orden del expediente', 
+        'trámite', 'subsanación de pendientes trámite'
+    ];
+    
+    const subestadosLegitimos = subestados.filter(subestado => {
+        const nombreLimpio = subestado.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(nombreValido => 
+            nombreLimpio.includes(nombreValido) || nombreValido.includes(nombreLimpio)
+        );
+    });
+    
+    console.log('🔍 Subestados filtrados (Back Office):', subestadosLegitimos.length);
+    console.log('✅ Subestados legítimos:', subestadosLegitimos.map(s => s.nombre));
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados de Back Office disponibles en este momento.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" 
+                               name="siguiente-subestado-orden" 
+                               id="subestado-orden-${index}" 
+                               value="${subestado.id}" 
+                               class="form-check-input me-2" 
+                               onchange="seleccionarSiguienteSubestadoOrden(${subestado.id}, '${subestado.nombre}')">
+                        <label for="subestado-orden-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">${subestado.descripcion || 'Disponible para avanzar'}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Añadir estilos hover y funcionalidad de clic en la tarjeta
+    setTimeout(() => {
+        document.querySelectorAll('.subestado-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const subestado = subestadosLegitimos[cardIndex];
+            
+            // Agregar event listener para la selección del subestado
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarSiguienteSubestadoOrden(subestado.id, subestado.nombre);
+                }
+            });
+            
+            // Hacer que toda la tarjeta sea clickeable
+            card.addEventListener('click', (e) => {
+                // Prevenir que el clic en el radio dispare dos eventos
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            // Efectos hover
+            card.addEventListener('mouseenter', () => {
+                if (!radio.checked) {
+                    card.style.borderColor = '#007bff';
+                    card.style.boxShadow = '0 4px 8px rgba(0,123,255,0.1)';
+                }
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                if (!radio.checked) {
+                    card.style.borderColor = '#e9ecef';
+                    card.style.boxShadow = 'none';
+                }
+            });
+        });
+    }, 100);
+}
+
+function seleccionarSiguienteSubestadoOrden(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoOrden = { 
+        id: parseInt(subestadoId), // Asegurar que sea número como en firma
+        nombre: subestadoNombre 
+    };
+    console.log('🎯 Subestado seleccionado en Orden:', siguienteSubestadoSeleccionadoOrden);
+    
+    // Actualizar información en la modal
+    const siguienteSpan = document.getElementById('avanzar-siguiente-subestado-orden');
+    if (siguienteSpan) {
+        siguienteSpan.textContent = subestadoNombre;
+    }
+    
+    // Actualizar estilos de las tarjetas
+    document.querySelectorAll('.subestado-card').forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio.checked) {
+            card.style.borderColor = '#007bff';
+            card.style.backgroundColor = '#f8f9ff';
+            card.style.boxShadow = '0 4px 12px rgba(0,123,255,0.15)';
+        } else {
+            card.style.borderColor = '#e9ecef';
+            card.style.backgroundColor = 'white';
+            card.style.boxShadow = 'none';
+        }
+    });
+    
+    // Validar formulario
+    validarFormularioAvanceOrden();
+}
+
+function configurarEventosAsignacionOrden() {
+    console.log('🎛️ Configurando eventos de asignación para Orden...');
+    
+    // Event listeners para radio buttons de asignación
+    document.querySelectorAll('input[name="opcion-asignacion-orden"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('📻 Opción de asignación cambiada:', this.value);
+            
+            const seccionUsuarios = document.getElementById('seccion-asignar-usuario-orden');
+            
+            if (this.value === 'otro') {
+                // Mostrar sección de usuarios y cargar usuarios
+                seccionUsuarios.style.display = 'block';
+                if (!window.usuariosOrdenCargados) {
+                    cargarUsuariosDisponiblesAvanceOrden();
+                    window.usuariosOrdenCargados = true;
+                }
+                
+                // Limpiar selección previa
+                window.usuarioSeleccionadoAvanceOrden = null;
+                
+            } else {
+                // Ocultar sección de usuarios
+                seccionUsuarios.style.display = 'none';
+                
+                // Limpiar selección de usuario
+                window.usuarioSeleccionadoAvanceOrden = null;
+            }
+            
+            // Validar formulario
+            validarFormularioAvanceOrden();
+        });
+    });
+    
+    // Selección por defecto
+    const opcionYo = document.getElementById('opcion-yo-orden');
+    if (opcionYo && !document.querySelector('input[name="opcion-asignacion-orden"]:checked')) {
+        opcionYo.checked = true;
+        opcionYo.dispatchEvent(new Event('change'));
+    }
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvanceOrden() {
+    return fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaOrden(data.usuarios);
+                return Promise.resolve();
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaOrden(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-orden');
+    const contador = document.getElementById('contador-usuarios-avance-orden');
+    
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.className = 'usuario-item';
+        row.setAttribute('data-usuario-id', usuario.id);
+        row.setAttribute('data-usuario-nombre', usuario.nombre || usuario.username || 'Usuario');
+        row.setAttribute('data-usuario-email', usuario.email || '');
+        
+        const avatar = usuario.profile_picture ?
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre || usuario.username || 'Usuario'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+            </div>`;
+        
+        const badges = [];
+        if (usuario.is_staff) badges.push('<span class="badge bg-info ms-1">Staff</span>');
+        if (usuario.is_superuser) badges.push('<span class="badge bg-danger ms-1">Admin</span>');
+        
+        const grupos = usuario.grupos && usuario.grupos.length > 0 ?
+            usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') :
+            '<span class="text-muted">Sin grupos</span>';
+        
+        row.innerHTML = `
+            <td class="text-center">
+                <span class="badge bg-secondary">${index + 1}</span>
+            </td>
+            <td class="text-center">${avatar}</td>
+            <td>
+                <div>
+                    <strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong>
+                    ${badges.join('')}
+                </div>
+            </td>
+            <td>
+                <small class="text-muted">${usuario.email || ''}</small>
+            </td>
+            <td>${grupos}</td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-orden" 
+                        data-usuario-id="${usuario.id}" 
+                        data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Asignar
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    // Agregar event listeners a los botones de asignar
+    document.querySelectorAll('.asignar-usuario-avance-orden').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const usuarioId = this.getAttribute('data-usuario-id');
+            const usuarioNombre = this.getAttribute('data-usuario-nombre');
+            seleccionarUsuarioAvanceOrden(usuarioId, usuarioNombre);
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceOrden(usuarioId, usuarioNombre) {
+    console.log('👥 Usuario seleccionado en Orden:', usuarioNombre);
+    
+    // Asignar a la variable global
+    window.usuarioSeleccionadoAvanceOrden = {
+        id: usuarioId,
+        nombre: usuarioNombre
+    };
+    
+    // Actualizar estilos de botones (selección única)
+    document.querySelectorAll('.asignar-usuario-avance-orden').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-orden`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceOrden();
+}
+
+function validarFormularioAvanceOrden() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-orden');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+    
+    let valido = true;
+    
+    // Verificar que hay un subestado seleccionado
+    if (!siguienteSubestadoSeleccionadoOrden) {
+        valido = false;
+    }
+    
+    // Verificar que hay una opción de asignación seleccionada
+    if (!opcionSeleccionada) {
+        valido = false;
+    }
+    
+    // Si seleccionó "otro", verificar que hay un usuario seleccionado
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !window.usuarioSeleccionadoAvanceOrden) {
+        valido = false;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    console.log('🔍 Validación Orden:', {
+        subestado: !!siguienteSubestadoSeleccionadoOrden,
+        opcion: !!opcionSeleccionada,
+        usuario: opcionSeleccionada?.value === 'otro' ? !!window.usuarioSeleccionadoAvanceOrden : true,
+        valido
+    });
+    
+    return valido;
+}
+
+function confirmarAvanceOrden() {
+    console.log('✅ Confirmando avance desde Orden...');
+    
+    if (!validarFormularioAvanceOrden()) {
+        mostrarMensaje('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+    
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        opcion: opcionSeleccionada.value,
+        usuario_id: window.usuarioSeleccionadoAvanceOrden?.id || null,
+        siguiente_subestado_id: siguienteSubestadoSeleccionadoOrden?.id || null,
+        comentario: document.getElementById('comentario-avance-orden')?.value || ''
+    };
+    
+    console.log('📤 Enviando datos de avance:', datos);
+    
+    // Deshabilitar botón y obtener referencia
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-orden');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    enviarAvanceRequestOrden(datos, btnConfirmar);
+}
+
+// Función auxiliar para enviar la request de avance - adaptada de firma
+function enviarAvanceRequestOrden(data, btnConfirmar) {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestadoOrden'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Mostrar mensaje de éxito
+            let mensaje;
+            
+            if (siguienteSubestadoSeleccionadoOrden) {
+                // Sistema de Orden (botones rectangulares)
+                mensaje = `Avanzando a: ${siguienteSubestadoSeleccionadoOrden.nombre}`;
+            } else {
+                // Sistema original
+                const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+                mensaje = opcionSeleccionada.value === 'yo' ?
+                    'Avanzando al siguiente subestado...' :
+                    opcionSeleccionada.value === 'otro' ?
+                    `Solicitud asignada a ${window.usuarioSeleccionadoAvanceOrden?.nombre}` :
+                    'Solicitud devuelta a bandeja grupal';
+            }
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Redirigir según la respuesta
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+            
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error:', error);
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        
+        // Restaurar botón
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
 </script>
+
+<!-- Modal para Avanzar Subestado - Orden del Expediente -->
+<div class="modal fade" id="modalAvanzarSubestadoOrden" tabindex="-1" aria-labelledby="modalAvanzarSubestadoOrdenLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoOrdenLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud-orden">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual-orden">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado-orden">Seleccione un subestado</span>
+        </div>
+
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>
+            Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container-orden">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando subestados disponibles...</p>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Radio buttons para sistema de Orden del expediente (botones rectangulares) -->
+          <div id="opciones-asignacion-orden">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-yo-orden" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-orden" class="form-check-label">
+                <i class="fas fa-user me-2"></i>
+                <strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-otro-orden" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-orden" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i>
+                <strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-bandeja-orden" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-orden" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i>
+                <strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (sistema de Orden) -->
+        <div id="seccion-asignar-usuario-orden" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-orden" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance-orden">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance-orden">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading-orden" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error-orden" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje-orden"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-orden" onclick="confirmarAvanceOrden()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

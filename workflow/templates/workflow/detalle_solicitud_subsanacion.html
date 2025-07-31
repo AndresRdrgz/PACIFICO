@@ -504,7 +504,7 @@
             <!-- Botones de Acción -->
             <div class="action-buttons">
               <!-- Botón de avance - siempre habilitado, sin validación de documentos -->
-              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="mostrarModalAvanzarSubestadoSubsanacion()">
                 <i class="fas fa-arrow-right me-2"></i>
                 <span id="btn-avanzar-texto">Avanzar</span>
                           </button>
@@ -532,7 +532,6 @@
 </div>
 
 <!-- Incluir modales necesarios -->
-{% include "workflow/partials/modal_avanzar_subestado.html" %}
 {% include "workflow/partials/modal_devolver_oficial.html" %}
 {% include "workflow/partials/modal_agregar_pendientes.html" %}
 
@@ -544,8 +543,13 @@
 
 <!-- Scripts específicos de Pendientes de Subsanación -->
 <script>
+// Variables globales para Subsanación
+const SOLICITUD_ID = {{ solicitud.id }};
+let siguienteSubestadoSeleccionadoSubsanacion = null;
+window.usuarioSeleccionadoAvanceSubsanacion = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Vista de Subsanación cargada para solicitud:', '{{ solicitud.id }}');
+    console.log('Vista de Subsanación cargada para solicitud:', SOLICITUD_ID);
     
     // Cargar pendientes al iniciar
     cargarPendientesSolicitud();
@@ -813,7 +817,34 @@ function filtrarPendientesPorEstado(estado) {
     });
 }
 
-// Función para validar documentos consultando la base de datos
+// ========================================
+// FUNCIONES PARA MODAL AVANZAR SUBESTADO - SUBSANACIÓN
+// ========================================
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestadoSubsanacion() {
+    console.log('🚀 Abriendo modal Avanzar Subestado - Subsanación');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestadoSubsanacion');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado Subsanación no encontrado');
+        mostrarMensaje('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosSubsanacion();
+    
+    // Configurar eventos
+    setTimeout(() => {
+        configurarEventosAsignacionSubsanacion();
+    }, 100);
+}
+
+// Función para validar documentos consultando la base de datos (CONSERVADA)
 function validarDocumentosYAvanzar() {
   console.log('🔍 Validando documentos contra la base de datos...');
   
@@ -934,5 +965,357 @@ function mostrarMensaje(mensaje, tipo) {
     }
 }
 
+// Funciones adicionales para el modal de Subsanación
+function cargarSiguientesSubestadosSubsanacion() {
+    const container = document.getElementById('siguiente-subestado-container-subsanacion');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando subestados...</p></div>';
+    
+    fetch(`/workflow/api/subestados-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarSubestadosSubsanacion(data.subestados);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function mostrarSubestadosSubsanacion(subestados) {
+    const container = document.getElementById('siguiente-subestado-container-subsanacion');
+    const subestadosBackOffice = ['checklist', 'captura', 'firma', 'orden del expediente', 'trámite', 'subsanación de pendientes trámite'];
+    const subestadosLegitimos = subestados.filter(s => {
+        const nombre = s.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(valido => nombre.includes(valido) || valido.includes(nombre));
+    });
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No hay subestados disponibles.</div>';
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado-subsanacion" id="subestado-subsanacion-${index}" value="${subestado.id}" class="form-check-input me-2">
+                        <label for="subestado-subsanacion-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">Disponible para avanzar</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Event listeners
+    setTimeout(() => {
+        document.querySelectorAll('.subestado-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const subestado = subestadosLegitimos[cardIndex];
+            
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarSiguienteSubestadoSubsanacion(subestado.id, subestado.nombre);
+                }
+            });
+            
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }, 100);
+}
+
+function seleccionarSiguienteSubestadoSubsanacion(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoSubsanacion = { id: parseInt(subestadoId), nombre: subestadoNombre };
+    const siguienteSpan = document.getElementById('avanzar-siguiente-subestado-subsanacion');
+    if (siguienteSpan) siguienteSpan.textContent = subestadoNombre;
+    validarFormularioAvanceSubsanacion();
+}
+
+function configurarEventosAsignacionSubsanacion() {
+    document.querySelectorAll('input[name="opcion-asignacion-subsanacion"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const seccionUsuarios = document.getElementById('seccion-asignar-usuario-subsanacion');
+            if (this.value === 'otro') {
+                seccionUsuarios.style.display = 'block';
+                if (!window.usuariosSubsanacionCargados) {
+                    cargarUsuariosDisponiblesAvanceSubsanacion();
+                    window.usuariosSubsanacionCargados = true;
+                }
+            } else {
+                seccionUsuarios.style.display = 'none';
+            }
+            validarFormularioAvanceSubsanacion();
+        });
+    });
+    
+    const opcionYo = document.getElementById('opcion-yo-subsanacion');
+    if (opcionYo && !document.querySelector('input[name="opcion-asignacion-subsanacion"]:checked')) {
+        opcionYo.checked = true;
+        opcionYo.dispatchEvent(new Event('change'));
+    }
+}
+
+function cargarUsuariosDisponiblesAvanceSubsanacion() {
+    fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaSubsanacion(data.usuarios);
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaSubsanacion(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-subsanacion');
+    const contador = document.getElementById('contador-usuarios-avance-subsanacion');
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="text-center"><span class="badge bg-secondary">${index + 1}</span></td>
+            <td class="text-center">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                    ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+                </div>
+            </td>
+            <td><strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong></td>
+            <td><small class="text-muted">${usuario.email || ''}</small></td>
+            <td><span class="text-muted">Sin grupos</span></td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-subsanacion" data-usuario-id="${usuario.id}" data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>Asignar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    document.querySelectorAll('.asignar-usuario-avance-subsanacion').forEach(btn => {
+        btn.addEventListener('click', function () {
+            seleccionarUsuarioAvanceSubsanacion(this.getAttribute('data-usuario-id'), this.getAttribute('data-usuario-nombre'));
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceSubsanacion(usuarioId, usuarioNombre) {
+    window.usuarioSeleccionadoAvanceSubsanacion = { id: usuarioId, nombre: usuarioNombre };
+    
+    // SELECCIÓN ÚNICA - resetear todos los botones
+    document.querySelectorAll('.asignar-usuario-avance-subsanacion').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    // Marcar solo el seleccionado
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-subsanacion`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    validarFormularioAvanceSubsanacion();
+}
+
+function validarFormularioAvanceSubsanacion() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-subsanacion');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-subsanacion"]:checked');
+    
+    let valido = !!siguienteSubestadoSeleccionadoSubsanacion && !!opcionSeleccionada;
+    if (opcionSeleccionada?.value === 'otro') {
+        valido = valido && !!window.usuarioSeleccionadoAvanceSubsanacion;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    return valido;
+}
+
+function confirmarAvanceSubsanacion() {
+    if (!validarFormularioAvanceSubsanacion()) {
+        mostrarMensaje('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-subsanacion"]:checked');
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        opcion: opcionSeleccionada.value,
+        usuario_id: window.usuarioSeleccionadoAvanceSubsanacion?.id || null,
+        siguiente_subestado_id: siguienteSubestadoSeleccionadoSubsanacion?.id || null
+    };
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-subsanacion');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestadoSubsanacion'));
+            if (modal) modal.hide();
+            
+            mostrarMensaje(`Avanzando a: ${siguienteSubestadoSeleccionadoSubsanacion.nombre}`, 'success');
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
 </script>
+
+<!-- Modal para Avanzar Subestado - Subsanación -->
+<div class="modal fade" id="modalAvanzarSubestadoSubsanacion" tabindex="-1" aria-labelledby="modalAvanzarSubestadoSubsanacionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoSubsanacionLabel">
+          <i class="fas fa-arrow-right me-2"></i>Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud-subsanacion">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual-subsanacion">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado-subsanacion">Seleccione un subestado</span>
+        </div>
+
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container-subsanacion">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando subestados disponibles...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <div id="opciones-asignacion-subsanacion">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-subsanacion" id="opcion-yo-subsanacion" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-subsanacion" class="form-check-label">
+                <i class="fas fa-user me-2"></i><strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-subsanacion" id="opcion-otro-subsanacion" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-subsanacion" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i><strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-subsanacion" id="opcion-bandeja-subsanacion" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-subsanacion" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i><strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario -->
+        <div id="seccion-asignar-usuario-subsanacion" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>Usuarios Disponibles:
+          </h6>
+
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-subsanacion" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance-subsanacion">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance-subsanacion">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-subsanacion" onclick="confirmarAvanceSubsanacion()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %} 
