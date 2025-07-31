@@ -259,6 +259,10 @@ urlpatterns += [
     path('api/makito/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_update_status, name='api_makito_update_status'),
     path('api/makito/upload-apc/<str:solicitud_codigo>/', views_workflow.api_makito_upload_apc, name='api_makito_upload_apc'),
     
+    # Nueva Solicitud Makito APIs
+    path('api/solicitar-apc-makito/<int:solicitud_id>/', views_workflow.api_solicitar_apc_makito, name='api_solicitar_apc_makito'),
+    path('api/solicitar-sura-makito/<int:solicitud_id>/', views_workflow.api_solicitar_sura_makito, name='api_solicitar_sura_makito'),
+    
     # SURA Makito URLs
     path('sura-tracking/', views_workflow.sura_tracking_view, name='sura_tracking'),
     path('api/sura/list/', api_sura.api_sura_list, name='api_sura_list'),

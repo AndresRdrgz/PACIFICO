@@ -2065,8 +2065,14 @@ def api_solicitudes(request):
     """API para obtener solicitudes"""
     
     solicitudes = Solicitud.objects.all().select_related(
-        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
+        'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a',
+        'cliente', 'cotizacion'
     )
+    
+    # Filtro por ID específico (para obtener una solicitud)
+    solicitud_id = request.GET.get('id')
+    if solicitud_id:
+        solicitudes = solicitudes.filter(id=solicitud_id)
     
     # Filtros
     pipeline_id = request.GET.get('pipeline')
@@ -2082,16 +2088,59 @@ def api_solicitudes(request):
     # Serializar datos
     datos = []
     for solicitud in solicitudes:
+        # Obtener nombre del cliente de diferentes fuentes
+        cliente_nombre = 'N/A'
+        cedula_cliente = ''
+        
+        if solicitud.cliente:
+            cliente_nombre = f"{solicitud.cliente.nombre} {solicitud.cliente.apellido}".strip()
+            cedula_cliente = solicitud.cliente.cedula or ''
+        elif solicitud.cotizacion and hasattr(solicitud.cotizacion, 'cliente') and solicitud.cotizacion.cliente:
+            cliente_nombre = f"{solicitud.cotizacion.cliente.nombre} {solicitud.cotizacion.cliente.apellido}".strip()
+            cedula_cliente = solicitud.cotizacion.cliente.cedula or ''
+        elif solicitud.apc_no_cedula:
+            # Fallback para solicitudes APC sin cliente asociado
+            cliente_nombre = 'Cliente APC'
+            cedula_cliente = solicitud.apc_no_cedula
+        elif hasattr(solicitud, 'sura_no_documento') and solicitud.sura_no_documento:
+            # Fallback para solicitudes SURA sin cliente asociado  
+            cliente_nombre = 'Cliente SURA'
+            cedula_cliente = solicitud.sura_no_documento
+        
+        # Datos de cotización si existe
+        cotizacion_data = {}
+        if solicitud.cotizacion:
+            cotizacion_data = {
+                'marca': getattr(solicitud.cotizacion, 'marca', ''),
+                'modelo': getattr(solicitud.cotizacion, 'modelo', ''),
+                'yearCarro': getattr(solicitud.cotizacion, 'year', ''),
+                'valorAuto': getattr(solicitud.cotizacion, 'valor_vehiculo', ''),
+                'placa': getattr(solicitud.cotizacion, 'placa', ''),
+            }
+        
         datos.append({
             'id': solicitud.id,
             'codigo': solicitud.codigo,
             'pipeline': solicitud.pipeline.nombre,
-            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+            'pipeline_id': solicitud.pipeline.id,
+            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Completada',
+            'etapa_actual_id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
             'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
             'creada_por': solicitud.creada_por.username,
             'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
             'fecha_creacion': solicitud.fecha_creacion.isoformat(),
             'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+            
+            # Información del cliente
+            'cliente_nombre': cliente_nombre,
+            'nombreCliente': cliente_nombre,  # Alias para compatibilidad
+            'cedulaCliente': cedula_cliente,
+            'apc_no_cedula': solicitud.apc_no_cedula or '',
+            'apc_tipo_documento': solicitud.apc_tipo_documento or '',
+            'apc_status': solicitud.apc_status or '',
+            
+            # Información de cotización
+            **cotizacion_data,
         })
     
     return JsonResponse({'solicitudes': datos})
@@ -7147,6 +7196,244 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo de debida diligencia para solicitud {solicitud.codigo}: {str(e)}")
+
+# ==========================================
+# APC MAKITO SOLICITAR API
+# ==========================================
+
+@login_required
+def api_solicitar_apc_makito(request, solicitud_id):
+    """
+    API para solicitar descarga de APC con Makito RPA
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+
+    try:
+        import json
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Parse request data
+        try:
+            request_data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            request_data = {}
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        # Verificar que la solicitud no tenga ya APC procesado
+        if solicitud.apc_status == 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta solicitud ya tiene APC completado'
+            }, status=400)
+        
+        # Obtener datos necesarios para APC
+        cliente_info = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Get document data from form submission first, fallback to existing data
+        tipo_documento = request_data.get('tipo_documento', '')
+        numero_documento = request_data.get('numero_documento', '')
+        
+        # If form data is not provided, try to get from existing records
+        if not numero_documento:
+            if hasattr(solicitud, 'cliente') and solicitud.cliente:
+                numero_documento = solicitud.cliente.cedulaCliente
+                tipo_documento = 'cedula' if numero_documento else ''
+            elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion and solicitud.cotizacion.cedulaCliente:
+                numero_documento = solicitud.cotizacion.cedulaCliente
+                tipo_documento = 'cedula' if numero_documento else ''
+        
+        if not numero_documento or not tipo_documento:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró información del documento del cliente para procesar APC. Por favor complete los campos del formulario.'
+            }, status=400)
+        
+        # Configurar solicitud para APC Makito
+        solicitud.descargar_apc_makito = True
+        solicitud.apc_no_cedula = numero_documento
+        solicitud.apc_tipo_documento = tipo_documento
+        solicitud.apc_status = 'pending'
+        solicitud.apc_fecha_solicitud = timezone.now()
+        
+        solicitud.save(update_fields=[
+            'descargar_apc_makito', 'apc_no_cedula', 'apc_tipo_documento', 
+            'apc_status', 'apc_fecha_solicitud'
+        ])
+        
+        # Enviar correo a Makito RPA
+        enviar_correo_apc_makito(
+            solicitud=solicitud,
+            no_cedula=numero_documento,
+            tipo_documento=tipo_documento,
+            request=request
+        )
+        
+        # Crear historial
+        try:
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=solicitud.etapa_actual,
+                usuario_responsable=request.user,
+                fecha_inicio=timezone.now(),
+                observaciones=f"APC solicitado a Makito RPA por {request.user.get_full_name() or request.user.username} - Documento: {tipo_documento.upper()} {numero_documento}"
+            )
+        except Exception as hist_error:
+            print(f"⚠️ Error al crear historial APC: {hist_error}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud APC para {cliente_info} enviada exitosamente a Makito RPA',
+            'solicitud_codigo': solicitud.codigo,
+            'apc_status': solicitud.apc_status
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+    except Exception as e:
+        print(f"❌ Error al solicitar APC para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+# ==========================================
+# SURA MAKITO SOLICITAR API
+# ==========================================
+
+@login_required
+def api_solicitar_sura_makito(request, solicitud_id):
+    """
+    API para solicitar cotización SURA con Makito RPA
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'error': 'Método no permitido'
+        }, status=405)
+
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not request.user.is_superuser:
+            user_groups = request.user.groups.all()
+            tiene_permiso = PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa=solicitud.etapa_actual
+            ).exists()
+            
+            if not tiene_permiso and solicitud.creada_por != request.user and solicitud.asignada_a != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tiene permisos para modificar esta solicitud'
+                }, status=403)
+        
+        # Verificar que la solicitud no tenga ya SURA procesado
+        if solicitud.sura_status == 'completed':
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta solicitud ya tiene cotización SURA completada'
+            }, status=400)
+        
+        # Obtener datos necesarios para SURA
+        cliente_info = solicitud.cliente_nombre_completo or "Cliente no asignado"
+        
+        # Verificar información del cliente
+        documento_cliente = None
+        primer_nombre = ""
+        primer_apellido = ""
+        
+        if hasattr(solicitud, 'cliente') and solicitud.cliente:
+            documento_cliente = solicitud.cliente.cedula or solicitud.cliente.ruc
+            primer_nombre = solicitud.cliente.primer_nombre or ""
+            primer_apellido = solicitud.cliente.primer_apellido or ""
+        elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion:
+            documento_cliente = solicitud.cotizacion.cedula
+            # Intentar extraer nombres de la cotización si están disponibles
+            if solicitud.cotizacion.cliente_nombre:
+                nombres = solicitud.cotizacion.cliente_nombre.split()
+                if len(nombres) >= 2:
+                    primer_nombre = nombres[0]
+                    primer_apellido = nombres[-1]
+        
+        if not documento_cliente:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró información del documento del cliente para procesar SURA'
+            }, status=400)
+        
+        # Configurar solicitud para SURA Makito
+        solicitud.sura_primer_nombre = primer_nombre
+        solicitud.sura_primer_apellido = primer_apellido
+        solicitud.sura_no_documento = documento_cliente
+        solicitud.sura_status = 'pending'
+        solicitud.sura_fecha_solicitud = timezone.now()
+        
+        solicitud.save(update_fields=[
+            'sura_primer_nombre', 'sura_primer_apellido', 'sura_no_documento',
+            'sura_status', 'sura_fecha_solicitud'
+        ])
+        
+        # Enviar correo a Makito RPA
+        enviar_correo_sura_makito(
+            solicitud=solicitud,
+            sura_primer_nombre=primer_nombre,
+            sura_primer_apellido=primer_apellido,
+            sura_no_documento=documento_cliente,
+            request=request
+        )
+        
+        # Crear historial
+        try:
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=solicitud.etapa_actual,
+                usuario_responsable=request.user,
+                fecha_inicio=timezone.now(),
+                observaciones=f"Cotización SURA solicitada a Makito RPA por {request.user.get_full_name() or request.user.username}"
+            )
+        except Exception as hist_error:
+            print(f"⚠️ Error al crear historial SURA: {hist_error}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud de cotización SURA para {cliente_info} enviada exitosamente a Makito RPA',
+            'solicitud_codigo': solicitud.codigo,
+            'sura_status': solicitud.sura_status
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+    except Exception as e:
+        print(f"❌ Error al solicitar SURA para solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
 
 @login_required
 def api_debida_diligencia_tracking(request):

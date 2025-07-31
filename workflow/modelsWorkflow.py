@@ -338,12 +338,12 @@ class Solicitud(models.Model):
         """Obtiene el nombre del cliente de forma consistente"""
         # Acceder directamente al campo de la base de datos para evitar recursión
         nombre_directo = self.__dict__.get('cliente_nombre', None)
-        if nombre_directo:
+        if nombre_directo and nombre_directo != 'None':
             return nombre_directo
-        elif self.cotizacion and self.cotizacion.nombreCliente:
-            return self.cotizacion.nombreCliente
         elif self.cliente and self.cliente.nombreCliente:
             return self.cliente.nombreCliente
+        elif self.cotizacion and self.cotizacion.nombreCliente:
+            return self.cotizacion.nombreCliente
         else:
             return ""  # Campo en blanco si no hay cliente
     

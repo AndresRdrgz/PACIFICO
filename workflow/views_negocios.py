@@ -588,6 +588,15 @@ def api_detalle_solicitud_modal(request, solicitud_id):
                 'producto': solicitud.cotizacion.producto,
                 'monto_financiado': float(solicitud.cotizacion.monto_financiado) if solicitud.cotizacion.monto_financiado else 0,
                 'plazo': getattr(solicitud.cotizacion, 'plazo', 0),
+                # Client data from cotization for SURA prefilling
+                'nombreCliente': getattr(solicitud.cotizacion, 'nombreCliente', ''),
+                'cedulaCliente': getattr(solicitud.cotizacion, 'cedulaCliente', ''),
+                'tipoDocumento': getattr(solicitud.cotizacion, 'tipoDocumento', 'CEDULA'),
+                # Car data from cotization for SURA prefilling  
+                'marca': getattr(solicitud.cotizacion, 'marca', ''),
+                'modelo': getattr(solicitud.cotizacion, 'modelo', ''),
+                'yearCarro': getattr(solicitud.cotizacion, 'yearCarro', ''),
+                'valorAuto': float(getattr(solicitud.cotizacion, 'valorAuto', 0)) if getattr(solicitud.cotizacion, 'valorAuto', None) else 0,
             } if solicitud.cotizacion else None,
             'creada_por': {
                 'id': solicitud.creada_por.id,
@@ -723,45 +732,111 @@ def api_estadisticas_negocios(request):
 def api_solicitudes(request):
     """API para obtener solicitudes según permisos del usuario"""
     
-    # Obtener solicitudes según permisos del usuario
-    if request.user.is_superuser:
-        solicitudes = Solicitud.objects.all().select_related(
-            'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
-        )
-    else:
-        solicitudes = Solicitud.objects.filter(
-            Q(asignada_a=request.user) | Q(creada_por=request.user)
-        ).select_related(
-            'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a'
-        )
-    
-    # Filtros
-    pipeline_id = request.GET.get('pipeline')
-    if pipeline_id:
-        solicitudes = solicitudes.filter(pipeline_id=pipeline_id)
-    
-    estado = request.GET.get('estado')
-    if estado == 'activas':
-        solicitudes = solicitudes.filter(etapa_actual__isnull=False)
-    elif estado == 'completadas':
-        solicitudes = solicitudes.filter(etapa_actual__isnull=True)
-    
-    # Serializar datos
-    datos = []
-    for solicitud in solicitudes:
-        datos.append({
-            'id': solicitud.id,
-            'codigo': solicitud.codigo,
-            'pipeline': solicitud.pipeline.nombre,
-            'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
-            'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
-            'creada_por': solicitud.creada_por.username,
-            'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
-            'fecha_creacion': solicitud.fecha_creacion.isoformat(),
-            'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
-        })
-    
-    return JsonResponse({'solicitudes': datos})
+    try:
+        # Obtener solicitudes según permisos del usuario
+        if request.user.is_superuser:
+            solicitudes = Solicitud.objects.all().select_related(
+                'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 
+                'cliente', 'cotizacion'
+            )
+        else:
+            solicitudes = Solicitud.objects.filter(
+                Q(asignada_a=request.user) | Q(creada_por=request.user)
+            ).select_related(
+                'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a',
+                'cliente', 'cotizacion'
+            )
+        
+        # Filtro por ID específico (para obtener una solicitud)
+        solicitud_id = request.GET.get('id')
+        if solicitud_id:
+            solicitudes = solicitudes.filter(id=solicitud_id)
+        
+        # Filtros
+        pipeline_id = request.GET.get('pipeline')
+        if pipeline_id:
+            solicitudes = solicitudes.filter(pipeline_id=pipeline_id)
+        
+        estado = request.GET.get('estado')
+        if estado == 'activas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=False)
+        elif estado == 'completadas':
+            solicitudes = solicitudes.filter(etapa_actual__isnull=True)
+        
+        # Serializar datos
+        datos = []
+        for solicitud in solicitudes:
+            # Obtener nombre del cliente de diferentes fuentes
+            cliente_nombre = 'N/A'
+            cedula_cliente = ''
+            
+            if solicitud.cliente:
+                cliente_nombre = solicitud.cliente.nombreCliente or 'Sin nombre'
+                cedula_cliente = solicitud.cliente.cedulaCliente or ''
+            elif solicitud.cotizacion and hasattr(solicitud.cotizacion, 'cliente') and solicitud.cotizacion.cliente:
+                cliente_nombre = solicitud.cotizacion.cliente.nombreCliente or 'Sin nombre'
+                cedula_cliente = solicitud.cotizacion.cliente.cedulaCliente or ''
+            elif solicitud.cotizacion:
+                # Fallback to cotization client fields
+                cliente_nombre = solicitud.cotizacion.nombreCliente or 'Sin cliente'
+                cedula_cliente = solicitud.cotizacion.cedulaCliente or ''
+            elif solicitud.apc_no_cedula:
+                # Fallback para solicitudes APC sin cliente asociado
+                cliente_nombre = 'Cliente APC'
+                cedula_cliente = solicitud.apc_no_cedula
+            elif hasattr(solicitud, 'sura_no_documento') and solicitud.sura_no_documento:
+                # Fallback para solicitudes SURA sin cliente asociado  
+                cliente_nombre = 'Cliente SURA'
+                cedula_cliente = solicitud.sura_no_documento
+            
+            # Datos de cotización si existe
+            cotizacion_data = {}
+            if solicitud.cotizacion:
+                cotizacion_data = {
+                    'marca': getattr(solicitud.cotizacion, 'marca', ''),
+                    'modelo': getattr(solicitud.cotizacion, 'modelo', ''),
+                    'yearCarro': getattr(solicitud.cotizacion, 'yearCarro', ''),
+                    'valorAuto': getattr(solicitud.cotizacion, 'valorAuto', ''),
+                    'placa': getattr(solicitud.cotizacion, 'placa', ''),
+                }
+            
+            datos.append({
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'pipeline': solicitud.pipeline.nombre,
+                'pipeline_id': solicitud.pipeline.id,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Completada',
+                'etapa_actual_id': solicitud.etapa_actual.id if solicitud.etapa_actual else None,
+                'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+                'creada_por': solicitud.creada_por.username,
+                'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+                'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+                
+                # Información del cliente (campos nuevos)
+                'cliente_nombre': cliente_nombre,
+                'nombreCliente': cliente_nombre,  # Alias para compatibilidad
+                'cedulaCliente': cedula_cliente,
+                'apc_no_cedula': solicitud.apc_no_cedula or '',
+                'apc_tipo_documento': solicitud.apc_tipo_documento or '',
+                'apc_status': solicitud.apc_status or '',
+                
+                # Información de cotización
+                **cotizacion_data,
+                
+                # Campos antiguos para compatibilidad
+                'cliente': cliente_nombre,
+                'documento': cedula_cliente,
+            })
+        
+        return JsonResponse({'solicitudes': datos})
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'error': f'Server error: {str(e)}',
+            'traceback': traceback.format_exc()
+        }, status=500)
 
 
 @login_required  
