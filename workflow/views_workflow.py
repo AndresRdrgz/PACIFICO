@@ -5234,6 +5234,83 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         print(f"❌ Error al enviar correo de cambio de etapa para solicitud {solicitud.codigo}: {str(e)}")
 
 
+def enviar_correo_devolucion_backoffice(solicitud, etapa_anterior, nueva_etapa, documentos_problematicos, motivo, usuario_que_devolvio, request=None):
+    """
+    🚨 NUEVO: Función para enviar correo automático cuando una solicitud es devuelta desde Back Office.
+    Incluye documentos problemáticos (malos + pendientes) y motivo de devolución.
+    """
+    try:
+        # Verificar que la solicitud tiene propietario o creador
+        destinatario_principal = None
+        if solicitud.propietario and solicitud.propietario.email:
+            destinatario_principal = solicitud.propietario.email
+            print(f"📧 Enviando correo de devolución al propietario: {destinatario_principal}")
+        elif solicitud.creada_por and solicitud.creada_por.email:
+            destinatario_principal = solicitud.creada_por.email
+            print(f"📧 Enviando correo de devolución al creador: {destinatario_principal}")
+        else:
+            print(f"⚠️ No se puede enviar correo: solicitud {solicitud.codigo} sin propietario/creador o email")
+            return
+        
+        # Destinatarios con copias
+        destinatarios = [destinatario_principal]
+        copias = [
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
+        
+        # Construir la URL de la solicitud
+        base_url = get_site_url(request)
+        solicitud_url = f"{base_url}/workflow/solicitudes/{solicitud.id}/detalle/"
+        
+        # Crear contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa_anterior': etapa_anterior,
+            'nueva_etapa': nueva_etapa,
+            'documentos_problematicos': documentos_problematicos,
+            'motivo': motivo,
+            'usuario_que_devolvio': usuario_que_devolvio,
+            'fecha_devolucion': timezone.now(),
+            'solicitud_url': solicitud_url,
+            'base_url': base_url,
+        }
+        
+        # Generar el contenido HTML del correo
+        html_content = render_to_string('workflow/emails/devolucion_backoffice_notification.html', context)
+        
+        # Crear el asunto del correo
+        subject = f"🚨 Solicitud {solicitud.codigo} Devuelta desde Back Office"
+        
+        # Crear y enviar el correo
+        from django.core.mail import EmailMultiAlternatives
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body="Tu solicitud ha sido devuelta desde Back Office. Por favor, revisa el correo en formato HTML.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+            cc=copias
+        )
+        
+        # Adjuntar contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo
+        email.send()
+        
+        print(f"✅ Correo de devolución enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"   - Destinatario: {destinatario_principal}")
+        print(f"   - Copias: {', '.join(copias)}")
+        print(f"   - Documentos problemáticos: {len(documentos_problematicos)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de devolución para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+
 def enviar_correo_comite_credito(solicitud, etapa, request=None):
     """
     Función para enviar correo automático cuando una solicitud entra a la etapa del Comité de Crédito.
@@ -11048,8 +11125,382 @@ def api_devolver_bandeja_grupal(request):
         })
 
 
+@login_required
+@require_http_methods(["POST"])
+def api_devolver_solicitud_backoffice(request):
+    """
+    🚨 NUEVA API: Devolver solicitud desde Back Office a etapa anterior con envío de correo
+    """
+    import json
+    from workflow.models import CalificacionDocumentoBackoffice
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        transicion_id = data.get('transicion_id')
+        motivo = data.get('motivo', '').strip()
+        
+        if not solicitud_id or not transicion_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos (solicitud_id, transicion_id).'
+            }, status=400)
+        
+        if not motivo:
+            return JsonResponse({
+                'success': False,
+                'message': 'El motivo de devolución es obligatorio.'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Back Office":
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta función solo está disponible desde Back Office.'
+            }, status=400)
+        
+        # Verificar que la transición es válida
+        if transicion.pipeline != solicitud.pipeline or transicion.etapa_origen != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'Transición no válida para esta solicitud.'
+            }, status=400)
+        
+        # 📊 OBTENER DOCUMENTOS PROBLEMÁTICOS DIRECTAMENTE DE LA BD
+        documentos_problematicos = []
+        
+        print(f"🔍 Obteniendo documentos problemáticos para solicitud {solicitud.codigo}")
+        
+        # 1. ✅ DOCUMENTOS CALIFICADOS COMO "MALO" - CONSULTA DIRECTA
+        calificaciones_malas = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,  # Usar ID directo
+            estado='malo'
+        ).select_related('requisito_solicitud__requisito')
+        
+        print(f"📊 Documentos MALOS encontrados: {calificaciones_malas.count()}")
+        
+        for calificacion in calificaciones_malas:
+            doc_malo = {
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'estado': 'malo'
+            }
+            documentos_problematicos.append(doc_malo)
+            print(f"   ❌ Malo: {doc_malo['nombre']}")
+        
+        # 2. ✅ DOCUMENTOS PENDIENTES - CONSULTA DIRECTA
+        calificaciones_pendientes = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,  # Usar ID directo
+            estado='pendiente'
+        ).select_related('requisito_solicitud__requisito')
+        
+        print(f"📊 Documentos PENDIENTES encontrados: {calificaciones_pendientes.count()}")
+        
+        for calificacion in calificaciones_pendientes:
+            doc_pendiente = {
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'estado': 'pendiente'
+            }
+            documentos_problematicos.append(doc_pendiente)
+            print(f"   ⚠️ Pendiente: {doc_pendiente['nombre']}")
+        
+        print(f"📋 TOTAL documentos problemáticos para correo: {len(documentos_problematicos)}")
+        
+        # Guardar etapa anterior
+        etapa_anterior = solicitud.etapa_actual
+        
+        # Cerrar historial actual
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.fecha_fin = timezone.now()
+            historial_actual.save()
+        
+        # Actualizar la solicitud
+        solicitud.etapa_actual = transicion.etapa_destino
+        solicitud.subestado_actual = None  # Resetear subestado
+        solicitud.asignada_a = None  # Liberar asignación
+        
+        # Limpiar campo de Back Office al salir
+        solicitud.calificaciondocumentobackoffice = None
+        
+        solicitud.save()
+        
+        # Crear nuevo historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=transicion.etapa_destino,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Crear comentario de devolución
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"🚨 DEVOLUCIÓN desde {etapa_anterior.nombre}: {motivo}",
+            tipo='sistema'
+        )
+        
+        # 📧 ENVIAR CORREO AL PROPIETARIO
+        try:
+            enviar_correo_devolucion_backoffice(
+                solicitud=solicitud,
+                etapa_anterior=etapa_anterior,
+                nueva_etapa=transicion.etapa_destino,
+                documentos_problematicos=documentos_problematicos,
+                motivo=motivo,
+                usuario_que_devolvio=request.user,
+                request=request
+            )
+        except Exception as e:
+            print(f"⚠️ Error enviando correo de devolución: {e}")
+            # No fallar la devolución por error en correo
+        
+        # Notificar cambio
+        notify_solicitud_change(solicitud, 'devolucion_backoffice', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud {solicitud.codigo} devuelta exitosamente a {transicion.etapa_destino.nombre}',
+            'redirect_url': f'/workflow/solicitudes/{solicitud.id}/detalle/',
+            'data': {
+                'solicitud_codigo': solicitud.codigo,
+                'etapa_anterior': etapa_anterior.nombre,
+                'nueva_etapa': transicion.etapa_destino.nombre,
+                'documentos_problematicos': len(documentos_problematicos),
+                'fecha_devolucion': timezone.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error en devolución desde Back Office: {str(e)}")
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al devolver solicitud: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_calificaciones_por_estado(request, solicitud_id, estado):
+    """
+    🆕 API para obtener calificaciones de documentos por estado específico
+    """
+    try:
+        print(f"📋 API llamada: solicitud_id={solicitud_id}, estado={estado}")
+        
+        # Verificar si la solicitud existe
+        try:
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            print(f"✅ Solicitud encontrada: {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Solicitud no encontrada: {e}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Solicitud no encontrada: {str(e)}'
+            }, status=404)
+        
+        # Verificar permisos básicos
+        if not (solicitud.propietario == request.user or 
+                solicitud.creada_por == request.user or
+                solicitud.asignada_a == request.user or
+                request.user.is_staff):
+            print(f"❌ Sin permisos para usuario: {request.user.username}")
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            }, status=403)
+        
+        print(f"✅ Permisos verificados para usuario: {request.user.username}")
+        
+        # Obtener calificaciones por estado - CONSULTA DIRECTA SIMPLE
+        from workflow.models import CalificacionDocumentoBackoffice
+        print(f"📊 Buscando calificaciones con estado: {estado} para solicitud {solicitud.codigo}")
+        
+        # Consulta simple y directa
+        calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,
+            estado=estado
+        ).select_related('requisito_solicitud__requisito')
+        
+        # Debugging adicional
+        total_calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id
+        ).count()
+        
+        print(f"📊 Total calificaciones en la solicitud: {total_calificaciones}")
+        print(f"📊 Calificaciones con estado '{estado}': {calificaciones.count()}")
+        
+        # Mostrar todas las calificaciones para debugging
+        todas = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id
+        ).values('estado', 'requisito_solicitud__requisito__nombre')
+        
+        print(f"📋 TODAS las calificaciones:")
+        for cal in todas:
+            print(f"   - {cal['requisito_solicitud__requisito__nombre']}: {cal['estado']}")
+        
+        # ✅ CORREGIDO: Obtener información de obligatoriedad desde RequisitoTransicion (como en api_validar_documentos_backoffice)
+        from workflow.modelsWorkflow import TransicionEtapa, RequisitoTransicion
+        
+        # Obtener transiciones de entrada hacia la etapa actual
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos definidos en RequisitoTransicion de entrada
+        requisitos_definidos = {}
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_definidos:
+                    requisitos_definidos[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'transicion_origen': transicion.etapa_origen.nombre
+                    }
+        
+        # Preparar datos
+        calificaciones_data = []
+        for calificacion in calificaciones:
+            try:
+                # Obtener información de obligatoriedad desde RequisitoTransicion
+                req_id = calificacion.requisito_solicitud.requisito.id
+                es_obligatorio = requisitos_definidos.get(req_id, {}).get('obligatorio', False)
+                
+                calificacion_data = {
+                    'id': calificacion.id,
+                    'estado': calificacion.estado,
+                    'requisito_solicitud': {
+                        'id': calificacion.requisito_solicitud.id,
+                        'requisito': {
+                            'id': calificacion.requisito_solicitud.requisito.id,
+                            'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                            'obligatorio': es_obligatorio,  # ✅ Ahora obtenido correctamente
+                        }
+                    },
+                    'observaciones': getattr(calificacion, 'observaciones', ''),  # Proteger contra campos faltantes
+                    'fecha_calificacion': calificacion.fecha_calificacion.isoformat() if calificacion.fecha_calificacion else None,
+                }
+                calificaciones_data.append(calificacion_data)
+                print(f"✅ Procesada calificación: {calificacion.id}")
+            except Exception as e:
+                print(f"❌ Error procesando calificación {calificacion.id}: {str(e)}")
+                import traceback
+                print(f"❌ TRACEBACK: {traceback.format_exc()}")
+                continue
+        
+        resultado = {
+            'success': True,
+            'estado_filtrado': estado,
+            'total': len(calificaciones_data),
+            'calificaciones': calificaciones_data
+        }
+        
+        print(f"✅ Devolviendo {len(calificaciones_data)} calificaciones")
+        return JsonResponse(resultado)
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"❌ Error en api_obtener_calificaciones_por_estado: {str(e)}")
+        print(f"❌ TRACEBACK: {error_traceback}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener calificaciones: {str(e)}',
+            'debug_traceback': error_traceback if settings.DEBUG else None
+        }, status=500)
+
+
+@login_required  
+@require_http_methods(["POST"])
+def api_crear_calificacion_test_malo(request, solicitud_id):
+    """
+    🧪 API TEMPORAL: Crear calificaciones de prueba con estado 'malo' para testing
+    """
+    try:
+        if not request.user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'message': 'Solo staff puede usar esta función de prueba.'
+            }, status=403)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        print(f"🧪 Creando calificaciones 'malo' para solicitud: {solicitud.codigo}")
+        
+        # Obtener requisitos de la solicitud para crear calificaciones "malo"
+        from workflow.models import RequisitoSolicitud, CalificacionDocumentoBackoffice
+        
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud)
+        print(f"📋 Requisitos encontrados en la solicitud: {requisitos_solicitud.count()}")
+        
+        if not requisitos_solicitud.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'No se encontraron requisitos en esta solicitud para crear calificaciones.'
+            })
+        
+        # Tomar los primeros 3 requisitos para crear calificaciones "malo"
+        requisitos_para_malo = requisitos_solicitud[:3]
+        calificaciones_creadas = 0
+        
+        for requisito_solicitud in requisitos_para_malo:
+            try:
+                # Crear o actualizar calificación como "malo"
+                calificacion, created = CalificacionDocumentoBackoffice.objects.get_or_create(
+                    requisito_solicitud=requisito_solicitud,
+                    defaults={
+                        'estado': 'malo',
+                        'observaciones': f'❌ Documento {requisito_solicitud.requisito.nombre} rechazado para pruebas de devolución',
+                        'calificado_por': request.user,
+                        'fecha_calificacion': timezone.now()
+                    }
+                )
+                
+                if not created:
+                    # Si ya existía, actualizarla a "malo"
+                    calificacion.estado = 'malo'
+                    calificacion.observaciones = f'❌ Documento {requisito_solicitud.requisito.nombre} rechazado (actualizado para pruebas)'
+                    calificacion.calificado_por = request.user
+                    calificacion.fecha_calificacion = timezone.now()
+                    calificacion.save()
+                    print(f"🔄 Calificación ACTUALIZADA a 'malo': {requisito_solicitud.requisito.nombre}")
+                else:
+                    print(f"✅ Calificación CREADA como 'malo': {requisito_solicitud.requisito.nombre}")
+                
+                calificaciones_creadas += 1
+                
+            except Exception as e:
+                print(f"❌ Error procesando requisito {requisito_solicitud.id}: {str(e)}")
+                continue
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Se crearon/actualizaron {calificaciones_creadas} calificaciones como "malo"',
+            'calificaciones_creadas': calificaciones_creadas
+        })
+        
+    except Exception as e:
+        print(f"❌ Error creando calificaciones de prueba: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
 # ==========================================
-# VISTAS PARA FORMULARIO GENERAL
+# VISTAS PARA FORMULARIO GENERAL  
 # ==========================================
 
 @login_required

@@ -740,19 +740,12 @@
                       {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
                       <div class="seccion-ver-descargar-backoffice">
                         <div class="btn-group">
-                          {% if archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".docx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".doc" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".pdf" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".xls" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".xlsx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".ppt" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".pptx" %}
-                          <a href="https://docs.google.com/viewer?url={{ request.build_absolute_uri }}{{ archivo_info.archivo_actual.archivo.url }}&embedded=true" target="_blank"
-                            rel="noopener noreferrer" class="btn btn-outline-primary"
-                            title="Ver documento en Google Viewer">
-                            <i class="fas fa-eye"></i> Ver
-                          </a>
-                          {% else %}
+                          <!-- ✅ CORREGIDO: Abrir directamente en el navegador (sin Google Viewer) -->
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
                             rel="noopener noreferrer" class="btn btn-outline-primary"
-                            title="Ver archivo en nueva pestaña">
+                            title="Ver documento en nueva pestaña">
                             <i class="fas fa-eye"></i> Ver
                           </a>
-                          {% endif %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
                             class="btn btn-outline-success" title="Descargar archivo">
                             <i class="fas fa-download"></i> Descargar
@@ -3513,53 +3506,166 @@ function mostrarModalDevolucion() {
   modal.show();
 }
 
-// Función para cargar documentos problemáticos
+// ✅ MEJORADO: Función para cargar documentos problemáticos (MALOS + PENDIENTES) 
 function cargarDocumentosProblematicos() {
   const solicitudId = {{ solicitud.id }};
   
-  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
-    .then(response => response.json())
-    .then(data => {
-      const listaContainer = document.getElementById('lista-documentos-problematicos');
+  console.log(`🔍 Cargando documentos problemáticos para solicitud ${solicitudId}`);
+  
+  // Obtener tanto pendientes como malos
+  Promise.all([
+    fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`).then(r => r.json()),
+    fetch(`/workflow/api/calificaciones/${solicitudId}/estado/malo/`).then(r => r.json()).catch(error => {
+      console.error('❌ Error en API de documentos malos:', error);
+      return {success: false, error: error.message};
+    })
+  ])
+  .then(([dataPendientes, dataMalos]) => {
+    console.log('📊 Datos pendientes:', dataPendientes);
+    console.log('📊 Datos malos:', dataMalos);
+    
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    let html = '';
+    let totalProblematicos = 0;
+    
+    // 1. ✅ PROCESAR DOCUMENTOS MALOS (rechazados) - CONSULTA DIRECTA BD
+    console.log('🔍 Verificando documentos MALOS...');
+    console.log('📊 Respuesta API malos:', dataMalos);
+    
+    if (dataMalos && dataMalos.success === true && dataMalos.calificaciones) {
+      console.log(`✅ API exitosa - ${dataMalos.calificaciones.length} calificaciones encontradas`);
       
-      if (data.success && data.documentos_pendientes && data.documentos_pendientes.length > 0) {
-        let html = '';
-        data.documentos_pendientes.forEach(doc => {
+      dataMalos.calificaciones.forEach(calificacion => {
+        console.log('📋 Calificación:', {
+          id: calificacion.id,
+          estado: calificacion.estado,
+          nombre: calificacion.requisito_solicitud?.requisito?.nombre
+        });
+        
+        // Solo procesar si el estado es exactamente 'malo'
+        if (calificacion.estado === 'malo') {
+          const nombreDoc = calificacion.requisito_solicitud?.requisito?.nombre || 'Documento sin nombre';
+          
           html += `
-            <div class="d-flex align-items-center mb-2 p-2" style="background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
-              <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-              <span class="fw-medium">${doc.nombre}</span>
-              <span class="badge bg-warning ms-auto">Pendiente</span>
+            <div class="d-flex align-items-center mb-2 p-2" style="background: #fee2e2; border-radius: 6px; border-left: 4px solid #dc2626;">
+              <i class="fas fa-times-circle text-danger me-2"></i>
+              <span class="fw-medium">${nombreDoc}</span>
+              <span class="badge bg-danger ms-auto">Rechazado</span>
             </div>
           `;
-        });
-        listaContainer.innerHTML = html;
-      } else {
-        listaContainer.innerHTML = `
-          <div class="text-center text-muted">
-            <i class="fas fa-check-circle text-success me-2"></i>
-            No hay documentos problemáticos detectados
+          totalProblematicos++;
+          console.log(`➕ AGREGADO documento malo: ${nombreDoc}`);
+        } else {
+          console.log(`⏭️ Saltado - estado: ${calificacion.estado}`);
+        }
+      });
+      
+      console.log(`📊 Total documentos malos procesados: ${totalProblematicos}`);
+    } else {
+      console.log('⚠️ No hay documentos malos:');
+      console.log('   - Success:', dataMalos?.success);
+      console.log('   - Calificaciones:', dataMalos?.calificaciones?.length);
+      console.log('   - Message:', dataMalos?.message);
+      if (dataMalos?.error) {
+        console.log('❌ Error API:', dataMalos.error);
+      }
+    }
+    
+    // 2. Agregar documentos PENDIENTES
+    console.log('🔍 Verificando documentos PENDIENTES...');
+    if (dataPendientes.success && dataPendientes.documentos_pendientes && dataPendientes.documentos_pendientes.length > 0) {
+      console.log(`✅ Encontrados ${dataPendientes.documentos_pendientes.length} documentos pendientes`);
+      dataPendientes.documentos_pendientes.forEach(doc => {
+        html += `
+          <div class="d-flex align-items-center mb-2 p-2" style="background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            <span class="fw-medium">${doc.nombre}</span>
+            <span class="badge bg-warning ms-auto">Pendiente</span>
           </div>
         `;
-      }
-    })
-    .catch(error => {
-      console.error('❌ Error cargando documentos problemáticos:', error);
-      document.getElementById('lista-documentos-problematicos').innerHTML = `
-        <div class="text-center text-danger">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Error al cargar documentos
+        totalProblematicos++;
+        console.log(`➕ Agregado documento pendiente: ${doc.nombre}`);
+      });
+    } else {
+      console.log('⚠️ No hay documentos pendientes o respuesta inválida');
+    }
+    
+    // 3. Mostrar resultado
+    console.log(`📊 Total documentos problemáticos: ${totalProblematicos}`);
+    if (totalProblematicos > 0) {
+      listaContainer.innerHTML = html;
+      console.log(`✅ Mostrando ${totalProblematicos} documentos problemáticos`);
+    } else {
+      listaContainer.innerHTML = `
+        <div class="text-center text-muted">
+          <i class="fas fa-check-circle text-success me-2"></i>
+          No hay documentos problemáticos detectados
         </div>
       `;
-    });
+      console.log('ℹ️ No hay documentos problemáticos para mostrar');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error cargando documentos problemáticos:', error);
+    document.getElementById('lista-documentos-problematicos').innerHTML = `
+      <div class="text-center text-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Error al cargar documentos
+      </div>
+    `;
+  });
 }
 
-// Función para confirmar devolución
+// 🧪 FUNCIÓN TEMPORAL: Crear calificaciones "malo" para testing
+function crearCalificacionesMalas() {
+  const solicitudId = {{ solicitud.id }};
+  const btn = document.getElementById('btn-crear-test-malos');
+  const textoOriginal = btn.innerHTML;
+  
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
+  btn.disabled = true;
+  
+  fetch(`/workflow/api/test/calificaciones/${solicitudId}/crear-malo/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('✅ Calificaciones "malo" creadas:', data);
+      alert(`✅ Se crearon ${data.calificaciones_creadas} calificaciones como "malo" para testing`);
+      
+      // Recargar los documentos problemáticos para mostrar los nuevos "malos"
+      cargarDocumentosProblematicos();
+    } else {
+      console.error('❌ Error creando calificaciones:', data);
+      alert(`❌ Error: ${data.message}`);
+    }
+    
+    // Restaurar botón
+    btn.innerHTML = textoOriginal;
+    btn.disabled = false;
+  })
+  .catch(error => {
+    console.error('❌ Error en petición:', error);
+    alert('❌ Error de conexión');
+    
+    // Restaurar botón
+    btn.innerHTML = textoOriginal;
+    btn.disabled = false;
+  });
+}
+
+// ✅ MEJORADO: Función para confirmar devolución con correo automático
 function confirmarDevolucion() {
   const motivo = document.getElementById('motivo-devolucion').value.trim();
   
   if (!motivo) {
     alert('Por favor, ingresa el motivo de la devolución.');
+    document.getElementById('motivo-devolucion').focus();
     return;
   }
   
@@ -3573,11 +3679,13 @@ function confirmarDevolucion() {
   const textoOriginal = btnConfirmar.innerHTML;
   
   // Mostrar loading
-  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
   btnConfirmar.disabled = true;
   
-  // Ejecutar transición
-  fetch('/workflow/api/ejecutar-transicion/', {
+  console.log(`🚨 Devolviendo solicitud {{ solicitud.id }} a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+  
+  // 🚨 USAR NUEVA API DE DEVOLUCIÓN CON CORREO
+  fetch('/workflow/api/solicitudes/devolver-backoffice/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -3592,16 +3700,29 @@ function confirmarDevolucion() {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      alert(`Solicitud devuelta exitosamente a ${transicion.etapa_destino.nombre}`);
+      // ✅ Mostrar mensaje de éxito con información del correo
+      const mensaje = `
+        ✅ Solicitud devuelta exitosamente a ${data.data.nueva_etapa}
+        
+        📧 Se ha enviado un correo automático al propietario con:
+        • Lista de documentos problemáticos (${data.data.documentos_problematicos})
+        • Motivo de devolución
+        • Instrucciones para corrección
+        
+        Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com
+      `;
+      
+      alert(mensaje);
       
       // Cerrar modal y redirigir
       const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
       modal.hide();
       
-      // ✅ SIEMPRE redireccionar a la vista de bandeja mixta después de devolución
-      window.location.href = '/workflow/bandeja-mixta/';
+      // Redirigir según la URL proporcionada por la API
+      window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+      
     } else {
-      alert(`Error al devolver solicitud: ${data.message || data.error}`);
+      alert(`❌ Error al devolver solicitud: ${data.message || data.error}`);
       
       // Restaurar botón
       btnConfirmar.innerHTML = textoOriginal;
@@ -3610,7 +3731,7 @@ function confirmarDevolucion() {
   })
   .catch(error => {
     console.error('❌ Error en devolución:', error);
-    alert('Error de conexión al devolver solicitud.');
+    alert('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.');
     
     // Restaurar botón
     btnConfirmar.innerHTML = textoOriginal;
@@ -4543,6 +4664,17 @@ document.addEventListener('DOMContentLoaded', function() {
           </label>
           <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
         </div>
+        
+        <!-- 🧪 BOTÓN TEMPORAL PARA TESTING -->
+        {% if user.is_staff %}
+        <div class="mb-3">
+          <small class="text-muted">🧪 Testing (Solo Staff):</small>
+          <button type="button" class="btn btn-outline-danger btn-sm ms-2" onclick="crearCalificacionesMalas()" id="btn-crear-test-malos">
+            <i class="fas fa-flask me-1"></i>
+            Crear Docs "Malos" para Test
+          </button>
+        </div>
+        {% endif %}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

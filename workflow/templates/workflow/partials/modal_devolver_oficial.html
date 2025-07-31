@@ -31,7 +31,10 @@
             </div>
             <div class="card-body" style="padding: 16px;">
               <div id="lista-documentos-problematicos">
-                <!-- Se llenará dinámicamente -->
+                <div class="text-center text-muted">
+                  <i class="fas fa-spinner fa-spin me-2"></i>
+                  Cargando documentos problemáticos...
+                </div>
               </div>
             </div>
           </div>
@@ -58,4 +61,79 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
+
+<script>
+// ✅ Función para cargar documentos problemáticos específicamente para el modal de devolución
+function cargarDocumentosProblematicosModal() {
+  const solicitudId = {{ solicitud.id }};
+  
+  console.log(`🔍 Cargando documentos problemáticos para modal de devolución - solicitud ${solicitudId}`);
+  
+  // Obtener documentos malos (rechazados) - API principal
+  fetch(`/workflow/api/calificaciones/${solicitudId}/estado/malo/`)
+    .then(response => response.json())
+    .then(dataMalos => {
+      console.log('📊 Datos malos recibidos:', dataMalos);
+      
+      const listaContainer = document.getElementById('lista-documentos-problematicos');
+      let html = '';
+      let totalProblematicos = 0;
+      
+      // ✅ PROCESAR DOCUMENTOS MALOS (rechazados) - CONSULTA DIRECTA BD
+      if (dataMalos && dataMalos.success === true && dataMalos.calificaciones) {
+        console.log(`✅ API exitosa - ${dataMalos.calificaciones.length} calificaciones encontradas`);
+        
+        dataMalos.calificaciones.forEach(calificacion => {
+          // Solo procesar si el estado es exactamente 'malo'
+          if (calificacion.estado === 'malo') {
+            const nombreDoc = calificacion.requisito_solicitud?.requisito?.nombre || 'Documento sin nombre';
+            
+            html += `
+              <div class="d-flex align-items-center mb-2 p-2" style="background: #fee2e2; border-radius: 6px; border-left: 4px solid #dc2626;">
+                <i class="fas fa-times-circle text-danger me-2"></i>
+                <span class="fw-medium">${nombreDoc}</span>
+                <span class="badge bg-danger ms-auto">Rechazado</span>
+              </div>
+            `;
+            totalProblematicos++;
+            console.log(`➕ AGREGADO documento malo: ${nombreDoc}`);
+          }
+        });
+        
+        console.log(`📊 Total documentos malos procesados: ${totalProblematicos}`);
+      } else {
+        console.log('⚠️ No hay documentos malos detectados');
+      }
+      
+      // Mostrar resultado
+      if (totalProblematicos > 0) {
+        listaContainer.innerHTML = html;
+        console.log(`✅ Mostrando ${totalProblematicos} documentos problemáticos en modal`);
+      } else {
+        listaContainer.innerHTML = `
+          <div class="text-center text-muted">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            No hay documentos problemáticos detectados
+          </div>
+        `;
+        console.log('ℹ️ No hay documentos problemáticos para mostrar en modal');
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando documentos problemáticos para modal:', error);
+      document.getElementById('lista-documentos-problematicos').innerHTML = `
+        <div class="text-center text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Error al cargar documentos problemáticos
+        </div>
+      `;
+    });
+}
+
+// ✅ Event listener para cargar documentos cuando se abre el modal
+document.getElementById('modalDevolverOficial').addEventListener('shown.bs.modal', function () {
+  console.log('🚀 Modal de devolución abierto - cargando documentos problemáticos');
+  cargarDocumentosProblematicosModal();
+});
+</script> 
