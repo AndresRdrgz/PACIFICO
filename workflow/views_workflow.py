@@ -11268,7 +11268,7 @@ def api_devolver_solicitud_backoffice(request):
         return JsonResponse({
             'success': True,
             'message': f'Solicitud {solicitud.codigo} devuelta exitosamente a {transicion.etapa_destino.nombre}',
-            'redirect_url': f'/workflow/solicitudes/{solicitud.id}/detalle/',
+            'redirect_url': '/workflow/bandeja-mixta/',  # ✅ CORREGIDO: Redirigir a vista mixta
             'data': {
                 'solicitud_codigo': solicitud.codigo,
                 'etapa_anterior': etapa_anterior.nombre,
@@ -11516,15 +11516,16 @@ def buscar_entrevistas_api(request):
         busqueda = request.GET.get('q', '').strip()
         
         # Construir query base
-        query = ClienteEntrevista.objects.all().order_by('-fecha_creacion')
+        query = ClienteEntrevista.objects.all().order_by('-fecha_entrevista')
         
         # Aplicar filtros si hay búsqueda
         if busqueda:
             query = query.filter(
-                Q(nombre__icontains=busqueda) | 
-                Q(apellido__icontains=busqueda) |
-                Q(cedulaCliente__icontains=busqueda) |
-                Q(celular__icontains=busqueda)
+                Q(primer_nombre__icontains=busqueda) | 
+                Q(primer_apellido__icontains=busqueda) |
+                Q(tomo_cedula__icontains=busqueda) |
+                Q(partida_cedula__icontains=busqueda) |
+                Q(telefono__icontains=busqueda)
             )
         
         # Limitar resultados
@@ -11533,14 +11534,19 @@ def buscar_entrevistas_api(request):
         # Preparar datos para respuesta
         entrevistas_data = []
         for entrevista in entrevistas:
+            # Construir cédula completa
+            cedula_completa = ""
+            if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+            
             entrevistas_data.append({
                 'id': entrevista.id,
-                'nombre': entrevista.nombre or '',
-                'apellido': entrevista.apellido or '',
-                'cedula': entrevista.cedulaCliente or '',
-                'celular': entrevista.celular or '',
-                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
-                'producto_interesado': entrevista.producto_interesado or ''
+                'nombre': entrevista.primer_nombre or '',
+                'apellido': entrevista.primer_apellido or '',
+                'cedula': cedula_completa,
+                'celular': entrevista.telefono or '',
+                'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y') if entrevista.fecha_entrevista else '',
+                'producto_interesado': entrevista.tipo_producto or ''
             })
         
         return JsonResponse({
@@ -11596,12 +11602,12 @@ def asociar_formulario_general(request, solicitud_id):
         # Preparar datos de respuesta
         entrevista_data = {
             'id': entrevista.id,
-            'nombre': entrevista.nombre or '',
-            'apellido': entrevista.apellido or '',
-            'cedula': entrevista.cedulaCliente or '',
-            'celular': entrevista.celular or '',
-            'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
-            'producto_interesado': entrevista.producto_interesado or ''
+            'nombre': entrevista.primer_nombre or '',
+            'apellido': entrevista.primer_apellido or '',
+            'cedula': f"{entrevista.provincia_cedula or ''}-{entrevista.tipo_letra or ''}-{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}",
+            'celular': entrevista.telefono or '',
+            'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y') if entrevista.fecha_entrevista else '',
+            'producto_interesado': entrevista.tipo_producto or ''
         }
         
         return JsonResponse({
@@ -11674,39 +11680,61 @@ def buscar_entrevistas(request):
         try:
             from .models import ClienteEntrevista
             
+            print(f"🔍 buscar_entrevistas iniciado - cedula: '{cedula}', query: '{query}'")
+            
             # Base queryset
             queryset = ClienteEntrevista.objects.all()
+            print(f"📊 Total entrevistas en BD: {queryset.count()}")
             
             # Si tenemos una cédula específica para filtrar
             if cedula:
+                # ✅ IMPORTAR Q AL INICIO para evitar UnboundLocalError
+                from django.db.models import Q
+                
                 # Intentar dividir la cédula en sus componentes
                 cedula_parts = cedula.split('-')
+                print(f"📋 Cédula dividida: {cedula_parts} (total partes: {len(cedula_parts)})")
                 
                 # Extraer solo números para búsqueda flexible
                 numeros_cedula = ''.join(filter(str.isdigit, cedula))
                 
                 if len(cedula_parts) == 4:  # Formato completo: provincia-letra-tomo-partida
                     provincia, letra, tomo, partida = cedula_parts
-                    
-                    # Usando Q objects para hacer búsqueda OR para ser más flexibles
-                    from django.db.models import Q
+                    print(f"📋 Cédula completa - provincia: {provincia}, letra: {letra}, tomo: {tomo}, partida: {partida}")
                     
                     # Intentar diferentes combinaciones de búsqueda
                     # 1. Búsqueda exacta por todos los componentes
                     # 2. Búsqueda por tomo y partida (los más identificativos)
-                    # 3. Búsqueda por los últimos dígitos en cualquier campo de cédula
+                    print(f"🔍 Aplicando filtro para cédula completa...")
                     queryset = queryset.filter(
                         Q(provincia_cedula=provincia, tipo_letra=letra, tomo_cedula=tomo, partida_cedula=partida) |
                         Q(tomo_cedula=tomo, partida_cedula=partida)
                     )
-                elif len(cedula_parts) >= 2:  # Formato parcial
+                    print(f"📊 Resultados después del filtro: {queryset.count()}")
+                    
+                elif len(cedula_parts) == 3:  # Formato 8-906-1692: provincia-tomo-partida
+                    provincia, tomo, partida = cedula_parts
+                    print(f"📋 Cédula 3 partes - provincia: {provincia}, tomo: {tomo}, partida: {partida}")
+                    
+                    print(f"🔍 Aplicando filtro para formato 3 partes...")
+                    queryset = queryset.filter(
+                        Q(provincia_cedula=provincia, tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula=tomo, partida_cedula=partida)  # Fallback sin provincia
+                    )
+                    print(f"📊 Resultados después del filtro 3 partes: {queryset.count()}")
+                    
+                elif len(cedula_parts) >= 2:  # Formato parcial: solo tomo-partida
                     # Si tenemos al menos tomo y partida, filtramos por ellos
                     tomo = cedula_parts[-2]
                     partida = cedula_parts[-1]
+                    print(f"📋 Cédula parcial - tomo: {tomo}, partida: {partida}, partes totales: {len(cedula_parts)}")
+                    
+                    print(f"🔍 Aplicando filtro para tomo y partida...")
                     queryset = queryset.filter(
                         Q(tomo_cedula=tomo, partida_cedula=partida) |
                         Q(tomo_cedula__endswith=tomo, partida_cedula=partida)
                     )
+                    print(f"📊 Resultados después del filtro parcial: {queryset.count()}")
                         
             # Aplicar filtro de búsqueda si hay un query
             if query and len(query) >= 2:
@@ -11722,46 +11750,85 @@ def buscar_entrevistas(request):
                 })
                 
             # Limitar resultados y ordenar
+            print(f"🔍 Obteniendo entrevistas finales...")
             entrevistas = queryset.order_by('-fecha_entrevista')[:20]
+            print(f"📊 Entrevistas finales a procesar: {len(entrevistas)}")
             
             # Serializar resultados
             resultados = []
-            for entrevista in entrevistas:
-                # Construir cédula completa
-                cedula_completa = ""
-                if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
-                    cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
-                else:
-                    cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
-                
-                resultados.append({
-                    'id': entrevista.id,
-                    'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
-                    'nombre': entrevista.primer_nombre or '',
-                    'apellido': entrevista.primer_apellido or '',
-                    'cedula': cedula_completa,
-                    'celular': entrevista.telefono or 'Sin celular',
-                    'email': entrevista.email or 'Sin email',
-                    'telefono': entrevista.telefono or 'Sin teléfono',
-                    'fecha_entrevista': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
-                    'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
-                    'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
-                    'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
-                    'salario': float(entrevista.salario) if entrevista.salario else 0,
-                    'empresa': entrevista.trabajo_lugar or 'Sin empresa',
-                    'completada': entrevista.completada_por_admin or False
-                })
+            print(f"🔄 Comenzando serialización de resultados...")
+            for i, entrevista in enumerate(entrevistas):
+                try:
+                    print(f"📋 Procesando entrevista {i+1}/{len(entrevistas)} - ID: {entrevista.id}")
+                    
+                    # Construir cédula completa
+                    cedula_completa = ""
+                    if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                        cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+                    else:
+                        cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
+                    
+                    print(f"   📄 Cédula construida: {cedula_completa}")
+                    
+                    # Verificar cada campo que puede causar problemas
+                    salario_valor = 0
+                    try:
+                        salario_valor = float(entrevista.salario) if entrevista.salario else 0
+                    except (ValueError, TypeError) as e:
+                        print(f"   ⚠️ Error convirtiendo salario: {e}")
+                        salario_valor = 0
+                    
+                    # Verificar fechas
+                    fecha_str = ''
+                    try:
+                        fecha_str = entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else ''
+                    except Exception as e:
+                        print(f"   ⚠️ Error formateando fecha: {e}")
+                        fecha_str = ''
+                    
+                    entrevista_data = {
+                        'id': entrevista.id,
+                        'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                        'nombre': entrevista.primer_nombre or '',
+                        'apellido': entrevista.primer_apellido or '',
+                        'cedula': cedula_completa,
+                        'celular': entrevista.telefono or 'Sin celular',
+                        'email': entrevista.email or 'Sin email',
+                        'telefono': entrevista.telefono or 'Sin teléfono',
+                        'fecha_entrevista': fecha_str,
+                        'fecha_creacion': fecha_str,
+                        'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
+                        'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
+                        'salario': salario_valor,
+                        'empresa': entrevista.trabajo_lugar or 'Sin empresa',
+                        'completada': bool(entrevista.completada_por_admin) if hasattr(entrevista, 'completada_por_admin') else False
+                    }
+                    
+                    resultados.append(entrevista_data)
+                    print(f"   ✅ Entrevista {entrevista.id} procesada exitosamente")
+                    
+                except Exception as e:
+                    print(f"   ❌ Error procesando entrevista {entrevista.id}: {e}")
+                    continue  # Continuar con la siguiente entrevista
             
+            print(f"✅ Serialización completada - Devolviendo {len(resultados)} entrevistas")
             return JsonResponse({
                 'success': True,
                 'entrevistas': resultados
             })
             
         except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
             print(f"❌ Error en buscar_entrevistas: {e}")
+            print(f"❌ TRACEBACK completo: {error_traceback}")
+            print(f"❌ Cédula buscada: {cedula}")
+            print(f"❌ Query: {query}")
+            
             return JsonResponse({
                 'success': False,
-                'error': 'Error interno del servidor'
+                'error': f'Error interno del servidor: {str(e)}',
+                'debug_info': error_traceback if hasattr(request, 'user') and request.user.is_staff else None
             }, status=500)
     
     return JsonResponse({
@@ -11771,16 +11838,24 @@ def buscar_entrevistas(request):
 
 
 @login_required
+@csrf_exempt
 def asociar_entrevista(request):
     """API para asociar/desasociar una entrevista con una solicitud"""
+    print(f"🔍 asociar_entrevista iniciado - Método: {request.method}")
+    print(f"🔍 User: {request.user}")
+    print(f"🔍 Headers: {dict(request.headers)}")
+    
     if request.method == 'POST':
         try:
+            print(f"🔍 Request body raw: {request.body}")
             import json
             data = json.loads(request.body)
+            print(f"🔍 Data parsed: {data}")
             
             solicitud_id = data.get('solicitud_id')
             entrevista_id = data.get('entrevista_id')
             accion = data.get('accion')  # 'asociar' o 'desasociar'
+            # Flag 'forzar' removido - ya no es necesario porque se permiten múltiples asociaciones
             
             if not solicitud_id or not accion:
                 return JsonResponse({
@@ -11812,28 +11887,28 @@ def asociar_entrevista(request):
                 from .models import ClienteEntrevista
                 entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
                 
-                # Verificar que la entrevista no esté ya asociada a otra solicitud
-                solicitud_existente = Solicitud.objects.filter(
-                    entrevista_cliente=entrevista
-                ).exclude(id=solicitud_id).first()
+                print(f"🔍 Verificando asociación de entrevista {entrevista_id} con solicitud {solicitud_id}")
                 
-                if solicitud_existente:
+                # Verificar si la entrevista ya está asociada a esta misma solicitud
+                if solicitud.entrevista_cliente and solicitud.entrevista_cliente.id == entrevista.id:
                     return JsonResponse({
                         'success': False,
-                        'error': f'Esta entrevista ya está asociada a la solicitud {solicitud_existente.codigo}',
-                        'solicitud_existente': {
-                            'codigo': solicitud_existente.codigo,
-                            'id': solicitud_existente.id
-                        }
+                        'error': 'Esta entrevista ya está asociada a esta solicitud',
+                        'ya_asociada': True
                     }, status=400)
                 
+                # ✅ PERMITIR MÚLTIPLES ASOCIACIONES: Una entrevista puede estar asociada a múltiples solicitudes
+                # Se removió la verificación de exclusividad
+                
                 # Asociar la entrevista
+                print(f"✅ Asociando entrevista {entrevista_id} a solicitud {solicitud_id}")
                 solicitud.entrevista_cliente = entrevista
                 solicitud.save()
+                print(f"✅ Entrevista asociada exitosamente")
                 
                 return JsonResponse({
                     'success': True,
-                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente',
+                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente (múltiples asociaciones permitidas)',
                     'entrevista': {
                         'id': entrevista.id,
                         'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),

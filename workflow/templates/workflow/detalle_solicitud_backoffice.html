@@ -2654,6 +2654,11 @@
     fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
       .then(response => response.json())
       .then(data => {
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
         // Mostrar mensaje sobre la búsqueda flexible
         const mensajeFlexible = `
           <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
@@ -2682,7 +2687,7 @@
         
         const container = document.getElementById('resultadosEntrevistas');
         container.innerHTML = mensajeFlexible;
-        mostrarResultadosEntrevistas(data.entrevistas, cedula);
+        mostrarResultadosEntrevistas(data.entrevistas || [], cedula);
       })
       .catch(error => {
         console.error('Error:', error);
@@ -2709,7 +2714,12 @@
     fetch(`/workflow/buscar-entrevistas/?q=${encodeURIComponent(termino)}&cedula=${encodeURIComponent(clienteCedula)}`)
       .then(response => response.json())
       .then(data => {
-        mostrarResultadosEntrevistas(data.entrevistas, clienteCedula);
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
+        mostrarResultadosEntrevistas(data.entrevistas || [], clienteCedula);
       })
       .catch(error => {
         console.error('Error:', error);
@@ -2720,6 +2730,12 @@
 
   function mostrarResultadosEntrevistas(entrevistas, cedula) {
     const container = document.getElementById('resultadosEntrevistas');
+    
+    // ✅ VALIDACIÓN: Asegurar que entrevistas sea un array válido
+    if (!entrevistas || !Array.isArray(entrevistas)) {
+      console.warn('Entrevistas no es un array válido:', entrevistas);
+      entrevistas = []; // Usar array vacío como fallback
+    }
     
     // Función para comparar similitud entre cédulas
     function compararCedulas(cedula1, cedula2) {
@@ -3131,9 +3147,16 @@
   }
 
   function confirmarAsociacion() {
-    if (!entrevistaSeleccionadaId) return;
+    console.log('🔍 DEBUG - Iniciando confirmarAsociacion');
+    console.log('  - entrevistaSeleccionadaId:', entrevistaSeleccionadaId);
+    
+    if (!entrevistaSeleccionadaId) {
+      console.log('❌ No hay entrevista seleccionada');
+      return;
+    }
     
     const solicitudId = {{ solicitud.id }};
+    console.log('  - solicitudId:', solicitudId);
     
     // Mostrar loading en el botón
     const btn = document.getElementById('btnConfirmarAsociacion');
@@ -3141,18 +3164,26 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
     btn.disabled = true;
     
+    // Obtener token CSRF
+    const csrfToken = getCsrfToken();
+    console.log('  - CSRF Token:', csrfToken ? 'Presente' : 'AUSENTE');
+    
+    const requestData = {
+      solicitud_id: solicitudId,
+      entrevista_id: entrevistaSeleccionadaId,
+      accion: 'asociar'
+    };
+    console.log('  - Datos a enviar:', requestData);
+    
     // Realizar asociación AJAX
+    console.log('🚀 Enviando fetch request...');
     fetch('/workflow/asociar-entrevista/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
+        'X-CSRFToken': csrfToken
       },
-      body: JSON.stringify({
-        solicitud_id: solicitudId,
-        entrevista_id: entrevistaSeleccionadaId,
-        accion: 'asociar'
-      })
+      body: JSON.stringify(requestData)
     })
     .then(response => response.json())
     .then(data => {
@@ -3169,12 +3200,20 @@
         }, 1500);
         
       } else {
-        mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+        // Manejo específico para entrevistas ya asociadas a esta solicitud
+        if (data.ya_asociada) {
+          mostrarMensaje('Esta entrevista ya está asociada a esta solicitud', 'warning');
+        } else {
+          mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+        }
       }
     })
     .catch(error => {
-      console.error('Error:', error);
-      mostrarMensaje('Error al asociar entrevista', 'error');
+      console.error('❌ Fetch error completo:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      mostrarMensaje(`Error al asociar entrevista: ${error.message}`, 'error');
     })
     .finally(() => {
       btn.innerHTML = originalText;
@@ -3216,6 +3255,8 @@
       mostrarMensaje('Error al desasociar entrevista', 'error');
     });
   }
+
+  // ✅ Función de reasociación removida - Ya no es necesaria porque se permiten múltiples asociaciones
 
   function verDetallesEntrevista(entrevistaId) {
     // Abrir modal o página con detalles de la entrevista
