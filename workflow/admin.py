@@ -634,14 +634,19 @@ class CalificacionDocumentoInline(admin.TabularInline):
 @admin.register(CalificacionDocumentoBackoffice)
 class CalificacionDocumentoBackofficeAdmin(admin.ModelAdmin):
     list_display = (
-        'requisito_solicitud', 'calificado_por', 'estado', 
-        'opcion_desplegable', 'fecha_calificacion'
+        'requisito_solicitud', 'colored_estado', 'calificado_por', 
+        'opcion_desplegable', 'fecha_calificacion', 'subsanado',
+        # 'subsanado_por_oficial', 'pendiente_completado'  # Activar después de migration
     )
-    list_filter = ('estado', 'fecha_calificacion', 'opcion_desplegable')
+    list_filter = (
+        'estado', 'fecha_calificacion', 'opcion_desplegable', 'subsanado',
+        # 'subsanado_por_oficial', 'pendiente_completado'  # Activar después de migration
+    )
     search_fields = (
         'requisito_solicitud__requisito__nombre', 
         'calificado_por__username',
-        'requisito_solicitud__solicitud__id'
+        'requisito_solicitud__solicitud__id',
+        'subsanado_por__username'
     )
     readonly_fields = ('fecha_calificacion', 'fecha_modificacion')
     ordering = ('-fecha_calificacion',)
@@ -650,11 +655,46 @@ class CalificacionDocumentoBackofficeAdmin(admin.ModelAdmin):
         ('Información Básica', {
             'fields': ('requisito_solicitud', 'calificado_por', 'estado', 'opcion_desplegable')
         }),
-        ('Fechas', {
+        ('Subsanación (Backoffice)', {
+            'fields': ('subsanado', 'subsanado_por', 'fecha_subsanado'),
+            'classes': ('collapse',)
+        }),
+        # ('Flujo Oficial-Backoffice', {  # Activar después de migration
+        #     'fields': ('subsanado_por_oficial', 'pendiente_completado'),
+        #     'classes': ('collapse',)
+        # }),
+        ('Fechas del Sistema', {
             'fields': ('fecha_calificacion', 'fecha_modificacion'),
             'classes': ('collapse',)
         }),
     )
+    
+    # Agregar colores para mejor visualización
+    def get_list_display_links(self, request, list_display):
+        return ['requisito_solicitud']
+    
+    def requisito_solicitud(self, obj):
+        return f"{obj.requisito_solicitud.requisito.nombre} (ID: {obj.requisito_solicitud.solicitud.id})"
+    requisito_solicitud.short_description = 'Documento y Solicitud'
+    
+    def colored_estado(self, obj):
+        from django.utils.html import format_html
+        colors = {
+            'bueno': 'green',
+            'malo': 'red', 
+            'pendiente': 'orange'
+        }
+        color = colors.get(obj.estado, 'black')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_estado_display()
+        )
+    colored_estado.short_description = 'Estado'
+    
+    # OPCIONAL: Suprimir warning de "unload is not allowed" en navegadores modernos
+    # class Media:
+    #     js = ('workflow/admin_fix.js',)  # Descomentar si quieres eliminar el warning
 
 
 @admin.register(ComentarioDocumentoBackoffice)

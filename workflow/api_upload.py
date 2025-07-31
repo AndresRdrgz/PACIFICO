@@ -383,7 +383,7 @@ def api_upload_documento_modal(request, solicitud_id):
             if action == 'replace':
                 requisito_solicitud.observaciones = f"Documento reemplazado por {request.user.get_full_name() or request.user.username}: {uploaded_file.name}"
                 
-                # Si había una calificación "malo", marcarla como subsanada
+                # Si había una calificación "malo", marcarla como subsanada (LÓGICA ORIGINAL)
                 calificacion_mala = CalificacionDocumentoBackoffice.objects.filter(
                     requisito_solicitud=requisito_solicitud,
                     estado='malo'
@@ -395,10 +395,53 @@ def api_upload_documento_modal(request, solicitud_id):
                     calificacion_mala.fecha_subsanado = timezone.now()
                     calificacion_mala.save()
                     logger.info(f"Calificación marcada como subsanada: {calificacion_mala.pk}")
-            else:
+                
+                # NUEVO: Marcar subsanado_por_oficial=True - TEMPORALMENTE COMENTADO HASTA MIGRATION
+                # try:
+                #     CalificacionDocumentoBackoffice.objects.filter(
+                #         requisito_solicitud=requisito_solicitud
+                #     ).update(
+                #         subsanado_por_oficial=True
+                #     )
+                #     logger.info(f"✅ Marcado subsanado_por_oficial=True para documento: {requisito_solicitud.requisito.nombre}")
+                # except Exception as e:
+                #     logger.warning(f"Error marcando subsanado_por_oficial: {e}")
+                logger.info(f"🔄 Funcionalidad subsanado_por_oficial temporalmente deshabilitada - ejecutar migration primero")
+                    
+            else:  # action == 'upload'
                 requisito_solicitud.observaciones = f"Documento subido por {request.user.get_full_name() or request.user.username}: {uploaded_file.name}"
+                
+                # NUEVO: Manejar pendiente_completado - TEMPORALMENTE COMENTADO HASTA MIGRATION
+                # try:
+                #     # Verificar si había calificación "pendiente" o si es un documento no obligatorio
+                #     calificacion_pendiente = CalificacionDocumentoBackoffice.objects.filter(
+                #         requisito_solicitud=requisito_solicitud,
+                #         estado='pendiente'
+                #     ).order_by('-fecha_calificacion').first()
+                #     
+                #     if calificacion_pendiente:
+                #         CalificacionDocumentoBackoffice.objects.filter(
+                #             requisito_solicitud=requisito_solicitud
+                #         ).update(
+                #             pendiente_completado=True
+                #         )
+                #         logger.info(f"✅ Marcado pendiente_completado=True para documento pendiente")
+                # except Exception as e:
+                #     logger.warning(f"Error manejando pendiente_completado: {e}")
+                logger.info(f"🔄 Funcionalidad pendiente_completado temporalmente deshabilitada - ejecutar migration primero")
             
+            # IMPORTANTE: Asegurar que se guarde como cumplido para que desaparezca de pendientes
+            requisito_solicitud.cumplido = True
             requisito_solicitud.save()
+            
+            # DEBUGGING EXHAUSTIVO
+            logger.info(f"✅ RequisitoSolicitud {requisito_solicitud.id} '{requisito_solicitud.requisito.nombre}' marcado como cumplido: {requisito_solicitud.cumplido}")
+            logger.info(f"📁 Archivo URL: {requisito_solicitud.archivo.url if requisito_solicitud.archivo else 'NO FILE'}")
+            logger.info(f"🔄 Observaciones: {requisito_solicitud.observaciones}")
+            
+            # Verificar que realmente se guardó
+            requisito_verificacion = RequisitoSolicitud.objects.get(id=requisito_solicitud.id)
+            logger.info(f"✅ VERIFICACIÓN POST-SAVE: cumplido={requisito_verificacion.cumplido}, archivo_exists={bool(requisito_verificacion.archivo)}")
             
             # Registrar en historial si existe
             try:

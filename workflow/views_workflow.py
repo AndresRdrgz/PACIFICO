@@ -234,8 +234,8 @@ def bandeja_trabajo(request):
     return render(request, 'workflow/bandeja_trabajo.html', context)
 
 
-@login_required
-def nueva_solicitud(request):
+# FUNCIÓN DUPLICADA ELIMINADA - nueva_solicitud está definida más abajo
+# Esta función fue comentada para evitar errores 500
     """Crear una nueva solicitud"""
     
     if request.method == 'POST':
@@ -7017,7 +7017,18 @@ def api_solicitud_brief(request, solicitud_id):
                 'subsanado': calificacion.subsanado if calificacion else False,
                 'subsanado_por': calificacion.subsanado_por.get_full_name() or calificacion.subsanado_por.username if calificacion and calificacion.subsanado_por else None,
                 'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M') if calificacion and calificacion.fecha_subsanado else None,
+                # NUEVOS CAMPOS TEMPORALMENTE COMENTADOS HASTA EJECUTAR MIGRATION
+                # 'subsanado_por_oficial': calificacion.subsanado_por_oficial if calificacion else False,
+                # 'pendiente_completado': calificacion.pendiente_completado if calificacion else False,
+                'subsanado_por_oficial': False,  # Temporal - hasta migration
+                'pendiente_completado': False,   # Temporal - hasta migration
             }
+            
+            # DEBUGGING: Log documentos que pueden aparecer como pendientes
+            if not es_obligatorio or not req.cumplido or not req.archivo:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"🔍 DEBUG DOCUMENTO POTENCIAL PENDIENTE: {req.requisito.nombre} (ID:{req.id}) - obligatorio:{es_obligatorio}, cumplido:{req.cumplido}, tiene_archivo:{bool(req.archivo)}, url:'{req.archivo.url if req.archivo else 'VACIO'}")
             
             # Special handling for APC requisito
             if req.requisito.nombre.lower() == 'apc':
@@ -7040,6 +7051,12 @@ def api_solicitud_brief(request, solicitud_id):
                     documento_info['apc_processing'] = False
             
             documentos.append(documento_info)
+            
+            # DEBUG: Log todos los documentos que se envían al frontend
+            if req.requisito.nombre.lower() in ['foto', 'proforma', 'excel']:  # Solo documentos comunes para no spam
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"📤 ENVIANDO AL FRONTEND: {req.requisito.nombre} - cumplido:{req.cumplido}, url:'{req.archivo.url if req.archivo else 'VACIO'}', obligatorio:{es_obligatorio}")
 
         # Cotización info
         cotizacion_info = {}

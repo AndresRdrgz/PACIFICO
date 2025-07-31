@@ -33,8 +33,37 @@ def capturar_calificacion_anterior(sender, instance, **kwargs):
 def registrar_cambio_calificacion(sender, instance, created, **kwargs):
     """
     Registra cambios en calificaciones de documentos en el historial
+    Y maneja reseteo automático de campos subsanado_por_oficial y pendiente_completado
     """
-    # Solo registrar si es una actualización (cambio de estado)
+    
+    # NUEVO: Manejar reseteo de campos - TEMPORALMENTE COMENTADO HASTA MIGRATION
+    # if created:  # Nueva calificación creada por backoffice
+    #     try:
+    #         # Si es una nueva calificación "malo", resetear subsanado_por_oficial
+    #         if instance.estado == 'malo':
+    #             CalificacionDocumentoBackoffice.objects.filter(
+    #                 requisito_solicitud=instance.requisito_solicitud
+    #             ).update(
+    #                 subsanado_por_oficial=False
+    #             )
+    #             print(f"🔄 Reseteado subsanado_por_oficial para documento: {instance.requisito_solicitud.requisito.nombre}")
+    #         
+    #         # Si es una nueva calificación "pendiente", resetear pendiente_completado
+    #         elif instance.estado == 'pendiente':
+    #             CalificacionDocumentoBackoffice.objects.filter(
+    #                 requisito_solicitud=instance.requisito_solicitud
+    #             ).update(
+    #                 pendiente_completado=False
+    #             )
+    #             print(f"🔄 Reseteado pendiente_completado para documento: {instance.requisito_solicitud.requisito.nombre}")
+    #             
+    #     except Exception as e:
+    #         print(f"Error reseteando campos automáticos: {e}")
+    
+    if created:
+        print(f"🔄 Signal de reseteo de campos temporalmente deshabilitado - ejecutar migration primero")
+    
+    # LÓGICA ORIGINAL: Solo registrar si es una actualización (cambio de estado)
     if not created and hasattr(instance, '_calificacion_anterior'):
         calificacion_anterior = instance._calificacion_anterior
         calificacion_nueva = instance.estado
@@ -55,6 +84,21 @@ def registrar_cambio_calificacion(sender, instance, created, **kwargs):
             except Exception as e:
                 # Log error but don't break the flow
                 print(f"Error registrando cambio de calificación: {e}")
+                
+        # NUEVO: Reseteo en actualizaciones - TEMPORALMENTE COMENTADO HASTA MIGRATION
+        # if calificacion_nueva == 'malo' and calificacion_anterior != 'malo':
+        #     try:
+        #         CalificacionDocumentoBackoffice.objects.filter(
+        #             requisito_solicitud=instance.requisito_solicitud
+        #         ).update(
+        #             subsanado_por_oficial=False
+        #         )
+        #         print(f"🔄 Reseteado subsanado_por_oficial en actualización")
+        #     except Exception as e:
+        #         print(f"Error reseteando campos en actualización: {e}")
+        
+        if calificacion_nueva == 'malo' and calificacion_anterior != 'malo':
+            print(f"🔄 Reseteo automático temporalmente deshabilitado - ejecutar migration primero")
 
 
 # --------------------------------------

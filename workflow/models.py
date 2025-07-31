@@ -463,6 +463,18 @@ class CalificacionDocumentoBackoffice(models.Model):
         verbose_name="Fecha de subsanación"
     )
     
+    # NUEVOS CAMPOS TEMPORALMENTE COMENTADOS HASTA EJECUTAR MIGRATION
+    # subsanado_por_oficial = models.BooleanField(
+    #     default=False,
+    #     verbose_name="Subsanado por Oficial",
+    #     help_text="Indica si la oficial ya subió/reemplazó el documento para subsanar el problema"
+    # )
+    # pendiente_completado = models.BooleanField(
+    #     default=False,
+    #     verbose_name="Pendiente Completado",
+    #     help_text="Indica si la oficial ya subió archivo para un documento que estaba pendiente"
+    # )
+    
     class Meta:
         db_table = 'workflow_calificacion_documento_backoffice'
         verbose_name = 'Calificación de Documento - Backoffice'

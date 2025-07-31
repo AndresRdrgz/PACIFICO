@@ -41,12 +41,16 @@ def calificar_documento(request):
         return JsonResponse({
             'success': True,
             'message': 'Calificación guardada exitosamente',
+            'created': created,  # Informar si fue creada (siempre True ahora)
             'data': {
                 'id': calificacion.id,
                 'estado': calificacion.estado,
                 'usuario': calificacion.calificado_por.username,
                 'opcion': opcion_nombre,
                 'fecha': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M')
+                # NUEVOS CAMPOS temporalmente comentados hasta migration
+                # 'subsanado_por_oficial': calificacion.subsanado_por_oficial,
+                # 'pendiente_completado': calificacion.pendiente_completado
             }
         })
         
