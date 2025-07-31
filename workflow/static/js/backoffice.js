@@ -7,13 +7,23 @@ function validarYAbrirModal() {
   console.log('🔘 validarYAbrirModal ejecutada');
 
   try {
+    // Detectar si estamos en una etapa que requiere validación de documentos
+    const documentCards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+    const requiereValidacionDocumentos = documentCards.length > 0;
+
+    if (!requiereValidacionDocumentos) {
+      console.log('🔍 Esta etapa no requiere validación de documentos - Abriendo modal directamente');
+      abrirModalDirectamente();
+      return;
+    }
+
     console.log('🔍 Validando documentos antes de abrir modal...');
 
     // Obtener todos los documentos obligatorios
     const documentosObligatorios = [];
     const documentosOpcionales = [];
 
-    document.querySelectorAll('.archivo-card-mejorada-backoffice').forEach(card => {
+    documentCards.forEach(card => {
       const obligatorio = card.querySelector('.text-danger') !== null; // Buscar etiqueta "Obligatorio"
       const requisitoId = card.getAttribute('data-requisito-id');
       const nombreDocumento = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim() || 'Documento';
@@ -69,8 +79,62 @@ function validarYAbrirModal() {
     if (todosObligatoriosCalificados) {
       // ✅ Todos los obligatorios están calificados - Abrir modal
       console.log('✅ Validación exitosa - Abriendo modal');
-      const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
-      modal.show();
+
+      // Buscar el modal correcto según el template actual
+      let modalElement = document.getElementById('modalAvanzarSubestado');
+      if (!modalElement) {
+        // Intentar con IDs específicos de cada template
+        const modalIds = [
+          'modalAvanzarSubestadoTramite',
+          'modalAvanzarSubestadoSubsanacion',
+          'modalAvanzarSubestadoCaptura',
+          'modalAvanzarSubestadoFirma',
+          'modalAvanzarSubestadoOrden'
+        ];
+
+        for (const modalId of modalIds) {
+          modalElement = document.getElementById(modalId);
+          if (modalElement) {
+            console.log(`✅ Modal encontrado: ${modalId}`);
+            break;
+          }
+        }
+      }
+
+      if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        // Ejecutar función de carga de subestados específica según el modal
+        const modalId = modalElement.id;
+        setTimeout(() => {
+          if (modalId === 'modalAvanzarSubestadoTramite' && typeof cargarSiguientesSubestadosTramite === 'function') {
+            console.log('🔄 Cargando subestados para Trámite...');
+            cargarSiguientesSubestadosTramite();
+            if (typeof configurarEventosAsignacionTramite === 'function') {
+              configurarEventosAsignacionTramite();
+            }
+          } else if (modalId === 'modalAvanzarSubestadoSubsanacion' && typeof cargarSiguientesSubestadosSubsanacion === 'function') {
+            console.log('🔄 Cargando subestados para Subsanación...');
+            cargarSiguientesSubestadosSubsanacion();
+            if (typeof configurarEventosAsignacionSubsanacion === 'function') {
+              configurarEventosAsignacionSubsanacion();
+            }
+          } else if (modalId === 'modalAvanzarSubestadoCaptura' && typeof cargarSiguientesSubestadosCaptura === 'function') {
+            console.log('🔄 Cargando subestados para Captura...');
+            cargarSiguientesSubestadosCaptura();
+          } else if (modalId === 'modalAvanzarSubestadoFirma' && typeof cargarSiguientesSubestadosFirma === 'function') {
+            console.log('🔄 Cargando subestados para Firma...');
+            cargarSiguientesSubestadosFirma();
+          } else if (modalId === 'modalAvanzarSubestadoOrden' && typeof cargarSiguientesSubestadosOrden === 'function') {
+            console.log('🔄 Cargando subestados para Orden...');
+            cargarSiguientesSubestadosOrden();
+          }
+        }, 100);
+      } else {
+        console.error('❌ No se encontró ningún modal de avanzar subestado');
+        mostrarMensaje('Error: Modal no encontrado. Verifica la configuración del template.', 'error');
+      }
     } else {
       // ❌ Hay documentos obligatorios que no están calificados como "buenos"
       console.log('❌ Validación fallida - Documentos obligatorios no están todos como "buenos"');
@@ -107,6 +171,67 @@ function validarYAbrirModal() {
   } catch (error) {
     console.error('❌ Error en validarYAbrirModal:', error);
     mostrarMensaje('Error al validar documentos. Recarga la página e intenta de nuevo.', 'error');
+  }
+}
+
+// Función para abrir modal directamente (sin validación)
+function abrirModalDirectamente() {
+  console.log('🔍 Abriendo modal directamente...');
+
+  // Buscar el modal correcto según el template actual
+  let modalElement = document.getElementById('modalAvanzarSubestado');
+  if (!modalElement) {
+    // Intentar con IDs específicos de cada template
+    const modalIds = [
+      'modalAvanzarSubestadoTramite',
+      'modalAvanzarSubestadoSubsanacion',
+      'modalAvanzarSubestadoCaptura',
+      'modalAvanzarSubestadoFirma',
+      'modalAvanzarSubestadoOrden'
+    ];
+
+    for (const modalId of modalIds) {
+      modalElement = document.getElementById(modalId);
+      if (modalElement) {
+        console.log(`✅ Modal encontrado: ${modalId}`);
+        break;
+      }
+    }
+  }
+
+  if (modalElement) {
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+
+    // Ejecutar función de carga de subestados específica según el modal
+    const modalId = modalElement.id;
+    setTimeout(() => {
+      if (modalId === 'modalAvanzarSubestadoTramite' && typeof cargarSiguientesSubestadosTramite === 'function') {
+        console.log('🔄 Cargando subestados para Trámite...');
+        cargarSiguientesSubestadosTramite();
+        if (typeof configurarEventosAsignacionTramite === 'function') {
+          configurarEventosAsignacionTramite();
+        }
+      } else if (modalId === 'modalAvanzarSubestadoSubsanacion' && typeof cargarSiguientesSubestadosSubsanacion === 'function') {
+        console.log('🔄 Cargando subestados para Subsanación...');
+        cargarSiguientesSubestadosSubsanacion();
+        if (typeof configurarEventosAsignacionSubsanacion === 'function') {
+          configurarEventosAsignacionSubsanacion();
+        }
+      } else if (modalId === 'modalAvanzarSubestadoCaptura' && typeof cargarSiguientesSubestadosCaptura === 'function') {
+        console.log('🔄 Cargando subestados para Captura...');
+        cargarSiguientesSubestadosCaptura();
+      } else if (modalId === 'modalAvanzarSubestadoFirma' && typeof cargarSiguientesSubestadosFirma === 'function') {
+        console.log('🔄 Cargando subestados para Firma...');
+        cargarSiguientesSubestadosFirma();
+      } else if (modalId === 'modalAvanzarSubestadoOrden' && typeof cargarSiguientesSubestadosOrden === 'function') {
+        console.log('🔄 Cargando subestados para Orden...');
+        cargarSiguientesSubestadosOrden();
+      }
+    }, 100);
+  } else {
+    console.error('❌ No se encontró ningún modal de avanzar subestado');
+    mostrarMensaje('Error: Modal no encontrado. Verifica la configuración del template.', 'error');
   }
 }
 
