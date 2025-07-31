@@ -245,6 +245,9 @@ urlpatterns += [
     path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),
     path('api/solicitudes/<int:solicitud_id>/asignar-usuario/', api.api_asignar_usuario, name='api_asignar_usuario'),
     
+    # API para validación de cotización duplicada
+    path('api/validate-cotizacion-duplicate/', api.api_validate_cotizacion_duplicate, name='api_validate_cotizacion_duplicate'),
+    
     # Unified Makito Tracking URL
     path('makito-tracking/', views_workflow.makito_tracking_view, name='makito_tracking'),
     

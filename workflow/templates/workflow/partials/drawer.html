@@ -60,6 +60,16 @@
                                 </button>
                             </div>
                         </div>
+                        <!-- Cotización validation warning -->
+                        <div id="cotizacionDuplicateWarning" class="alert alert-warning mt-2" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Atención:</strong> Esta cotización ya está siendo utilizada en otra solicitud del pipeline.
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <strong>Solicitud existente:</strong> <span id="existingSolicitudInfo"></span>
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -844,6 +854,36 @@
         padding: 4px 10px;
         font-size: 0.875rem;
     }
+
+    /* Cotización duplicate warning styles */
+    .alert {
+        padding: 12px 15px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+
+    .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+    }
+
+    .alert i {
+        color: #f39c12;
+    }
+
+    /* Validation styles */
+    .form-control.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+
+    .form-control.is-valid {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
 </style>
 
 <script>
@@ -859,11 +899,107 @@
 
     // Render functions defined in negocios.html to avoid conflicts
 
+    // Cotización duplicate validation functions
+    window.validateCotizacionDuplicate = async function(cotizacionId, pipelineId) {
+        console.log('🔍 Validating cotización duplicate:', { cotizacionId, pipelineId });
+        
+        if (!cotizacionId || !pipelineId) {
+            return { isDuplicate: false };
+        }
+
+        try {
+            const response = await fetch(`/workflow/api/validate-cotizacion-duplicate/?cotizacion_id=${cotizacionId}&pipeline_id=${pipelineId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ Cotización validation response:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error validating cotización:', error);
+            return { isDuplicate: false, error: true };
+        }
+    };
+
+    window.showCotizacionDuplicateWarning = function(existingSolicitudData) {
+        console.log('⚠️ Showing cotización duplicate warning:', existingSolicitudData);
+        
+        const warningElement = document.getElementById('cotizacionDuplicateWarning');
+        const existingInfoElement = document.getElementById('existingSolicitudInfo');
+        
+        if (warningElement && existingInfoElement) {
+            // Format the existing solicitud information
+            const solicitudInfo = `${existingSolicitudData.codigo || 'Sin código'} - ${existingSolicitudData.etapa_actual || 'Sin etapa'} - Creada: ${existingSolicitudData.fecha_creacion || 'N/A'}`;
+            existingInfoElement.textContent = solicitudInfo;
+            
+            // Show the warning
+            warningElement.style.display = 'block';
+            
+            // Add visual feedback to the search input
+            const cotizacionSearch = document.getElementById('cotizacionSearch');
+            if (cotizacionSearch) {
+                cotizacionSearch.classList.add('is-invalid');
+            }
+        }
+    };
+
+    window.hideCotizacionDuplicateWarning = function() {
+        console.log('✅ Hiding cotización duplicate warning');
+        
+        const warningElement = document.getElementById('cotizacionDuplicateWarning');
+        const cotizacionSearch = document.getElementById('cotizacionSearch');
+        
+        if (warningElement) {
+            warningElement.style.display = 'none';
+        }
+        
+        if (cotizacionSearch) {
+            cotizacionSearch.classList.remove('is-invalid');
+            cotizacionSearch.classList.add('is-valid');
+        }
+    };
+
+    window.checkCotizacionBeforeSubmit = async function() {
+        console.log('🔍 Checking cotización before submit');
+        
+        const cotizacionId = document.getElementById('cotizacionId')?.value;
+        const pipelineId = document.getElementById('pipelineSelect')?.value;
+        
+        if (!cotizacionId || !pipelineId) {
+            return { canProceed: true };
+        }
+
+        const validation = await validateCotizacionDuplicate(cotizacionId, pipelineId);
+        
+        if (validation.isDuplicate) {
+            const userConfirmed = confirm(
+                `Esta cotización ya está siendo utilizada en otra solicitud (${validation.existingSolicitud?.codigo || 'Sin código'}).\n\n` +
+                `¿Está seguro de que desea continuar creando una solicitud duplicada?`
+            );
+            
+            return { 
+                canProceed: userConfirmed, 
+                isDuplicate: true,
+                existingSolicitud: validation.existingSolicitud 
+            };
+        }
+        
+        return { canProceed: true, isDuplicate: false };
+    };
+
     // Submit form and showSuccessMessage functions defined in negocios.html to avoid conflicts
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function () {
-        setupSearch();
         setupSessionMonitoring();
 
         // Close drawer when clicking outside

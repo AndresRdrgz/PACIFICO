@@ -1097,3 +1097,67 @@ def api_notas_recordatorios_completar(request, solicitud_id, nota_id):
     except Exception as e:
         logger.error(f"Error completando recordatorio {nota_id} para solicitud {solicitud_id}: {str(e)}")
         return JsonResponse({'error': 'Error interno del servidor'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_validate_cotizacion_duplicate(request):
+    """
+    Valida si una cotización ya está siendo utilizada en otra solicitud del mismo pipeline
+    """
+    try:
+        cotizacion_id = request.GET.get('cotizacion_id')
+        pipeline_id = request.GET.get('pipeline_id')
+        
+        logger.info(f"🔍 Validating cotización duplicate: cotizacion_id={cotizacion_id}, pipeline_id={pipeline_id}")
+        
+        if not cotizacion_id or not pipeline_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Se requieren cotizacion_id y pipeline_id'
+            }, status=400)
+        
+        # Buscar solicitudes existentes con la misma cotización en el mismo pipeline
+        existing_solicitudes = Solicitud.objects.filter(
+            cotizacion_id=cotizacion_id,
+            pipeline_id=pipeline_id
+        ).select_related('etapa_actual', 'creada_por').order_by('-fecha_creacion')
+        
+        if existing_solicitudes.exists():
+            # Obtener la primera solicitud (más reciente)
+            existing_solicitud = existing_solicitudes.first()
+            
+            # Formatear datos de la solicitud existente
+            existing_data = {
+                'id': existing_solicitud.id,
+                'codigo': existing_solicitud.codigo,
+                'etapa_actual': existing_solicitud.etapa_actual.nombre if existing_solicitud.etapa_actual else 'Sin etapa',
+                'fecha_creacion': existing_solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if existing_solicitud.fecha_creacion else 'N/A',
+                'creada_por': existing_solicitud.creada_por.get_full_name() or existing_solicitud.creada_por.username if existing_solicitud.creada_por else 'N/A'
+            }
+            
+            logger.warning(f"⚠️ Cotización duplicate found: {existing_data}")
+            
+            return JsonResponse({
+                'success': True,
+                'isDuplicate': True,
+                'existingSolicitud': existing_data,
+                'totalDuplicates': existing_solicitudes.count(),
+                'message': f'Esta cotización ya está siendo utilizada en {existing_solicitudes.count()} solicitud(es) del mismo pipeline'
+            })
+        
+        logger.info(f"✅ No duplicates found for cotización {cotizacion_id} in pipeline {pipeline_id}")
+        
+        return JsonResponse({
+            'success': True,
+            'isDuplicate': False,
+            'message': 'Cotización válida, no hay duplicados'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error validating cotización duplicate: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
+        }, status=500)

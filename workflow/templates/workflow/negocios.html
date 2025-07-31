@@ -6179,6 +6179,40 @@
             }
 
             hideSearchResults(type);
+            
+            // If this is a cotización selection, validate for duplicates
+            if (type === 'cotizacion') {
+                validateCotizacionSelection(item);
+            }
+        }
+
+        async function validateCotizacionSelection(cotizacion) {
+            console.log('🔍 Validating cotización selection:', cotizacion);
+            
+            // Get the current pipeline
+            const pipelineSelect = document.getElementById('pipelineSelect');
+            const pipelineId = pipelineSelect ? pipelineSelect.value : null;
+            
+            if (!pipelineId) {
+                console.log('⚠️ No pipeline selected, skipping validation');
+                return;
+            }
+            
+            try {
+                // Call the validation function from drawer.html
+                const validation = await window.validateCotizacionDuplicate(cotizacion.id, pipelineId);
+                
+                if (validation.isDuplicate) {
+                    console.log('⚠️ Cotización duplicate detected:', validation);
+                    window.showCotizacionDuplicateWarning(validation.existingSolicitud);
+                } else {
+                    console.log('✅ Cotización is valid, no duplicates');
+                    window.hideCotizacionDuplicateWarning();
+                }
+            } catch (error) {
+                console.error('❌ Error validating cotización:', error);
+                // Don't block the user if validation fails, just log the error
+            }
         }
 
 
@@ -6391,9 +6425,28 @@
                 return;
             }
 
-            // Show loading state
+            // Get submit button and original text before validation
             const submitBtn = document.querySelector('.drawer-footer .btn-primary');
             const originalText = submitBtn.innerHTML;
+
+            // Validate cotización for duplicates before submitting
+            checkCotizacionBeforeSubmit().then(validationResult => {
+                if (!validationResult.canProceed) {
+                    console.log('🛑 User cancelled submission due to duplicate cotización');
+                    return;
+                }
+
+                // Continue with form submission
+                proceedWithFormSubmission(formData, pipelineId, submitBtn, originalText);
+            }).catch(error => {
+                console.error('❌ Error validating cotización during submit:', error);
+                // Continue with submission if validation fails
+                proceedWithFormSubmission(formData, pipelineId, submitBtn, originalText);
+            });
+        };
+
+        function proceedWithFormSubmission(formData, pipelineId, submitBtn, originalText) {
+            // Show loading state
             submitBtn.innerHTML = '<span class="spinner"></span> Creando...';
             submitBtn.disabled = true;
 
@@ -6427,7 +6480,7 @@
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                 });
-        };
+        }
 
         window.showSuccessMessage = function (message) {
             console.log('🔧 showSuccessMessage called with:', message);
