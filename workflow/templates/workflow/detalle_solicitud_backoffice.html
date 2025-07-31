@@ -946,16 +946,16 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
-                  <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg" onclick="validarDocumentosYAvanzar()">
-                    <i class="fas fa-arrow-right me-2"></i>
-                    <span id="btn-avanzar-texto">Avanzar</span>
-                  </button>
-                  
                   <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
-                  <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg ms-2" style="display: none;" onclick="mostrarModalDevolucion()">
+                  <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: none;" onclick="mostrarModalDevolucion()">
                     <i class="fas fa-arrow-left me-2"></i>
                     <span>Devolver a Oficial</span>
+                  </button>
+                  
+                  <!-- Botón de avance - se habilita automáticamente al calificar todos los documentos -->
+                  <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2" onclick="validarDocumentosYAvanzar()" disabled title="Debes calificar todos los documentos antes de avanzar">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    <span id="btn-avanzar-texto">Avanzar</span>
                   </button>
                   
                   <!-- Indicador de estado de validación -->
@@ -1068,9 +1068,12 @@
       // Mostrar notificación de éxito
       showToast('Estado de archivos actualizado correctamente', 'success');
 
-      // Recargar la página para mostrar datos actualizados
-      location.reload();
-    }, 2000);
+      // Mostrar mensaje y recargar
+      mostrarMensaje('Estado de archivos actualizado correctamente', 'success');
+      setTimeout(() => {
+        location.reload();
+      }, 800);
+    }, 2000); // Simular actualización
   }
   
   function marcarControlCalidad() {
@@ -1480,7 +1483,7 @@
         // Actualizar pestañas y recargar después de un breve delay
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 800);
       } else {
         console.error(`Error en ${accion} automático:`, data.message);
         mostrarMensaje(data.message || `Error al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
@@ -1581,6 +1584,16 @@
           console.log('Llamando a actualizarEstadoCalificacion...');
           actualizarEstadoCalificacion(requisitoId, estado, data.data || { usuario: 'Usuario actual' });
           
+          // ✅ INDICADOR VISUAL: Mostrar que se está verificando el botón
+          const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+          if (btnAvanzar) {
+            const textoOriginal = btnAvanzar.innerHTML;
+            btnAvanzar.innerHTML = '<i class="fas fa-sync fa-spin me-2"></i>Verificando...';
+            setTimeout(() => {
+              btnAvanzar.innerHTML = textoOriginal;
+            }, 1000); // Mostrar "Verificando..." por 1 segundo
+          }
+          
           // Preservar estado después de un breve delay
           setTimeout(() => {
             console.log('Preservando estado después de calificación...');
@@ -1600,6 +1613,11 @@
                 req.elemento.classList.add('documento-pendiente');
               }
             });
+            
+            // ✅ SOLO USAR BACKEND: No más lógica JavaScript local confusa
+            setTimeout(() => {
+              verificarEstadoInicialBotonAvanzar(); // Solo consultar el backend
+            }, 200); // Pequeño delay para que el DOM se actualice primero
             
             // Si todos los documentos están calificados, mostrar mensaje informativo
             if (verificacion.todoCalificado) {
@@ -2409,8 +2427,11 @@
                               requisito.querySelector('h5')?.textContent?.trim() || 
                               `Requisito ${requisitoId}`;
       
-      // Verificar si tiene algún botón activo (calificado)
-      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.active, .calificar-btn-backoffice.active');
+      // Verificar si tiene algún botón activo (calificado) - usando la clase correcta 'activo'
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.activo, .calificar-btn-backoffice.activo');
+      
+      // Verificar si tiene un botón "pendiente" (solo para documentos opcionales)
+      const botonPendiente = requisito.querySelector('.calificar-btn-backoffice[data-estado="pendiente"].activo');
       
       if (botonesCalificados.length === 0) {
         // Este requisito no ha sido calificado
@@ -2419,6 +2440,10 @@
           nombre: requisitoNombre,
           elemento: requisito
         });
+      } else if (botonPendiente) {
+        // Si tiene un botón pendiente activo, NO lo consideramos como bloqueante
+        // ya que los documentos opcionales "Pendiente" no bloquean el avance
+        console.log(`✅ Documento opcional "${requisitoNombre}" marcado como Pendiente - No bloquea el avance`);
       }
     });
 
@@ -3673,48 +3698,7 @@ function cargarDocumentosProblematicos() {
   });
 }
 
-// 🧪 FUNCIÓN TEMPORAL: Crear calificaciones "malo" para testing
-function crearCalificacionesMalas() {
-  const solicitudId = {{ solicitud.id }};
-  const btn = document.getElementById('btn-crear-test-malos');
-  const textoOriginal = btn.innerHTML;
-  
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
-  btn.disabled = true;
-  
-  fetch(`/workflow/api/test/calificaciones/${solicitudId}/crear-malo/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrfToken()
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      console.log('✅ Calificaciones "malo" creadas:', data);
-      alert(`✅ Se crearon ${data.calificaciones_creadas} calificaciones como "malo" para testing`);
-      
-      // Recargar los documentos problemáticos para mostrar los nuevos "malos"
-      cargarDocumentosProblematicos();
-    } else {
-      console.error('❌ Error creando calificaciones:', data);
-      alert(`❌ Error: ${data.message}`);
-    }
-    
-    // Restaurar botón
-    btn.innerHTML = textoOriginal;
-    btn.disabled = false;
-  })
-  .catch(error => {
-    console.error('❌ Error en petición:', error);
-    alert('❌ Error de conexión');
-    
-    // Restaurar botón
-    btn.innerHTML = textoOriginal;
-    btn.disabled = false;
-  });
-}
+
 
 // ✅ MEJORADO: Función para confirmar devolución con correo automático
 function confirmarDevolucion() {
@@ -4184,7 +4168,211 @@ function filtrarUsuarios(termino) {
 }
 
 // Event listener para cuando se abre el modal
+  // ✅ NUEVA FUNCIÓN: Verificar y habilitar botón Avanzar automáticamente
+  function verificarYHabilitarBotonAvanzar() {
+    console.log('🔍 Verificando si se puede habilitar el botón Avanzar...');
+    
+    const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+    if (!btnAvanzar) {
+      console.log('❌ Botón Avanzar no encontrado');
+      return;
+    }
+    
+    // Buscar todos los documentos que tienen botones de calificación (bueno/malo/pendiente)
+    const documentosConBotones = document.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"], .calificar-btn-backoffice[data-estado="malo"], .calificar-btn-backoffice[data-estado="pendiente"]');
+    
+    if (documentosConBotones.length === 0) {
+      console.log('ℹ️ No hay documentos para calificar');
+      btnAvanzar.disabled = false; // Habilitar si no hay documentos que calificar
+      btnAvanzar.title = 'Listo para avanzar';
+      return;
+    }
+    
+    // Agrupar botones por requisito ID
+    const documentosPorRequisito = {};
+    documentosConBotones.forEach(btn => {
+      const requisitoId = btn.getAttribute('data-requisito');
+      if (requisitoId) {
+        if (!documentosPorRequisito[requisitoId]) {
+          documentosPorRequisito[requisitoId] = [];
+        }
+        documentosPorRequisito[requisitoId].push(btn);
+      }
+    });
+    
+    const requisitosIds = Object.keys(documentosPorRequisito);
+    console.log(`📋 Encontrados ${requisitosIds.length} documentos para verificar`);
+    
+    let todosCalificados = true;
+    let contadorCalificados = 0;
+    let documentosPendientes = 0;
+    
+    // Verificar cada requisito
+    requisitosIds.forEach(requisitoId => {
+      const botones = documentosPorRequisito[requisitoId];
+      const tieneActivo = botones.some(btn => btn.classList.contains('activo'));
+      const esPendiente = botones.some(btn => btn.classList.contains('activo') && btn.getAttribute('data-estado') === 'pendiente');
+      
+      if (tieneActivo) {
+        contadorCalificados++;
+        if (esPendiente) {
+          documentosPendientes++;
+          console.log(`✅ Documento opcional ${requisitoId}: Marcado como Pendiente (No bloquea)`);
+        } else {
+          console.log(`✅ Documento ${requisitoId}: Calificado`);
+        }
+      } else {
+        todosCalificados = false;
+        console.log(`⏳ Documento ${requisitoId}: Sin calificar`);
+      }
+    });
+    
+    console.log(`📊 Progreso: ${contadorCalificados}/${requisitosIds.length} documentos calificados (${documentosPendientes} opcionales pendientes)`);
+    
+    // Habilitar/deshabilitar botón basado en el resultado
+    if (todosCalificados) {
+      btnAvanzar.disabled = false;
+      btnAvanzar.title = 'Todos los documentos calificados - Listo para avanzar';
+      btnAvanzar.classList.add('btn-pulsating'); // Clase visual opcional
+      console.log('✅ Botón Avanzar HABILITADO - Todos los documentos calificados');
+      
+      // Mostrar mensaje de confirmación
+      const documentosReales = contadorCalificados - documentosPendientes;
+      let mensaje = `¡Perfecto! Todos los documentos han sido calificados. Ya puedes avanzar.`;
+      if (documentosPendientes > 0) {
+        mensaje = `¡Perfecto! Todos los documentos obligatorios han sido calificados (${documentosReales} calificados, ${documentosPendientes} opcionales pendientes). Ya puedes avanzar.`;
+      }
+      mostrarMensaje(mensaje, 'success');
+      
+    } else {
+      btnAvanzar.disabled = true;
+      btnAvanzar.title = `Faltan ${requisitosIds.length - contadorCalificados} documentos por calificar`;
+      btnAvanzar.classList.remove('btn-pulsating');
+      console.log(`⏳ Botón Avanzar DESHABILITADO - Faltan ${requisitosIds.length - contadorCalificados} documentos por calificar`);
+    }
+  }
+
+  // ✅ SOLUCIÓN PARA PROBLEMA DE ARCHIVOS: Detectar subidas exitosas y actualizar
+function detectarCambiosEnArchivos() {
+  // Interceptar llamadas fetch exitosas relacionadas con archivos
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    return originalFetch.apply(this, args)
+      .then(response => {
+        const url = args[0];
+        // Detectar si es una subida de archivo exitosa
+        if (url && (url.includes('upload-documento') || url.includes('subir-requisito')) && response.ok) {
+          response.clone().json().then(data => {
+            if (data.success) {
+              console.log('🎯 Subida de archivo detectada exitosamente - forzando actualización');
+              // Usar mensaje específico y delay corto
+              mostrarMensaje('Archivo subido - Actualizando vista...', 'success');
+              
+              // ✅ SOLO VERIFICAR CON EL BACKEND
+              setTimeout(() => {
+                verificarEstadoInicialBotonAvanzar(); // Solo usar el backend
+              }, 300);
+              
+              setTimeout(() => {
+                window.location.reload();
+              }, 600);
+            }
+          }).catch(() => {
+            // Si no es JSON, asumir que es exitoso si response.ok
+            console.log('🎯 Operación de archivo exitosa detectada');
+            setTimeout(() => {
+              window.location.reload();
+            }, 600);
+          });
+        }
+        return response;
+      });
+  };
+}
+
+// ✅ FUNCIÓN CORREGIDA: Usar SOLO la respuesta del backend, no lógica local
+function verificarEstadoInicialBotonAvanzar() {
+  console.log('🔍 Verificando estado con el BACKEND (fuente de verdad)...');
+  
+  const solicitudId = {{ solicitud.id }};
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  
+  if (!btnAvanzar) {
+    console.log('❌ Botón Avanzar no encontrado');
+    return;
+  }
+  
+  // ✅ SOLO CONSULTAR EL BACKEND - No usar lógica JavaScript local
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('🎯 Respuesta DEFINITIVA del backend:', data);
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        // ✅ BACKEND DICE QUE PUEDE AVANZAR
+        btnAvanzar.disabled = false;
+        btnAvanzar.title = '✅ Listo para avanzar según validación del servidor';
+        btnAvanzar.classList.add('btn-pulsating');
+        btnAvanzar.style.backgroundColor = '#28a745';
+        btnAvanzar.style.borderColor = '#28a745';
+        btnAvanzar.classList.remove('btn-secondary');
+        btnAvanzar.classList.add('btn-success');
+        
+        console.log('✅ BOTÓN HABILITADO por el backend');
+        mostrarMensaje(data.mensaje || 'Puede avanzar', 'success', 4000);
+        
+      } else {
+        // ❌ BACKEND DICE QUE NO PUEDE AVANZAR
+        btnAvanzar.disabled = true;
+        btnAvanzar.title = data.mensaje || 'No puede avanzar según validación del servidor';
+        btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+        btnAvanzar.classList.add('btn-secondary');
+        btnAvanzar.style.backgroundColor = '#6c757d';
+        btnAvanzar.style.borderColor = '#6c757d';
+        
+        console.log('❌ BOTÓN DESHABILITADO por el backend:', data.mensaje);
+        mostrarMensaje(data.mensaje || 'No puede avanzar', 'warning', 4000);
+      }
+    } else {
+      // Error en la API
+      console.error('❌ Error en validación del backend:', data.error);
+      btnAvanzar.disabled = true;
+      btnAvanzar.title = 'Error al validar con el servidor';
+      btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+      btnAvanzar.classList.add('btn-secondary');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de conexión con el backend:', error);
+    btnAvanzar.disabled = true;
+    btnAvanzar.title = 'Error de conexión con el servidor';
+    btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+    btnAvanzar.classList.add('btn-secondary');
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar detector de cambios en archivos
+  detectarCambiosEnArchivos();
+  
+  // ✅ VERIFICACIÓN INMEDIATA DEL BOTÓN AVANZAR
+  setTimeout(() => {
+    verificarEstadoInicialBotonAvanzar();
+  }, 500);
+  
+  // ❌ FUNCIÓN DE RESPALDO DESACTIVADA - Ahora solo el backend decide
+  setTimeout(() => {
+    console.log('🔧 Función de respaldo: DESACTIVADA - Solo el backend decide el estado del botón');
+    // La función de respaldo ya no interfiere con las decisiones del backend
+  }, 2000);
+  
   const modal = document.getElementById('modalAvanzarSubestado');
   if (modal) {
     modal.addEventListener('shown.bs.modal', function() {
@@ -4196,6 +4384,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Cargar transiciones negativas al inicializar la página
   cargarTransicionesNegativas();
 });
+
+// ✅ FUNCIÓN DE EMERGENCIA - Consulta el backend para obtener el estado real
+window.VERIFICAR_ESTADO_BOTON_BACKEND = function() {
+  console.log('🚨 FUNCIÓN DE EMERGENCIA: Consultando estado real del backend...');
+  
+  // Forzar verificación inmediata con el backend
+  verificarEstadoInicialBotonAvanzar();
+  
+  alert('🔍 Consultando el estado real con el servidor...\nRevisa la consola y el botón en unos segundos.');
+  
+  return true;
+};
 
 </script>
 
@@ -4722,16 +4922,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
         </div>
         
-        <!-- 🧪 BOTÓN TEMPORAL PARA TESTING -->
-        {% if user.is_staff %}
-        <div class="mb-3">
-          <small class="text-muted">🧪 Testing (Solo Staff):</small>
-          <button type="button" class="btn btn-outline-danger btn-sm ms-2" onclick="crearCalificacionesMalas()" id="btn-crear-test-malos">
-            <i class="fas fa-flask me-1"></i>
-            Crear Docs "Malos" para Test
-          </button>
-        </div>
-        {% endif %}
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

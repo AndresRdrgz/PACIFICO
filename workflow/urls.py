@@ -169,7 +169,7 @@ urlpatterns = [
     path('api/solicitudes/<int:solicitud_id>/transiciones-negativas/', views_workflow.api_obtener_transiciones_negativas, name='api_obtener_transiciones_negativas'),
     path('api/solicitudes/devolver-backoffice/', views_workflow.api_devolver_solicitud_backoffice, name='api_devolver_solicitud_backoffice'),
     path('api/calificaciones/<int:solicitud_id>/estado/<str:estado>/', views_workflow.api_obtener_calificaciones_por_estado, name='api_obtener_calificaciones_por_estado'),
-    path('api/test/calificaciones/<int:solicitud_id>/crear-malo/', views_workflow.api_crear_calificacion_test_malo, name='api_crear_calificacion_test_malo'),
+
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),

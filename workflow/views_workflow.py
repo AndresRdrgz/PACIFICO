@@ -11422,81 +11422,7 @@ def api_obtener_calificaciones_por_estado(request, solicitud_id, estado):
         }, status=500)
 
 
-@login_required  
-@require_http_methods(["POST"])
-def api_crear_calificacion_test_malo(request, solicitud_id):
-    """
-    🧪 API TEMPORAL: Crear calificaciones de prueba con estado 'malo' para testing
-    """
-    try:
-        if not request.user.is_staff:
-            return JsonResponse({
-                'success': False,
-                'message': 'Solo staff puede usar esta función de prueba.'
-            }, status=403)
-        
-        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
-        
-        print(f"🧪 Creando calificaciones 'malo' para solicitud: {solicitud.codigo}")
-        
-        # Obtener requisitos de la solicitud para crear calificaciones "malo"
-        from workflow.models import RequisitoSolicitud, CalificacionDocumentoBackoffice
-        
-        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud)
-        print(f"📋 Requisitos encontrados en la solicitud: {requisitos_solicitud.count()}")
-        
-        if not requisitos_solicitud.exists():
-            return JsonResponse({
-                'success': False,
-                'message': 'No se encontraron requisitos en esta solicitud para crear calificaciones.'
-            })
-        
-        # Tomar los primeros 3 requisitos para crear calificaciones "malo"
-        requisitos_para_malo = requisitos_solicitud[:3]
-        calificaciones_creadas = 0
-        
-        for requisito_solicitud in requisitos_para_malo:
-            try:
-                # Crear o actualizar calificación como "malo"
-                calificacion, created = CalificacionDocumentoBackoffice.objects.get_or_create(
-                    requisito_solicitud=requisito_solicitud,
-                    defaults={
-                        'estado': 'malo',
-                        'observaciones': f'❌ Documento {requisito_solicitud.requisito.nombre} rechazado para pruebas de devolución',
-                        'calificado_por': request.user,
-                        'fecha_calificacion': timezone.now()
-                    }
-                )
-                
-                if not created:
-                    # Si ya existía, actualizarla a "malo"
-                    calificacion.estado = 'malo'
-                    calificacion.observaciones = f'❌ Documento {requisito_solicitud.requisito.nombre} rechazado (actualizado para pruebas)'
-                    calificacion.calificado_por = request.user
-                    calificacion.fecha_calificacion = timezone.now()
-                    calificacion.save()
-                    print(f"🔄 Calificación ACTUALIZADA a 'malo': {requisito_solicitud.requisito.nombre}")
-                else:
-                    print(f"✅ Calificación CREADA como 'malo': {requisito_solicitud.requisito.nombre}")
-                
-                calificaciones_creadas += 1
-                
-            except Exception as e:
-                print(f"❌ Error procesando requisito {requisito_solicitud.id}: {str(e)}")
-                continue
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Se crearon/actualizaron {calificaciones_creadas} calificaciones como "malo"',
-            'calificaciones_creadas': calificaciones_creadas
-        })
-        
-    except Exception as e:
-        print(f"❌ Error creando calificaciones de prueba: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }, status=500)
+
 
 
 # ==========================================
@@ -12486,6 +12412,9 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         documentos_buenos = 0
         documentos_malos = 0
         
+        # 🔍 DEBUG SIMPLIFICADO: Solo información esencial
+        print(f"📋 Validando solicitud {solicitud_id}: {len(requisitos_definidos)} requisitos definidos")
+        
         # Validar documentos - Solo documentos OBLIGATORIOS calificados como "malo" bloquean el avance
         for req_sol in requisitos_solicitud:
             # Buscar la calificación más reciente
@@ -12500,12 +12429,22 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             if calificacion:
                 estado = calificacion.estado
                 
-                # Contar por estado
+                # ✅ IGNORAR COMPLETAMENTE LOS DOCUMENTOS "PENDIENTE" - NO BLOQUEAN EL AVANCE
+                if estado == 'pendiente':
+                    documentos_pendientes.append({
+                        'nombre': req_sol.requisito.nombre,
+                        'estado': 'pendiente',
+                        'es_obligatorio': es_obligatorio
+                    })
+                    # NO contar como problema, NO bloquear avance
+                    continue
+                
+                # Contar por estado (solo bueno/malo, pendiente se ignora)
                 if estado == 'bueno':
                     documentos_buenos += 1
                 elif estado == 'malo':
                     documentos_malos += 1
-                    # ✅ CORREGIDO: Solo documentos OBLIGATORIOS + "malo" bloquean el avance
+                    # ✅ LÓGICA CORRECTA: Solo documentos OBLIGATORIOS "malo" bloquean
                     if es_obligatorio:
                         documentos_problematicos.append({
                             'nombre': req_sol.requisito.nombre,
@@ -12514,17 +12453,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                             'es_obligatorio': True
                         })
                     # Los documentos opcionales "malo" NO bloquean el avance
-                elif estado == 'pendiente':
-                    documentos_pendientes.append({
-                        'nombre': req_sol.requisito.nombre,
-                        'estado': 'pendiente',
-                        'es_obligatorio': es_obligatorio
-                    })
             else:
                 # Sin calificación = pendiente automático (permite avanzar)
                 documentos_pendientes.append({
                     'nombre': req_sol.requisito.nombre,
-                    'estado': 'pendiente',
+                    'estado': 'sin_calificacion_pendiente',
                     'es_obligatorio': es_obligatorio
                 })
                 
@@ -12552,12 +12485,65 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                     'mensaje_personalizado': req_info['mensaje_personalizado']
                 })
         
-        # Verificar si puede avanzar (solo documentos OBLIGATORIOS + "malo" bloquean)
-        if len(documentos_problematicos) == 0:
+        # ✅ LÓGICA CORREGIDA: Solo bloquear por documentos OBLIGATORIOS sin calificar
+        documentos_obligatorios_sin_calificar = []
+        
+        # Verificar documentos obligatorios que no han sido calificados
+        for req_id, req_info in requisitos_definidos.items():
+            es_obligatorio = req_info['obligatorio']
+            if es_obligatorio:
+                # Buscar si existe calificación para este documento obligatorio
+                req_sol_existe = requisitos_solicitud.filter(requisito_id=req_id).first()
+                if not req_sol_existe:
+                    # Documento obligatorio que no ha sido subido/calificado
+                    documentos_obligatorios_sin_calificar.append({
+                        'nombre': req_info['requisito'].nombre,
+                        'problema': 'sin_subir',
+                        'es_obligatorio': True
+                    })
+                else:
+                    # Verificar si tiene calificación
+                    calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=req_sol_existe
+                    ).order_by('-fecha_calificacion').first()
+                    
+                    if not calificacion:
+                        # Documento subido pero sin calificar
+                        documentos_obligatorios_sin_calificar.append({
+                            'nombre': req_info['requisito'].nombre,
+                            'problema': 'sin_calificar',
+                            'es_obligatorio': True
+                        })
+        
+        # 🎯 REGLAS DE BLOQUEO: 
+        # 1. Documentos obligatorios sin calificar → BLOQUEAN
+        # 2. Documentos obligatorios "malo" → BLOQUEAN  
+        # 3. Documentos "pendiente" → NO bloquean
+        # 4. Documentos opcionales "malo" → NO bloquean
+        
+        total_bloqueantes = len(documentos_obligatorios_sin_calificar) + len(documentos_problematicos)
+        print(f"🎯 Resultado: {len(documentos_obligatorios_sin_calificar)} sin calificar + {len(documentos_problematicos)} obligatorios 'malo' = {total_bloqueantes} bloqueantes")
+        
+        if total_bloqueantes == 0:
+            # Mensaje personalizado basado en la situación
+            mensaje_partes = []
+            if documentos_buenos > 0:
+                mensaje_partes.append(f"{documentos_buenos} documento(s) bueno(s)")
+            if documentos_malos > 0:
+                mensaje_partes.append(f"{documentos_malos} documento(s) malo(s) - NO bloquean")
+            if len(documentos_pendientes) > 0:
+                mensaje_partes.append(f"{len(documentos_pendientes)} documento(s) pendiente(s) - NO bloquean")
+            
+            if mensaje_partes:
+                detalle = ", ".join(mensaje_partes)
+                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente" y opcionales "malo" NO bloquean)'
+            else:
+                mensaje = '✅ Puede avanzar. No hay documentos obligatorios que bloqueen el avance.'
+            
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': True,
-                'mensaje': 'No hay documentos obligatorios calificados como "Malo". Puede avanzar. (Documentos opcionales "Malo" y documentos "Pendientes" permiten continuar)',
+                'mensaje': mensaje,
                 'documentos_pendientes': documentos_pendientes,
                 'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
@@ -12565,28 +12551,37 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'documentos_pendientes_count': len(documentos_pendientes)
             })
         else:
-            # Construir mensaje detallado para documentos obligatorios "malo"
+            # ❌ HAY DOCUMENTOS BLOQUEANTES - BLOQUEAR AVANCE
             mensajes_detalle = []
+            
+            # Agregar documentos sin calificar
+            for doc in documentos_obligatorios_sin_calificar:
+                if doc['problema'] == 'sin_subir':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO no subido")
+                elif doc['problema'] == 'sin_calificar':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO sin calificar")
+            
+            # Agregar documentos obligatorios "malo"
             for doc in documentos_problematicos:
                 if doc['problema'] == 'calificado_como_malo':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO calificado como 'Malo' - debe cambiar a 'Bueno' o 'Pendiente'")
-                elif doc['problema'] == 'sin_calificar':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Sin calificar")
-                elif doc['problema'] == 'mal_calificado':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como '{doc['estado_actual']}' - debe cambiar")
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO calificado como 'Malo'")
+            
+            # Combinar todos los documentos problemáticos para la respuesta
+            todos_problematicos = documentos_obligatorios_sin_calificar + documentos_problematicos
             
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': False,
-                'documentos_problematicos': documentos_problematicos,
+                'documentos_problematicos': todos_problematicos,
                 'documentos_pendientes': documentos_pendientes,
-                'mensaje': f'No puede avanzar: {len(documentos_problematicos)} documento(s) OBLIGATORIO(S) calificado(s) como "Malo"',
+                'mensaje': f'No puede avanzar: {total_bloqueantes} documento(s) OBLIGATORIO(S) requieren atención',
                 'detalle': mensajes_detalle,
-                'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
+                'total_documentos': len(requisitos_definidos),
                 'documentos_buenos': documentos_buenos,
                 'documentos_malos': documentos_malos,
                 'documentos_pendientes_count': len(documentos_pendientes)
             })
+
             
     except Exception as e:
         return JsonResponse({
