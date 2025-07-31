@@ -337,7 +337,11 @@ def bandeja_trabajo(request):
             
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
-                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                try:
+                    enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                except Exception as e:
+                    print(f"Error enviando correo APC: {e}")
+                    # No detener el proceso por error en correo
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2717,7 +2721,11 @@ def nueva_solicitud(request):
         cotizacion_id = request.POST.get('cotizacion')
         
         if pipeline_id:
-            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            try:
+                pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            except Exception as e:
+                messages.error(request, f'Pipeline no encontrado: {e}')
+                return JsonResponse({'success': False, 'error': f'Pipeline {pipeline_id} no existe'}, status=400)
             
             # Obtener primera etapa del pipeline
             primera_etapa = pipeline.etapas.order_by('orden').first()
@@ -2810,7 +2818,11 @@ def nueva_solicitud(request):
             
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
-                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                try:
+                    enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                except Exception as e:
+                    print(f"Error enviando correo APC: {e}")
+                    # No detener el proceso por error en correo
             
             # Responder con JSON para requests AJAX
             if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -10914,6 +10926,17 @@ def api_ejecutar_transicion(request):
         # Resetear subestado al primer subestado de la nueva etapa
         primer_subestado = transicion.etapa_destino.subestados.order_by('orden').first()
         solicitud.subestado_actual = primer_subestado
+        
+        # ✅ NUEVO: Auto-asignar calificación 'pendiente' cuando llega a Back Office
+        if transicion.etapa_destino.nombre == 'Back Office' and not solicitud.calificaciondocumentobackoffice:
+            solicitud.calificaciondocumentobackoffice = 'pendiente'
+            print(f"🔄 Auto-asignado calificaciondocumentobackoffice='pendiente' para solicitud {solicitud.codigo}")
+            
+            # ✅ NUEVO: También crear calificaciones individuales de documentos al llegar a Back Office
+            usuario_calificador = request.user  # El usuario que está haciendo la transición
+            crear_calificaciones_pendientes_backoffice(solicitud, usuario_calificador)
+            print(f"✅ Calificaciones de documentos creadas al llegar a Back Office para solicitud {solicitud.codigo}")
+        
         solicitud.save()
         
         # Crear nuevo historial
@@ -11726,49 +11749,60 @@ def backoffice_subsanacion(request, solicitud_id):
 
 def crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado):
     """
-    Crear calificaciones automáticas como 'pendiente' para documentos opcionales sin archivo
-    cuando una solicitud es asignada en Back Office.
+    🚨 BULLETPROOF: Crear calificaciones automáticas FORZANDO la creación en BD
     """
     from .models import CalificacionDocumentoBackoffice, RequisitoTransicion, RequisitoSolicitud
+    from django.db import transaction
+    
+    print(f"🚨 INICIANDO crear_calificaciones_pendientes_backoffice para solicitud {solicitud.codigo}")
+    print(f"🚨 Usuario asignado: {usuario_asignado.username}")
+    print(f"🚨 Etapa actual: {solicitud.etapa_actual.nombre}")
     
     try:
-        # Obtener todas las transiciones de salida de la etapa Back Office
-        transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
-        
-        # Obtener todos los requisitos de transición para estas transiciones
-        for transicion in transiciones_salida:
-            requisitos_transicion = RequisitoTransicion.objects.filter(
-                transicion=transicion,
-                obligatorio=False  # Solo documentos opcionales
-            ).select_related('requisito')
+        with transaction.atomic():  # FORZAR transacción
+            calificaciones_creadas = 0
             
-            for req_transicion in requisitos_transicion:
-                # Verificar si existe un RequisitoSolicitud para este requisito
-                requisito_solicitud = RequisitoSolicitud.objects.filter(
-                    solicitud=solicitud,
-                    requisito=req_transicion.requisito
-                ).first()
-                
-                # Si existe el RequisitoSolicitud pero NO tiene archivo, crear calificación pendiente
-                if requisito_solicitud and not requisito_solicitud.archivo:
+            # ✅ MÉTODO DIRECTO: Obtener TODOS los RequisitoSolicitud de la solicitud
+            todos_requisitos = RequisitoSolicitud.objects.filter(solicitud=solicitud)
+            print(f"🚨 ENCONTRADOS {todos_requisitos.count()} RequisitoSolicitud para procesar")
+            
+            for req_sol in todos_requisitos:
+                try:
                     # Verificar que no exista ya una calificación
                     calificacion_existente = CalificacionDocumentoBackoffice.objects.filter(
-                        requisito_solicitud=requisito_solicitud
+                        requisito_solicitud=req_sol
                     ).first()
                     
                     if not calificacion_existente:
-                        # Crear calificación pendiente
-                        CalificacionDocumentoBackoffice.objects.create(
-                            requisito_solicitud=requisito_solicitud,
+                        print(f"🚨 CREANDO calificación para: {req_sol.requisito.nombre}")
+                        
+                        # CREAR CALIFICACIÓN FORZADA
+                        nueva_calificacion = CalificacionDocumentoBackoffice.objects.create(
+                            requisito_solicitud=req_sol,
                             calificado_por=usuario_asignado,
                             estado='pendiente'
                         )
-                        print(f"✅ Calificación pendiente creada para requisito: {req_transicion.requisito.nombre}")
-        
-        print(f"🎯 Calificaciones pendientes procesadas para solicitud {solicitud.codigo}")
-        
+                        
+                        # VERIFICAR QUE SE CREÓ
+                        if nueva_calificacion.id:
+                            calificaciones_creadas += 1
+                            print(f"✅ CALIFICACIÓN CREADA CON ID: {nueva_calificacion.id} para {req_sol.requisito.nombre}")
+                        else:
+                            print(f"❌ FALLÓ crear calificación para {req_sol.requisito.nombre}")
+                    
+                    else:
+                        print(f"ℹ️  Ya existe calificación para: {req_sol.requisito.nombre} (Estado: {calificacion_existente.estado})")
+                        
+                except Exception as e_inner:
+                    print(f"❌ Error individual creando para {req_sol.requisito.nombre}: {str(e_inner)}")
+                    continue
+            
+            print(f"🎯 RESULTADO FINAL: {calificaciones_creadas} calificaciones creadas para solicitud {solicitud.codigo}")
+            
     except Exception as e:
-        print(f"❌ Error creando calificaciones pendientes: {str(e)}")
+        print(f"❌ ERROR CRÍTICO creando calificaciones pendientes: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK COMPLETO: {traceback.format_exc()}")
         # No lanzar excepción para no interrumpir el flujo de asignación
 
 
@@ -12089,9 +12123,11 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
             solicitud.asignada_a = usuario_asignado
             solicitud.save()
             
-            # Crear calificaciones pendientes para el nuevo subestado si es necesario
-            if opcion == 'otro' and usuario_asignado:
-                crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado)
+            # ✅ CORREGIDO: Crear calificaciones pendientes SIEMPRE, para todas las opciones
+            # Determinar el usuario que va a calificar
+            usuario_calificador = usuario_asignado if usuario_asignado else request.user
+            crear_calificaciones_pendientes_backoffice(solicitud, usuario_calificador)
+            print(f"✅ Calificaciones pendientes creadas para solicitud {solicitud.codigo} con usuario {usuario_calificador.username}")
             
             # Generar URL de redirección
             if opcion == 'yo':

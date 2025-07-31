@@ -50,12 +50,14 @@ class Etapa(models.Model):
             self._crear_subestados_backoffice()
     
     def _crear_subestados_backoffice(self):
-        """Crea los 4 subestados predefinidos para Back Office"""
+        """Crea los 6 subestados predefinidos para Back Office"""
         subestados_predefinidos = [
             {'nombre': 'Checklist', 'orden': 1},
             {'nombre': 'Captura', 'orden': 2},
             {'nombre': 'Firma', 'orden': 3},
             {'nombre': 'Orden del expediente', 'orden': 4},
+            {'nombre': 'Trámite', 'orden': 5},
+            {'nombre': 'Subsanación de pendientes Trámite', 'orden': 6},
         ]
         
         for subestado_data in subestados_predefinidos:
@@ -189,6 +191,20 @@ class Solicitud(models.Model):
     
     # Relación con entrevista de cliente
     entrevista_cliente = models.ForeignKey('workflow.ClienteEntrevista', on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes', help_text="Entrevista de cliente asociada a esta solicitud")
+    
+    # Estado de calificación de documentos en Back Office
+    CALIFICACION_DOCUMENTO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('bueno', 'Bueno'),
+        ('malo', 'Malo'),
+    ]
+    calificaciondocumentobackoffice = models.CharField(
+        max_length=20, 
+        choices=CALIFICACION_DOCUMENTO_CHOICES, 
+        null=True, 
+        blank=True,
+        help_text='Estado de la calificación de documentos en Back Office (solo se activa al llegar a Back Office)'
+    )
 
     def __str__(self):
         return f"{self.codigo} ({self.pipeline.nombre})"
