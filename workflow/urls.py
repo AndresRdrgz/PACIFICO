@@ -4,7 +4,7 @@ from . import api
 from . import views_workflow
 from . import views_negocios
 from . import dashboard_views
-from . import views_calificacion
+
 from . import views_formulario
 from . import views_comite
 from . import apicomite
@@ -34,10 +34,20 @@ urlpatterns = [
     path('makito-tracking/', views_workflow.makito_tracking_view, name='makito_tracking'),
     path('apc-tracking/', views_workflow.apc_tracking_view, name='apc_tracking'),
     path('sura-tracking/', views_workflow.sura_tracking_view, name='sura_tracking'),
+    path('agenda-firma/', views_workflow.agenda_firma_view, name='agenda_firma'),
+
     path('bandeja-trabajo/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('nueva-solicitud/', views_workflow.nueva_solicitud, name='nueva_solicitud'),
     path('solicitudes/<int:solicitud_id>/detalle/', views_workflow.detalle_solicitud, name='detalle_solicitud'),
     path('solicitudes/<int:solicitud_id>/backoffice/', views_workflow.detalle_solicitud, name='detalle_solicitud_backoffice'),
+    
+    # URLs específicas para cada subestado del Back Office
+    path('solicitudes/<int:solicitud_id>/backoffice/checklist/', views_workflow.backoffice_checklist, name='backoffice_checklist'),
+    path('solicitudes/<int:solicitud_id>/backoffice/captura/', views_workflow.backoffice_captura, name='backoffice_captura'),
+    path('solicitudes/<int:solicitud_id>/backoffice/firma/', views_workflow.backoffice_firma, name='backoffice_firma'),
+    path('solicitudes/<int:solicitud_id>/backoffice/orden/', views_workflow.backoffice_orden, name='backoffice_orden'),
+    path('solicitudes/<int:solicitud_id>/backoffice/tramite/', views_workflow.backoffice_tramite, name='backoffice_tramite'),
+    path('solicitudes/<int:solicitud_id>/backoffice/subsanacion/', views_workflow.backoffice_subsanacion, name='backoffice_subsanacion'),
     path('solicitudes/<int:solicitud_id>/transicion/', views_workflow.transicion_solicitud, name='transicion_solicitud'),
     path('solicitudes/<int:solicitud_id>/auto-asignar/', views_workflow.auto_asignar_solicitud, name='auto_asignar_solicitud'),
     path('solicitudes/<int:solicitud_id>/requisitos/<int:requisito_id>/actualizar/', views_workflow.actualizar_requisito, name='actualizar_requisito'),
@@ -98,6 +108,7 @@ urlpatterns = [
     path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
     path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
     path('api/devolver-bandeja-grupal/', views_workflow.api_devolver_bandeja_grupal, name='api_devolver_bandeja_grupal'),
+    path('api/solicitudes/<int:solicitud_id>/cambiar-subestado/', views_workflow.api_cambiar_subestado_backoffice, name='api_cambiar_subestado_backoffice'),
     
     # PDF Download API URLs
     path('api/solicitudes/<int:solicitud_id>/download-merged-pdf/', views_workflow.api_download_merged_pdf, name='api_download_merged_pdf'),
@@ -168,12 +179,7 @@ urlpatterns = [
     path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
     path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
-    # URLs para calificación de documentos
-    path('api/documento/calificar/', views_calificacion.calificar_documento, name='calificar_documento'),
-    path('api/documento/comentar/', views_calificacion.comentar_documento, name='comentar_documento'),
-    path('api/documento/comentario/editar/', views_calificacion.editar_comentario, name='editar_comentario'),
-    path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
-    path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
+
     
     # URLs para asociación de entrevistas
     path('buscar-entrevistas/', views_workflow.buscar_entrevistas, name='buscar_entrevistas'),
@@ -200,7 +206,38 @@ urlpatterns = [
     # Makito RPA API URLs for Debida Diligencia
     path('api/makito/debida-diligencia/update-status/<str:solicitud_codigo>/', views_workflow.api_makito_debida_diligencia_update_status, name='api_makito_debida_diligencia_update_status'),
     path('api/makito/debida-diligencia/upload/<str:solicitud_codigo>/', views_workflow.api_makito_debida_diligencia_upload, name='api_makito_debida_diligencia_upload'),
+    # URLs para nuevo flujo de avance de subestado
+    path('api/solicitudes/<int:solicitud_id>/siguiente-subestado/', views_workflow.api_obtener_siguiente_subestado, name='api_obtener_siguiente_subestado'),
+    path('api/solicitudes/<int:solicitud_id>/validar-documentos/', views_workflow.api_validar_documentos_backoffice, name='api_validar_documentos_backoffice'),
+    path('api/solicitudes/<int:solicitud_id>/avanzar-subestado/', views_workflow.api_avanzar_subestado_backoffice, name='api_avanzar_subestado_backoffice'),
+    path('api/solicitudes/<int:solicitud_id>/transiciones-negativas/', views_workflow.api_obtener_transiciones_negativas, name='api_obtener_transiciones_negativas'),
+    path('api/solicitudes/devolver-backoffice/', views_workflow.api_devolver_solicitud_backoffice, name='api_devolver_solicitud_backoffice'),
+    path('api/calificaciones/<int:solicitud_id>/estado/<str:estado>/', views_workflow.api_obtener_calificaciones_por_estado, name='api_obtener_calificaciones_por_estado'),
+
     
     # Debug URLs
     path('api/debug-session/', views_workflow.debug_session, name='debug_session'),
+    
+    # APIs para Pendientes Antes de Firma
+    path('api/pendientes/catalogo/', views_workflow.api_buscar_pendientes_catalogo, name='api_buscar_pendientes_catalogo'),
+    path('api/solicitudes/<int:solicitud_id>/pendientes/', views_workflow.api_obtener_pendientes_solicitud, name='api_obtener_pendientes_solicitud'),
+    path('api/solicitudes/<int:solicitud_id>/pendientes/agregar/', views_workflow.api_agregar_pendiente_solicitud, name='api_agregar_pendiente_solicitud'),
+    path('api/pendientes/<int:pendiente_solicitud_id>/cambiar-estado/', views_workflow.api_cambiar_estado_pendiente, name='api_cambiar_estado_pendiente'),
+    path('api/pendientes/<int:pendiente_solicitud_id>/eliminar/', views_workflow.api_eliminar_pendiente_solicitud, name='api_eliminar_pendiente_solicitud'),
+    
+    # APIs para Agenda de Firma
+    path('api/agenda-firma/citas/', views_workflow.api_listar_citas_calendario, name='api_listar_citas_calendario'),
+    path('api/agenda-firma/buscar-solicitudes/', views_workflow.api_buscar_solicitudes_agenda, name='api_buscar_solicitudes_agenda'),
+    path('api/agenda-firma/crear-cita/', views_workflow.api_crear_cita_firma, name='api_crear_cita_firma'),
+    path('api/agenda-firma/cita/<int:cita_id>/', views_workflow.api_obtener_cita_firma, name='api_obtener_cita_firma'),
+    path('api/agenda-firma/solicitud/<int:solicitud_id>/', views_workflow.api_obtener_citas_solicitud, name='api_obtener_citas_solicitud'),
+    path('api/agenda-firma/editar-cita/<int:cita_id>/', views_workflow.api_editar_cita_firma, name='api_editar_cita_firma'),
+    path('api/agenda-firma/eliminar-cita/<int:cita_id>/', views_workflow.api_eliminar_cita_firma, name='api_eliminar_cita_firma'),
+    
+    # APIs para Orden de Expediente
+    path('api/orden-expediente/actualizar-documento/', views_workflow.actualizar_documento_orden, name='actualizar_documento_orden'),
+    path('api/orden-expediente/actualizar-orden/', views_workflow.actualizar_orden_documentos, name='actualizar_orden_documentos'),
+    path('api/orden-expediente/agregar-comentario/', views_workflow.agregar_comentario_documento, name='agregar_comentario_documento'),
+    path('api/orden-expediente/obtener-comentario/<int:documento_id>/', views_workflow.obtener_comentario_documento, name='obtener_comentario_documento'),
+    path('api/orden-expediente/marcar-todos/', views_workflow.marcar_todos_documentos, name='marcar_todos_documentos'),
 ]

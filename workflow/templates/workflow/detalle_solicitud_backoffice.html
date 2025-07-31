@@ -271,6 +271,19 @@
 /* Transiciones suaves */
 .tab-modern {
   transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tab-modern:hover {
+  text-decoration: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.tab-modern:focus {
+  outline: none;
+  text-decoration: none;
 }
 
 /* Indicador de proceso secuencial */
@@ -302,6 +315,116 @@
     transform: translateY(-2px);
   }
 }
+
+/* Estilos para enlaces de referencia rápida */
+.quick-links-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #dee2e6;
+}
+
+.quick-link-card {
+  display: block;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.quick-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  text-decoration: none;
+  color: inherit;
+  border-color: #ced4da;
+}
+
+.quick-link-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.1rem;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.quick-link-content {
+  flex-grow: 1;
+}
+
+.quick-link-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #495057;
+  margin-bottom: 2px;
+}
+
+.quick-link-subtitle {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+.quick-link-arrow {
+  color: #adb5bd;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.quick-link-card:hover .quick-link-arrow {
+  color: #495057;
+  transform: translateX(2px);
+}
+
+.quick-link-card-disabled {
+  display: block;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 1rem;
+  color: #6c757d;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  opacity: 0.7;
+}
+
+/* Estilos para información del cliente en header */
+.client-header-info {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.client-name {
+  color: #495057;
+}
+
+.client-name strong {
+  color: #343a40;
+  font-weight: 600;
+}
+
+.client-cedula {
+  color: #495057;
+  font-weight: 500;
+}
+
+.header-info-badge {
+  display: inline-block;
+}
+
+.header-info-badge .badge {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
 </style>
 {% endblock %}
 
@@ -312,102 +435,14 @@
     <div class="col-12">
       <!-- Header Principal -->
       <div class="card mb-4">
-        <div class="backoffice-header">
-          <div class="row align-items-center">
-            <div class="col-lg-8 col-md-7 col-sm-12">
-              <h2 class="mb-2">
-                <i class="fas fa-building me-2"></i>
-                Back Office - Etapa Especializada
-              </h2>
-              <p class="mb-0 opacity-75">
-                <i class="fas fa-file-alt me-1"></i>
-                Solicitud {{ solicitud.codigo }} - {{ solicitud.etapa_actual.nombre }}
-              </p>
-            </div>
-            <div class="col-lg-4 col-md-5 col-sm-12 text-md-end text-center mt-2 mt-md-0">
-              <div class="d-flex align-items-center justify-content-md-end justify-content-center flex-wrap gap-2">
-                {% if solicitud.prioridad %}
-                <span class="badge bg-warning text-dark px-3 py-2">
-                  <i class="fas fa-star"></i> {{ solicitud.prioridad }}
-                </span>
-                {% endif %}
-                
-                <!-- Botón de Reconsideración -->
-                {% if solicitud.resultado_consulta in 'Rechazado,Alternativa' and solicitud.propietario == request.user and not solicitud.es_reconsideracion %}
-                <a href="{% url 'workflow:solicitar_reconsideracion' solicitud.id %}" 
-                   class="btn btn-outline-warning btn-sm d-flex align-items-center">
-                  <i class="fas fa-redo me-2"></i>
-                  Solicitar Reconsideración
-                </a>
-                {% elif solicitud.es_reconsideracion %}
-                <span class="badge bg-info px-3 py-2">
-                  <i class="fas fa-redo me-1"></i>
-                  En Reconsideración
-                </span>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Información del Cliente -->
-        <div class="card-body">
-          <h5 class="mb-3">
-            <i class="fas fa-user-circle"></i> Información del Cliente
-          </h5>
-          <div class="client-info-grid">
-            <div class="info-item">
-              <div class="info-label">Cliente</div>
-              <div class="info-value {% if not solicitud.cliente_nombre_completo %}empty{% endif %}">
-                {{ solicitud.cliente_nombre_completo|default:"Sin especificar" }}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Cédula</div>
-              <div class="info-value {% if not solicitud.cliente_cedula_completa %}empty{% endif %}">
-                {{ solicitud.cliente_cedula_completa|default:"Sin especificar" }}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Producto</div>
-              <div class="info-value {% if not solicitud.producto_solicitado %}empty{% endif %}">
-                {{ solicitud.producto_solicitado|default:"Sin especificar" }}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Monto Solicitado</div>
-              <div class="info-value {% if not solicitud.monto_solicitado %}empty{% endif %}">
-                {% if solicitud.monto_solicitado %}B/. {{ solicitud.monto_solicitado|floatformat:2 }}{% else %}No
-                especificado{% endif %}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Teléfono</div>
-              <div class="info-value {% if not solicitud.cliente_telefono %}empty{% endif %}">
-                {{ solicitud.cliente_telefono|default:"Sin especificar" }}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Email</div>
-              <div class="info-value {% if not solicitud.cliente_email %}empty{% endif %}">
-                {{ solicitud.cliente_email|default:"Sin especificar" }}
-              </div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Estado Actual</div>
-              <div class="info-value {% if not solicitud.estado_actual %}empty{% endif %}">
-                {{ solicitud.estado_actual|default:"Sin especificar" }}
-              </div>
-            </div>
-            <!-- Campo Asignado a temporalmente removido -->
-          </div>
-        </div>
-      </div>
+
 
       <!-- Subestados de Back Office -->
       <div class="card processes-card">
         <div class="card-header processes-header">
           <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
             <div class="d-flex align-items-center">
               <div class="process-icon-container">
                 <i class="fas fa-tasks"></i>
@@ -417,10 +452,41 @@
                 <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
               </div>
             </div>
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
             <div class="process-badge">
               <span class="badge bg-success">
                 <i class="fas fa-check-circle me-1"></i>
-                {{ solicitud.etapa_actual.subestados.count }} Etapas
+                6 Etapas
               </span>
             </div>
           </div>
@@ -430,74 +496,188 @@
           <!-- Pestañas de Navegación Mejoradas -->
           <div class="nav-tabs-container">
             <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
-              {% for subestado in solicitud.etapa_actual.subestados.all %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern {% if subestado.id == solicitud.subestado_actual.id %}active{% endif %}" id="tab-{{ subestado.id }}"
-                  data-bs-toggle="tab" data-bs-target="#content-{{ subestado.id }}" type="button" role="tab"
-                  aria-controls="content-{{ subestado.id }}"
-                  aria-selected="{% if subestado.id == solicitud.subestado_actual.id %}true{% else %}false{% endif %}"
-                  data-subestado-orden="{{ subestado.orden }}"
-                  data-subestado-id="{{ subestado.id }}">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}" 
+                     style="cursor: default; pointer-events: none;">
                   <div class="tab-content-wrapper">
-                    <div class="tab-number">{{ forloop.counter }}</div>
+                    <div class="tab-number">1</div>
                     <div class="tab-text">
-                      <span class="tab-title">{{ subestado.nombre }}</span>
-                      <span class="tab-status">{% if subestado.id == solicitud.subestado_actual.id %}Activo{% else %}En proceso{% endif %}</span>
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
                     </div>
                     <div class="tab-arrow">
                       <i class="fas fa-chevron-right"></i>
                     </div>
                   </div>
-                </button>
+                </div>
               </li>
-              {% empty %}
               <li class="nav-item" role="presentation">
-                <button class="nav-link tab-modern active" disabled>
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
                   <div class="tab-content-wrapper">
-                    <div class="tab-number">!</div>
+                    <div class="tab-number">2</div>
                     <div class="tab-text">
-                      <span class="tab-title">Sin Procesos</span>
-                      <span class="tab-status">No configurado</span>
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
                     </div>
                   </div>
-                </button>
+                </div>
               </li>
-              {% endfor %}
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
             </ul>
           </div>
 
-          <!-- Contenido de las Pestañas -->
-          <div class="tab-content" id="backoffice-content">
-            {% for subestado in solicitud.etapa_actual.subestados.all %}
-            <div class="tab-pane fade {% if subestado.id == solicitud.subestado_actual.id %}show active{% endif %}" id="content-{{ subestado.id }}"
-              role="tabpanel" aria-labelledby="tab-{{ subestado.id }}">
-              <div class="subestado-content-modern">
-                <div class="process-step-header">
-                  <div class="step-indicator">
-                    <span class="step-number">{{ forloop.counter }}</span>
-                    <span class="step-total">/ {{ solicitud.etapa_actual.subestados.count }}</span>
-                  </div>
-                  <div class="subestado-icon">
-                    <i class="fas fa-folder-open"></i>
-                  </div>
-                  <div class="step-status">
-                    <span class="badge bg-primary">
-                      <i class="fas fa-cog me-1"></i>Procesando
-                    </span>
+          <!-- Contenido del Subestado Actual -->
+          {% if solicitud.etapa_actual.subestados.exists %}
+          <div class="subestado-content-modern">
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">1</span>
+                <span class="step-total">/ 6</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-folder-open"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
+            </div>
+
+            <!-- Enlaces de Referencia Rápida -->
+            <div class="quick-links-section mb-4">
+              <div class="row">
+                {% if solicitud.cotizacion %}
+                <div class="col-md-6 mb-2">
+                  <a href="{% url 'cotizacion_detail' solicitud.cotizacion.id %}" class="quick-link-card" target="_blank">
+                    <div class="d-flex align-items-center">
+                      <div class="quick-link-icon bg-primary">
+                        <i class="fas fa-calculator"></i>
+                      </div>
+                      <div class="quick-link-content">
+                        <div class="quick-link-title">Ver Cotización</div>
+                        <div class="quick-link-subtitle">{{ solicitud.cotizacion.codigo|default:"Sin código" }}</div>
+                      </div>
+                      <div class="quick-link-arrow">
+                        <i class="fas fa-external-link-alt"></i>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+                {% endif %}
+                
+                {% if solicitud.cliente %}
+                <div class="col-md-6 mb-2">
+                  <a href="{% url 'cliente_profile' solicitud.cliente.id %}" class="quick-link-card" target="_blank">
+                    <div class="d-flex align-items-center">
+                      <div class="quick-link-icon bg-success">
+                        <i class="fas fa-user"></i>
+                      </div>
+                      <div class="quick-link-content">
+                        <div class="quick-link-title">Ver Cliente</div>
+                        <div class="quick-link-subtitle">{{ solicitud.cliente.nombreCliente|default:"Sin nombre" }}</div>
+                      </div>
+                      <div class="quick-link-arrow">
+                        <i class="fas fa-external-link-alt"></i>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+                {% endif %}
+                
+                {% if solicitud.cotizacion and solicitud.cotizacion.nombreCliente and not solicitud.cliente %}
+                <div class="col-md-6 mb-2">
+                  <div class="quick-link-card-disabled">
+                    <div class="d-flex align-items-center">
+                      <div class="quick-link-icon bg-info">
+                        <i class="fas fa-user-tie"></i>
+                      </div>
+                      <div class="quick-link-content">
+                        <div class="quick-link-title">Cliente (Cotización)</div>
+                        <div class="quick-link-subtitle">{{ solicitud.cotizacion.nombreCliente }}</div>
+                      </div>
+                      <div class="quick-link-arrow">
+                        <i class="fas fa-info-circle"></i>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-
+                {% endif %}
+              </div>
+            </div>
 
                 <!-- Archivos Requeridos Dinámicos -->
-                {% if archivos_por_subestado and subestado.id in archivos_por_subestado %}
-                {% with archivos=archivos_por_subestado|get_item:subestado.id %}
+                {% if archivos_por_subestado and solicitud.subestado_actual.id in archivos_por_subestado %}
+                {% with archivos=archivos_por_subestado|get_item:solicitud.subestado_actual.id %}
                 {% if archivos|length > 0 %}
 
                 <div class="process-details">
                   {% for archivo_info in archivos %}
                   <div class="detail-card archivo-card-mejorada-backoffice"
-                    data-requisito-id="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% else %}{{ archivo_info.requisito.id }}{% endif %}">
+                    data-requisito-id="{{ archivo_info.archivo_actual.id }}">
                     <!-- Header del archivo -->
                     <div class="archivo-header-backoffice">
                       <!-- IZQUIERDA: Información del documento -->
@@ -519,6 +699,23 @@
                             <span class="badge bg-success me-2">
                               <i class="fas fa-check me-1"></i>Completo
                             </span>
+                            
+                            <!-- ✅ Badge de Subsanado en amarillo cuando está marcado como subsanado -->
+                            {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.subsanado %}
+                            <span class="badge bg-warning me-2">
+                              <i class="fas fa-tools me-1"></i>Subsanado
+                            </span>
+                            {% endif %}
+                            
+                            {% if archivo_info.obligatorio %}
+                            <span class="badge bg-danger me-2">
+                              <i class="fas fa-exclamation-circle me-1"></i>Obligatorio
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary me-2">
+                              <i class="fas fa-info-circle me-1"></i>Opcional
+                            </span>
+                            {% endif %}
                             <small class="text-muted">
                               Archivo: {{ archivo_info.archivo_actual.archivo.name|slice:"10:" }}
                             </small>
@@ -528,6 +725,14 @@
                             <span class="badge bg-warning me-2">
                               <i class="fas fa-exclamation-triangle me-1"></i>Pendiente
                             </span>
+                            
+                            <!-- ✅ Badge de Subsanado también para documentos pendientes -->
+                            {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.subsanado %}
+                            <span class="badge bg-warning me-2" style="background-color: #ffc107 !important;">
+                              <i class="fas fa-tools me-1"></i>Subsanado
+                            </span>
+                            {% endif %}
+                            
                             {% if archivo_info.obligatorio %}
                             <small class="text-danger">Obligatorio</small>
                             {% else %}
@@ -551,19 +756,12 @@
                       {% if archivo_info.esta_cumplido and archivo_info.archivo_actual.archivo %}
                       <div class="seccion-ver-descargar-backoffice">
                         <div class="btn-group">
-                          {% if archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".docx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".doc" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".pdf" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".xls" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".xlsx" or archivo_info.archivo_actual.archivo.name|slice:"-4:" == ".ppt" or archivo_info.archivo_actual.archivo.name|slice:"-5:" == ".pptx" %}
-                          <a href="https://docs.google.com/viewer?url={{ request.build_absolute_uri }}{{ archivo_info.archivo_actual.archivo.url }}&embedded=true" target="_blank"
-                            rel="noopener noreferrer" class="btn btn-outline-primary"
-                            title="Ver documento en Google Viewer">
-                            <i class="fas fa-eye"></i> Ver
-                          </a>
-                          {% else %}
+                          <!-- ✅ CORREGIDO: Abrir directamente en el navegador (sin Google Viewer) -->
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" target="_blank"
                             rel="noopener noreferrer" class="btn btn-outline-primary"
-                            title="Ver archivo en nueva pestaña">
+                            title="Ver documento en nueva pestaña">
                             <i class="fas fa-eye"></i> Ver
                           </a>
-                          {% endif %}
                           <a href="{{ archivo_info.archivo_actual.archivo.url }}" download
                             class="btn btn-outline-success" title="Descargar archivo">
                             <i class="fas fa-download"></i> Descargar
@@ -574,42 +772,86 @@
 
                       <!-- DERECHA: Botones de calificación -->
                       <div class="seccion-acciones-derecha-backoffice">
-                        <!-- Botones de Calificación -->
-                        <div class="botones-calificacion-backoffice">
-                          <!-- Bueno -->
-                          <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Marcar como bueno"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-thumbs-up"></i>
-                            <span>Bueno</span>
-                          </button>
-                          <!-- Malo -->
-                          <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Marcar como malo"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-thumbs-down"></i>
-                            <span>Malo</span>
-                          </button>
-                          <!-- Comentarios -->
-                          <button type="button" class="btn comentario-btn-backoffice"
-                            data-requisito="{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}"
-                            title="Ver/Agregar comentarios"
-                            {% if not archivo_info.archivo_actual %}disabled{% endif %}>
-                            <i class="fas fa-comment"></i>
-                            <span>Comentar</span>
-                            <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
-                          </button>
-                        </div>
-                        <!-- Opciones -->
-                        <div class="seccion-opciones">
-                          <button class="btn opciones-dropdown-btn-backoffice" type="button"
-                            onclick="mostrarModalOpciones('{% if archivo_info.archivo_actual %}{{ archivo_info.archivo_actual.id }}{% endif %}', '{{ archivo_info.requisito.nombre }}')"
-                            title="Opciones adicionales">
-                            <i class="fas fa-ellipsis-v"></i>
-                            <span>Opciones</span>
-                          </button>
+                        <!-- Botones de Calificación Optimizados para Checklist -->
+                        <div class="botones-calificacion-backoffice botones-checklist-optimizado">
+                          {% if archivo_info.archivo_actual.archivo %}
+                            <!-- Si tiene archivo: Solo Bueno/Malo (sin Pendiente para ningún tipo) -->
+                            <!-- Bueno -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Marcar como bueno">
+                              <i class="fas fa-thumbs-up"></i>
+                              <span>Bueno</span>
+                            </button>
+                            
+                            <!-- Malo - Abre modal directamente -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'malo' %}activo{% endif %}" data-estado="malo"
+                              title="Marcar como malo"
+                              onclick="mostrarModalOpciones('{{ archivo_info.archivo_actual.id }}', '{{ archivo_info.requisito.nombre }}')">
+                              <i class="fas fa-thumbs-down"></i>
+                              <span>Malo</span>
+                            </button>
+                            
+                            <!-- PENDIENTE - Eliminado: Con archivo no se permite Pendiente -->
+                            
+                            <!-- Comentarios -->
+                            <button type="button" class="btn comentario-btn-backoffice"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Ver/Agregar comentarios">
+                              <i class="fas fa-comment"></i>
+                              <span>Comentar</span>
+                              <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                            </button>
+                          {% else %}
+                            <!-- Si NO tiene archivo: Comportamiento según obligatoriedad -->
+                            <!-- Bueno - Deshabilitado -->
+                            <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
+                              disabled title="Debe subir archivo para calificar como bueno">
+                              <i class="fas fa-thumbs-up"></i>
+                              <span>Bueno</span>
+                            </button>
+                            
+                            <!-- Malo - Deshabilitado -->
+                            <button type="button" class="btn calificar-btn-backoffice" data-estado="malo"
+                              disabled title="Debe subir archivo para calificar como malo">
+                              <i class="fas fa-thumbs-down"></i>
+                              <span>Malo</span>
+                            </button>
+                            
+                            <!-- Pendiente - Solo para documentos opcionales -->
+                            {% if not archivo_info.obligatorio %}
+                            <button type="button" class="btn calificar-btn-backoffice activo" data-estado="pendiente"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Pendiente (Sin archivo)"
+                              data-calificado="pendiente"
+                              style="background-color: #ffc107 !important; border-color: #ffc107 !important; color: #212529 !important; font-weight: bold; box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);">
+                              <i class="fas fa-clock"></i>
+                              <span>Pendiente</span>
+                            </button>
+                            {% endif %}
+                            
+                            <!-- Comentarios -->
+                            <button type="button" class="btn comentario-btn-backoffice"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Ver/Agregar comentarios">
+                              <i class="fas fa-comment"></i>
+                              <span>Comentar</span>
+                              <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
+                            </button>
+                            
+                            <!-- Información adicional -->
+                            <div class="mt-2">
+                              {% if not archivo_info.obligatorio %}
+                                <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sin archivo - Marcado automáticamente como pendiente</small>
+                                <br>
+                                <small class="text-muted">Documento opcional</small>
+                              {% else %}
+                                <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Sin archivo - Requiere subir documento</small>
+                                <br>
+                                <small class="text-danger">Documento requerido</small>
+                              {% endif %}
+                            </div>
+                          {% endif %}
                         </div>
                       </div>
                     </div>
@@ -704,18 +946,28 @@
                 {% endif %}
 
                 <div class="action-buttons">
-                  <button id="btn-control-calidad" class="btn btn-primary me-2" onclick="marcarControlCalidad()">
-                    <i class="fas fa-check-circle me-1"></i>Control de Calidad Realizado
+                  <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+                  <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: none;" onclick="mostrarModalDevolucion()">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    <span>Devolver a Oficial</span>
                   </button>
-                  <button id="btn-avanzar-etapa" type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAvanzarEtapa" disabled>
-                    <i class="fas fa-arrow-right me-1"></i>
-                    Avanzar Etapa
+                  
+                  <!-- Botón de avance - se habilita automáticamente al calificar todos los documentos -->
+                  <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2" onclick="validarDocumentosYAvanzar()" disabled title="Debes calificar todos los documentos antes de avanzar">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    <span id="btn-avanzar-texto">Avanzar</span>
                   </button>
+                  
+                  <!-- Indicador de estado de validación -->
+                  <div id="validacion-estado" class="mt-2">
+                    <small class="text-muted">
+                      <i class="fas fa-check-circle text-success me-1"></i>
+                      <span id="validacion-mensaje">Listo para avanzar</span>
+                    </small>
+                  </div>
                 </div>
               </div>
-            </div>
-            {% empty %}
-            <div class="tab-pane fade show active">
+            {% else %}
               <div class="subestado-content-modern">
                 <div class="alert alert-warning text-center">
                   <div class="subestado-icon">
@@ -732,52 +984,7 @@
                   </div>
                 </div>
               </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Barra de Progreso del Workflow -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-chart-line"></i> Progreso del Workflow
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="workflow-progress">
-            <div class="progress-info mb-3">
-              <div class="d-flex justify-content-between">
-                <span class="fw-bold">Progreso Actual</span>
-                <span class="text-muted">{{ solicitud.subestado_actual.orden|default:1 }} de {{ solicitud.etapa_actual.subestados.count }}
-                  procesos</span>
-              </div>
-            </div>
-            <div class="progress progress-custom mb-3">
-              <div class="progress-bar bg-success" role="progressbar"
-                style="width: {% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}%"
-                aria-valuenow="{% widthratio solicitud.subestado_actual.orden|default:1 solicitud.etapa_actual.subestados.count 100 %}" aria-valuemin="0"
-                aria-valuemax="100"></div>
-            </div>
-            <div class="progress-steps">
-              {% for subestado in solicitud.etapa_actual.subestados.all %}
-              <div class="step-item {% if subestado.id == solicitud.subestado_actual.id %}active{% elif subestado.orden < solicitud.subestado_actual.orden %}completed{% endif %}">
-                <div class="step-circle">
-                  {% if subestado.id == solicitud.subestado_actual.id %}
-                  <i class="fas fa-check"></i>
-                  {% elif subestado.orden < solicitud.subestado_actual.orden %}
-                  <i class="fas fa-check"></i>
-                  {% else %} 
-                  {{ forloop.counter }} 
-                  {% endif %}
-                </div>
-                <div class="step-label">
-                  {{ subestado.nombre|truncatechars:20 }}
-                </div>
-              </div>
-              {% endfor %}
-            </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -822,7 +1029,7 @@
                   </div>
                   <div class="member-details">
                     <div class="member-name">
-                      {{ solicitud.asignado_a|default:"Sin asignar" }}
+                      {{ solicitud.asignada_a|default:"Sin asignar" }}
                     </div>
                     <div class="member-role">Analista Back Office</div>
                   </div>
@@ -861,9 +1068,12 @@
       // Mostrar notificación de éxito
       showToast('Estado de archivos actualizado correctamente', 'success');
 
-      // Recargar la página para mostrar datos actualizados
-      location.reload();
-    }, 2000);
+      // Mostrar mensaje y recargar
+      mostrarMensaje('Estado de archivos actualizado correctamente', 'success');
+      setTimeout(() => {
+        location.reload();
+      }, 800);
+    }, 2000); // Simular actualización
   }
   
   function marcarControlCalidad() {
@@ -1273,7 +1483,7 @@
         // Actualizar pestañas y recargar después de un breve delay
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 800);
       } else {
         console.error(`Error en ${accion} automático:`, data.message);
         mostrarMensaje(data.message || `Error al ${accion === 'retroceso' ? 'retroceder' : 'avanzar'} subestado`, 'error');
@@ -1327,8 +1537,9 @@
       // Buscar todos los botones de calificación en esta card
       const botonesBueno = card.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"]');
       const botonesMalo = card.querySelectorAll('.calificar-btn-backoffice[data-estado="malo"]');
+      const botonesPendiente = card.querySelectorAll('.calificar-btn-backoffice[data-estado="pendiente"]');
       
-      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} botones buenos, ${botonesMalo.length} botones malos`);
+      console.log(`📊 Requisito ${requisitoId}: ${botonesBueno.length} buenos, ${botonesMalo.length} malos, ${botonesPendiente.length} pendientes`);
       
       // Verificar si debe estar marcado como bueno o malo basado en el estado guardado
       // Esta función se ejecutará después de que actualizarEstadoCalificacion haya hecho su trabajo
@@ -1373,6 +1584,16 @@
           console.log('Llamando a actualizarEstadoCalificacion...');
           actualizarEstadoCalificacion(requisitoId, estado, data.data || { usuario: 'Usuario actual' });
           
+          // ✅ INDICADOR VISUAL: Mostrar que se está verificando el botón
+          const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+          if (btnAvanzar) {
+            const textoOriginal = btnAvanzar.innerHTML;
+            btnAvanzar.innerHTML = '<i class="fas fa-sync fa-spin me-2"></i>Verificando...';
+            setTimeout(() => {
+              btnAvanzar.innerHTML = textoOriginal;
+            }, 1000); // Mostrar "Verificando..." por 1 segundo
+          }
+          
           // Preservar estado después de un breve delay
           setTimeout(() => {
             console.log('Preservando estado después de calificación...');
@@ -1392,6 +1613,11 @@
                 req.elemento.classList.add('documento-pendiente');
               }
             });
+            
+            // ✅ SOLO USAR BACKEND: No más lógica JavaScript local confusa
+            setTimeout(() => {
+              verificarEstadoInicialBotonAvanzar(); // Solo consultar el backend
+            }, 200); // Pequeño delay para que el DOM se actualice primero
             
             // Si todos los documentos están calificados, mostrar mensaje informativo
             if (verificacion.todoCalificado) {
@@ -1803,6 +2029,12 @@
           btn.style.color = 'white !important';
           btn.style.fontWeight = 'bold';
           btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+        } else if (estado === 'pendiente') {
+          btn.style.backgroundColor = '#ffc107 !important';
+          btn.style.borderColor = '#ffc107 !important';
+          btn.style.color = '#212529 !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
         }
       });
     }, 1000);
@@ -2195,8 +2427,11 @@
                               requisito.querySelector('h5')?.textContent?.trim() || 
                               `Requisito ${requisitoId}`;
       
-      // Verificar si tiene algún botón activo (calificado)
-      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.active, .calificar-btn-backoffice.active');
+      // Verificar si tiene algún botón activo (calificado) - usando la clase correcta 'activo'
+      const botonesCalificados = requisito.querySelectorAll('.calificar-btn.activo, .calificar-btn-backoffice.activo');
+      
+      // Verificar si tiene un botón "pendiente" (solo para documentos opcionales)
+      const botonPendiente = requisito.querySelector('.calificar-btn-backoffice[data-estado="pendiente"].activo');
       
       if (botonesCalificados.length === 0) {
         // Este requisito no ha sido calificado
@@ -2205,6 +2440,10 @@
           nombre: requisitoNombre,
           elemento: requisito
         });
+      } else if (botonPendiente) {
+        // Si tiene un botón pendiente activo, NO lo consideramos como bloqueante
+        // ya que los documentos opcionales "Pendiente" no bloquean el avance
+        console.log(`✅ Documento opcional "${requisitoNombre}" marcado como Pendiente - No bloquea el avance`);
       }
     });
 
@@ -2440,6 +2679,11 @@
     fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
       .then(response => response.json())
       .then(data => {
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
         // Mostrar mensaje sobre la búsqueda flexible
         const mensajeFlexible = `
           <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
@@ -2468,7 +2712,7 @@
         
         const container = document.getElementById('resultadosEntrevistas');
         container.innerHTML = mensajeFlexible;
-        mostrarResultadosEntrevistas(data.entrevistas, cedula);
+        mostrarResultadosEntrevistas(data.entrevistas || [], cedula);
       })
       .catch(error => {
         console.error('Error:', error);
@@ -2495,7 +2739,12 @@
     fetch(`/workflow/buscar-entrevistas/?q=${encodeURIComponent(termino)}&cedula=${encodeURIComponent(clienteCedula)}`)
       .then(response => response.json())
       .then(data => {
-        mostrarResultadosEntrevistas(data.entrevistas, clienteCedula);
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
+        mostrarResultadosEntrevistas(data.entrevistas || [], clienteCedula);
       })
       .catch(error => {
         console.error('Error:', error);
@@ -2506,6 +2755,12 @@
 
   function mostrarResultadosEntrevistas(entrevistas, cedula) {
     const container = document.getElementById('resultadosEntrevistas');
+    
+    // ✅ VALIDACIÓN: Asegurar que entrevistas sea un array válido
+    if (!entrevistas || !Array.isArray(entrevistas)) {
+      console.warn('Entrevistas no es un array válido:', entrevistas);
+      entrevistas = []; // Usar array vacío como fallback
+    }
     
     // Función para comparar similitud entre cédulas
     function compararCedulas(cedula1, cedula2) {
@@ -2917,9 +3172,16 @@
   }
 
   function confirmarAsociacion() {
-    if (!entrevistaSeleccionadaId) return;
+    console.log('🔍 DEBUG - Iniciando confirmarAsociacion');
+    console.log('  - entrevistaSeleccionadaId:', entrevistaSeleccionadaId);
+    
+    if (!entrevistaSeleccionadaId) {
+      console.log('❌ No hay entrevista seleccionada');
+      return;
+    }
     
     const solicitudId = {{ solicitud.id }};
+    console.log('  - solicitudId:', solicitudId);
     
     // Mostrar loading en el botón
     const btn = document.getElementById('btnConfirmarAsociacion');
@@ -2927,18 +3189,26 @@
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
     btn.disabled = true;
     
+    // Obtener token CSRF
+    const csrfToken = getCsrfToken();
+    console.log('  - CSRF Token:', csrfToken ? 'Presente' : 'AUSENTE');
+    
+    const requestData = {
+      solicitud_id: solicitudId,
+      entrevista_id: entrevistaSeleccionadaId,
+      accion: 'asociar'
+    };
+    console.log('  - Datos a enviar:', requestData);
+    
     // Realizar asociación AJAX
+    console.log('🚀 Enviando fetch request...');
     fetch('/workflow/asociar-entrevista/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
+        'X-CSRFToken': csrfToken
       },
-      body: JSON.stringify({
-        solicitud_id: solicitudId,
-        entrevista_id: entrevistaSeleccionadaId,
-        accion: 'asociar'
-      })
+      body: JSON.stringify(requestData)
     })
     .then(response => response.json())
     .then(data => {
@@ -2955,12 +3225,20 @@
         }, 1500);
         
       } else {
-        mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+        // Manejo específico para entrevistas ya asociadas a esta solicitud
+        if (data.ya_asociada) {
+          mostrarMensaje('Esta entrevista ya está asociada a esta solicitud', 'warning');
+        } else {
+          mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+        }
       }
     })
     .catch(error => {
-      console.error('Error:', error);
-      mostrarMensaje('Error al asociar entrevista', 'error');
+      console.error('❌ Fetch error completo:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      mostrarMensaje(`Error al asociar entrevista: ${error.message}`, 'error');
     })
     .finally(() => {
       btn.innerHTML = originalText;
@@ -3002,6 +3280,8 @@
       mostrarMensaje('Error al desasociar entrevista', 'error');
     });
   }
+
+  // ✅ Función de reasociación removida - Ya no es necesaria porque se permiten múltiples asociaciones
 
   function verDetallesEntrevista(entrevistaId) {
     // Abrir modal o página con detalles de la entrevista
@@ -3154,6 +3434,969 @@
     return cookieValue;
   }
 
+// Función para validar documentos consultando la base de datos
+function validarDocumentosYAvanzar() {
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
+}
+
+// ========================================
+// FUNCIONES PARA DEVOLUCIÓN A OFICIAL
+// ========================================
+
+// Variable global para almacenar transiciones negativas
+let transicionesNegativas = [];
+
+// Función para cargar transiciones negativas al cargar la página
+function cargarTransicionesNegativas() {
+  const solicitudId = {{ solicitud.id }};
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      console.log('🔄 Transiciones negativas:', data);
+      
+      if (data.success && data.tiene_transiciones_negativas) {
+        transicionesNegativas = data.transiciones_negativas;
+        
+        // Mostrar botón de devolver
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          btnDevolver.style.display = 'inline-block';
+          
+          // Actualizar texto del botón si hay múltiples transiciones
+          if (transicionesNegativas.length === 1) {
+            btnDevolver.querySelector('span').textContent = transicionesNegativas[0].nombre;
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando transiciones negativas:', error);
+    });
+}
+
+// Función para mostrar modal de devolución
+function mostrarModalDevolucion() {
+  console.log('📋 Mostrando modal de devolución...');
+  
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles.');
+    return;
+  }
+  
+  // Cargar información de la transición
+  const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
+  document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+  
+  // Cargar documentos problemáticos
+  cargarDocumentosProblematicos();
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+  modal.show();
+}
+
+// ✅ MEJORADO: Función para cargar documentos problemáticos (MALOS + PENDIENTES) 
+function cargarDocumentosProblematicos() {
+  const solicitudId = {{ solicitud.id }};
+  
+  console.log(`🔍 Cargando documentos problemáticos para solicitud ${solicitudId}`);
+  
+  // Obtener tanto pendientes como malos
+  Promise.all([
+    fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`).then(r => r.json()),
+    fetch(`/workflow/api/calificaciones/${solicitudId}/estado/malo/`).then(r => r.json()).catch(error => {
+      console.error('❌ Error en API de documentos malos:', error);
+      return {success: false, error: error.message};
+    })
+  ])
+  .then(([dataPendientes, dataMalos]) => {
+    console.log('📊 Datos pendientes:', dataPendientes);
+    console.log('📊 Datos malos:', dataMalos);
+    
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    let html = '';
+    let totalProblematicos = 0;
+    
+    // 1. ✅ PROCESAR DOCUMENTOS MALOS (rechazados) - CONSULTA DIRECTA BD
+    console.log('🔍 Verificando documentos MALOS...');
+    console.log('📊 Respuesta API malos:', dataMalos);
+    
+    if (dataMalos && dataMalos.success === true && dataMalos.calificaciones) {
+      console.log(`✅ API exitosa - ${dataMalos.calificaciones.length} calificaciones encontradas`);
+      
+      dataMalos.calificaciones.forEach(calificacion => {
+        console.log('📋 Calificación:', {
+          id: calificacion.id,
+          estado: calificacion.estado,
+          nombre: calificacion.requisito_solicitud?.requisito?.nombre
+        });
+        
+        // Solo procesar si el estado es exactamente 'malo'
+        if (calificacion.estado === 'malo') {
+          const nombreDoc = calificacion.requisito_solicitud?.requisito?.nombre || 'Documento sin nombre';
+          
+          html += `
+            <div class="d-flex align-items-center mb-2 p-2" style="background: #fee2e2; border-radius: 6px; border-left: 4px solid #dc2626;">
+              <i class="fas fa-times-circle text-danger me-2"></i>
+              <span class="fw-medium">${nombreDoc}</span>
+              <span class="badge bg-danger ms-auto">Rechazado</span>
+            </div>
+          `;
+          totalProblematicos++;
+          console.log(`➕ AGREGADO documento malo: ${nombreDoc}`);
+        } else {
+          console.log(`⏭️ Saltado - estado: ${calificacion.estado}`);
+        }
+      });
+      
+      console.log(`📊 Total documentos malos procesados: ${totalProblematicos}`);
+    } else {
+      console.log('⚠️ No hay documentos malos:');
+      console.log('   - Success:', dataMalos?.success);
+      console.log('   - Calificaciones:', dataMalos?.calificaciones?.length);
+      console.log('   - Message:', dataMalos?.message);
+      if (dataMalos?.error) {
+        console.log('❌ Error API:', dataMalos.error);
+      }
+    }
+    
+    // 2. Agregar documentos PENDIENTES
+    console.log('🔍 Verificando documentos PENDIENTES...');
+    if (dataPendientes.success && dataPendientes.documentos_pendientes && dataPendientes.documentos_pendientes.length > 0) {
+      console.log(`✅ Encontrados ${dataPendientes.documentos_pendientes.length} documentos pendientes`);
+      dataPendientes.documentos_pendientes.forEach(doc => {
+        html += `
+          <div class="d-flex align-items-center mb-2 p-2" style="background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            <span class="fw-medium">${doc.nombre}</span>
+            <span class="badge bg-warning ms-auto">Pendiente</span>
+          </div>
+        `;
+        totalProblematicos++;
+        console.log(`➕ Agregado documento pendiente: ${doc.nombre}`);
+      });
+    } else {
+      console.log('⚠️ No hay documentos pendientes o respuesta inválida');
+    }
+    
+    // 3. Mostrar resultado
+    console.log(`📊 Total documentos problemáticos: ${totalProblematicos}`);
+    if (totalProblematicos > 0) {
+      listaContainer.innerHTML = html;
+      console.log(`✅ Mostrando ${totalProblematicos} documentos problemáticos`);
+    } else {
+      listaContainer.innerHTML = `
+        <div class="text-center text-muted">
+          <i class="fas fa-check-circle text-success me-2"></i>
+          No hay documentos problemáticos detectados
+        </div>
+      `;
+      console.log('ℹ️ No hay documentos problemáticos para mostrar');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error cargando documentos problemáticos:', error);
+    document.getElementById('lista-documentos-problematicos').innerHTML = `
+      <div class="text-center text-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Error al cargar documentos
+      </div>
+    `;
+  });
+}
+
+
+
+// ✅ MEJORADO: Función para confirmar devolución con correo automático
+function confirmarDevolucion() {
+  const motivo = document.getElementById('motivo-devolucion').value.trim();
+  
+  if (!motivo) {
+    alert('Por favor, ingresa el motivo de la devolución.');
+    document.getElementById('motivo-devolucion').focus();
+    return;
+  }
+  
+  if (transicionesNegativas.length === 0) {
+    alert('No hay transiciones negativas disponibles.');
+    return;
+  }
+  
+  const transicion = transicionesNegativas[0];
+  const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+  const textoOriginal = btnConfirmar.innerHTML;
+  
+  // Mostrar loading
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+  btnConfirmar.disabled = true;
+  
+  console.log(`🚨 Devolviendo solicitud {{ solicitud.id }} a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+  
+  // 🚨 USAR NUEVA API DE DEVOLUCIÓN CON CORREO
+  fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      solicitud_id: {{ solicitud.id }},
+      transicion_id: transicion.id,
+      motivo: motivo
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // ✅ Mostrar mensaje de éxito con información del correo
+      const mensaje = `
+        ✅ Solicitud devuelta exitosamente a ${data.data.nueva_etapa}
+        
+        📧 Se ha enviado un correo automático al propietario con:
+        • Lista de documentos problemáticos (${data.data.documentos_problematicos})
+        • Motivo de devolución
+        • Instrucciones para corrección
+        
+        Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com
+      `;
+      
+      alert(mensaje);
+      
+      // Cerrar modal y redirigir
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+      modal.hide();
+      
+      // Redirigir según la URL proporcionada por la API
+      window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+      
+    } else {
+      alert(`❌ Error al devolver solicitud: ${data.message || data.error}`);
+      
+      // Restaurar botón
+      btnConfirmar.innerHTML = textoOriginal;
+      btnConfirmar.disabled = false;
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error en devolución:', error);
+    alert('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.');
+    
+    // Restaurar botón
+    btnConfirmar.innerHTML = textoOriginal;
+    btnConfirmar.disabled = false;
+  });
+}
+
+// ========================================
+// FUNCIONES AUXILIARES
+// ========================================
+
+// Función para obtener el token CSRF
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+// ========================================
+// FUNCIONES DEL MODAL DE AVANCE
+// ========================================
+
+// Función para cargar información del modal cuando se abre
+function cargarInformacionAvance() {
+  console.log('🔄 Cargando información de avance...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar loading
+  document.getElementById('avance-loading').style.display = 'block';
+  document.getElementById('avance-error').style.display = 'none';
+  document.getElementById('estado-documentos').style.display = 'none';
+  
+  // Cargar siguiente subestado Y validar documentos en paralelo
+  Promise.all([
+    fetch(`/workflow/api/solicitudes/${solicitudId}/siguiente-subestado/`),
+    fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`)
+  ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([subestadoData, validacionData]) => {
+      console.log('📊 Información de subestado:', subestadoData);
+      console.log('📊 Validación de documentos:', validacionData);
+      
+      // Actualizar información del siguiente paso
+      if (subestadoData.success) {
+        window.siguientePaso = subestadoData;
+        
+        if (subestadoData.siguiente_subestado) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_subestado.nombre;
+        } else if (subestadoData.siguiente_etapa) {
+          document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_etapa.nombre;
+        } else {
+          document.getElementById('avanzar-siguiente-subestado').textContent = 'Fin del proceso';
+        }
+      } else {
+        document.getElementById('avanzar-siguiente-subestado').textContent = 'Error al cargar';
+      }
+      
+      // Mostrar estado de documentos
+      if (validacionData.success) {
+        mostrarEstadoDocumentos(validacionData);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('avanzar-siguiente-subestado').textContent = 'Error de conexión';
+    })
+    .finally(() => {
+      document.getElementById('avance-loading').style.display = 'none';
+    });
+  
+  // Cargar usuarios disponibles
+  cargarUsuariosDisponiblesAvance();
+}
+
+// Función para mostrar el estado de documentos en el modal
+function mostrarEstadoDocumentos(data) {
+  console.log('📋 Mostrando estado de documentos:', data);
+  
+  // Mostrar la sección de estado de documentos
+  document.getElementById('estado-documentos').style.display = 'block';
+  
+  // Actualizar contadores
+  document.getElementById('documentos-total-count').textContent = data.total_documentos || 0;
+  document.getElementById('documentos-buenos-count').textContent = data.documentos_buenos || 0;
+  document.getElementById('documentos-malos-count').textContent = data.documentos_malos || 0;
+  document.getElementById('documentos-pendientes-count').textContent = data.documentos_pendientes_count || data.documentos_pendientes?.length || 0;
+  
+  // Mostrar lista de documentos pendientes si existen
+  const listaPendientes = document.getElementById('lista-documentos-pendientes');
+  const sinPendientes = document.getElementById('sin-documentos-pendientes');
+  const listaPendientesContainer = document.getElementById('documentos-pendientes-lista');
+  
+  if (data.documentos_pendientes && data.documentos_pendientes.length > 0) {
+    // Hay documentos pendientes - mostrar lista
+    listaPendientes.style.display = 'block';
+    sinPendientes.style.display = 'none';
+    
+    // Limpiar lista anterior
+    listaPendientesContainer.innerHTML = '';
+    
+    // Agregar cada documento pendiente
+    data.documentos_pendientes.forEach((doc, index) => {
+      const docElement = document.createElement('div');
+      docElement.className = 'mb-2';
+      docElement.innerHTML = `
+        <div class="d-flex align-items-center p-2" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+          <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; background: #f59e0b; color: white; flex-shrink: 0;">
+            <i class="fas fa-clock" style="font-size: 12px;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-bold" style="color: #92400e; font-size: 0.9rem;">${doc.nombre}</div>
+            <small style="color: #b45309;">Documento opcional sin archivo - marcado como pendiente</small>
+          </div>
+          <div class="badge" style="background: #f59e0b; color: white; font-size: 0.75rem;">
+            Pendiente
+          </div>
+        </div>
+      `;
+      listaPendientesContainer.appendChild(docElement);
+    });
+    
+  } else {
+    // No hay documentos pendientes
+    listaPendientes.style.display = 'none';
+    sinPendientes.style.display = 'block';
+  }
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvance() {
+  console.log('👥 Cargando usuarios disponibles...');
+  
+  fetch('/workflow/api/usuarios/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarUsuariosEnTabla(data.usuarios);
+      } else {
+        mostrarErrorAvance('Error al cargar usuarios: ' + (data.message || 'Error desconocido'));
+      }
+    })
+    .catch(error => {
+      console.error('Error cargando usuarios:', error);
+      mostrarErrorAvance('Error de conexión al cargar usuarios');
+    });
+}
+
+// Función para mostrar usuarios en la tabla
+function mostrarUsuariosEnTabla(usuarios) {
+  console.log('📋 Mostrando usuarios en tabla:', usuarios.length);
+  
+  const tbody = document.getElementById('lista-usuarios-avance');
+  const contador = document.getElementById('contador-usuarios-avance');
+  
+  if (!usuarios || usuarios.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay usuarios disponibles</td></tr>';
+    contador.textContent = '0';
+    return;
+  }
+  
+  let html = '';
+  usuarios.forEach((usuario, index) => {
+    const avatarUrl = usuario.profile_picture || '/static/images/profile.png';
+    const grupos = 'Sin información de grupos';
+    const roleBadge = '';
+    const adminBadge = '';
+    
+    html += `
+      <tr id="usuario-row-${usuario.id}" style="cursor: pointer;" onclick="seleccionarUsuarioAvance(${usuario.id}, '${usuario.full_name}')">
+        <td>${index + 1}</td>
+        <td>
+          <img src="${avatarUrl}" alt="Avatar" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+        </td>
+        <td>
+          <div>
+            <strong>${usuario.full_name}</strong>
+            <div class="small text-muted">@${usuario.username}</div>
+          </div>
+        </td>
+        <td>
+          <div class="small">${usuario.email}</div>
+        </td>
+        <td>
+          <div class="small">${grupos}</div>
+          <div>${roleBadge} ${adminBadge}</div>
+        </td>
+        <td>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); seleccionarUsuarioAvance(${usuario.id}, '${usuario.full_name}')">
+            <i class="fas fa-check"></i> Seleccionar
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+  contador.textContent = usuarios.length;
+}
+
+// Función para seleccionar opción (yo, otro, o bandeja)
+function seleccionarOpcionAvance(opcion) {
+  console.log('🎯 Opción seleccionada:', opcion);
+  
+  // Resetear todos los botones
+  document.getElementById('btn-continuar-yo').classList.remove('btn-primary');
+  document.getElementById('btn-continuar-yo').classList.add('btn-outline-primary');
+  document.getElementById('btn-asignar-otro').classList.remove('btn-success');
+  document.getElementById('btn-asignar-otro').classList.add('btn-outline-success');
+  document.getElementById('btn-bandeja-grupal').classList.remove('btn-warning');
+  document.getElementById('btn-bandeja-grupal').classList.add('btn-outline-warning');
+  
+  // Activar botón seleccionado y configurar estado
+  if (opcion === 'yo') {
+    document.getElementById('btn-continuar-yo').classList.remove('btn-outline-primary');
+    document.getElementById('btn-continuar-yo').classList.add('btn-primary');
+    document.getElementById('seccion-asignar-usuario').style.display = 'none';
+    document.getElementById('btn-confirmar-avance').disabled = false;
+    window.opcionSeleccionada = 'yo';
+    window.usuarioSeleccionadoId = null;
+  } else if (opcion === 'otro') {
+    document.getElementById('btn-asignar-otro').classList.remove('btn-outline-success');
+    document.getElementById('btn-asignar-otro').classList.add('btn-success');
+    document.getElementById('seccion-asignar-usuario').style.display = 'block';
+    document.getElementById('btn-confirmar-avance').disabled = true;
+    window.opcionSeleccionada = 'otro';
+    window.usuarioSeleccionadoId = null;
+  } else if (opcion === 'bandeja') {
+    document.getElementById('btn-bandeja-grupal').classList.remove('btn-outline-warning');
+    document.getElementById('btn-bandeja-grupal').classList.add('btn-warning');
+    document.getElementById('seccion-asignar-usuario').style.display = 'none';
+    document.getElementById('btn-confirmar-avance').disabled = false;
+    window.opcionSeleccionada = 'bandeja';
+    window.usuarioSeleccionadoId = null;
+  }
+}
+
+// Función para seleccionar usuario
+function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
+  console.log('👤 Usuario seleccionado:', usuarioId, usuarioNombre);
+  
+  // Remover selección anterior
+  document.querySelectorAll('#lista-usuarios-avance tr').forEach(row => {
+    row.classList.remove('table-success');
+    row.style.backgroundColor = '';
+  });
+  
+  // Marcar fila seleccionada
+  const row = document.getElementById(`usuario-row-${usuarioId}`);
+  if (row) {
+    row.classList.add('table-success');
+    row.style.backgroundColor = '#d1edff';
+  }
+  
+  // Habilitar botón de confirmar
+  document.getElementById('btn-confirmar-avance').disabled = false;
+  
+  // Guardar selección
+  window.usuarioSeleccionadoId = usuarioId;
+  window.usuarioSeleccionadoNombre = usuarioNombre;
+}
+
+// Función para confirmar el avance
+function confirmarAvance() {
+  console.log('✅ Confirmando avance...');
+  
+  const solicitudId = {{ solicitud.id }};
+  const opcion = window.opcionSeleccionada;
+  const usuarioId = window.usuarioSeleccionadoId;
+  
+  if (!opcion) {
+    alert('Por favor selecciona una opción (Continuar Yo, Asignar a Otro Usuario, o Devolver a Bandeja Grupal)');
+    return;
+  }
+  
+  if (opcion === 'otro' && !usuarioId) {
+    alert('Por favor selecciona un usuario');
+    return;
+  }
+  
+  // Deshabilitar botón y mostrar loading
+  const btn = document.getElementById('btn-confirmar-avance');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+  
+  // Preparar datos
+  const data = {
+    opcion: opcion
+  };
+  
+  if (opcion === 'otro') {
+    data.usuario_id = usuarioId;
+  } else if (opcion === 'bandeja') {
+    // Para bandeja grupal, no asignamos a un usuario específico (usuario_asignado = null)
+    data.usuario_id = null;
+  }
+  
+  // Agregar información del siguiente paso
+  if (window.siguientePaso) {
+    if (window.siguientePaso.siguiente_subestado) {
+      data.siguiente_subestado_id = window.siguientePaso.siguiente_subestado.id;
+    }
+    // Si no hay siguiente subestado, la API manejará la transición a la siguiente etapa
+  }
+  
+  console.log('📤 Enviando datos:', data);
+  
+  // Enviar solicitud
+  fetch(`/workflow/api/solicitudes/${solicitudId}/avanzar-subestado/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestado'));
+      modal.hide();
+      
+      // Mostrar mensaje de éxito
+      alert('✅ ' + (data.mensaje || data.message || 'Avance completado exitosamente'));
+      
+      // Redirigir según la opción
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        window.location.reload();
+      }
+    } else {
+      mostrarErrorAvance(data.error || data.message || 'Error al avanzar subestado');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    mostrarErrorAvance('Error de conexión');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  });
+}
+
+// Función para mostrar errores en el modal
+function mostrarErrorAvance(mensaje) {
+  console.error('❌ Error en avance:', mensaje);
+  
+  document.getElementById('avance-error-mensaje').textContent = mensaje;
+  document.getElementById('avance-error').style.display = 'block';
+  
+  setTimeout(() => {
+    document.getElementById('avance-error').style.display = 'none';
+  }, 5000);
+}
+
+// Función para configurar búsqueda de usuarios
+function configurarBusquedaUsuarios() {
+  const input = document.getElementById('buscar-usuario-avance');
+  const btnLimpiar = document.getElementById('limpiar-busqueda-avance');
+  
+  if (input) {
+    input.addEventListener('input', function() {
+      filtrarUsuarios(this.value);
+    });
+  }
+  
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener('click', function() {
+      input.value = '';
+      filtrarUsuarios('');
+    });
+  }
+}
+
+// Función para filtrar usuarios
+function filtrarUsuarios(termino) {
+  const filas = document.querySelectorAll('#lista-usuarios-avance tr');
+  let contador = 0;
+  
+  filas.forEach(fila => {
+    if (fila.querySelector('td')) { // Evitar header
+      const texto = fila.textContent.toLowerCase();
+      const visible = texto.includes(termino.toLowerCase());
+      fila.style.display = visible ? '' : 'none';
+      if (visible) contador++;
+    }
+  });
+  
+  document.getElementById('contador-usuarios-avance').textContent = contador;
+}
+
+// Event listener para cuando se abre el modal
+  // ✅ NUEVA FUNCIÓN: Verificar y habilitar botón Avanzar automáticamente
+  function verificarYHabilitarBotonAvanzar() {
+    console.log('🔍 Verificando si se puede habilitar el botón Avanzar...');
+    
+    const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+    if (!btnAvanzar) {
+      console.log('❌ Botón Avanzar no encontrado');
+      return;
+    }
+    
+    // Buscar todos los documentos que tienen botones de calificación (bueno/malo/pendiente)
+    const documentosConBotones = document.querySelectorAll('.calificar-btn-backoffice[data-estado="bueno"], .calificar-btn-backoffice[data-estado="malo"], .calificar-btn-backoffice[data-estado="pendiente"]');
+    
+    if (documentosConBotones.length === 0) {
+      console.log('ℹ️ No hay documentos para calificar');
+      btnAvanzar.disabled = false; // Habilitar si no hay documentos que calificar
+      btnAvanzar.title = 'Listo para avanzar';
+      return;
+    }
+    
+    // Agrupar botones por requisito ID
+    const documentosPorRequisito = {};
+    documentosConBotones.forEach(btn => {
+      const requisitoId = btn.getAttribute('data-requisito');
+      if (requisitoId) {
+        if (!documentosPorRequisito[requisitoId]) {
+          documentosPorRequisito[requisitoId] = [];
+        }
+        documentosPorRequisito[requisitoId].push(btn);
+      }
+    });
+    
+    const requisitosIds = Object.keys(documentosPorRequisito);
+    console.log(`📋 Encontrados ${requisitosIds.length} documentos para verificar`);
+    
+    let todosCalificados = true;
+    let contadorCalificados = 0;
+    let documentosPendientes = 0;
+    
+    // Verificar cada requisito
+    requisitosIds.forEach(requisitoId => {
+      const botones = documentosPorRequisito[requisitoId];
+      const tieneActivo = botones.some(btn => btn.classList.contains('activo'));
+      const esPendiente = botones.some(btn => btn.classList.contains('activo') && btn.getAttribute('data-estado') === 'pendiente');
+      
+      if (tieneActivo) {
+        contadorCalificados++;
+        if (esPendiente) {
+          documentosPendientes++;
+          console.log(`✅ Documento opcional ${requisitoId}: Marcado como Pendiente (No bloquea)`);
+        } else {
+          console.log(`✅ Documento ${requisitoId}: Calificado`);
+        }
+      } else {
+        todosCalificados = false;
+        console.log(`⏳ Documento ${requisitoId}: Sin calificar`);
+      }
+    });
+    
+    console.log(`📊 Progreso: ${contadorCalificados}/${requisitosIds.length} documentos calificados (${documentosPendientes} opcionales pendientes)`);
+    
+    // Habilitar/deshabilitar botón basado en el resultado
+    if (todosCalificados) {
+      btnAvanzar.disabled = false;
+      btnAvanzar.title = 'Todos los documentos calificados - Listo para avanzar';
+      btnAvanzar.classList.add('btn-pulsating'); // Clase visual opcional
+      console.log('✅ Botón Avanzar HABILITADO - Todos los documentos calificados');
+      
+      // Mostrar mensaje de confirmación
+      const documentosReales = contadorCalificados - documentosPendientes;
+      let mensaje = `¡Perfecto! Todos los documentos han sido calificados. Ya puedes avanzar.`;
+      if (documentosPendientes > 0) {
+        mensaje = `¡Perfecto! Todos los documentos obligatorios han sido calificados (${documentosReales} calificados, ${documentosPendientes} opcionales pendientes). Ya puedes avanzar.`;
+      }
+      mostrarMensaje(mensaje, 'success');
+      
+    } else {
+      btnAvanzar.disabled = true;
+      btnAvanzar.title = `Faltan ${requisitosIds.length - contadorCalificados} documentos por calificar`;
+      btnAvanzar.classList.remove('btn-pulsating');
+      console.log(`⏳ Botón Avanzar DESHABILITADO - Faltan ${requisitosIds.length - contadorCalificados} documentos por calificar`);
+    }
+  }
+
+  // ✅ SOLUCIÓN PARA PROBLEMA DE ARCHIVOS: Detectar subidas exitosas y actualizar
+function detectarCambiosEnArchivos() {
+  // Interceptar llamadas fetch exitosas relacionadas con archivos
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    return originalFetch.apply(this, args)
+      .then(response => {
+        const url = args[0];
+        // Detectar si es una subida de archivo exitosa
+        if (url && (url.includes('upload-documento') || url.includes('subir-requisito')) && response.ok) {
+          response.clone().json().then(data => {
+            if (data.success) {
+              console.log('🎯 Subida de archivo detectada exitosamente - forzando actualización');
+              // Usar mensaje específico y delay corto
+              mostrarMensaje('Archivo subido - Actualizando vista...', 'success');
+              
+              // ✅ SOLO VERIFICAR CON EL BACKEND
+              setTimeout(() => {
+                verificarEstadoInicialBotonAvanzar(); // Solo usar el backend
+              }, 300);
+              
+              setTimeout(() => {
+                window.location.reload();
+              }, 600);
+            }
+          }).catch(() => {
+            // Si no es JSON, asumir que es exitoso si response.ok
+            console.log('🎯 Operación de archivo exitosa detectada');
+            setTimeout(() => {
+              window.location.reload();
+            }, 600);
+          });
+        }
+        return response;
+      });
+  };
+}
+
+// ✅ FUNCIÓN CORREGIDA: Usar SOLO la respuesta del backend, no lógica local
+function verificarEstadoInicialBotonAvanzar() {
+  console.log('🔍 Verificando estado con el BACKEND (fuente de verdad)...');
+  
+  const solicitudId = {{ solicitud.id }};
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  
+  if (!btnAvanzar) {
+    console.log('❌ Botón Avanzar no encontrado');
+    return;
+  }
+  
+  // ✅ SOLO CONSULTAR EL BACKEND - No usar lógica JavaScript local
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('🎯 Respuesta DEFINITIVA del backend:', data);
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        // ✅ BACKEND DICE QUE PUEDE AVANZAR
+        btnAvanzar.disabled = false;
+        btnAvanzar.title = '✅ Listo para avanzar según validación del servidor';
+        btnAvanzar.classList.add('btn-pulsating');
+        btnAvanzar.style.backgroundColor = '#28a745';
+        btnAvanzar.style.borderColor = '#28a745';
+        btnAvanzar.classList.remove('btn-secondary');
+        btnAvanzar.classList.add('btn-success');
+        
+        console.log('✅ BOTÓN HABILITADO por el backend');
+        mostrarMensaje(data.mensaje || 'Puede avanzar', 'success', 4000);
+        
+      } else {
+        // ❌ BACKEND DICE QUE NO PUEDE AVANZAR
+        btnAvanzar.disabled = true;
+        btnAvanzar.title = data.mensaje || 'No puede avanzar según validación del servidor';
+        btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+        btnAvanzar.classList.add('btn-secondary');
+        btnAvanzar.style.backgroundColor = '#6c757d';
+        btnAvanzar.style.borderColor = '#6c757d';
+        
+        console.log('❌ BOTÓN DESHABILITADO por el backend:', data.mensaje);
+        mostrarMensaje(data.mensaje || 'No puede avanzar', 'warning', 4000);
+      }
+    } else {
+      // Error en la API
+      console.error('❌ Error en validación del backend:', data.error);
+      btnAvanzar.disabled = true;
+      btnAvanzar.title = 'Error al validar con el servidor';
+      btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+      btnAvanzar.classList.add('btn-secondary');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de conexión con el backend:', error);
+    btnAvanzar.disabled = true;
+    btnAvanzar.title = 'Error de conexión con el servidor';
+    btnAvanzar.classList.remove('btn-pulsating', 'btn-success');
+    btnAvanzar.classList.add('btn-secondary');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar detector de cambios en archivos
+  detectarCambiosEnArchivos();
+  
+  // ✅ VERIFICACIÓN INMEDIATA DEL BOTÓN AVANZAR
+  setTimeout(() => {
+    verificarEstadoInicialBotonAvanzar();
+  }, 500);
+  
+  // ❌ FUNCIÓN DE RESPALDO DESACTIVADA - Ahora solo el backend decide
+  setTimeout(() => {
+    console.log('🔧 Función de respaldo: DESACTIVADA - Solo el backend decide el estado del botón');
+    // La función de respaldo ya no interfiere con las decisiones del backend
+  }, 2000);
+  
+  const modal = document.getElementById('modalAvanzarSubestado');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function() {
+      cargarInformacionAvance();
+      configurarBusquedaUsuarios();
+    });
+  }
+  
+  // Cargar transiciones negativas al inicializar la página
+  cargarTransicionesNegativas();
+});
+
+// ✅ FUNCIÓN DE EMERGENCIA - Consulta el backend para obtener el estado real
+window.VERIFICAR_ESTADO_BOTON_BACKEND = function() {
+  console.log('🚨 FUNCIÓN DE EMERGENCIA: Consultando estado real del backend...');
+  
+  // Forzar verificación inmediata con el backend
+  verificarEstadoInicialBotonAvanzar();
+  
+  alert('🔍 Consultando el estado real con el servidor...\nRevisa la consola y el botón en unos segundos.');
+  
+  return true;
+};
+
 </script>
 
 <!-- Modal para Comentarios -->
@@ -3209,10 +4452,14 @@
           <strong>Documento:</strong> <span id="opciones-documento-nombre"></span>
         </div>
         <div class="mb-3">
-          <p class="text-muted">Selecciona una opción para calificar este documento como "malo":</p>
+          <p class="text-muted"><strong>Debes seleccionar una opción</strong> para calificar este documento como "malo":</p>
         </div>
         <div id="opciones-container">
           <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Nota:</strong> Selecciona una opción de la lista para continuar. El documento se calificará automáticamente como "malo" con la razón seleccionada.
         </div>
       </div>
       <div class="modal-footer">
@@ -3408,6 +4655,283 @@
         </button>
         <button type="button" class="btn btn-success" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
           <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Avanzar Subestado -->
+<div class="modal fade" id="modalAvanzarSubestado" tabindex="-1" aria-labelledby="modalAvanzarSubestadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
+        </div>
+
+        <!-- Estado de documentos -->
+        <div id="estado-documentos" class="mb-4" style="display: none;">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Estado de Documentos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              
+              <!-- Resumen de documentos -->
+              <div class="row text-center mb-3">
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                      <i class="fas fa-check" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #059669;" id="documentos-buenos-count">0</div>
+                    <small class="text-muted">Buenos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                      <i class="fas fa-times" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #dc2626;" id="documentos-malos-count">0</div>
+                    <small class="text-muted">Malos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                      <i class="fas fa-clock" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #d97706;" id="documentos-pendientes-count">0</div>
+                    <small class="text-muted">Pendientes</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                      <i class="fas fa-file-alt" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #4b5563;" id="documentos-total-count">0</div>
+                    <small class="text-muted">Total</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de documentos pendientes -->
+              <div id="lista-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2" style="color: #d97706;"></i>
+                    <div>
+                      <strong>Documentos Pendientes Detectados</strong>
+                      <br>
+                      <small>Los siguientes documentos opcionales están marcados como pendientes y avanzarán en este estado:</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="documentos-pendientes-lista" class="mb-3">
+                  <!-- Los documentos pendientes se insertarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Mensaje cuando no hay pendientes -->
+              <div id="sin-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 1px solid #10b981; border-radius: 8px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2" style="color: #10b981;"></i>
+                    <div>
+                      <strong>Todos los documentos están procesados</strong>
+                      <br>
+                      <small>No hay documentos pendientes. Puedes continuar con confianza.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Botones de opción -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
+              <i class="fas fa-user me-2"></i>
+              Continuar Yo
+            </button>
+            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
+              <i class="fas fa-user-plus me-2"></i>
+              Asignar a Otro Usuario
+            </button>
+            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
+              <i class="fas fa-inbox me-2"></i>
+              Devolver a Bandeja Grupal
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
+        <div id="seccion-asignar-usuario" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Barra de búsqueda -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
+              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Busca por nombre, email, grupos o roles (Staff/Admin)
+            </small>
+          </div>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Devolver a Oficial -->
+<div class="modal fade" id="modalDevolverOficial" tabindex="-1" aria-labelledby="modalDevolverOficialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #fff;">
+        <h5 class="modal-title" id="modalDevolverOficialLabel">
+          <i class="fas fa-arrow-left me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%); color: #dc2626; border: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Solicitud:</strong> <span>{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span>{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Se devolverá a:</strong> <span id="devolver-etapa-destino">Cargando...</span>
+        </div>
+
+        <!-- Resumen de documentos problemáticos -->
+        <div id="documentos-problematicos" class="mb-4">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Documentos Problemáticos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div id="lista-documentos-problematicos">
+                <!-- Se llenará dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de devolución -->
+        <div class="mb-3">
+          <label for="motivo-devolucion" class="form-label fw-bold">
+            <i class="fas fa-comment-alt me-2"></i>
+            Motivo de la devolución
+          </label>
+          <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
+        </div>
+        
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucion()">
+          <i class="fas fa-arrow-left me-1"></i>
+          Confirmar Devolución
         </button>
       </div>
     </div>

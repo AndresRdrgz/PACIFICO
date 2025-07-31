@@ -1,0 +1,139 @@
+<!-- Modal para Devolver a Oficial -->
+<div class="modal fade" id="modalDevolverOficial" tabindex="-1" aria-labelledby="modalDevolverOficialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #fff;">
+        <h5 class="modal-title" id="modalDevolverOficialLabel">
+          <i class="fas fa-arrow-left me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%); color: #dc2626; border: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Solicitud:</strong> <span>{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span>{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Se devolverá a:</strong> <span id="devolver-etapa-destino">Cargando...</span>
+        </div>
+
+        <!-- Resumen de documentos problemáticos -->
+        <div id="documentos-problematicos" class="mb-4">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Documentos Problemáticos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div id="lista-documentos-problematicos">
+                <div class="text-center text-muted">
+                  <i class="fas fa-spinner fa-spin me-2"></i>
+                  Cargando documentos problemáticos...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de devolución -->
+        <div class="mb-3">
+          <label for="motivo-devolucion" class="form-label fw-bold">
+            <i class="fas fa-comment-alt me-2"></i>
+            Motivo de la devolución
+          </label>
+          <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucionModal()">
+          <i class="fas fa-arrow-left me-1"></i>
+          Confirmar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ✅ Función para cargar documentos problemáticos específicamente para el modal de devolución
+function cargarDocumentosProblematicosModal() {
+  const solicitudId = {{ solicitud.id }};
+  
+  console.log(`🔍 Cargando documentos problemáticos para modal de devolución - solicitud ${solicitudId}`);
+  
+  // Obtener documentos malos (rechazados) - API principal
+  fetch(`/workflow/api/calificaciones/${solicitudId}/estado/malo/`)
+    .then(response => response.json())
+    .then(dataMalos => {
+      console.log('📊 Datos malos recibidos:', dataMalos);
+      
+      const listaContainer = document.getElementById('lista-documentos-problematicos');
+      let html = '';
+      let totalProblematicos = 0;
+      
+      // ✅ PROCESAR DOCUMENTOS MALOS (rechazados) - CONSULTA DIRECTA BD
+      if (dataMalos && dataMalos.success === true && dataMalos.calificaciones) {
+        console.log(`✅ API exitosa - ${dataMalos.calificaciones.length} calificaciones encontradas`);
+        
+        dataMalos.calificaciones.forEach(calificacion => {
+          // Solo procesar si el estado es exactamente 'malo'
+          if (calificacion.estado === 'malo') {
+            const nombreDoc = calificacion.requisito_solicitud?.requisito?.nombre || 'Documento sin nombre';
+            
+            html += `
+              <div class="d-flex align-items-center mb-2 p-2" style="background: #fee2e2; border-radius: 6px; border-left: 4px solid #dc2626;">
+                <i class="fas fa-times-circle text-danger me-2"></i>
+                <span class="fw-medium">${nombreDoc}</span>
+                <span class="badge bg-danger ms-auto">Rechazado</span>
+              </div>
+            `;
+            totalProblematicos++;
+            console.log(`➕ AGREGADO documento malo: ${nombreDoc}`);
+          }
+        });
+        
+        console.log(`📊 Total documentos malos procesados: ${totalProblematicos}`);
+      } else {
+        console.log('⚠️ No hay documentos malos detectados');
+      }
+      
+      // Mostrar resultado
+      if (totalProblematicos > 0) {
+        listaContainer.innerHTML = html;
+        console.log(`✅ Mostrando ${totalProblematicos} documentos problemáticos en modal`);
+      } else {
+        listaContainer.innerHTML = `
+          <div class="text-center text-muted">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            No hay documentos problemáticos detectados
+          </div>
+        `;
+        console.log('ℹ️ No hay documentos problemáticos para mostrar en modal');
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando documentos problemáticos para modal:', error);
+      document.getElementById('lista-documentos-problematicos').innerHTML = `
+        <div class="text-center text-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Error al cargar documentos problemáticos
+        </div>
+      `;
+    });
+}
+
+// ✅ Event listener para cargar documentos cuando se abre el modal
+document.getElementById('modalDevolverOficial').addEventListener('shown.bs.modal', function () {
+  console.log('🚀 Modal de devolución abierto - cargando documentos problemáticos');
+  cargarDocumentosProblematicosModal();
+});
+</script> 

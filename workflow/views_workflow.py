@@ -25,7 +25,8 @@ from .modelsWorkflow import (
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
     RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud,
     RequisitoTransicion, SolicitudComentario, PermisoPipeline, PermisoBandeja,
-    NivelComite, UsuarioNivelComite
+    NivelComite, UsuarioNivelComite, CatalogoPendienteAntesFirma, PendienteSolicitud,
+    AgendaFirma
 )
 from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
@@ -233,8 +234,8 @@ def bandeja_trabajo(request):
     return render(request, 'workflow/bandeja_trabajo.html', context)
 
 
-@login_required
-def nueva_solicitud(request):
+# FUNCIÓN DUPLICADA ELIMINADA - nueva_solicitud está definida más abajo
+# Esta función fue comentada para evitar errores 500
     """Crear una nueva solicitud"""
     
     if request.method == 'POST':
@@ -360,7 +361,11 @@ def nueva_solicitud(request):
             
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
-                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                try:
+                    enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                except Exception as e:
+                    print(f"Error enviando correo APC: {e}")
+                    # No detener el proceso por error en correo
             
             # Send SURA email if requested
             if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
@@ -487,34 +492,16 @@ def detalle_solicitud(request, solicitud_id):
         solicitud.etapa_actual.nombre == "Back Office" and 
         solicitud.etapa_actual.es_bandeja_grupal):
         
-        # Obtener transiciones de salida desde la etapa actual
-        transiciones_salida = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
+        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
+        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
+        # (no en las de salida, que son para la siguiente etapa)
         transiciones_entrada = TransicionEtapa.objects.filter(
             pipeline=solicitud.pipeline,
             etapa_destino=solicitud.etapa_actual
         ).prefetch_related('requisitos_obligatorios__requisito')
         
-        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
+        # Obtener todos los requisitos necesarios (solo de entrada)
         requisitos_necesarios = {}
-        
-        # Procesar requisitos de transiciones de salida
-        for transicion in transiciones_salida:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'salida'
-                    }
         
         # Procesar requisitos de transiciones de entrada
         for transicion in transiciones_entrada:
@@ -547,6 +534,46 @@ def detalle_solicitud(request, solicitud_id):
                     activo=True
                 ).select_related('comentario_por').order_by('-fecha_comentario')
                 
+                # 🚨 DEBUG: LÓGICA AUTOMÁTICA CON VALIDACIÓN ESTRICTA (PRIMERA FUNCIÓN)
+                print(f"🔍 DEBUG F1 - Solicitud actual: {solicitud.id} ({solicitud.codigo})")
+                print(f"🔍 DEBUG F1 - Procesando req_sol: {req_sol.id} - Requisito: {req_sol.requisito.nombre}")
+                print(f"🔍 DEBUG F1 - req_sol.solicitud.id: {req_sol.solicitud.id}")
+                print(f"🔍 DEBUG F1 - ¿Coincide solicitud?: {req_sol.solicitud.id == solicitud.id}")
+                
+                # 🛡️ VALIDACIÓN ESTRICTA: Solo procesar si pertenece a la solicitud actual
+                if req_sol.solicitud.id != solicitud.id:
+                    print(f"❌ ERROR CRÍTICO F1: req_sol pertenece a solicitud {req_sol.solicitud.id} pero estamos en {solicitud.id}")
+                    continue  # Saltar este requisito
+                
+                if not req_sol.archivo:  # Sin archivo
+                    print(f"📄 F1 Sin archivo para: {req_sol.requisito.nombre} en solicitud {solicitud.codigo}")
+                    # Buscar si ya existe calificación
+                    calificacion_existente = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=req_sol
+                    ).first()
+                    
+                    # Si no existe, crearla automáticamente como "pendiente"
+                    if not calificacion_existente:
+                        try:
+                            print(f"💾 F1 CREANDO calificación pendiente para:")
+                            print(f"   - RequisitoSolicitud ID: {req_sol.id}")
+                            print(f"   - Requisito: {req_sol.requisito.nombre}")
+                            print(f"   - Solicitud: {req_sol.solicitud.codigo} (ID: {req_sol.solicitud.id})")
+                            print(f"   - Usuario: {request.user.username}")
+                            
+                            CalificacionDocumentoBackoffice.objects.create(
+                                requisito_solicitud=req_sol,
+                                calificado_por=request.user,
+                                estado='pendiente'
+                            )
+                            print(f"✅ F1 Calificación creada exitosamente")
+                            # Recargar calificaciones para incluir la nueva
+                            calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+                                requisito_solicitud=req_sol
+                            ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
+                        except Exception as e:
+                            print(f"❌ F1 Error creando calificación: {e}")
+
                 requisitos_necesarios[req_id]['archivo_actual'] = req_sol
                 requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
                 requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
@@ -600,10 +627,39 @@ def detalle_solicitud(request, solicitud_id):
             solicitud.save()
             print(f"DEBUG: Asignado primer subestado por defecto: {primer_subestado.nombre}")
         
-        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
+        # Verificar si se está cambiando de subestado por parámetro GET
+        subestado_param = request.GET.get('subestado')
+        if subestado_param:
+            try:
+                nuevo_subestado = solicitud.etapa_actual.subestados.get(nombre=subestado_param)
+                solicitud.subestado_actual = nuevo_subestado
+                solicitud.save()
+                print(f"DEBUG: Cambiado a subestado: {nuevo_subestado.nombre}")
+            except:
+                print(f"DEBUG: No se pudo cambiar al subestado: {subestado_param}")
+        
+        # Seleccionar template según el subestado actual
+        template_map = {
+            'Checklist': 'workflow/detalle_solicitud_backoffice.html',
+            'Captura': 'workflow/detalle_solicitud_captura.html', 
+            'Firma': 'workflow/detalle_solicitud_firma.html',
+            'Orden del expediente': 'workflow/detalle_solicitud_orden.html',
+            'Trámite': 'workflow/detalle_solicitud_tramite.html',
+            'Subsanación de pendientes Trámite': 'workflow/detalle_solicitud_subsanacion.html'
+        }
+        
+        # PRIMERA FUNCIÓN DETALLE_SOLICITUD - AHORA CON AUTO-CREACIÓN TAMBIÉN
+        template_name = template_map.get(
+            solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Checklist',
+            'workflow/detalle_solicitud_backoffice.html'
+        )
+        
+        return render(request, template_name, context)
     
     return render(request, 'workflow/detalle_solicitud.html', context)
 
+# FUNCIÓN DUPLICADA CAMBIADA A NOMBRE DIFERENTE 
+# def detalle_solicitud → detalle_solicitud_DUPLICADA_DESHABILITADA
 
 @login_required
 def transicion_solicitud(request, solicitud_id):
@@ -2817,7 +2873,11 @@ def nueva_solicitud(request):
         cotizacion_id = request.POST.get('cotizacion')
         
         if pipeline_id:
-            pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            try:
+                pipeline = get_object_or_404(Pipeline, id=pipeline_id)
+            except Exception as e:
+                messages.error(request, f'Pipeline no encontrado: {e}')
+                return JsonResponse({'success': False, 'error': f'Pipeline {pipeline_id} no existe'}, status=400)
             
             # Obtener primera etapa del pipeline
             primera_etapa = pipeline.etapas.order_by('orden').first()
@@ -2934,7 +2994,11 @@ def nueva_solicitud(request):
             
             # Send APC email if requested
             if descargar_apc_makito and apc_no_cedula and apc_tipo_documento:
-                enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                try:
+                    enviar_correo_apc_makito(solicitud, apc_no_cedula, apc_tipo_documento, request)
+                except Exception as e:
+                    print(f"Error enviando correo APC: {e}")
+                    # No detener el proceso por error en correo
             
             # Send SURA email if requested
             if cotizar_sura_makito and sura_primer_nombre and sura_primer_apellido and sura_no_documento:
@@ -2988,187 +3052,6 @@ def nueva_solicitud(request):
     }
     
     return render(request, 'workflow/nueva_solicitud.html', context)
-
-
-@login_required
-def detalle_solicitud(request, solicitud_id):
-    """Detalle de una solicitud específica"""
-    
-    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
-    
-    # Verificar permisos
-    if solicitud.asignada_a and solicitud.asignada_a != request.user:
-        # Superusers bypass permission checks
-        if not (request.user.is_superuser or request.user.is_staff):
-            grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_ver=True
-            ).exists()
-            
-            if not tiene_permiso:
-                messages.error(request, 'No tienes permisos para ver esta solicitud.')
-                return redirect('bandeja_trabajo')
-    
-    # Obtener transiciones disponibles
-    transiciones_disponibles = []
-    if solicitud.etapa_actual:
-        transiciones = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        )
-        
-        for transicion in transiciones:
-            # Verificar requisitos para esta transición
-            requisitos_faltantes = verificar_requisitos_transicion(solicitud, transicion)
-            
-            if not transicion.requiere_permiso:
-                transiciones_disponibles.append({
-                    'transicion': transicion,
-                    'puede_realizar': len(requisitos_faltantes) == 0,
-                    'requisitos_faltantes': requisitos_faltantes,
-                    'total_requisitos_faltantes': len(requisitos_faltantes)
-                })
-            else:
-                # Verificar si el usuario tiene permisos específicos
-                grupos_usuario = request.user.groups.all()
-                tiene_permiso = PermisoEtapa.objects.filter(
-                    etapa=transicion.etapa_destino,
-                    grupo__in=grupos_usuario
-                ).exists()
-                if tiene_permiso:
-                    transiciones_disponibles.append({
-                        'transicion': transicion,
-                        'puede_realizar': len(requisitos_faltantes) == 0,
-                        'requisitos_faltantes': requisitos_faltantes,
-                        'total_requisitos_faltantes': len(requisitos_faltantes)
-                    })
-    
-    # Obtener historial
-    historial = solicitud.historial.all().order_by('-fecha_inicio')
-    
-    # Obtener requisitos
-    requisitos = solicitud.requisitos.all()
-    
-    # Obtener campos personalizados
-    campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
-    valores_campos = solicitud.valores_personalizados.all()
-    
-    # Para vista backoffice: obtener archivos requeridos por subestado
-    archivos_por_subestado = {}
-    if (solicitud.etapa_actual and 
-        solicitud.etapa_actual.nombre == "Back Office" and 
-        solicitud.etapa_actual.es_bandeja_grupal):
-        
-        # Obtener transiciones de salida desde la etapa actual
-        transiciones_salida = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
-        transiciones_entrada = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_destino=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
-        requisitos_necesarios = {}
-        
-        # Procesar requisitos de transiciones de salida
-        for transicion in transiciones_salida:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'salida'
-                    }
-        
-        # Procesar requisitos de transiciones de entrada
-        for transicion in transiciones_entrada:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'entrada'
-                    }
-        
-        # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
-        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud).select_related('requisito')
-        for req_sol in requisitos_solicitud:
-            req_id = req_sol.requisito_id  # Usar el foreign key directamente
-            if req_id in requisitos_necesarios:
-                # Obtener calificaciones y comentarios
-                from .models import CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, OpcionDesplegable
-                
-                calificaciones = CalificacionDocumentoBackoffice.objects.filter(
-                    requisito_solicitud=req_sol
-                ).select_related('calificado_por', 'opcion_desplegable').order_by('-fecha_calificacion')
-                
-                comentarios = ComentarioDocumentoBackoffice.objects.filter(
-                    requisito_solicitud=req_sol,
-                    activo=True
-                ).select_related('comentario_por').order_by('-fecha_comentario')
-                
-                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
-                requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
-                requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
-                requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
-        
-        # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
-        for subestado in solicitud.etapa_actual.subestados.all():
-            archivos_por_subestado[subestado.id] = list(requisitos_necesarios.values())
-    
-    # Calcular estadísticas de archivos para el template
-    archivos_stats = {}
-    if archivos_por_subestado:
-        for subestado_id, archivos in archivos_por_subestado.items():
-            total_archivos = len(archivos)
-            archivos_completos = len([archivo for archivo in archivos if archivo['esta_cumplido']])
-            archivos_stats[subestado_id] = {
-                'total': total_archivos,
-                'completos': archivos_completos,
-                'pendientes': total_archivos - archivos_completos,
-                'porcentaje': round((archivos_completos / total_archivos * 100) if total_archivos > 0 else 0, 1)
-            }
-    
-    # Obtener opciones de desplegable para calificación
-    opciones_desplegable = []
-    if archivos_por_subestado:  # Solo si estamos en Back Office
-        from .models import OpcionDesplegable
-        opciones_desplegable = OpcionDesplegable.objects.filter(activo=True).order_by('orden')
-    
-    context = {
-        'solicitud': solicitud,
-        'transiciones_disponibles': transiciones_disponibles,
-        'historial': historial,
-        'requisitos': requisitos,
-        'campos_personalizados': campos_personalizados,
-        'valores_campos': valores_campos,
-        'archivos_por_subestado': archivos_por_subestado,
-        'archivos_stats': archivos_stats,
-        'opciones_desplegable': opciones_desplegable,
-    }
-    
-    # Verificar si estamos en la etapa "Back Office" con bandeja grupal
-    if (solicitud.etapa_actual and 
-        solicitud.etapa_actual.nombre == "Back Office" and 
-        solicitud.etapa_actual.es_bandeja_grupal):
-        return render(request, 'workflow/detalle_solicitud_backoffice.html', context)
-    
-    return render(request, 'workflow/detalle_solicitud.html', context)
 
 
 @login_required
@@ -5484,6 +5367,83 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
     except Exception as e:
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo de cambio de etapa para solicitud {solicitud.codigo}: {str(e)}")
+
+
+def enviar_correo_devolucion_backoffice(solicitud, etapa_anterior, nueva_etapa, documentos_problematicos, motivo, usuario_que_devolvio, request=None):
+    """
+    🚨 NUEVO: Función para enviar correo automático cuando una solicitud es devuelta desde Back Office.
+    Incluye documentos problemáticos (malos + pendientes) y motivo de devolución.
+    """
+    try:
+        # Verificar que la solicitud tiene propietario o creador
+        destinatario_principal = None
+        if solicitud.propietario and solicitud.propietario.email:
+            destinatario_principal = solicitud.propietario.email
+            print(f"📧 Enviando correo de devolución al propietario: {destinatario_principal}")
+        elif solicitud.creada_por and solicitud.creada_por.email:
+            destinatario_principal = solicitud.creada_por.email
+            print(f"📧 Enviando correo de devolución al creador: {destinatario_principal}")
+        else:
+            print(f"⚠️ No se puede enviar correo: solicitud {solicitud.codigo} sin propietario/creador o email")
+            return
+        
+        # Destinatarios con copias
+        destinatarios = [destinatario_principal]
+        copias = [
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
+        
+        # Construir la URL de la solicitud
+        base_url = get_site_url(request)
+        solicitud_url = f"{base_url}/workflow/solicitudes/{solicitud.id}/detalle/"
+        
+        # Crear contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'etapa_anterior': etapa_anterior,
+            'nueva_etapa': nueva_etapa,
+            'documentos_problematicos': documentos_problematicos,
+            'motivo': motivo,
+            'usuario_que_devolvio': usuario_que_devolvio,
+            'fecha_devolucion': timezone.now(),
+            'solicitud_url': solicitud_url,
+            'base_url': base_url,
+        }
+        
+        # Generar el contenido HTML del correo
+        html_content = render_to_string('workflow/emails/devolucion_backoffice_notification.html', context)
+        
+        # Crear el asunto del correo
+        subject = f"🚨 Solicitud {solicitud.codigo} Devuelta desde Back Office"
+        
+        # Crear y enviar el correo
+        from django.core.mail import EmailMultiAlternatives
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body="Tu solicitud ha sido devuelta desde Back Office. Por favor, revisa el correo en formato HTML.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+            cc=copias
+        )
+        
+        # Adjuntar contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo
+        email.send()
+        
+        print(f"✅ Correo de devolución enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"   - Destinatario: {destinatario_principal}")
+        print(f"   - Copias: {', '.join(copias)}")
+        print(f"   - Documentos problemáticos: {len(documentos_problematicos)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de devolución para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
 
 
 def enviar_correo_comite_credito(solicitud, etapa, request=None):
@@ -8994,16 +8954,74 @@ def api_solicitud_brief(request, solicitud_id):
             referencias.append({'nombre': 'APC', 'tipo': 'APC', 'relacion': '', 'telefono': '', 'descripcion': cotizacion.referenciasAPC})
         # TODO: Agregar referencias personales/comerciales si existen modelos relacionados
 
-        # Documentos (de requisitos)
+        # Documentos (de requisitos) - CON INFORMACIÓN DE CALIFICACIÓN
+        from .models import CalificacionDocumentoBackoffice, RequisitoTransicion
+        
         documentos = []
         for req in solicitud.requisitos.all():
+            # Obtener calificación más reciente si existe
+            calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                requisito_solicitud=req
+            ).order_by('-fecha_calificacion').first()
+            
+            # Obtener información de obligatoriedad - MEJORADA PARA INCLUIR MÁS CASOS
+            es_obligatorio = False
+            
+            # 1. Primero verificar en RequisitoTransicion para la etapa actual
+            if solicitud.etapa_actual:
+                transiciones_entrada = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_destino=solicitud.etapa_actual
+                )
+                for transicion in transiciones_entrada:
+                    req_transicion = RequisitoTransicion.objects.filter(
+                        transicion=transicion,
+                        requisito=req.requisito
+                    ).first()
+                    if req_transicion:
+                        es_obligatorio = req_transicion.obligatorio
+                        break
+            
+            # 2. Si no se encontró en RequisitoTransicion, verificar en RequisitoPipeline
+            if not es_obligatorio:
+                from .modelsWorkflow import RequisitoPipeline
+                req_pipeline = RequisitoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    requisito=req.requisito
+                ).first()
+                if req_pipeline:
+                    es_obligatorio = req_pipeline.obligatorio
+            
+            # 3. Para efectos del tab "Documentos Pendientes", si no está definido
+            # en ningún lado, se considera NO obligatorio (opcional)
+            
             documento_info = {
                 'id': req.id,  # Add the RequisitoSolicitud ID
                 'nombre': req.requisito.nombre,
                 'url': req.archivo.url if req.archivo else '',
                 'cumplido': req.cumplido,
-                'observaciones': req.observaciones or ''
+                'observaciones': req.observaciones or '',
+                # Nuevos campos para calificación
+                'obligatorio': es_obligatorio,
+                'calificacion_estado': calificacion.estado if calificacion else None,
+                'motivo_calificacion': calificacion.opcion_desplegable.nombre if calificacion and calificacion.opcion_desplegable else None,
+                'calificado_por': calificacion.calificado_por.get_full_name() or calificacion.calificado_por.username if calificacion else None,
+                'fecha_calificacion': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if calificacion else None,
+                'subsanado': calificacion.subsanado if calificacion else False,
+                'subsanado_por': calificacion.subsanado_por.get_full_name() or calificacion.subsanado_por.username if calificacion and calificacion.subsanado_por else None,
+                'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M') if calificacion and calificacion.fecha_subsanado else None,
+                # NUEVOS CAMPOS TEMPORALMENTE COMENTADOS HASTA EJECUTAR MIGRATION
+                # 'subsanado_por_oficial': calificacion.subsanado_por_oficial if calificacion else False,
+                # 'pendiente_completado': calificacion.pendiente_completado if calificacion else False,
+                'subsanado_por_oficial': False,  # Temporal - hasta migration
+                'pendiente_completado': False,   # Temporal - hasta migration
             }
+            
+            # DEBUGGING: Log documentos que pueden aparecer como pendientes
+            if not es_obligatorio or not req.cumplido or not req.archivo:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"🔍 DEBUG DOCUMENTO POTENCIAL PENDIENTE: {req.requisito.nombre} (ID:{req.id}) - obligatorio:{es_obligatorio}, cumplido:{req.cumplido}, tiene_archivo:{bool(req.archivo)}, url:'{req.archivo.url if req.archivo else 'VACIO'}")
             
             # Special handling for APC requisito
             if req.requisito.nombre.lower() == 'apc':
@@ -9046,6 +9064,12 @@ def api_solicitud_brief(request, solicitud_id):
                     documento_info['sura_processing'] = False
             
             documentos.append(documento_info)
+            
+            # DEBUG: Log todos los documentos que se envían al frontend
+            if req.requisito.nombre.lower() in ['foto', 'proforma', 'excel']:  # Solo documentos comunes para no spam
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"📤 ENVIANDO AL FRONTEND: {req.requisito.nombre} - cumplido:{req.cumplido}, url:'{req.archivo.url if req.archivo else 'VACIO'}', obligatorio:{es_obligatorio}")
 
         # Cotización info
         cotizacion_info = {}
@@ -13765,6 +13789,7 @@ def api_ejecutar_transicion(request):
         data = json.loads(request.body)
         solicitud_id = data.get('solicitud_id')
         transicion_id = data.get('transicion_id')
+        motivo = data.get('motivo', '')  # ✅ NUEVO: Obtener motivo de devolución
         
         if not solicitud_id or not transicion_id:
             return JsonResponse({
@@ -13797,6 +13822,22 @@ def api_ejecutar_transicion(request):
             # Aquí podrías agregar lógica adicional de permisos
             pass
         
+        # ✅ NUEVO: Registrar devolución en historial si viene desde Back Office
+        if (solicitud.etapa_actual and 
+            solicitud.etapa_actual.nombre == "Back Office" and
+            transicion.etapa_origen.nombre == "Back Office"):
+            
+            # Importar función de registro
+            from .signals_backoffice import registrar_devolucion_manual
+            
+            # Registrar la devolución en el historial
+            registrar_devolucion_manual(
+                solicitud=solicitud,
+                usuario=request.user,
+                motivo=motivo or "Devolución desde Back Office",
+                etapa_destino=transicion.etapa_destino
+            )
+        
         # Cerrar el historial actual
         historial_actual = HistorialSolicitud.objects.filter(
             solicitud=solicitud,
@@ -13812,6 +13853,17 @@ def api_ejecutar_transicion(request):
         # Resetear subestado al primer subestado de la nueva etapa
         primer_subestado = transicion.etapa_destino.subestados.order_by('orden').first()
         solicitud.subestado_actual = primer_subestado
+        
+        # ✅ NUEVO: Auto-asignar calificación 'pendiente' cuando llega a Back Office
+        if transicion.etapa_destino.nombre == 'Back Office' and not solicitud.calificaciondocumentobackoffice:
+            solicitud.calificaciondocumentobackoffice = 'pendiente'
+            print(f"🔄 Auto-asignado calificaciondocumentobackoffice='pendiente' para solicitud {solicitud.codigo}")
+            
+            # ✅ NUEVO: También crear calificaciones individuales de documentos al llegar a Back Office
+            usuario_calificador = request.user  # El usuario que está haciendo la transición
+            crear_calificaciones_pendientes_backoffice(solicitud, usuario_calificador)
+            print(f"✅ Calificaciones de documentos creadas al llegar a Back Office para solicitud {solicitud.codigo}")
+        
         solicitud.save()
         
         # Crear nuevo historial
@@ -13923,8 +13975,308 @@ def api_devolver_bandeja_grupal(request):
         })
 
 
+@login_required
+@require_http_methods(["POST"])
+def api_devolver_solicitud_backoffice(request):
+    """
+    🚨 NUEVA API: Devolver solicitud desde Back Office a etapa anterior con envío de correo
+    """
+    import json
+    from workflow.models import CalificacionDocumentoBackoffice
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        transicion_id = data.get('transicion_id')
+        motivo = data.get('motivo', '').strip()
+        
+        if not solicitud_id or not transicion_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Faltan parámetros requeridos (solicitud_id, transicion_id).'
+            }, status=400)
+        
+        if not motivo:
+            return JsonResponse({
+                'success': False,
+                'message': 'El motivo de devolución es obligatorio.'
+            }, status=400)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Back Office":
+            return JsonResponse({
+                'success': False,
+                'message': 'Esta función solo está disponible desde Back Office.'
+            }, status=400)
+        
+        # Verificar que la transición es válida
+        if transicion.pipeline != solicitud.pipeline or transicion.etapa_origen != solicitud.etapa_actual:
+            return JsonResponse({
+                'success': False,
+                'message': 'Transición no válida para esta solicitud.'
+            }, status=400)
+        
+        # 📊 OBTENER DOCUMENTOS PROBLEMÁTICOS DIRECTAMENTE DE LA BD
+        documentos_problematicos = []
+        
+        print(f"🔍 Obteniendo documentos problemáticos para solicitud {solicitud.codigo}")
+        
+        # 1. ✅ DOCUMENTOS CALIFICADOS COMO "MALO" - CONSULTA DIRECTA
+        calificaciones_malas = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,  # Usar ID directo
+            estado='malo'
+        ).select_related('requisito_solicitud__requisito')
+        
+        print(f"📊 Documentos MALOS encontrados: {calificaciones_malas.count()}")
+        
+        for calificacion in calificaciones_malas:
+            doc_malo = {
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'estado': 'malo'
+            }
+            documentos_problematicos.append(doc_malo)
+            print(f"   ❌ Malo: {doc_malo['nombre']}")
+        
+        # 2. ✅ DOCUMENTOS PENDIENTES - CONSULTA DIRECTA
+        calificaciones_pendientes = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,  # Usar ID directo
+            estado='pendiente'
+        ).select_related('requisito_solicitud__requisito')
+        
+        print(f"📊 Documentos PENDIENTES encontrados: {calificaciones_pendientes.count()}")
+        
+        for calificacion in calificaciones_pendientes:
+            doc_pendiente = {
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'estado': 'pendiente'
+            }
+            documentos_problematicos.append(doc_pendiente)
+            print(f"   ⚠️ Pendiente: {doc_pendiente['nombre']}")
+        
+        print(f"📋 TOTAL documentos problemáticos para correo: {len(documentos_problematicos)}")
+        
+        # Guardar etapa anterior
+        etapa_anterior = solicitud.etapa_actual
+        
+        # Cerrar historial actual
+        historial_actual = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=True
+        ).first()
+        
+        if historial_actual:
+            historial_actual.fecha_fin = timezone.now()
+            historial_actual.save()
+        
+        # Actualizar la solicitud
+        solicitud.etapa_actual = transicion.etapa_destino
+        solicitud.subestado_actual = None  # Resetear subestado
+        solicitud.asignada_a = None  # Liberar asignación
+        
+        # Limpiar campo de Back Office al salir
+        solicitud.calificaciondocumentobackoffice = None
+        
+        solicitud.save()
+        
+        # Crear nuevo historial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=transicion.etapa_destino,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Crear comentario de devolución
+        SolicitudComentario.objects.create(
+            solicitud=solicitud,
+            usuario=request.user,
+            comentario=f"🚨 DEVOLUCIÓN desde {etapa_anterior.nombre}: {motivo}",
+            tipo='sistema'
+        )
+        
+        # 📧 ENVIAR CORREO AL PROPIETARIO
+        try:
+            enviar_correo_devolucion_backoffice(
+                solicitud=solicitud,
+                etapa_anterior=etapa_anterior,
+                nueva_etapa=transicion.etapa_destino,
+                documentos_problematicos=documentos_problematicos,
+                motivo=motivo,
+                usuario_que_devolvio=request.user,
+                request=request
+            )
+        except Exception as e:
+            print(f"⚠️ Error enviando correo de devolución: {e}")
+            # No fallar la devolución por error en correo
+        
+        # Notificar cambio
+        notify_solicitud_change(solicitud, 'devolucion_backoffice', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Solicitud {solicitud.codigo} devuelta exitosamente a {transicion.etapa_destino.nombre}',
+            'redirect_url': '/workflow/bandeja-mixta/',  # ✅ CORREGIDO: Redirigir a vista mixta
+            'data': {
+                'solicitud_codigo': solicitud.codigo,
+                'etapa_anterior': etapa_anterior.nombre,
+                'nueva_etapa': transicion.etapa_destino.nombre,
+                'documentos_problematicos': len(documentos_problematicos),
+                'fecha_devolucion': timezone.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error en devolución desde Back Office: {str(e)}")
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al devolver solicitud: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_calificaciones_por_estado(request, solicitud_id, estado):
+    """
+    🆕 API para obtener calificaciones de documentos por estado específico
+    """
+    try:
+        print(f"📋 API llamada: solicitud_id={solicitud_id}, estado={estado}")
+        
+        # Verificar si la solicitud existe
+        try:
+            solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+            print(f"✅ Solicitud encontrada: {solicitud.codigo}")
+        except Exception as e:
+            print(f"❌ Solicitud no encontrada: {e}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Solicitud no encontrada: {str(e)}'
+            }, status=404)
+        
+        # Verificar permisos básicos
+        if not (solicitud.propietario == request.user or 
+                solicitud.creada_por == request.user or
+                solicitud.asignada_a == request.user or
+                request.user.is_staff):
+            print(f"❌ Sin permisos para usuario: {request.user.username}")
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permisos para ver esta solicitud.'
+            }, status=403)
+        
+        print(f"✅ Permisos verificados para usuario: {request.user.username}")
+        
+        # Obtener calificaciones por estado - CONSULTA DIRECTA SIMPLE
+        from workflow.models import CalificacionDocumentoBackoffice
+        print(f"📊 Buscando calificaciones con estado: {estado} para solicitud {solicitud.codigo}")
+        
+        # Consulta simple y directa
+        calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id,
+            estado=estado
+        ).select_related('requisito_solicitud__requisito')
+        
+        # Debugging adicional
+        total_calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id
+        ).count()
+        
+        print(f"📊 Total calificaciones en la solicitud: {total_calificaciones}")
+        print(f"📊 Calificaciones con estado '{estado}': {calificaciones.count()}")
+        
+        # Mostrar todas las calificaciones para debugging
+        todas = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud_id=solicitud.id
+        ).values('estado', 'requisito_solicitud__requisito__nombre')
+        
+        print(f"📋 TODAS las calificaciones:")
+        for cal in todas:
+            print(f"   - {cal['requisito_solicitud__requisito__nombre']}: {cal['estado']}")
+        
+        # ✅ CORREGIDO: Obtener información de obligatoriedad desde RequisitoTransicion (como en api_validar_documentos_backoffice)
+        from workflow.modelsWorkflow import TransicionEtapa, RequisitoTransicion
+        
+        # Obtener transiciones de entrada hacia la etapa actual
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos definidos en RequisitoTransicion de entrada
+        requisitos_definidos = {}
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_definidos:
+                    requisitos_definidos[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'transicion_origen': transicion.etapa_origen.nombre
+                    }
+        
+        # Preparar datos
+        calificaciones_data = []
+        for calificacion in calificaciones:
+            try:
+                # Obtener información de obligatoriedad desde RequisitoTransicion
+                req_id = calificacion.requisito_solicitud.requisito.id
+                es_obligatorio = requisitos_definidos.get(req_id, {}).get('obligatorio', False)
+                
+                calificacion_data = {
+                    'id': calificacion.id,
+                    'estado': calificacion.estado,
+                    'requisito_solicitud': {
+                        'id': calificacion.requisito_solicitud.id,
+                        'requisito': {
+                            'id': calificacion.requisito_solicitud.requisito.id,
+                            'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                            'obligatorio': es_obligatorio,  # ✅ Ahora obtenido correctamente
+                        }
+                    },
+                    'observaciones': getattr(calificacion, 'observaciones', ''),  # Proteger contra campos faltantes
+                    'fecha_calificacion': calificacion.fecha_calificacion.isoformat() if calificacion.fecha_calificacion else None,
+                }
+                calificaciones_data.append(calificacion_data)
+                print(f"✅ Procesada calificación: {calificacion.id}")
+            except Exception as e:
+                print(f"❌ Error procesando calificación {calificacion.id}: {str(e)}")
+                import traceback
+                print(f"❌ TRACEBACK: {traceback.format_exc()}")
+                continue
+        
+        resultado = {
+            'success': True,
+            'estado_filtrado': estado,
+            'total': len(calificaciones_data),
+            'calificaciones': calificaciones_data
+        }
+        
+        print(f"✅ Devolviendo {len(calificaciones_data)} calificaciones")
+        return JsonResponse(resultado)
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"❌ Error en api_obtener_calificaciones_por_estado: {str(e)}")
+        print(f"❌ TRACEBACK: {error_traceback}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener calificaciones: {str(e)}',
+            'debug_traceback': error_traceback if settings.DEBUG else None
+        }, status=500)
+
+
+
+
+
 # ==========================================
-# VISTAS PARA FORMULARIO GENERAL
+# VISTAS PARA FORMULARIO GENERAL  
 # ==========================================
 
 @login_required
@@ -13940,15 +14292,16 @@ def buscar_entrevistas_api(request):
         busqueda = request.GET.get('q', '').strip()
         
         # Construir query base
-        query = ClienteEntrevista.objects.all().order_by('-fecha_creacion')
+        query = ClienteEntrevista.objects.all().order_by('-fecha_entrevista')
         
         # Aplicar filtros si hay búsqueda
         if busqueda:
             query = query.filter(
-                Q(nombre__icontains=busqueda) | 
-                Q(apellido__icontains=busqueda) |
-                Q(cedulaCliente__icontains=busqueda) |
-                Q(celular__icontains=busqueda)
+                Q(primer_nombre__icontains=busqueda) | 
+                Q(primer_apellido__icontains=busqueda) |
+                Q(tomo_cedula__icontains=busqueda) |
+                Q(partida_cedula__icontains=busqueda) |
+                Q(telefono__icontains=busqueda)
             )
         
         # Limitar resultados
@@ -13957,14 +14310,19 @@ def buscar_entrevistas_api(request):
         # Preparar datos para respuesta
         entrevistas_data = []
         for entrevista in entrevistas:
+            # Construir cédula completa
+            cedula_completa = ""
+            if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+            
             entrevistas_data.append({
                 'id': entrevista.id,
-                'nombre': entrevista.nombre or '',
-                'apellido': entrevista.apellido or '',
-                'cedula': entrevista.cedulaCliente or '',
-                'celular': entrevista.celular or '',
-                'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
-                'producto_interesado': entrevista.producto_interesado or ''
+                'nombre': entrevista.primer_nombre or '',
+                'apellido': entrevista.primer_apellido or '',
+                'cedula': cedula_completa,
+                'celular': entrevista.telefono or '',
+                'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y') if entrevista.fecha_entrevista else '',
+                'producto_interesado': entrevista.tipo_producto or ''
             })
         
         return JsonResponse({
@@ -14020,12 +14378,12 @@ def asociar_formulario_general(request, solicitud_id):
         # Preparar datos de respuesta
         entrevista_data = {
             'id': entrevista.id,
-            'nombre': entrevista.nombre or '',
-            'apellido': entrevista.apellido or '',
-            'cedula': entrevista.cedulaCliente or '',
-            'celular': entrevista.celular or '',
-            'fecha_creacion': entrevista.fecha_creacion.strftime('%d/%m/%Y') if entrevista.fecha_creacion else '',
-            'producto_interesado': entrevista.producto_interesado or ''
+            'nombre': entrevista.primer_nombre or '',
+            'apellido': entrevista.primer_apellido or '',
+            'cedula': f"{entrevista.provincia_cedula or ''}-{entrevista.tipo_letra or ''}-{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}",
+            'celular': entrevista.telefono or '',
+            'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y') if entrevista.fecha_entrevista else '',
+            'producto_interesado': entrevista.tipo_producto or ''
         }
         
         return JsonResponse({
@@ -14098,39 +14456,61 @@ def buscar_entrevistas(request):
         try:
             from .models import ClienteEntrevista
             
+            print(f"🔍 buscar_entrevistas iniciado - cedula: '{cedula}', query: '{query}'")
+            
             # Base queryset
             queryset = ClienteEntrevista.objects.all()
+            print(f"📊 Total entrevistas en BD: {queryset.count()}")
             
             # Si tenemos una cédula específica para filtrar
             if cedula:
+                # ✅ IMPORTAR Q AL INICIO para evitar UnboundLocalError
+                from django.db.models import Q
+                
                 # Intentar dividir la cédula en sus componentes
                 cedula_parts = cedula.split('-')
+                print(f"📋 Cédula dividida: {cedula_parts} (total partes: {len(cedula_parts)})")
                 
                 # Extraer solo números para búsqueda flexible
                 numeros_cedula = ''.join(filter(str.isdigit, cedula))
                 
                 if len(cedula_parts) == 4:  # Formato completo: provincia-letra-tomo-partida
                     provincia, letra, tomo, partida = cedula_parts
-                    
-                    # Usando Q objects para hacer búsqueda OR para ser más flexibles
-                    from django.db.models import Q
+                    print(f"📋 Cédula completa - provincia: {provincia}, letra: {letra}, tomo: {tomo}, partida: {partida}")
                     
                     # Intentar diferentes combinaciones de búsqueda
                     # 1. Búsqueda exacta por todos los componentes
                     # 2. Búsqueda por tomo y partida (los más identificativos)
-                    # 3. Búsqueda por los últimos dígitos en cualquier campo de cédula
+                    print(f"🔍 Aplicando filtro para cédula completa...")
                     queryset = queryset.filter(
                         Q(provincia_cedula=provincia, tipo_letra=letra, tomo_cedula=tomo, partida_cedula=partida) |
                         Q(tomo_cedula=tomo, partida_cedula=partida)
                     )
-                elif len(cedula_parts) >= 2:  # Formato parcial
+                    print(f"📊 Resultados después del filtro: {queryset.count()}")
+                    
+                elif len(cedula_parts) == 3:  # Formato 8-906-1692: provincia-tomo-partida
+                    provincia, tomo, partida = cedula_parts
+                    print(f"📋 Cédula 3 partes - provincia: {provincia}, tomo: {tomo}, partida: {partida}")
+                    
+                    print(f"🔍 Aplicando filtro para formato 3 partes...")
+                    queryset = queryset.filter(
+                        Q(provincia_cedula=provincia, tomo_cedula=tomo, partida_cedula=partida) |
+                        Q(tomo_cedula=tomo, partida_cedula=partida)  # Fallback sin provincia
+                    )
+                    print(f"📊 Resultados después del filtro 3 partes: {queryset.count()}")
+                    
+                elif len(cedula_parts) >= 2:  # Formato parcial: solo tomo-partida
                     # Si tenemos al menos tomo y partida, filtramos por ellos
                     tomo = cedula_parts[-2]
                     partida = cedula_parts[-1]
+                    print(f"📋 Cédula parcial - tomo: {tomo}, partida: {partida}, partes totales: {len(cedula_parts)}")
+                    
+                    print(f"🔍 Aplicando filtro para tomo y partida...")
                     queryset = queryset.filter(
                         Q(tomo_cedula=tomo, partida_cedula=partida) |
                         Q(tomo_cedula__endswith=tomo, partida_cedula=partida)
                     )
+                    print(f"📊 Resultados después del filtro parcial: {queryset.count()}")
                         
             # Aplicar filtro de búsqueda si hay un query
             if query and len(query) >= 2:
@@ -14146,46 +14526,85 @@ def buscar_entrevistas(request):
                 })
                 
             # Limitar resultados y ordenar
+            print(f"🔍 Obteniendo entrevistas finales...")
             entrevistas = queryset.order_by('-fecha_entrevista')[:20]
+            print(f"📊 Entrevistas finales a procesar: {len(entrevistas)}")
             
             # Serializar resultados
             resultados = []
-            for entrevista in entrevistas:
-                # Construir cédula completa
-                cedula_completa = ""
-                if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
-                    cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
-                else:
-                    cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
-                
-                resultados.append({
-                    'id': entrevista.id,
-                    'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
-                    'nombre': entrevista.primer_nombre or '',
-                    'apellido': entrevista.primer_apellido or '',
-                    'cedula': cedula_completa,
-                    'celular': entrevista.telefono or 'Sin celular',
-                    'email': entrevista.email or 'Sin email',
-                    'telefono': entrevista.telefono or 'Sin teléfono',
-                    'fecha_entrevista': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
-                    'fecha_creacion': entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else '',
-                    'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
-                    'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
-                    'salario': float(entrevista.salario) if entrevista.salario else 0,
-                    'empresa': entrevista.trabajo_lugar or 'Sin empresa',
-                    'completada': entrevista.completada_por_admin or False
-                })
+            print(f"🔄 Comenzando serialización de resultados...")
+            for i, entrevista in enumerate(entrevistas):
+                try:
+                    print(f"📋 Procesando entrevista {i+1}/{len(entrevistas)} - ID: {entrevista.id}")
+                    
+                    # Construir cédula completa
+                    cedula_completa = ""
+                    if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                        cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+                    else:
+                        cedula_completa = f"{entrevista.tomo_cedula or ''}-{entrevista.partida_cedula or ''}"
+                    
+                    print(f"   📄 Cédula construida: {cedula_completa}")
+                    
+                    # Verificar cada campo que puede causar problemas
+                    salario_valor = 0
+                    try:
+                        salario_valor = float(entrevista.salario) if entrevista.salario else 0
+                    except (ValueError, TypeError) as e:
+                        print(f"   ⚠️ Error convirtiendo salario: {e}")
+                        salario_valor = 0
+                    
+                    # Verificar fechas
+                    fecha_str = ''
+                    try:
+                        fecha_str = entrevista.fecha_entrevista.strftime('%d/%m/%Y %H:%M') if entrevista.fecha_entrevista else ''
+                    except Exception as e:
+                        print(f"   ⚠️ Error formateando fecha: {e}")
+                        fecha_str = ''
+                    
+                    entrevista_data = {
+                        'id': entrevista.id,
+                        'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
+                        'nombre': entrevista.primer_nombre or '',
+                        'apellido': entrevista.primer_apellido or '',
+                        'cedula': cedula_completa,
+                        'celular': entrevista.telefono or 'Sin celular',
+                        'email': entrevista.email or 'Sin email',
+                        'telefono': entrevista.telefono or 'Sin teléfono',
+                        'fecha_entrevista': fecha_str,
+                        'fecha_creacion': fecha_str,
+                        'tipo_producto': entrevista.tipo_producto or 'Sin especificar',
+                        'producto_interesado': entrevista.tipo_producto or 'Sin especificar',
+                        'salario': salario_valor,
+                        'empresa': entrevista.trabajo_lugar or 'Sin empresa',
+                        'completada': bool(entrevista.completada_por_admin) if hasattr(entrevista, 'completada_por_admin') else False
+                    }
+                    
+                    resultados.append(entrevista_data)
+                    print(f"   ✅ Entrevista {entrevista.id} procesada exitosamente")
+                    
+                except Exception as e:
+                    print(f"   ❌ Error procesando entrevista {entrevista.id}: {e}")
+                    continue  # Continuar con la siguiente entrevista
             
+            print(f"✅ Serialización completada - Devolviendo {len(resultados)} entrevistas")
             return JsonResponse({
                 'success': True,
                 'entrevistas': resultados
             })
             
         except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
             print(f"❌ Error en buscar_entrevistas: {e}")
+            print(f"❌ TRACEBACK completo: {error_traceback}")
+            print(f"❌ Cédula buscada: {cedula}")
+            print(f"❌ Query: {query}")
+            
             return JsonResponse({
                 'success': False,
-                'error': 'Error interno del servidor'
+                'error': f'Error interno del servidor: {str(e)}',
+                'debug_info': error_traceback if hasattr(request, 'user') and request.user.is_staff else None
             }, status=500)
     
     return JsonResponse({
@@ -14195,16 +14614,24 @@ def buscar_entrevistas(request):
 
 
 @login_required
+@csrf_exempt
 def asociar_entrevista(request):
     """API para asociar/desasociar una entrevista con una solicitud"""
+    print(f"🔍 asociar_entrevista iniciado - Método: {request.method}")
+    print(f"🔍 User: {request.user}")
+    print(f"🔍 Headers: {dict(request.headers)}")
+    
     if request.method == 'POST':
         try:
+            print(f"🔍 Request body raw: {request.body}")
             import json
             data = json.loads(request.body)
+            print(f"🔍 Data parsed: {data}")
             
             solicitud_id = data.get('solicitud_id')
             entrevista_id = data.get('entrevista_id')
             accion = data.get('accion')  # 'asociar' o 'desasociar'
+            # Flag 'forzar' removido - ya no es necesario porque se permiten múltiples asociaciones
             
             if not solicitud_id or not accion:
                 return JsonResponse({
@@ -14236,28 +14663,28 @@ def asociar_entrevista(request):
                 from .models import ClienteEntrevista
                 entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
                 
-                # Verificar que la entrevista no esté ya asociada a otra solicitud
-                solicitud_existente = Solicitud.objects.filter(
-                    entrevista_cliente=entrevista
-                ).exclude(id=solicitud_id).first()
+                print(f"🔍 Verificando asociación de entrevista {entrevista_id} con solicitud {solicitud_id}")
                 
-                if solicitud_existente:
+                # Verificar si la entrevista ya está asociada a esta misma solicitud
+                if solicitud.entrevista_cliente and solicitud.entrevista_cliente.id == entrevista.id:
                     return JsonResponse({
                         'success': False,
-                        'error': f'Esta entrevista ya está asociada a la solicitud {solicitud_existente.codigo}',
-                        'solicitud_existente': {
-                            'codigo': solicitud_existente.codigo,
-                            'id': solicitud_existente.id
-                        }
+                        'error': 'Esta entrevista ya está asociada a esta solicitud',
+                        'ya_asociada': True
                     }, status=400)
                 
+                # ✅ PERMITIR MÚLTIPLES ASOCIACIONES: Una entrevista puede estar asociada a múltiples solicitudes
+                # Se removió la verificación de exclusividad
+                
                 # Asociar la entrevista
+                print(f"✅ Asociando entrevista {entrevista_id} a solicitud {solicitud_id}")
                 solicitud.entrevista_cliente = entrevista
                 solicitud.save()
+                print(f"✅ Entrevista asociada exitosamente")
                 
                 return JsonResponse({
                     'success': True,
-                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente',
+                    'mensaje': f'Entrevista de {entrevista.primer_nombre} {entrevista.primer_apellido} asociada exitosamente (múltiples asociaciones permitidas)',
                     'entrevista': {
                         'id': entrevista.id,
                         'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.primer_apellido or ''}".strip(),
@@ -14310,6 +14737,7 @@ def asociar_entrevista(request):
 
 # ==========================================
 # APIS DE GESTIÓN DE USUARIOS DEL CANAL DIGITAL
+# API PARA CAMBIO DE SUBESTADOS EN BACK OFFICE
 # ==========================================
 
 @login_required
@@ -14573,6 +15001,902 @@ def api_solicitudes_procesadas(request):
             'por_pagina': por_pagina,
             'filtro_aplicado': filtro,
             'timestamp': timezone.now().isoformat()
+            
+def api_cambiar_subestado_backoffice(request, solicitud_id):
+    """API para cambiar el subestado actual en Back Office"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not (solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user or 
+                request.user.is_superuser or
+                request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para modificar esta solicitud'
+            }, status=403)
+        
+        # Verificar que estamos en Back Office
+        if not (solicitud.etapa_actual and 
+                solicitud.etapa_actual.nombre == "Back Office" and 
+                solicitud.etapa_actual.es_bandeja_grupal):
+            return JsonResponse({
+                'success': False,
+                'error': 'Esta solicitud no está en la etapa de Back Office'
+            }, status=400)
+        
+        data = json.loads(request.body)
+        nuevo_subestado_nombre = data.get('subestado')
+        
+        if not nuevo_subestado_nombre:
+            return JsonResponse({
+                'success': False,
+                'error': 'Nombre de subestado requerido'
+            }, status=400)
+        
+        # Buscar el subestado
+        try:
+            nuevo_subestado = solicitud.etapa_actual.subestados.get(nombre=nuevo_subestado_nombre)
+        except:
+            return JsonResponse({
+                'success': False,
+                'error': f'Subestado "{nuevo_subestado_nombre}" no encontrado'
+            }, status=404)
+        
+        # Cambiar subestado
+        solicitud.subestado_actual = nuevo_subestado
+        solicitud.save()
+        
+        # Notificar cambio
+        notify_solicitud_change(solicitud, 'subestado_cambiado', request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': f'Cambiado a subestado: {nuevo_subestado.nombre}',
+            'subestado': {
+                'id': nuevo_subestado.id,
+                'nombre': nuevo_subestado.nombre,
+                'orden': nuevo_subestado.orden
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'JSON inválido'
+        }, status=400)
+    except Exception as e:
+        print(f"❌ Error en api_cambiar_subestado_backoffice: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+# ==========================================
+# BACK OFFICE SUBESTADO VIEWS
+# ==========================================
+
+@login_required
+def backoffice_checklist(request, solicitud_id):
+    """Vista específica para el subestado Checklist del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Checklist
+    try:
+        checklist_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Checklist')
+        solicitud.subestado_actual = checklist_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Checklist no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Reutilizar la lógica existente de detalle_solicitud
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required  
+def backoffice_captura(request, solicitud_id):
+    """Vista específica para el subestado Captura del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Captura
+    try:
+        captura_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Captura')
+        solicitud.subestado_actual = captura_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Captura no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Captura'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_firma(request, solicitud_id):
+    """Vista específica para el subestado Firma del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Firma
+    try:
+        firma_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Firma')
+        solicitud.subestado_actual = firma_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Firma no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Firma'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_orden(request, solicitud_id):
+    """Vista específica para el subestado Orden del expediente del Back Office"""
+    from .modelsWorkflow import OrdenExpediente, PlantillaOrdenExpediente
+    from collections import defaultdict
+    
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Orden del expediente
+    try:
+        orden_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Orden del expediente')
+        solicitud.subestado_actual = orden_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Orden del expediente no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Función auxiliar para ordenar documentos por sección
+    def ordenar_documentos_por_seccion(documentos_qs, pipeline):
+        # Crear un diccionario de orden de secciones desde las plantillas
+        orden_secciones = {}
+        plantillas_orden_seccion = PlantillaOrdenExpediente.objects.filter(
+            pipeline=pipeline,
+            activo=True
+        ).values('seccion', 'orden_seccion').distinct().order_by('orden_seccion')
+        
+        for plantilla in plantillas_orden_seccion:
+            if plantilla['seccion'] not in orden_secciones:
+                orden_secciones[plantilla['seccion']] = plantilla['orden_seccion']
+        
+        # Ordenar documentos usando el orden de sección
+        return sorted(
+            documentos_qs, 
+            key=lambda doc: (orden_secciones.get(doc.seccion, 999), doc.orden)
+        )
+
+    # Obtener o crear documentos de orden de expediente para esta solicitud
+    documentos_orden_qs = OrdenExpediente.objects.filter(
+        solicitud=solicitud, 
+        activo=True
+    ).select_related('calificado_por')
+    
+    # Si no hay documentos, crear desde plantillas del pipeline
+    if not documentos_orden_qs.exists():
+        plantillas = PlantillaOrdenExpediente.objects.filter(
+            pipeline=solicitud.pipeline,
+            activo=True
+        ).order_by('orden_seccion', 'seccion', 'orden')
+        
+        documentos_creados = []
+        for plantilla in plantillas:
+            documento = OrdenExpediente.objects.create(
+                solicitud=solicitud,
+                seccion=plantilla.seccion,
+                nombre_documento=plantilla.nombre_documento,
+                orden=plantilla.orden,
+                obligatorio=plantilla.obligatorio
+            )
+            documentos_creados.append(documento)
+        
+        if documentos_creados:
+            messages.info(request, f'Se crearon {len(documentos_creados)} documentos desde las plantillas del pipeline.')
+    
+    # Aplicar ordenamiento personalizado a todos los documentos (nuevos o existentes)
+    documentos_orden = ordenar_documentos_por_seccion(documentos_orden_qs, solicitud.pipeline)
+    
+    # Agrupar documentos por sección
+    documentos_por_seccion = defaultdict(list)
+    for documento in documentos_orden:
+        documentos_por_seccion[documento.seccion].append(documento)
+    
+    # Estadísticas
+    total_documentos = len(documentos_orden)
+    documentos_presentes = len([doc for doc in documentos_orden if doc.tiene_documento])
+    documentos_faltantes = len([doc for doc in documentos_orden if not doc.tiene_documento and doc.obligatorio])
+    documentos_opcionales_faltantes = len([doc for doc in documentos_orden if not doc.tiene_documento and not doc.obligatorio])
+    
+    # Calcular porcentaje de completitud
+    porcentaje_completitud = 0
+    if total_documentos > 0:
+        porcentaje_completitud = round((documentos_presentes / total_documentos) * 100)
+    
+    # Transiciones negativas - no necesarias para esta vista específica
+    transiciones_negativas = []
+    
+    context = {
+        'solicitud': solicitud,
+        'documentos_por_seccion': dict(documentos_por_seccion),
+        'total_documentos': total_documentos,
+        'documentos_presentes': documentos_presentes,
+        'documentos_faltantes': documentos_faltantes,
+        'documentos_opcionales_faltantes': documentos_opcionales_faltantes,
+        'porcentaje_completitud': porcentaje_completitud,
+        'transiciones_negativas': transiciones_negativas,
+        'tiene_transiciones_negativas': len(transiciones_negativas) > 0,
+        'puede_modificar': True,  # El usuario de backoffice puede modificar
+    }
+    
+    return render(request, 'workflow/detalle_solicitud_orden.html', context)
+
+
+@login_required
+def backoffice_tramite(request, solicitud_id):
+    """Vista específica para el subestado Trámite del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Trámite
+    try:
+        tramite_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Trámite')
+        solicitud.subestado_actual = tramite_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Trámite no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Trámite'
+    return detalle_solicitud(request, solicitud_id)
+
+
+@login_required
+def backoffice_subsanacion(request, solicitud_id):
+    """Vista específica para el subestado Subsanación de pendientes Trámite del Back Office"""
+    solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+    
+    # Verificar que estamos en Back Office
+    if not (solicitud.etapa_actual and solicitud.etapa_actual.nombre == "Back Office"):
+        messages.error(request, 'Esta solicitud no está en la etapa de Back Office.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Asegurar que el subestado actual sea Subsanación de pendientes Trámite
+    try:
+        subsanacion_subestado = SubEstado.objects.get(etapa=solicitud.etapa_actual, nombre='Subsanación de pendientes Trámite')
+        solicitud.subestado_actual = subsanacion_subestado
+        solicitud.save()
+    except SubEstado.DoesNotExist:
+        messages.error(request, 'El subestado Subsanación de pendientes Trámite no existe.')
+        return redirect('detalle_solicitud', solicitud_id=solicitud_id)
+    
+    # Usar la misma lógica que detalle_solicitud pero con template específico
+    request.GET = request.GET.copy()
+    request.GET['subestado'] = 'Subsanación de pendientes Trámite'
+    return detalle_solicitud(request, solicitud_id)
+
+
+def crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado):
+    """
+    🚨 BULLETPROOF: Crear calificaciones automáticas FORZANDO la creación en BD
+    """
+    from .models import CalificacionDocumentoBackoffice, RequisitoTransicion, RequisitoSolicitud
+    from django.db import transaction
+    
+    print(f"🚨 INICIANDO crear_calificaciones_pendientes_backoffice para solicitud {solicitud.codigo}")
+    print(f"🚨 Usuario asignado: {usuario_asignado.username}")
+    print(f"🚨 Etapa actual: {solicitud.etapa_actual.nombre}")
+    
+    try:
+        with transaction.atomic():  # FORZAR transacción
+            calificaciones_creadas = 0
+            
+            # ✅ MÉTODO DIRECTO: Obtener TODOS los RequisitoSolicitud de la solicitud
+            todos_requisitos = RequisitoSolicitud.objects.filter(solicitud=solicitud)
+            print(f"🚨 ENCONTRADOS {todos_requisitos.count()} RequisitoSolicitud para procesar")
+            
+            for req_sol in todos_requisitos:
+                try:
+                    # Verificar que no exista ya una calificación
+                    calificacion_existente = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=req_sol
+                    ).first()
+                    
+                    if not calificacion_existente:
+                        print(f"🚨 CREANDO calificación para: {req_sol.requisito.nombre}")
+                        
+                        # CREAR CALIFICACIÓN FORZADA
+                        nueva_calificacion = CalificacionDocumentoBackoffice.objects.create(
+                            requisito_solicitud=req_sol,
+                            calificado_por=usuario_asignado,
+                            estado='pendiente'
+                        )
+                        
+                        # VERIFICAR QUE SE CREÓ
+                        if nueva_calificacion.id:
+                            calificaciones_creadas += 1
+                            print(f"✅ CALIFICACIÓN CREADA CON ID: {nueva_calificacion.id} para {req_sol.requisito.nombre}")
+                        else:
+                            print(f"❌ FALLÓ crear calificación para {req_sol.requisito.nombre}")
+                    
+                    else:
+                        print(f"ℹ️  Ya existe calificación para: {req_sol.requisito.nombre} (Estado: {calificacion_existente.estado})")
+                        
+                except Exception as e_inner:
+                    print(f"❌ Error individual creando para {req_sol.requisito.nombre}: {str(e_inner)}")
+                    continue
+            
+            print(f"🎯 RESULTADO FINAL: {calificaciones_creadas} calificaciones creadas para solicitud {solicitud.codigo}")
+            
+    except Exception as e:
+        print(f"❌ ERROR CRÍTICO creando calificaciones pendientes: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK COMPLETO: {traceback.format_exc()}")
+        # No lanzar excepción para no interrumpir el flujo de asignación
+
+
+def verificar_documentos_pendientes_backoffice(solicitud):
+    """
+    Verificar si hay documentos pendientes (opcionales sin archivo) en Back Office
+    """
+    from .models import CalificacionDocumentoBackoffice, RequisitoTransicion, RequisitoSolicitud
+    
+    documentos_pendientes = []
+    
+    try:
+        # Obtener calificaciones pendientes
+        calificaciones_pendientes = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud=solicitud,
+            estado='pendiente'
+        ).select_related('requisito_solicitud__requisito')
+        
+        for calificacion in calificaciones_pendientes:
+            documentos_pendientes.append({
+                'id': calificacion.requisito_solicitud.id,
+                'nombre': calificacion.requisito_solicitud.requisito.nombre,
+                'calificacion_id': calificacion.id
+            })
+        
+        return documentos_pendientes
+        
+    except Exception as e:
+        print(f"❌ Error verificando documentos pendientes: {str(e)}")
+        return []
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_siguiente_subestado(request, solicitud_id):
+    """
+    API para obtener el siguiente subestado disponible para una solicitud en Back Office
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or 'back office' not in solicitud.etapa_actual.nombre.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'La solicitud no está en Back Office'
+            }, status=400)
+        
+        # Obtener el subestado actual
+        subestado_actual = solicitud.subestado_actual
+        if not subestado_actual:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se encontró el subestado actual'
+            }, status=400)
+        
+        # Obtener todos los subestados de Back Office ordenados
+        subestados_backoffice = solicitud.etapa_actual.subestados.all().order_by('orden')
+        
+        # Encontrar el siguiente subestado
+        siguiente_subestado = None
+        for subestado in subestados_backoffice:
+            if subestado.orden > subestado_actual.orden:
+                siguiente_subestado = subestado
+                break
+        
+        # Si no hay siguiente subestado, significa que terminamos Back Office
+        if siguiente_subestado:
+            return JsonResponse({
+                'success': True,
+                'siguiente_subestado': {
+                    'id': siguiente_subestado.id,
+                    'nombre': siguiente_subestado.nombre,
+                    'orden': siguiente_subestado.orden
+                }
+            })
+        else:
+            # Obtener siguiente etapa disponible
+            transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
+            if transiciones_salida.exists():
+                siguiente_etapa = transiciones_salida.first().etapa_destino
+                return JsonResponse({
+                    'success': True,
+                    'siguiente_subestado': None,
+                    'siguiente_etapa': {
+                        'id': siguiente_etapa.id,
+                        'nombre': siguiente_etapa.nombre
+                    }
+                })
+            else:
+                return JsonResponse({
+                    'success': True,
+                    'siguiente_subestado': None,
+                    'siguiente_etapa': None
+                })
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo siguiente subestado: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_validar_documentos_backoffice(request, solicitud_id):
+    """
+    Validar que todos los documentos obligatorios estén calificados como 'bueno'
+    antes de permitir avanzar al siguiente subestado.
+    """
+    from .models import CalificacionDocumentoBackoffice
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que el usuario tenga permisos
+        if not (request.user.is_superuser or request.user.is_staff or solicitud.asignada_a == request.user):
+            return JsonResponse({
+                'success': False, 
+                'error': 'No tienes permisos para validar esta solicitud'
+            }, status=403)
+        
+        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
+        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
+        # (no en las de salida, que son para la siguiente etapa)
+        transiciones_entrada = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=solicitud.etapa_actual
+        ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Obtener todos los requisitos definidos en RequisitoTransicion de entrada
+        requisitos_definidos = {}
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                req_id = req_transicion.requisito.id
+                if req_id not in requisitos_definidos:
+                    requisitos_definidos[req_id] = {
+                        'requisito': req_transicion.requisito,
+                        'obligatorio': req_transicion.obligatorio,
+                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                        'transicion_origen': transicion.etapa_origen.nombre
+                    }
+        
+        # Solo procesar RequisitoSolicitud que estén definidos en RequisitoTransicion de entrada
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(
+            solicitud=solicitud,
+            requisito_id__in=requisitos_definidos.keys()  # 🎯 CLAVE: Solo los definidos en RequisitoTransicion
+        ).select_related('requisito')
+        
+        documentos_problematicos = []
+        documentos_pendientes = []
+        documentos_buenos = 0
+        documentos_malos = 0
+        
+        # 🔍 DEBUG SIMPLIFICADO: Solo información esencial
+        print(f"📋 Validando solicitud {solicitud_id}: {len(requisitos_definidos)} requisitos definidos")
+        
+        # Validar documentos - Solo documentos OBLIGATORIOS calificados como "malo" bloquean el avance
+        for req_sol in requisitos_solicitud:
+            # Buscar la calificación más reciente
+            calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                requisito_solicitud=req_sol
+            ).order_by('-fecha_calificacion').first()
+            
+            # Obtener información de obligatoriedad desde RequisitoTransicion
+            req_id = req_sol.requisito.id
+            es_obligatorio = requisitos_definidos.get(req_id, {}).get('obligatorio', False)
+            
+            if calificacion:
+                estado = calificacion.estado
+                
+                # ✅ VERIFICAR DOCUMENTOS "PENDIENTE" - Solo obligatorios bloquean
+                if estado == 'pendiente':
+                    if es_obligatorio:
+                        # Documento OBLIGATORIO pendiente → BLOQUEA
+                        documentos_problematicos.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'problema': 'obligatorio_pendiente',
+                            'estado_actual': estado,
+                            'es_obligatorio': True
+                        })
+                    else:
+                        # Documento OPCIONAL pendiente → NO bloquea
+                        documentos_pendientes.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'estado': 'pendiente',
+                            'es_obligatorio': es_obligatorio
+                        })
+                    continue
+                
+                # Contar por estado (solo bueno/malo, pendiente se ignora)
+                if estado == 'bueno':
+                    documentos_buenos += 1
+                elif estado == 'malo':
+                    documentos_malos += 1
+                    # ✅ LÓGICA CORRECTA: Solo documentos OBLIGATORIOS "malo" bloquean
+                    if es_obligatorio:
+                        documentos_problematicos.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'problema': 'calificado_como_malo',
+                            'estado_actual': estado,
+                            'es_obligatorio': True
+                        })
+                    # Los documentos opcionales "malo" NO bloquean el avance
+            else:
+                # Sin calificación = pendiente automático (permite avanzar)
+                documentos_pendientes.append({
+                    'nombre': req_sol.requisito.nombre,
+                    'estado': 'sin_calificacion_pendiente',
+                    'es_obligatorio': es_obligatorio
+                })
+                
+                # Crear calificación automática como "pendiente"
+                try:
+                    CalificacionDocumentoBackoffice.objects.get_or_create(
+                        requisito_solicitud=req_sol,
+                        defaults={
+                            'calificado_por': request.user,
+                            'estado': 'pendiente'
+                        }
+                    )
+                except Exception:
+                    pass  # Ignorar errores de creación automática
+        
+        # ✅ NUEVO: Incluir documentos definidos en RequisitoTransicion que NO están en RequisitoSolicitud
+        # Estos son documentos requeridos que el usuario aún no ha subido
+        for req_id, req_info in requisitos_definidos.items():
+            # Si no existe un RequisitoSolicitud para este requisito
+            if not requisitos_solicitud.filter(requisito_id=req_id).exists():
+                documentos_pendientes.append({
+                    'nombre': req_info['requisito'].nombre,
+                    'estado': 'faltante',
+                    'obligatorio': req_info['obligatorio'],
+                    'mensaje_personalizado': req_info['mensaje_personalizado']
+                })
+        
+        # ✅ LÓGICA CORREGIDA: Solo bloquear por documentos OBLIGATORIOS sin calificar
+        documentos_obligatorios_sin_calificar = []
+        
+        # Verificar documentos obligatorios que no han sido calificados
+        for req_id, req_info in requisitos_definidos.items():
+            es_obligatorio = req_info['obligatorio']
+            if es_obligatorio:
+                # Buscar si existe calificación para este documento obligatorio
+                req_sol_existe = requisitos_solicitud.filter(requisito_id=req_id).first()
+                if not req_sol_existe:
+                    # Documento obligatorio que no ha sido subido/calificado
+                    documentos_obligatorios_sin_calificar.append({
+                        'nombre': req_info['requisito'].nombre,
+                        'problema': 'sin_subir',
+                        'es_obligatorio': True
+                    })
+                else:
+                    # Verificar si tiene calificación
+                    calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                        requisito_solicitud=req_sol_existe
+                    ).order_by('-fecha_calificacion').first()
+                    
+                    if not calificacion:
+                        # Documento subido pero sin calificar
+                        documentos_obligatorios_sin_calificar.append({
+                            'nombre': req_info['requisito'].nombre,
+                            'problema': 'sin_calificar',
+                            'es_obligatorio': True
+                        })
+        
+        # 🎯 REGLAS DE BLOQUEO: 
+        # 1. Documentos obligatorios sin calificar → BLOQUEAN
+        # 2. Documentos obligatorios "malo" → BLOQUEAN  
+        # 3. Documentos "pendiente" → NO bloquean
+        # 4. Documentos opcionales "malo" → NO bloquean
+        
+        total_bloqueantes = len(documentos_obligatorios_sin_calificar) + len(documentos_problematicos)
+        print(f"🎯 Resultado: {len(documentos_obligatorios_sin_calificar)} sin calificar + {len(documentos_problematicos)} obligatorios 'malo' = {total_bloqueantes} bloqueantes")
+        
+        if total_bloqueantes == 0:
+            # Mensaje personalizado basado en la situación
+            mensaje_partes = []
+            if documentos_buenos > 0:
+                mensaje_partes.append(f"{documentos_buenos} documento(s) bueno(s)")
+            if documentos_malos > 0:
+                mensaje_partes.append(f"{documentos_malos} documento(s) malo(s) - NO bloquean")
+            if len(documentos_pendientes) > 0:
+                mensaje_partes.append(f"{len(documentos_pendientes)} documento(s) pendiente(s) - NO bloquean")
+            
+            if mensaje_partes:
+                detalle = ", ".join(mensaje_partes)
+                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente" y opcionales "malo" NO bloquean)'
+            else:
+                mensaje = '✅ Puede avanzar. No hay documentos obligatorios que bloqueen el avance.'
+            
+            return JsonResponse({
+                'success': True,
+                'puede_avanzar': True,
+                'mensaje': mensaje,
+                'documentos_pendientes': documentos_pendientes,
+                'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
+                'documentos_buenos': documentos_buenos,
+                'documentos_malos': documentos_malos,
+                'documentos_pendientes_count': len(documentos_pendientes)
+            })
+        else:
+            # ❌ HAY DOCUMENTOS BLOQUEANTES - BLOQUEAR AVANCE
+            mensajes_detalle = []
+            
+            # Agregar documentos sin calificar
+            for doc in documentos_obligatorios_sin_calificar:
+                if doc['problema'] == 'sin_subir':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO no subido")
+                elif doc['problema'] == 'sin_calificar':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO sin calificar")
+            
+            # Agregar documentos obligatorios "malo"
+            for doc in documentos_problematicos:
+                if doc['problema'] == 'calificado_como_malo':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO calificado como 'Malo'")
+                elif doc['problema'] == 'obligatorio_pendiente':
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO pendiente - requiere calificación")
+            
+            # Combinar todos los documentos problemáticos para la respuesta
+            todos_problematicos = documentos_obligatorios_sin_calificar + documentos_problematicos
+            
+            return JsonResponse({
+                'success': True,
+                'puede_avanzar': False,
+                'documentos_problematicos': todos_problematicos,
+                'documentos_pendientes': documentos_pendientes,
+                'mensaje': f'No puede avanzar: {total_bloqueantes} documento(s) OBLIGATORIO(S) requieren atención',
+                'detalle': mensajes_detalle,
+                'total_documentos': len(requisitos_definidos),
+                'documentos_buenos': documentos_buenos,
+                'documentos_malos': documentos_malos,
+                'documentos_pendientes_count': len(documentos_pendientes)
+            })
+
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_avanzar_subestado_backoffice(request, solicitud_id):
+    """
+    API para avanzar al siguiente subestado en Back Office con opción de asignación
+    """
+    try:
+        import json
+        from django.contrib.auth.models import User
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        data = json.loads(request.body)
+        
+        opcion = data.get('opcion')  # 'yo' o 'otro'
+        usuario_id = data.get('usuario_id')
+        siguiente_subestado_id = data.get('siguiente_subestado_id')
+        
+        # Validaciones
+        if opcion not in ['yo', 'otro', 'bandeja']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Opción inválida. Debe ser "yo", "otro" o "bandeja"'
+            }, status=400)
+        
+        if opcion == 'otro' and not usuario_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe especificar un usuario para asignar'
+            }, status=400)
+        
+        # Verificar que estamos en Back Office
+        if not solicitud.etapa_actual or 'back office' not in solicitud.etapa_actual.nombre.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'La solicitud no está en Back Office'
+            }, status=400)
+        
+        # Determinar el usuario asignado
+        if opcion == 'yo':
+            usuario_asignado = request.user
+        elif opcion == 'otro':
+            usuario_asignado = get_object_or_404(User, id=usuario_id)
+        else:  # opcion == 'bandeja'
+            usuario_asignado = None  # Sin asignar, queda en bandeja grupal
+        
+        # Si hay siguiente subestado, avanzar a él
+        if siguiente_subestado_id:
+            siguiente_subestado = get_object_or_404(SubEstado, id=siguiente_subestado_id)
+            
+            # Actualizar la solicitud
+            solicitud.subestado_actual = siguiente_subestado
+            solicitud.asignada_a = usuario_asignado
+            solicitud.save()
+            
+            # ✅ CORREGIDO: Crear calificaciones pendientes SIEMPRE, para todas las opciones
+            # Determinar el usuario que va a calificar
+            usuario_calificador = usuario_asignado if usuario_asignado else request.user
+            crear_calificaciones_pendientes_backoffice(solicitud, usuario_calificador)
+            print(f"✅ Calificaciones pendientes creadas para solicitud {solicitud.codigo} con usuario {usuario_calificador.username}")
+            
+            # Generar URL de redirección
+            if opcion == 'yo':
+                # Normalizar nombre del subestado para la URL
+                def normalizar_subestado_url(nombre):
+                    """Normaliza el nombre del subestado para crear URLs válidas"""
+                    # Mapeo específico para los subestados de Back Office
+                    mapeo_subestados = {
+                        'checklist': 'checklist',
+                        'captura': 'captura', 
+                        'firma': 'firma',
+                        'orden del expediente': 'orden',
+                        'trámite': 'tramite',  # Sin acento
+                        'subsanación de pendientes trámite': 'subsanacion'  # Sin acento y simplificado
+                    }
+                    
+                    nombre_lower = nombre.lower().strip()
+                    return mapeo_subestados.get(nombre_lower, nombre_lower.replace(' ', '-'))
+                
+                subestado_url = normalizar_subestado_url(siguiente_subestado.nombre)
+                redirect_url = f"/solicitudes/{solicitud.id}/backoffice/{subestado_url}/"
+            else:  # opcion == 'otro' o 'bandeja'
+                redirect_url = "/workflow/bandeja-mixta/"
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'subestado_changed', request.user)
+            
+            # Generar mensaje según la opción
+            if opcion == 'yo':
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre}. Continuarás trabajando en este subestado.'
+            elif opcion == 'otro':
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre} y asignada a {usuario_asignado.get_full_name() or usuario_asignado.username}.'
+            else:  # opcion == 'bandeja'
+                mensaje = f'Solicitud avanzada a {siguiente_subestado.nombre} y devuelta a la bandeja grupal para que cualquier usuario pueda tomarla.'
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': mensaje,
+                'redirect_url': redirect_url
+            })
+        
+        else:
+            # No hay siguiente subestado, avanzar a la siguiente etapa
+            transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
+            
+            if not transiciones_salida.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No hay transiciones disponibles desde esta etapa'
+                }, status=400)
+            
+            # Tomar la primera transición disponible (puede mejorarse con lógica más específica)
+            transicion = transiciones_salida.first()
+            siguiente_etapa = transicion.etapa_destino
+            
+            # Actualizar la solicitud
+            solicitud.etapa_actual = siguiente_etapa
+            solicitud.subestado_actual = None  # Se asignará en la nueva etapa
+            solicitud.asignada_a = usuario_asignado
+            solicitud.save()
+            
+            # Generar URL de redirección
+            if opcion == 'yo':
+                redirect_url = f"/solicitudes/{solicitud.id}/"
+            else:  # opcion == 'otro' o 'bandeja'
+                redirect_url = "/workflow/bandeja-mixta/"
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'etapa_changed', request.user)
+            
+            # Generar mensaje según la opción
+            if opcion == 'yo':
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre}. Continuarás trabajando en esta etapa.'
+            elif opcion == 'otro':
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre} y asignada a {usuario_asignado.get_full_name() or usuario_asignado.username}.'
+            else:  # opcion == 'bandeja'
+                mensaje = f'Solicitud avanzada a la etapa {siguiente_etapa.nombre} y devuelta a la bandeja grupal para que cualquier usuario pueda tomarla.'
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': mensaje,
+                'redirect_url': redirect_url
+            })
+        
+    except Exception as e:
+        print(f"❌ Error avanzando subestado: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_transiciones_negativas(request, solicitud_id):
+    """API para obtener transiciones negativas (hacia atrás) disponibles para una solicitud"""
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        etapa_actual = solicitud.etapa_actual
+        
+        # Buscar transiciones desde la etapa actual hacia etapas con orden menor (transiciones negativas)
+        transiciones_negativas = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_origen=etapa_actual,
+            etapa_destino__orden__lt=etapa_actual.orden  # Orden menor = hacia atrás
+        ).select_related('etapa_destino').order_by('-etapa_destino__orden')  # Ordenar por etapa destino descendente
+        
+        transiciones_data = []
+        for transicion in transiciones_negativas:
+            transiciones_data.append({
+                'id': transicion.id,
+                'nombre': transicion.nombre,
+                'etapa_destino': {
+                    'id': transicion.etapa_destino.id,
+                    'nombre': transicion.etapa_destino.nombre,
+                    'orden': transicion.etapa_destino.orden
+                },
+                'requiere_permiso': transicion.requiere_permiso
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'transiciones_negativas': transiciones_data,
+            'tiene_transiciones_negativas': len(transiciones_data) > 0
         })
         
     except Exception as e:
@@ -15237,4 +16561,988 @@ def generar_pdf_resultado_comite(pdf_data):
     buffer.seek(0)
     
     return buffer
+            'error': f'Error al obtener transiciones negativas: {str(e)}'
+        }, status=500)
+
+
+# ==========================================================
+# APIS PARA PENDIENTES ANTES DE FIRMA
+# ==========================================================
+
+@login_required
+@require_http_methods(["GET"])
+def api_buscar_pendientes_catalogo(request):
+    """
+    API para buscar pendientes en el catálogo
+    """
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        # Filtrar pendientes activos
+        pendientes = CatalogoPendienteAntesFirma.objects.filter(activo=True)
+        
+        # Si hay término de búsqueda, filtrar
+        if query:
+            pendientes = pendientes.filter(
+                Q(nombre__icontains=query) |
+                Q(descripcion__icontains=query)
+            )
+        
+        # Ordenar por orden y nombre
+        pendientes = pendientes.order_by('orden', 'nombre')[:20]  # Limitar a 20 resultados
+        
+        pendientes_data = []
+        for pendiente in pendientes:
+            pendientes_data.append({
+                'id': pendiente.id,
+                'nombre': pendiente.nombre,
+                'descripcion': pendiente.descripcion,
+                'orden': pendiente.orden
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pendientes': pendientes_data,
+            'total': len(pendientes_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al buscar pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_pendientes_solicitud(request, solicitud_id):
+    """
+    API para obtener los pendientes de una solicitud específica
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        pendientes = PendienteSolicitud.objects.filter(
+            solicitud=solicitud
+        ).select_related(
+            'pendiente', 'agregado_por', 'completado_por', 'ultima_modificacion_por'
+        ).order_by('-fecha_agregado')
+        
+        pendientes_data = []
+        for pendiente in pendientes:
+            pendientes_data.append({
+                'id': pendiente.id,
+                'pendiente': {
+                    'id': pendiente.pendiente.id,
+                    'nombre': pendiente.pendiente.nombre,
+                    'descripcion': pendiente.pendiente.descripcion
+                },
+                'estado': pendiente.estado,
+                'estado_display': pendiente.get_estado_display(),
+                'agregado_por': {
+                    'id': pendiente.agregado_por.id,
+                    'username': pendiente.agregado_por.username,
+                    'nombre_completo': f"{pendiente.agregado_por.first_name} {pendiente.agregado_por.last_name}".strip() or pendiente.agregado_por.username
+                },
+                'fecha_agregado': pendiente.fecha_agregado.isoformat(),
+                'fecha_agregado_display': pendiente.fecha_agregado.strftime('%d/%m/%Y %H:%M'),
+                'completado_por': {
+                    'id': pendiente.completado_por.id,
+                    'username': pendiente.completado_por.username,
+                    'nombre_completo': f"{pendiente.completado_por.first_name} {pendiente.completado_por.last_name}".strip() or pendiente.completado_por.username
+                } if pendiente.completado_por else None,
+                'fecha_completado': pendiente.fecha_completado.isoformat() if pendiente.fecha_completado else None,
+                'fecha_completado_display': pendiente.fecha_completado.strftime('%d/%m/%Y %H:%M') if pendiente.fecha_completado else None,
+                'etapa_agregado': pendiente.etapa_agregado,
+                'subestado_agregado': pendiente.subestado_agregado,
+                'notas': pendiente.notas,
+                'esta_completado': pendiente.esta_completado
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'pendientes': pendientes_data,
+            'total': len(pendientes_data),
+            'solicitud_codigo': solicitud.codigo
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_agregar_pendiente_solicitud(request, solicitud_id):
+    """
+    API para agregar uno o varios pendientes a una solicitud
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        pendientes_ids = data.get('pendientes_ids', [])
+        
+        if not pendientes_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe seleccionar al menos un pendiente'
+            }, status=400)
+        
+        # Verificar que los pendientes existan y estén activos
+        pendientes = CatalogoPendienteAntesFirma.objects.filter(
+            id__in=pendientes_ids, 
+            activo=True
+        )
+        
+        if len(pendientes) != len(pendientes_ids):
+            return JsonResponse({
+                'success': False,
+                'error': 'Algunos pendientes seleccionados no existen o no están activos'
+            }, status=400)
+        
+        agregados = []
+        duplicados = []
+        
+        for pendiente in pendientes:
+            # Verificar si ya existe esta combinación
+            if PendienteSolicitud.objects.filter(
+                solicitud=solicitud, 
+                pendiente=pendiente
+            ).exists():
+                duplicados.append(pendiente.nombre)
+                continue
+            
+            # Crear el nuevo pendiente de solicitud
+            pendiente_solicitud = PendienteSolicitud.objects.create(
+                solicitud=solicitud,
+                pendiente=pendiente,
+                agregado_por=request.user,
+                etapa_agregado=solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+                subestado_agregado=solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado',
+                ultima_modificacion_por=request.user
+            )
+            
+            agregados.append({
+                'id': pendiente_solicitud.id,
+                'nombre': pendiente.nombre
+            })
+        
+        mensaje = f"Se agregaron {len(agregados)} pendiente(s) correctamente."
+        if duplicados:
+            mensaje += f" Se omitieron {len(duplicados)} pendiente(s) ya existente(s): {', '.join(duplicados)}"
+        
+        return JsonResponse({
+            'success': True,
+            'message': mensaje,
+            'agregados': agregados,
+            'duplicados': duplicados
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error en el formato de datos enviados'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al agregar pendientes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_cambiar_estado_pendiente(request, pendiente_solicitud_id):
+    """
+    API para cambiar el estado de un pendiente de solicitud
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        pendiente_solicitud = get_object_or_404(PendienteSolicitud, id=pendiente_solicitud_id)
+        nuevo_estado = data.get('estado')
+        notas = data.get('notas', '')
+        
+        # Validar el nuevo estado
+        estados_validos = dict(PendienteSolicitud.ESTADO_CHOICES).keys()
+        if nuevo_estado not in estados_validos:
+            return JsonResponse({
+                'success': False,
+                'error': f'Estado inválido. Estados válidos: {list(estados_validos)}'
+            }, status=400)
+        
+        # Actualizar el pendiente
+        pendiente_solicitud.estado = nuevo_estado
+        pendiente_solicitud.ultima_modificacion_por = request.user
+        
+        if notas:
+            pendiente_solicitud.notas = notas
+        
+        # Si se marca como listo, establecer completado_por
+        if nuevo_estado == 'listo':
+            pendiente_solicitud.completado_por = request.user
+        else:
+            # Si cambia de listo a otro estado, limpiar datos de completado
+            pendiente_solicitud.completado_por = None
+            pendiente_solicitud.fecha_completado = None
+        
+        pendiente_solicitud.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Estado cambiado a "{pendiente_solicitud.get_estado_display()}" correctamente',
+            'nuevo_estado': nuevo_estado,
+            'nuevo_estado_display': pendiente_solicitud.get_estado_display(),
+            'fecha_completado': pendiente_solicitud.fecha_completado.isoformat() if pendiente_solicitud.fecha_completado else None,
+            'completado_por': {
+                'username': pendiente_solicitud.completado_por.username,
+                'nombre_completo': f"{pendiente_solicitud.completado_por.first_name} {pendiente_solicitud.completado_por.last_name}".strip() or pendiente_solicitud.completado_por.username
+            } if pendiente_solicitud.completado_por else None
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error en el formato de datos enviados'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al cambiar estado: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_pendiente_solicitud(request, pendiente_solicitud_id):
+    """
+    API para eliminar un pendiente de una solicitud
+    """
+    try:
+        pendiente_solicitud = get_object_or_404(PendienteSolicitud, id=pendiente_solicitud_id)
+        
+        # Guardar información antes de eliminar
+        pendiente_nombre = pendiente_solicitud.pendiente.nombre
+        solicitud_codigo = pendiente_solicitud.solicitud.codigo
+        
+        # Eliminar el pendiente
+        pendiente_solicitud.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Pendiente "{pendiente_nombre}" eliminado correctamente de la solicitud {solicitud_codigo}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar pendiente: {str(e)}'
+        }, status=500)
+
+
+# ==========================================================
+# VISTA PARA AGENDA DE FIRMA
+# ==========================================================
+
+@login_required
+def agenda_firma_view(request):
+    """
+    Vista principal para la Agenda de Firma
+    """
+    try:
+        # Por ahora, simplemente renderizamos un template básico
+        # Más funcionalidad se agregará según las especificaciones
+        
+        context = {
+            'titulo_pagina': 'Agenda de Firma',
+            'usuario': request.user,
+        }
+        
+        return render(request, 'workflow/agenda_firma.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar la agenda de firma: {str(e)}')
+        return redirect('workflow:dashboard')
+
+
+# ==========================================================
+# APIs PARA AGENDA DE FIRMA
+# ==========================================================
+
+@login_required
+def api_listar_citas_calendario(request):
+    """
+    API para obtener las citas del calendario en formato FullCalendar
+    """
+    try:
+        # Obtener parámetros de fecha del calendario
+        start_date = request.GET.get('start')
+        end_date = request.GET.get('end')
+        
+        # Filtrar citas por rango de fechas si se proporcionan
+        citas = AgendaFirma.objects.select_related('solicitud', 'creado_por').all()
+        if start_date and end_date:
+            citas = citas.filter(
+                fecha_hora__gte=start_date,
+                fecha_hora__lte=end_date
+            )
+        
+        # Convertir a formato FullCalendar
+        eventos = []
+        for cita in citas:
+            try:
+                # Validar que la cita tenga todos los datos necesarios
+                if not cita.solicitud or not cita.creado_por:
+                    continue
+                
+                eventos.append({
+                    'id': cita.id,
+                    'title': f'{cita.cliente_nombre} - {cita.solicitud.codigo}',
+                    'start': cita.fecha_hora.isoformat(),
+                    'end': (cita.fecha_hora + timedelta(hours=1)).isoformat(),  # 1 hora de duración
+                    'backgroundColor': '#28a745',  # Verde para resaltar
+                    'borderColor': '#1e7e34',
+                    'textColor': '#ffffff',
+                    'extendedProps': {
+                        'solicitud_codigo': cita.solicitud.codigo or 'N/A',
+                        'cliente_nombre': cita.cliente_nombre,
+                        'cliente_cedula': cita.cliente_cedula,
+                        'lugar_firma': cita.lugar_firma_display,
+                        'comentarios': cita.comentarios or '',
+                        'creado_por': cita.creado_por.username,
+                        'tiene_pendientes': cita.tiene_pendientes
+                    }
+                })
+            except Exception as item_error:
+                # Si hay error con una cita específica, continuar con las demás
+                print(f"Error procesando cita {cita.id}: {str(item_error)}")
+                continue
+        
+        # FullCalendar siempre espera un array, nunca un objeto
+        return JsonResponse(eventos, safe=False)
+        
+    except Exception as e:
+        print(f"Error en api_listar_citas_calendario: {str(e)}")
+        # IMPORTANTE: Siempre devolver array vacío, nunca un objeto con error
+        # FullCalendar no puede manejar objetos de error
+        return JsonResponse([], safe=False)
+
+
+@login_required
+def api_buscar_solicitudes_agenda(request):
+    """
+    API para buscar solicitudes en el autocomplete del modal
+    """
+    try:
+        termino = request.GET.get('q', '').strip()
+        if len(termino) < 2:
+            return JsonResponse({'solicitudes': []})
+        
+        # Construir consulta más segura
+        q_filters = Q(codigo__icontains=termino)
+        
+        # Agregar filtros solo si los campos existen y no son None
+        try:
+            q_filters |= Q(cliente__nombreCliente__icontains=termino)
+            q_filters |= Q(cliente__cedulaCliente__icontains=termino)
+        except:
+            pass  # Ignorar si el campo no existe o hay error
+            
+        try:
+            q_filters |= Q(cotizacion__nombreCliente__icontains=termino)
+            q_filters |= Q(cotizacion__cedulaCliente__icontains=termino)
+        except:
+            pass  # Ignorar si el campo no existe o hay error
+        
+        # Ejecutar consulta con select_related para optimizar
+        solicitudes = Solicitud.objects.select_related(
+            'cliente', 'cotizacion', 'etapa_actual'
+        ).filter(q_filters).distinct()[:10]
+        
+        resultados = []
+        for solicitud in solicitudes:
+            try:
+                # Obtener información del cliente de forma segura
+                cliente_nombre = "N/A"
+                cliente_cedula = "N/A"
+                
+                # Priorizar información del cliente directo
+                if solicitud.cliente:
+                    if hasattr(solicitud.cliente, 'nombreCliente') and solicitud.cliente.nombreCliente:
+                        cliente_nombre = solicitud.cliente.nombreCliente
+                    if hasattr(solicitud.cliente, 'cedulaCliente') and solicitud.cliente.cedulaCliente:
+                        cliente_cedula = solicitud.cliente.cedulaCliente
+                # Fallback a cotización si no hay cliente directo
+                elif solicitud.cotizacion:
+                    if hasattr(solicitud.cotizacion, 'nombreCliente') and solicitud.cotizacion.nombreCliente:
+                        cliente_nombre = solicitud.cotizacion.nombreCliente
+                    if hasattr(solicitud.cotizacion, 'cedulaCliente') and solicitud.cotizacion.cedulaCliente:
+                        cliente_cedula = solicitud.cotizacion.cedulaCliente
+                
+                # Obtener etapa actual de forma segura
+                etapa_actual = "N/A"
+                if solicitud.etapa_actual and hasattr(solicitud.etapa_actual, 'nombre'):
+                    etapa_actual = solicitud.etapa_actual.nombre
+                
+                resultados.append({
+                    'id': solicitud.id,
+                    'codigo': solicitud.codigo or "N/A",
+                    'cliente_nombre': cliente_nombre,
+                    'cliente_cedula': cliente_cedula,
+                    'etapa_actual': etapa_actual,
+                    'display_text': f'{solicitud.codigo or "N/A"} - {cliente_nombre} ({cliente_cedula})'
+                })
+                
+            except Exception as item_error:
+                # Si hay error con una solicitud específica, continuar con las demás
+                print(f"Error procesando solicitud {solicitud.id}: {str(item_error)}")
+                continue
+        
+        return JsonResponse({'solicitudes': resultados})
+        
+    except Exception as e:
+        print(f"Error en api_buscar_solicitudes_agenda: {str(e)}")
+        # Siempre devolver la estructura esperada, incluso en caso de error
+        return JsonResponse({
+            'solicitudes': [],
+            'error_message': f'Error al buscar solicitudes: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_crear_cita_firma(request):
+    """
+    API para crear una nueva cita de firma
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Validar campos requeridos
+        solicitud_id = data.get('solicitud_id')
+        fecha_hora_str = data.get('fecha_hora')
+        lugar_firma = data.get('lugar_firma')
+        comentarios = data.get('comentarios', '')
+        
+        if not all([solicitud_id, fecha_hora_str, lugar_firma]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Todos los campos son obligatorios'
+            }, status=400)
+        
+        # Validar solicitud
+        try:
+            solicitud = Solicitud.objects.get(id=solicitud_id)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Solicitud no encontrada'
+            }, status=404)
+        
+        # Parsear fecha y hora
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora_str.replace('Z', '+00:00'))
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formato de fecha inválido'
+            }, status=400)
+        
+        # Crear la cita
+        cita = AgendaFirma.objects.create(
+            solicitud=solicitud,
+            fecha_hora=fecha_hora,
+            lugar_firma=lugar_firma,
+            comentarios=comentarios,
+            creado_por=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cita creada exitosamente',
+            'cita': {
+                'id': cita.id,
+                'title': f'{cita.cliente_nombre} - {cita.solicitud.codigo}',
+                'start': cita.fecha_hora.isoformat(),
+                'end': (cita.fecha_hora + timedelta(hours=1)).isoformat(),
+                'backgroundColor': '#28a745',
+                'borderColor': '#1e7e34',
+                'textColor': '#ffffff'
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al crear cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_editar_cita_firma(request, cita_id):
+    """
+    API para editar una cita de firma existente
+    """
+    try:
+        # Solo admins pueden editar
+        if not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para editar citas'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        
+        try:
+            cita = AgendaFirma.objects.get(id=cita_id)
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cita no encontrada'
+            }, status=404)
+        
+        # Actualizar campos si se proporcionan
+        if 'fecha_hora' in data:
+            try:
+                cita.fecha_hora = datetime.fromisoformat(data['fecha_hora'].replace('Z', '+00:00'))
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Formato de fecha inválido'
+                }, status=400)
+        
+        if 'lugar_firma' in data:
+            cita.lugar_firma = data['lugar_firma']
+        
+        if 'comentarios' in data:
+            cita.comentarios = data['comentarios']
+        
+        # Actualizar auditoría
+        cita.modificado_por = request.user
+        cita.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cita actualizada exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al editar cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_cita_firma(request, cita_id):
+    """
+    API para eliminar una cita de firma
+    """
+    try:
+        # Solo admins pueden eliminar
+        if not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para eliminar citas'
+            }, status=403)
+        
+        try:
+            cita = AgendaFirma.objects.get(id=cita_id)
+            cita_info = f'{cita.solicitud.codigo} - {cita.cliente_nombre}'
+            cita.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Cita {cita_info} eliminada exitosamente'
+            })
+            
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Cita no encontrada'
+            }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al eliminar cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_obtener_cita_firma(request, cita_id):
+    """
+    API para obtener detalles de una cita específica
+    """
+    try:
+        cita = get_object_or_404(AgendaFirma, id=cita_id)
+        
+        return JsonResponse({
+            'success': True,
+            'cita': {
+                'id': cita.id,
+                'solicitud': {
+                    'id': cita.solicitud.id,
+                    'codigo': cita.solicitud.codigo,
+                    'cliente_nombre': cita.cliente_nombre,
+                    'cliente_cedula': cita.cliente_cedula
+                },
+                'fecha_hora': cita.fecha_hora.isoformat(),
+                'lugar_firma': cita.lugar_firma,
+                'lugar_firma_display': cita.lugar_firma_display,
+                'comentarios': cita.comentarios,
+                'creado_por': cita.creado_por.username,
+                'fecha_creacion': cita.fecha_creacion.isoformat(),
+                'tiene_pendientes': cita.tiene_pendientes
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def api_obtener_citas_solicitud(request, solicitud_id):
+    """
+    API para obtener todas las citas de AgendaFirma de una solicitud específica
+    """
+    try:
+        # Verificar que la solicitud existe
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        
+        # Obtener todas las citas de esta solicitud
+        citas = AgendaFirma.objects.filter(
+            solicitud=solicitud
+        ).select_related('creado_por', 'modificado_por').order_by('-fecha_hora')
+        
+        # Convertir a formato JSON
+        citas_data = []
+        for cita in citas:
+            citas_data.append({
+                'id': cita.id,
+                'fecha_hora': cita.fecha_hora.isoformat(),
+                'fecha_formateada': cita.fecha_formateada,
+                'lugar_firma': cita.lugar_firma,
+                'lugar_firma_display': cita.lugar_firma_display,
+                'comentarios': cita.comentarios,
+                'creado_por': {
+                    'username': cita.creado_por.username,
+                    'nombre_completo': f"{cita.creado_por.first_name} {cita.creado_por.last_name}".strip() or cita.creado_por.username
+                },
+                'fecha_creacion': cita.fecha_creacion.isoformat(),
+                'modificado_por': {
+                    'username': cita.modificado_por.username if cita.modificado_por else None,
+                    'nombre_completo': f"{cita.modificado_por.first_name} {cita.modificado_por.last_name}".strip() if cita.modificado_por else None
+                } if cita.modificado_por else None,
+                'fecha_modificacion': cita.fecha_modificacion.isoformat() if cita.fecha_modificacion else None,
+                'tiene_pendientes': cita.tiene_pendientes,
+                'solicitud_codigo': cita.solicitud_codigo,
+                'cliente_nombre': cita.cliente_nombre,
+                'cliente_cedula': cita.cliente_cedula
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'citas': citas_data,
+            'total': len(citas_data),
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo
+            }
+        })
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Solicitud no encontrada'
+        }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener las citas: {str(e)}'
+        }, status=500)
+
+
+# ==========================================================
+# VISTA PARA PENDIENTES Y ERRORES  
+# ==========================================================
+
+@login_required
+def pendientes_errores_view(request):
+    """
+    Vista principal para el módulo de Pendientes y errores
+    Muestra tres tablas: pendientes, errores y pendientes antes de firma
+    """
+    from django.core.paginator import Paginator
+    from .models import CalificacionDocumentoBackoffice, RequisitoSolicitud
+    from .modelsWorkflow import PendienteSolicitud
+    
+    try:
+        # Obtener datos para tabla de pendientes (documentos pendientes)
+        pendientes_query = CalificacionDocumentoBackoffice.objects.filter(
+            estado='pendiente',
+            requisito_solicitud__solicitud__isnull=False
+        ).select_related(
+            'requisito_solicitud',
+            'requisito_solicitud__solicitud',
+            'requisito_solicitud__requisito',
+            'calificado_por'
+        ).order_by('-fecha_calificacion')
+
+        # Obtener datos para tabla de errores (documentos marcados como malo)
+        errores_query = CalificacionDocumentoBackoffice.objects.filter(
+            estado='malo',
+            requisito_solicitud__solicitud__isnull=False
+        ).select_related(
+            'requisito_solicitud',
+            'requisito_solicitud__solicitud', 
+            'requisito_solicitud__requisito',
+            'calificado_por',
+            'subsanado_por'
+        ).order_by('-fecha_calificacion')
+
+        # Obtener datos para tabla de pendientes antes de firma
+        pendientes_firma_query = PendienteSolicitud.objects.filter(
+            estado__in=['por_hacer', 'haciendo']
+        ).select_related(
+            'solicitud',
+            'pendiente',
+            'agregado_por',
+            'completado_por'
+        ).order_by('-fecha_agregado')
+
+        # Paginación para pendientes
+        pendientes_paginator = Paginator(pendientes_query, 10)
+        pendientes_page = request.GET.get('pendientes_page', 1)
+        pendientes = pendientes_paginator.get_page(pendientes_page)
+
+        # Paginación para errores  
+        errores_paginator = Paginator(errores_query, 10)
+        errores_page = request.GET.get('errores_page', 1)
+        errores = errores_paginator.get_page(errores_page)
+
+        # Paginación para pendientes antes de firma
+        pendientes_firma_paginator = Paginator(pendientes_firma_query, 10)
+        pendientes_firma_page = request.GET.get('pendientes_firma_page', 1)
+        pendientes_firma = pendientes_firma_paginator.get_page(pendientes_firma_page)
+
+        context = {
+            'titulo_pagina': 'Pendientes y errores',
+            'usuario': request.user,
+            'pendientes': pendientes,
+            'errores': errores,
+            'pendientes_firma': pendientes_firma,
+            'total_pendientes': pendientes_query.count(),
+            'total_errores': errores_query.count(),
+            'total_pendientes_firma': pendientes_firma_query.count(),
+        }
+        
+        return render(request, 'workflow/pendientes_errores.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar pendientes y errores: {str(e)}')
+        return redirect('workflow:dashboard')
+
+
+# ==========================================================
+# VISTAS AJAX PARA ORDEN DE EXPEDIENTE
+# ==========================================================
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_documento_orden(request):
+    """Vista AJAX para actualizar el estado de un documento en el orden de expediente"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documento_id = data.get('documento_id')
+        tiene_documento = data.get('tiene_documento', False)
+        
+        print(f"📝 Actualizando documento ID: {documento_id}, Estado: {tiene_documento}")
+        
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos (usuario debe tener acceso a la solicitud)
+        if not documento.solicitud.asignada_a == request.user:
+            # Verificar si es bandeja grupal y el usuario tiene permisos
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar documento - CRÍTICO: Guardar ambos cambios
+        documento.tiene_documento = tiene_documento
+        documento.calificado_por = request.user
+        documento.fecha_calificacion = timezone.now()
+        documento.save()  # Guardar TODOS los cambios
+        
+        print(f"✅ Documento guardado: ID {documento_id}, tiene_documento={documento.tiene_documento}")
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'tiene_documento': documento.tiene_documento,
+            'estado_display': documento.estado_display,
+            'css_class': documento.css_class,
+            'message': f'Documento {"marcado como presente" if tiene_documento else "marcado como faltante"}'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error al actualizar documento: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_orden_documentos(request):
+    """Vista AJAX para actualizar el orden de los documentos mediante drag & drop"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documentos_orden = data.get('documentos_orden', [])
+        
+        if not documentos_orden:
+            return JsonResponse({'success': False, 'error': 'No se recibieron datos'})
+        
+        # Actualizar orden de cada documento
+        for idx, documento_data in enumerate(documentos_orden):
+            documento_id = documento_data.get('id')
+            nuevo_orden = idx + 1
+            
+            documento = get_object_or_404(OrdenExpediente, id=documento_id)
+            
+            # Verificar permisos
+            if not documento.solicitud.asignada_a == request.user:
+                if not (documento.solicitud.etapa_actual and 
+                       documento.solicitud.etapa_actual.es_bandeja_grupal):
+                    return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+            
+            documento.orden = nuevo_orden
+            documento.marcar_calificado(request.user)
+        
+        return JsonResponse({'success': True, 'message': 'Orden actualizado correctamente'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def agregar_comentario_documento(request):
+    """Vista AJAX para agregar comentario a un documento"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        documento_id = data.get('documento_id')
+        comentario = data.get('comentario', '').strip()
+        
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos
+        if not documento.solicitud.asignada_a == request.user:
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar comentario
+        documento.comentarios = comentario
+        documento.marcar_calificado(request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'comentario': documento.comentarios,
+            'calificado_por': documento.calificado_por.get_full_name() if documento.calificado_por else None,
+            'fecha_calificacion': documento.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if documento.fecha_calificacion else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+@csrf_exempt
+def obtener_comentario_documento(request, documento_id):
+    """Vista AJAX para obtener el comentario de un documento"""
+    from .modelsWorkflow import OrdenExpediente
+    
+    try:
+        documento = get_object_or_404(OrdenExpediente, id=documento_id)
+        
+        # Verificar permisos de lectura
+        if not documento.solicitud.asignada_a == request.user:
+            if not (documento.solicitud.etapa_actual and 
+                   documento.solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        return JsonResponse({
+            'success': True,
+            'documento_id': documento_id,
+            'nombre_documento': documento.nombre_documento,
+            'comentario': documento.comentarios or '',
+            'calificado_por': documento.calificado_por.get_full_name() if documento.calificado_por else None,
+            'fecha_calificacion': documento.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if documento.fecha_calificacion else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def marcar_todos_documentos(request):
+    """Vista AJAX para marcar o desmarcar todos los documentos de una vez"""
+    from .modelsWorkflow import OrdenExpediente
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        marcar_todos = data.get('marcar_todos', True)
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not solicitud.asignada_a == request.user:
+            if not (solicitud.etapa_actual and 
+                   solicitud.etapa_actual.es_bandeja_grupal):
+                return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+        
+        # Actualizar todos los documentos
+        documentos = OrdenExpediente.objects.filter(solicitud=solicitud, activo=True)
+        count = 0
+        for documento in documentos:
+            documento.tiene_documento = marcar_todos
+            documento.marcar_calificado(request.user)
+            count += 1
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'{"Marcados" if marcar_todos else "Desmarcados"} {count} documentos',
+            'documentos_actualizados': count
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

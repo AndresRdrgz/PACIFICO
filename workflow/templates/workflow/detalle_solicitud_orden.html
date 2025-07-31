@@ -1,0 +1,2136 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Orden del Expediente - Sistema de Workflow{% endblock %}
+
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Orden del Expediente */
+.orden-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e8 100%);
+  border: 2px solid #4caf50;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+.orden-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.orden-icon {
+  font-size: 3rem;
+  color: #4caf50;
+  margin-bottom: 1rem;
+}
+
+.document-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  min-height: 400px;
+}
+
+.document-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+  cursor: move;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.document-item:last-child {
+  border-bottom: none;
+}
+
+.document-item:hover {
+  background: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.document-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.document-item.drag-over {
+  border-top: 3px solid #4caf50;
+  background: #e8f5e8;
+}
+
+.document-order-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #4caf50;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  margin-right: 1rem;
+}
+
+.document-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-complete {
+  background: #d1edff;
+  color: #0f5132;
+}
+
+.status-missing {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.expediente-summary {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.progress-ring {
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg);
+}
+
+.progress-ring-background {
+  fill: none;
+  stroke: #e0e0e0;
+  stroke-width: 8;
+}
+
+.progress-ring-progress {
+  fill: none;
+  stroke: #4caf50;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+  transition: all 0.3s ease;
+}
+
+.checklist-item:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.checklist-item.completed {
+  background: #e8f5e8;
+  border-color: #4caf50;
+}
+
+.checklist-item input[type="checkbox"] {
+  margin-right: 1rem;
+  transform: scale(1.2);
+}
+
+/* Drag and drop eliminado para optimización */
+
+.action-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 0 15px 15px;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -2rem;
+}
+
+/* Estilos para el buscador de documentos */
+#buscador-documentos {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+#buscador-documentos:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  outline: 0;
+}
+
+#limpiar-busqueda {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+#limpiar-busqueda:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+
+.document-item {
+  transition: opacity 0.3s ease;
+}
+
+.document-item[style*="display: none"] {
+  opacity: 0;
+}
+
+#resultado-busqueda {
+  font-size: 0.875rem;
+}
+
+.seccion-header {
+  transition: opacity 0.3s ease;
+}
+
+.seccion-header[style*="display: none"] {
+  opacity: 0;
+}
+
+/* Estilos para el indicador de progreso */
+.process-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.step-indicator {
+  display: flex;
+  align-items: baseline;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 2rem;
+  color: #2196f3;
+  font-weight: 700;
+}
+
+.step-total {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-left: 2px;
+}
+
+.subestado-icon {
+  font-size: 2.5rem;
+  color: #2196f3;
+  opacity: 0.8;
+}
+
+.step-status .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* Nuevos estilos para la tabla de orden de expediente */
+.seccion-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.document-section .document-item {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.document-section .document-item:hover {
+  background-color: #f8f9fa;
+}
+
+.document-order-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* Drag and drop eliminado - segunda instancia */
+
+.document-meta .badge {
+  font-size: 0.65rem;
+}
+
+.document-actions .btn {
+  position: relative;
+}
+
+.document-actions .badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 0.6rem;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Checkbox personalizado */
+.documento-checkbox {
+  transform: scale(1.2);
+}
+
+.form-check-label {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Estados de documentos */
+.document-item.table-success {
+  border-left: 4px solid #28a745;
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+.document-item.table-danger {
+  border-left: 4px solid #dc3545;
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.document-item.table-secondary {
+  border-left: 4px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.05);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
+            </div>
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                6 Etapas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Orden del Expediente -->
+          <div class="orden-container">
+            <!-- Indicador de Progreso -->
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">4</span>
+                <span class="step-total">/ 6</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-folder-tree"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
+            </div>
+
+            <!-- Tabla de Orden de Expediente -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <!-- Primera fila: Título y controles principales -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>Orden de Documentos
+                      </h5>
+                      <div>
+                        <button class="btn btn-outline-success btn-sm me-2" id="marcar-todos" onclick="marcarTodosDocumentos(true)">
+                          <i class="fas fa-check-double me-1"></i>Marcar Todos
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm me-2" id="desmarcar-todos" onclick="marcarTodosDocumentos(false)">
+                          <i class="fas fa-times me-1"></i>Desmarcar Todos
+                        </button>
+                        <span class="badge bg-info ms-2" id="contador-documentos">
+                          Total: {{ total_documentos }} | Presentes: {{ documentos_presentes }} | Faltantes: {{ documentos_faltantes }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <!-- Segunda fila: Buscador -->
+                    <div class="row align-items-center">
+                      <div class="col-md-6">
+                        <div class="position-relative">
+                          <input type="text" 
+                                 class="form-control form-control-sm" 
+                                 id="buscador-documentos" 
+                                 placeholder="🔍 Buscar documentos por nombre..."
+                                 onkeyup="filtrarDocumentos()"
+                                 style="padding-left: 35px;">
+                          <i class="fas fa-search position-absolute" 
+                             style="left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 0.875rem;"></i>
+                        </div>
+                      </div>
+                      <div class="col-md-6 text-end">
+                        <small class="text-muted" id="resultado-busqueda">
+                          <i class="fas fa-info-circle me-1"></i>
+                          Mostrando todos los documentos
+                        </small>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" 
+                                id="limpiar-busqueda" 
+                                onclick="limpiarBusqueda()" 
+                                style="display: none;">
+                          <i class="fas fa-times me-1"></i>Limpiar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-body p-0">
+                    {% if documentos_por_seccion %}
+                      {% for seccion, documentos in documentos_por_seccion.items %}
+                        <!-- Sección Header -->
+                        <div class="seccion-header bg-light border-bottom px-3 py-2">
+                          <h6 class="mb-0 fw-bold text-primary">
+                            <i class="fas fa-folder me-2"></i>{{ seccion }}
+                            <span class="badge bg-secondary ms-2">{{ documentos|length }} documento{{ documentos|length|pluralize:"s" }}</span>
+                          </h6>
+                              </div>
+
+                        <!-- Documentos de la Sección -->
+                        <div class="document-section" data-seccion="{{ seccion }}">
+                          {% for documento in documentos %}
+                                                        <div class="document-item {{ documento.css_class }}" 
+                                 data-document-id="{{ documento.id }}"
+                                 data-seccion="{{ documento.seccion }}"
+                                 data-orden="{{ documento.orden }}">
+                              <div class="d-flex align-items-center p-2">
+                                <!-- Número de Orden -->
+                                <span class="document-order-number me-2">{{ documento.orden }}</span>
+                                
+                                <!-- Checkbox -->
+                                <div class="form-check me-3">
+                                  <input class="form-check-input documento-checkbox" 
+                                         type="checkbox" 
+                                         id="doc_{{ documento.id }}"
+                                         data-documento-id="{{ documento.id }}"
+                                         {% if documento.tiene_documento %}checked{% endif %}
+                                         onchange="actualizarEstadoDocumento({{ documento.id }}, this.checked)">
+                                  <label class="form-check-label" for="doc_{{ documento.id }}">
+                                    {% if documento.tiene_documento %}
+                                      <i class="fas fa-check-circle text-success me-1"></i>Lo tengo
+                                    {% else %}
+                                      <i class="fas fa-times-circle text-danger me-1"></i>No lo tengo
+                                    {% endif %}
+                                  </label>
+                      </div>
+
+                                                                <!-- Información del Documento -->
+                          <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                      <h6 class="mb-0 fw-semibold">{{ documento.nombre_documento }}</h6>
+                                      <div class="document-meta text-muted small mt-1">
+                                        {% if documento.obligatorio %}
+                                          <span class="badge bg-warning text-dark me-1" style="font-size: 0.6rem;">Obligatorio</span>
+                                        {% else %}
+                                          <span class="badge bg-secondary me-1" style="font-size: 0.6rem;">Opcional</span>
+                                        {% endif %}
+                                        
+                                        <span class="badge bg-{{ documento.css_class|slice:6 }}" style="font-size: 0.6rem;">
+                                          {{ documento.estado_display }}
+                          </span>
+                                        
+                                        {% if documento.calificado_por %}
+                                          <span class="text-muted ms-2" style="font-size: 0.65rem;">
+                                            <i class="fas fa-user me-1"></i>{{ documento.calificado_por.get_full_name }}
+                                            {% if documento.fecha_calificacion %}
+                                              - {{ documento.fecha_calificacion|date:"d/m/Y H:i" }}
+                                            {% endif %}
+                          </span>
+                                        {% endif %}
+                        </div>
+                      </div>
+
+                                    <!-- Acciones -->
+                                    <div class="document-actions">
+                                      <button class="btn btn-sm btn-outline-primary me-1" 
+                                              onclick="mostrarModalComentarios({{ documento.id }})"
+                                              title="Agregar comentario">
+                                        <i class="fas fa-comment"></i>
+                                        {% if documento.comentarios %}
+                                          <span class="badge bg-warning text-dark ms-1">1</span>
+                                        {% endif %}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                          {% endfor %}
+                    </div>
+                      {% endfor %}
+                    {% else %}
+                      <div class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay documentos configurados</h5>
+                        <p class="text-muted">Configure las plantillas de orden de expediente para este pipeline desde la administración.</p>
+                  </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+              <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="OrdenWorkflow.mostrarModalDevolucion()">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Devolver a Oficial</span>
+              </button>
+              
+              <!-- Botón de avance - siempre habilitado, validación al hacer clic -->
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2" onclick="validarDocumentosYAvanzar()">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span id="btn-avanzar-texto">Avanzar</span>
+              </button>
+              
+              <!-- Indicador de estado de validación -->
+              <div id="validacion-estado" class="mt-2">
+                <small class="text-muted">
+                  <i class="fas fa-check-circle text-success me-1"></i>
+                  <span id="validacion-mensaje">Listo para avanzar</span>
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Comentarios -->
+<div class="modal fade" id="modalComentarios" tabindex="-1" aria-labelledby="modalComentariosLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalComentariosLabel">
+          <i class="fas fa-comment me-2"></i>Comentarios del Documento
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <h6 class="fw-bold text-primary" id="nombreDocumentoModal">Nombre del Documento</h6>
+        </div>
+        
+        <div class="mb-3">
+          <label for="comentarioTexto" class="form-label">Comentario:</label>
+          <textarea class="form-control" id="comentarioTexto" rows="4" 
+                    placeholder="Agregue sus comentarios sobre este documento..."></textarea>
+        </div>
+        
+        <div id="infoCalificacion" class="alert alert-info d-none">
+          <small>
+            <i class="fas fa-info-circle me-1"></i>
+            <span id="infoCalificacionTexto"></span>
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarComentario()">
+          <i class="fas fa-save me-1"></i>Guardar Comentario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSRF Token oculto -->
+{% csrf_token %}
+
+<!-- Scripts específicos para Orden del Expediente -->
+<script>
+// Variables globales
+let currentDocumentoId = null;
+const SOLICITUD_ID = {{ solicitud.id }};
+
+// ========================================
+// NAMESPACE DE DEVOLUCIÓN - DEFINIR PRIMERO
+// ========================================
+
+// Namespace específico para Orden para evitar conflictos con backoffice.js
+const OrdenWorkflow = {
+  transicionesNegativas: [],
+
+  // Función para cargar transiciones negativas al inicializar
+  cargarTransicionesNegativas: function() {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          OrdenWorkflow.transicionesNegativas = data.transiciones_negativas || [];
+          const btnDevolver = document.getElementById('btn-devolver-oficial');
+          if (btnDevolver) {
+            btnDevolver.style.display = data.tiene_transiciones_negativas ? 'inline-block' : 'none';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error al cargar transiciones negativas:', error);
+      });
+  },
+
+  // Función para mostrar modal de devolución
+  mostrarModalDevolucion: function() {
+    console.log('📋 Mostrando modal de devolución...');
+    
+    if (OrdenWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = OrdenWorkflow.transicionesNegativas[0];
+    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+    
+    // En Orden no hay documentos problemáticos específicos, mostrar mensaje genérico
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    listaContainer.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Devolución desde Orden del Expediente</strong>
+            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+    modal.show();
+  },
+
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO
+  confirmarDevolucion: function() {
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    
+    if (!motivo) {
+        mostrarMensaje('Por favor, ingresa el motivo de la devolución.', 'warning');
+        document.getElementById('motivo-devolucion').focus();
+        return;
+    }
+    
+    // Verificar que haya transiciones negativas disponibles
+    if (typeof OrdenWorkflow.transicionesNegativas === 'undefined' || OrdenWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'error');
+        return;
+    }
+    
+    const transicion = OrdenWorkflow.transicionesNegativas[0];
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    
+    // Mostrar loading
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+    btnConfirmar.disabled = true;
+    
+    console.log(`🚨 Devolviendo solicitud ${SOLICITUD_ID} desde ORDEN a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+    
+    // 🚨 USAR API DE DEVOLUCIÓN CON CORREO
+    fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            solicitud_id: SOLICITUD_ID,
+            transicion_id: transicion.id,
+            motivo: motivo,
+            etapa_origen: 'orden'  // ✅ Identificar que viene de orden
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Mostrar mensaje de éxito con información del correo
+            const mensaje = `✅ Solicitud devuelta exitosamente desde ORDEN a ${data.data.nueva_etapa}
+            
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Orden del Expediente
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+            modal.hide();
+            
+            // Redirigir según la URL proporcionada por la API
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+            }, 2000);
+            
+        } else {
+            mostrarMensaje(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
+            
+            // Restaurar botón
+            btnConfirmar.innerHTML = textoOriginal;
+            btnConfirmar.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error en devolución desde Orden:', error);
+        mostrarMensaje('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
+        
+        // Restaurar botón
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+  }
+};
+
+// Inicialización  
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando Orden de Expediente para solicitud:', SOLICITUD_ID);
+    
+    // Inicializar funcionalidades
+    OrdenWorkflow.cargarTransicionesNegativas();
+    
+    console.log('✅ Orden de Expediente inicializado correctamente');
+});
+
+// ========================================
+// DRAG AND DROP ELIMINADO - Solo orden fijo desde admin
+// ========================================
+
+// ========================================
+// FUNCIONES AJAX
+// ========================================
+
+function actualizarEstadoDocumento(documentoId, tieneDocumento) {
+    console.log(`📝 Actualizando documento ${documentoId}: ${tieneDocumento ? 'tiene' : 'no tiene'}`);
+    
+    const data = {
+        documento_id: documentoId,
+        tiene_documento: tieneDocumento
+    };
+    
+    fetch('/workflow/api/orden-expediente/actualizar-documento/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Documento actualizado correctamente');
+            
+            // Actualizar la interfaz
+            const documentItem = document.querySelector(`[data-document-id="${documentoId}"]`);
+            const label = documentItem.querySelector('.form-check-label');
+            const icon = label.querySelector('i');
+            
+            if (data.tiene_documento) {
+                icon.className = 'fas fa-check-circle text-success me-1';
+                label.innerHTML = icon.outerHTML + 'Lo tengo';
+            } else {
+                icon.className = 'fas fa-times-circle text-danger me-1';
+                label.innerHTML = icon.outerHTML + 'No lo tengo';
+            }
+            
+            // Actualizar clases CSS del item
+            documentItem.className = `document-item ${data.css_class}`;
+            
+            // Actualizar estadísticas en header
+            actualizarEstadisticas();
+            
+        } else {
+            console.error('❌ Error al actualizar documento:', data.error);
+            mostrarMensaje('Error al actualizar documento: ' + data.error, 'error');
+            
+            // Revertir checkbox
+            const checkbox = document.querySelector(`#doc_${documentoId}`);
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error de red:', error);
+        mostrarMensaje('Error de conexión al actualizar documento', 'error');
+        
+        // Revertir checkbox
+        const checkbox = document.querySelector(`#doc_${documentoId}`);
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+        }
+    });
+}
+
+// Función actualizarOrdenDocumentos eliminada - no se necesita sin drag & drop
+
+function marcarTodosDocumentos(marcarTodos) {
+    console.log(`📋 ${marcarTodos ? 'Marcando' : 'Desmarcando'} todos los documentos`);
+    
+    const data = {
+        solicitud_id: SOLICITUD_ID,
+        marcar_todos: marcarTodos
+    };
+    
+    fetch('/workflow/api/orden-expediente/marcar-todos/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+    if (data.success) {
+            console.log('✅ Documentos actualizados masivamente');
+            mostrarMensaje(data.message, 'success');
+            
+            // Actualizar todos los checkboxes en la interfaz (solo los visibles si hay filtro)
+            const terminoBusqueda = document.getElementById('buscador-documentos')?.value.toLowerCase().trim() || '';
+            const selector = terminoBusqueda === '' ? '.documento-checkbox' : '.document-item:not([style*="display: none"]) .documento-checkbox';
+            
+            document.querySelectorAll(selector).forEach(checkbox => {
+                checkbox.checked = marcarTodos;
+                
+                // Trigger change event para actualizar labels
+                const event = new Event('change');
+                checkbox.dispatchEvent(event);
+            });
+            
+            // Actualizar estadísticas y contadores del buscador
+            setTimeout(() => {
+                if (typeof actualizarEstadisticas === 'function') {
+                    actualizarEstadisticas();
+                }
+                if (terminoBusqueda !== '') {
+                    filtrarDocumentos(); // Actualizar contadores filtrados
+                } else {
+                    recalcularContadores(); // Actualizar contadores totales
+                }
+            }, 500);
+            
+            } else {
+            console.error('❌ Error al marcar documentos:', data.error);
+            mostrarMensaje('Error: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error de red:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    });
+}
+
+// ========================================
+// FUNCIONES DE COMENTARIOS
+// ========================================
+
+function mostrarModalComentarios(documentoId) {
+    console.log('💬 Mostrando modal de comentarios para documento:', documentoId);
+    currentDocumentoId = documentoId;
+    
+    // Obtener información del documento
+    fetch(`/workflow/api/orden-expediente/obtener-comentario/${documentoId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Rellenar modal
+                document.getElementById('nombreDocumentoModal').textContent = data.nombre_documento;
+                document.getElementById('comentarioTexto').value = data.comentario || '';
+                
+                // Mostrar información de calificación si existe
+                const infoDiv = document.getElementById('infoCalificacion');
+                const infoTexto = document.getElementById('infoCalificacionTexto');
+                
+                if (data.calificado_por) {
+                    infoTexto.textContent = `Última actualización por ${data.calificado_por} el ${data.fecha_calificacion}`;
+                    infoDiv.classList.remove('d-none');
+                } else {
+                    infoDiv.classList.add('d-none');
+                }
+                
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('modalComentarios'));
+                modal.show();
+                
+    } else {
+                console.error('❌ Error al obtener comentario:', data.error);
+                mostrarMensaje('Error al cargar comentario: ' + data.error, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+            mostrarMensaje('Error de conexión al cargar comentario', 'error');
+        });
+}
+
+function guardarComentario() {
+    if (!currentDocumentoId) {
+        console.error('❌ No hay documento seleccionado');
+         return;
+     }
+     
+    const comentario = document.getElementById('comentarioTexto').value.trim();
+    console.log('💾 Guardando comentario para documento:', currentDocumentoId);
+    
+    const data = {
+        documento_id: currentDocumentoId,
+        comentario: comentario
+    };
+    
+    fetch('/workflow/api/orden-expediente/agregar-comentario/', {
+        method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+            console.log('✅ Comentario guardado correctamente');
+            mostrarMensaje('Comentario guardado correctamente', 'success');
+            
+            // Actualizar indicador de comentario en la interfaz
+            const documentItem = document.querySelector(`[data-document-id="${currentDocumentoId}"]`);
+            const commentBtn = documentItem.querySelector('.btn-outline-primary');
+            const badge = commentBtn.querySelector('.badge');
+            
+            if (data.comentario && data.comentario.trim()) {
+                if (!badge) {
+                    commentBtn.innerHTML += '<span class="badge bg-warning text-dark ms-1">1</span>';
+                }
+            } else {
+                if (badge) {
+                    badge.remove();
+                }
+            }
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalComentarios'));
+            modal.hide();
+            currentDocumentoId = null;
+            
+    } else {
+            console.error('❌ Error al guardar comentario:', data.error);
+            mostrarMensaje('Error al guardar comentario: ' + data.error, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+        mostrarMensaje('Error de conexión al guardar comentario', 'error');
+    });
+}
+
+// ========================================
+// FUNCIONES AUXILIARES
+// ========================================
+
+function actualizarEstadisticas() {
+    const totalCheckboxes = document.querySelectorAll('.documento-checkbox').length;
+    const checkedCheckboxes = document.querySelectorAll('.documento-checkbox:checked').length;
+    const uncheckedCheckboxes = totalCheckboxes - checkedCheckboxes;
+    
+    // Actualizar badge en header
+    const badge = document.querySelector('.badge.bg-info');
+    if (badge) {
+        badge.textContent = `Total: ${totalCheckboxes} | Presentes: ${checkedCheckboxes} | Faltantes: ${uncheckedCheckboxes}`;
+    }
+}
+
+function getCsrfToken() {
+    // Buscar el token en el campo oculto generado por {% csrf_token %}
+    const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenInput) {
+        console.log('🔑 CSRF token encontrado en input');
+        return tokenInput.value;
+    }
+    
+    // Buscar en meta tag
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        console.log('🔑 CSRF token encontrado en meta tag');
+        return metaTag.getAttribute('content');
+    }
+    
+    // Buscar en las cookies (Django lo pone ahí por defecto)
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            console.log('🔑 CSRF token encontrado en cookie');
+            return value;
+        }
+    }
+    
+    console.error('❌ No se pudo encontrar el CSRF token');
+    return '';
+}
+
+function mostrarMensaje(mensaje, tipo) {
+  const alertDiv = document.createElement('div');
+  let alertClass = 'alert alert-dismissible fade show';
+  let iconClass = '';
+  
+  switch(tipo) {
+    case 'success':
+      alertClass += ' alert-success';
+      iconClass = 'fas fa-check-circle';
+      break;
+    case 'warning':
+      alertClass += ' alert-warning';
+      iconClass = 'fas fa-exclamation-triangle';
+      break;
+    case 'info':
+      alertClass += ' alert-info';
+      iconClass = 'fas fa-info-circle';
+      break;
+    case 'error':
+    default:
+      alertClass += ' alert-danger';
+      iconClass = 'fas fa-exclamation-circle';
+      break;
+  }
+  
+  alertDiv.className = alertClass;
+  alertDiv.style.position = 'fixed';
+  alertDiv.style.top = '20px';
+  alertDiv.style.right = '20px';
+  alertDiv.style.zIndex = '9999';
+  alertDiv.style.maxWidth = '400px';
+  alertDiv.innerHTML = `
+      <i class="${iconClass} me-2"></i>${mensaje}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+
+  document.body.appendChild(alertDiv);
+
+  const timeout = tipo === 'warning' ? 5000 : 3000;
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, timeout);
+}
+
+// ========================================
+// FUNCIONES PARA AVANZAR (mantener funcionalidad existente)
+// ========================================
+
+function validarDocumentosYAvanzar() {
+    console.log('🔍 Validando documentos para avanzar...');
+    mostrarModalAvanzarSubestadoOrden();
+}
+
+// Función para cargar información del modal cuando se abre - Adaptada para Orden
+function cargarInformacionAvance() {
+    console.log('🔄 Cargando información de avance para Orden...');
+    
+    // Mostrar loading si existe
+    const loadingElement = document.getElementById('avance-loading-orden');
+    const errorElement = document.getElementById('avance-error-orden');
+    
+    if (loadingElement) loadingElement.style.display = 'block';
+    if (errorElement) errorElement.style.display = 'none';
+    
+    // Solo cargar siguiente subestado (sin validación de documentos) - usando SOLICITUD_ID como firma
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/siguiente-subestado/`)
+        .then(response => response.json())
+        .then(subestadoData => {
+            console.log('📊 Información de subestado:', subestadoData);
+            
+            // Actualizar información del siguiente paso
+            if (subestadoData.success) {
+                window.siguientePaso = subestadoData;
+                
+                const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+                if (siguienteElement) {
+                    if (subestadoData.siguiente_subestado) {
+                        siguienteElement.textContent = subestadoData.siguiente_subestado.nombre;
+                    } else if (subestadoData.siguiente_etapa) {
+                        siguienteElement.textContent = subestadoData.siguiente_etapa.nombre;
+                    } else {
+                        siguienteElement.textContent = 'Trámite';
+                    }
+                }
+            } else {
+                const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+                if (siguienteElement) {
+                    siguienteElement.textContent = 'Error al cargar';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const siguienteElement = document.getElementById('avanzar-siguiente-subestado-orden');
+            if (siguienteElement) {
+                siguienteElement.textContent = 'Error de conexión';
+            }
+        })
+        .finally(() => {
+            if (loadingElement) loadingElement.style.display = 'none';
+        });
+}
+
+// ========================================
+// FUNCIONES DE DEVOLUCIÓN (DEFINIDAS ARRIBA EN NAMESPACE)
+// ========================================
+
+// Función global para compatibilidad con modal reutilizable
+function confirmarDevolucionModal() {
+  OrdenWorkflow.confirmarDevolucion();
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Función auxiliar para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', function () {
+        toastContainer.removeChild(toast);
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Función auxiliar para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', function () {
+        toastContainer.removeChild(toast);
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
+}
+
+// ========================================
+// FUNCIONES DEL BUSCADOR DE DOCUMENTOS
+// ========================================
+
+function filtrarDocumentos() {
+    const terminoBusqueda = document.getElementById('buscador-documentos').value.toLowerCase().trim();
+    const documentosItems = document.querySelectorAll('.document-item');
+    const btnLimpiar = document.getElementById('limpiar-busqueda');
+    const resultadoBusqueda = document.getElementById('resultado-busqueda');
+    
+    let documentosVisibles = 0;
+    let documentosPresentes = 0;
+    let documentosFaltantes = 0;
+    
+    if (terminoBusqueda === '') {
+        // Mostrar todos los documentos
+        documentosItems.forEach(item => {
+            item.style.display = '';
+            
+            // Contar documentos
+            const checkbox = item.querySelector('.documento-checkbox');
+            if (checkbox && checkbox.checked) {
+                documentosPresentes++;
+            } else {
+                documentosFaltantes++;
+            }
+        });
+        
+        documentosVisibles = documentosItems.length;
+        btnLimpiar.style.display = 'none';
+        resultadoBusqueda.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mostrando todos los documentos';
+        
+    } else {
+        // Filtrar documentos
+        documentosItems.forEach(item => {
+            const nombreDocumento = item.querySelector('h6.fw-semibold');
+            if (nombreDocumento) {
+                const texto = nombreDocumento.textContent.toLowerCase();
+                const esVisible = texto.includes(terminoBusqueda);
+                
+                item.style.display = esVisible ? '' : 'none';
+                
+                if (esVisible) {
+                    documentosVisibles++;
+                    
+                    // Contar documentos visibles
+                    const checkbox = item.querySelector('.documento-checkbox');
+                    if (checkbox && checkbox.checked) {
+                        documentosPresentes++;
+                    } else {
+                        documentosFaltantes++;
+                    }
+                }
+            }
+        });
+        
+        btnLimpiar.style.display = 'inline-block';
+        
+        if (documentosVisibles === 0) {
+            resultadoBusqueda.innerHTML = '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>No se encontraron documentos';
+        } else {
+            resultadoBusqueda.innerHTML = `<i class="fas fa-filter me-1 text-primary"></i>Mostrando ${documentosVisibles} de ${documentosItems.length} documentos`;
+        }
+    }
+    
+    // Actualizar contador dinámico
+    actualizarContadorDocumentos(documentosVisibles, documentosPresentes, documentosFaltantes);
+    
+    // Mostrar/ocultar secciones vacías
+    actualizarVisibilidadSecciones();
+}
+
+function limpiarBusqueda() {
+    const buscador = document.getElementById('buscador-documentos');
+    const btnLimpiar = document.getElementById('limpiar-busqueda');
+    const resultadoBusqueda = document.getElementById('resultado-busqueda');
+    
+    buscador.value = '';
+    btnLimpiar.style.display = 'none';
+    resultadoBusqueda.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mostrando todos los documentos';
+    
+    // Mostrar todos los documentos
+    document.querySelectorAll('.document-item').forEach(item => {
+        item.style.display = '';
+    });
+    
+    // Mostrar todas las secciones
+    document.querySelectorAll('.seccion-header, .seccion-contenido').forEach(seccion => {
+        seccion.style.display = '';
+    });
+    
+    // Restaurar contador original
+    recalcularContadores();
+    
+    // Enfocar el buscador
+    buscador.focus();
+}
+
+function actualizarContadorDocumentos(total, presentes, faltantes) {
+    const contador = document.getElementById('contador-documentos');
+    if (contador) {
+        contador.textContent = `Total: ${total} | Presentes: ${presentes} | Faltantes: ${faltantes}`;
+    }
+}
+
+function actualizarVisibilidadSecciones() {
+    const secciones = document.querySelectorAll('.seccion-header');
+    
+    secciones.forEach(seccionHeader => {
+        const seccionContenido = seccionHeader.nextElementSibling;
+        if (seccionContenido) {
+            const documentosVisibles = seccionContenido.querySelectorAll('.document-item[style=""], .document-item:not([style])');
+            
+            if (documentosVisibles.length === 0) {
+                seccionHeader.style.display = 'none';
+                seccionContenido.style.display = 'none';
+            } else {
+                seccionHeader.style.display = '';
+                seccionContenido.style.display = '';
+            }
+        }
+    });
+}
+
+function recalcularContadores() {
+    const documentosItems = document.querySelectorAll('.document-item');
+    let documentosPresentes = 0;
+    let documentosFaltantes = 0;
+    
+    documentosItems.forEach(item => {
+        const checkbox = item.querySelector('.documento-checkbox');
+        if (checkbox && checkbox.checked) {
+            documentosPresentes++;
+        } else {
+            documentosFaltantes++;
+        }
+    });
+    
+    actualizarContadorDocumentos(documentosItems.length, documentosPresentes, documentosFaltantes);
+}
+
+// Variables globales para Orden del expediente
+let siguienteSubestadoSeleccionadoOrden = null;
+window.usuarioSeleccionadoAvanceOrden = null;
+
+// ========================================
+// FUNCIONES PARA MODAL AVANZAR SUBESTADO - ORDEN
+// ========================================
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestadoOrden() {
+    console.log('🚀 Abriendo modal Avanzar Subestado - Orden');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestadoOrden');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado Orden no encontrado');
+        mostrarMensaje('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    // Configurar accesibilidad
+    modalElement.removeAttribute('aria-hidden');
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar información necesaria para Orden
+    if (typeof cargarInformacionAvance === 'function') {
+        cargarInformacionAvance();
+    }
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosOrden();
+    
+    // Los radio buttons ya están visibles por defecto
+    
+    // Configurar eventos con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventosAsignacionOrden();
+    }, 100);
+}
+
+function cargarSiguientesSubestadosOrden() {
+    console.log('📋 Cargando subestados disponibles para Orden...');
+    const container = document.getElementById('siguiente-subestado-container-orden');
+    
+    if (!container) {
+        console.error('❌ Container de subestados no encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    container.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando subestados disponibles...</p>
+        </div>
+    `;
+    
+    // Llamada AJAX para obtener subestados - usando la misma URL que firma
+    fetch(`/workflow/api/subestados-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Subestados cargados:', data.subestados);
+                mostrarSubestadosOrden(data.subestados);
+            } else {
+                throw new Error(data.error || 'Error al cargar subestados');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error al cargar subestados:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar subestados: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function mostrarSubestadosOrden(subestados) {
+    const container = document.getElementById('siguiente-subestado-container-orden');
+    
+    if (!subestados || subestados.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados disponibles para avanzar
+            </div>
+        `;
+        return;
+    }
+    
+    // Filtrar subestados de Back Office como hace firma
+    const subestadosBackOffice = [
+        'checklist', 'captura', 'firma', 'orden del expediente', 
+        'trámite', 'subsanación de pendientes trámite'
+    ];
+    
+    const subestadosLegitimos = subestados.filter(subestado => {
+        const nombreLimpio = subestado.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(nombreValido => 
+            nombreLimpio.includes(nombreValido) || nombreValido.includes(nombreLimpio)
+        );
+    });
+    
+    console.log('🔍 Subestados filtrados (Back Office):', subestadosLegitimos.length);
+    console.log('✅ Subestados legítimos:', subestadosLegitimos.map(s => s.nombre));
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados de Back Office disponibles en este momento.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" 
+                               name="siguiente-subestado-orden" 
+                               id="subestado-orden-${index}" 
+                               value="${subestado.id}" 
+                               class="form-check-input me-2" 
+                               onchange="seleccionarSiguienteSubestadoOrden(${subestado.id}, '${subestado.nombre}')">
+                        <label for="subestado-orden-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">${subestado.descripcion || 'Disponible para avanzar'}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Añadir estilos hover y funcionalidad de clic en la tarjeta
+    setTimeout(() => {
+        document.querySelectorAll('.subestado-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const subestado = subestadosLegitimos[cardIndex];
+            
+            // Agregar event listener para la selección del subestado
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarSiguienteSubestadoOrden(subestado.id, subestado.nombre);
+                }
+            });
+            
+            // Hacer que toda la tarjeta sea clickeable
+            card.addEventListener('click', (e) => {
+                // Prevenir que el clic en el radio dispare dos eventos
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            // Efectos hover
+            card.addEventListener('mouseenter', () => {
+                if (!radio.checked) {
+                    card.style.borderColor = '#007bff';
+                    card.style.boxShadow = '0 4px 8px rgba(0,123,255,0.1)';
+                }
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                if (!radio.checked) {
+                    card.style.borderColor = '#e9ecef';
+                    card.style.boxShadow = 'none';
+                }
+            });
+        });
+    }, 100);
+}
+
+function seleccionarSiguienteSubestadoOrden(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoOrden = { 
+        id: parseInt(subestadoId), // Asegurar que sea número como en firma
+        nombre: subestadoNombre 
+    };
+    console.log('🎯 Subestado seleccionado en Orden:', siguienteSubestadoSeleccionadoOrden);
+    
+    // Actualizar información en la modal
+    const siguienteSpan = document.getElementById('avanzar-siguiente-subestado-orden');
+    if (siguienteSpan) {
+        siguienteSpan.textContent = subestadoNombre;
+    }
+    
+    // Actualizar estilos de las tarjetas
+    document.querySelectorAll('.subestado-card').forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio.checked) {
+            card.style.borderColor = '#007bff';
+            card.style.backgroundColor = '#f8f9ff';
+            card.style.boxShadow = '0 4px 12px rgba(0,123,255,0.15)';
+        } else {
+            card.style.borderColor = '#e9ecef';
+            card.style.backgroundColor = 'white';
+            card.style.boxShadow = 'none';
+        }
+    });
+    
+    // Validar formulario
+    validarFormularioAvanceOrden();
+}
+
+function configurarEventosAsignacionOrden() {
+    console.log('🎛️ Configurando eventos de asignación para Orden...');
+    
+    // Event listeners para radio buttons de asignación
+    document.querySelectorAll('input[name="opcion-asignacion-orden"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('📻 Opción de asignación cambiada:', this.value);
+            
+            const seccionUsuarios = document.getElementById('seccion-asignar-usuario-orden');
+            
+            if (this.value === 'otro') {
+                // Mostrar sección de usuarios y cargar usuarios
+                seccionUsuarios.style.display = 'block';
+                if (!window.usuariosOrdenCargados) {
+                    cargarUsuariosDisponiblesAvanceOrden();
+                    window.usuariosOrdenCargados = true;
+                }
+                
+                // Limpiar selección previa
+                window.usuarioSeleccionadoAvanceOrden = null;
+                
+            } else {
+                // Ocultar sección de usuarios
+                seccionUsuarios.style.display = 'none';
+                
+                // Limpiar selección de usuario
+                window.usuarioSeleccionadoAvanceOrden = null;
+            }
+            
+            // Validar formulario
+            validarFormularioAvanceOrden();
+        });
+    });
+    
+    // Selección por defecto
+    const opcionYo = document.getElementById('opcion-yo-orden');
+    if (opcionYo && !document.querySelector('input[name="opcion-asignacion-orden"]:checked')) {
+        opcionYo.checked = true;
+        opcionYo.dispatchEvent(new Event('change'));
+    }
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvanceOrden() {
+    return fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaOrden(data.usuarios);
+                return Promise.resolve();
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaOrden(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-orden');
+    const contador = document.getElementById('contador-usuarios-avance-orden');
+    
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.className = 'usuario-item';
+        row.setAttribute('data-usuario-id', usuario.id);
+        row.setAttribute('data-usuario-nombre', usuario.nombre || usuario.username || 'Usuario');
+        row.setAttribute('data-usuario-email', usuario.email || '');
+        
+        const avatar = usuario.profile_picture ?
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre || usuario.username || 'Usuario'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+            </div>`;
+        
+        const badges = [];
+        if (usuario.is_staff) badges.push('<span class="badge bg-info ms-1">Staff</span>');
+        if (usuario.is_superuser) badges.push('<span class="badge bg-danger ms-1">Admin</span>');
+        
+        const grupos = usuario.grupos && usuario.grupos.length > 0 ?
+            usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') :
+            '<span class="text-muted">Sin grupos</span>';
+        
+        row.innerHTML = `
+            <td class="text-center">
+                <span class="badge bg-secondary">${index + 1}</span>
+            </td>
+            <td class="text-center">${avatar}</td>
+            <td>
+                <div>
+                    <strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong>
+                    ${badges.join('')}
+                </div>
+            </td>
+            <td>
+                <small class="text-muted">${usuario.email || ''}</small>
+            </td>
+            <td>${grupos}</td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-orden" 
+                        data-usuario-id="${usuario.id}" 
+                        data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Asignar
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    // Agregar event listeners a los botones de asignar
+    document.querySelectorAll('.asignar-usuario-avance-orden').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const usuarioId = this.getAttribute('data-usuario-id');
+            const usuarioNombre = this.getAttribute('data-usuario-nombre');
+            seleccionarUsuarioAvanceOrden(usuarioId, usuarioNombre);
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceOrden(usuarioId, usuarioNombre) {
+    console.log('👥 Usuario seleccionado en Orden:', usuarioNombre);
+    
+    // Asignar a la variable global
+    window.usuarioSeleccionadoAvanceOrden = {
+        id: usuarioId,
+        nombre: usuarioNombre
+    };
+    
+    // Actualizar estilos de botones (selección única)
+    document.querySelectorAll('.asignar-usuario-avance-orden').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-orden`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceOrden();
+}
+
+function validarFormularioAvanceOrden() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-orden');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+    
+    let valido = true;
+    
+    // Verificar que hay un subestado seleccionado
+    if (!siguienteSubestadoSeleccionadoOrden) {
+        valido = false;
+    }
+    
+    // Verificar que hay una opción de asignación seleccionada
+    if (!opcionSeleccionada) {
+        valido = false;
+    }
+    
+    // Si seleccionó "otro", verificar que hay un usuario seleccionado
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !window.usuarioSeleccionadoAvanceOrden) {
+        valido = false;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    console.log('🔍 Validación Orden:', {
+        subestado: !!siguienteSubestadoSeleccionadoOrden,
+        opcion: !!opcionSeleccionada,
+        usuario: opcionSeleccionada?.value === 'otro' ? !!window.usuarioSeleccionadoAvanceOrden : true,
+        valido
+    });
+    
+    return valido;
+}
+
+function confirmarAvanceOrden() {
+    console.log('✅ Confirmando avance desde Orden...');
+    
+    if (!validarFormularioAvanceOrden()) {
+        mostrarMensaje('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+    
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        opcion: opcionSeleccionada.value,
+        usuario_id: window.usuarioSeleccionadoAvanceOrden?.id || null,
+        siguiente_subestado_id: siguienteSubestadoSeleccionadoOrden?.id || null,
+        comentario: document.getElementById('comentario-avance-orden')?.value || ''
+    };
+    
+    console.log('📤 Enviando datos de avance:', datos);
+    
+    // Deshabilitar botón y obtener referencia
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-orden');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    enviarAvanceRequestOrden(datos, btnConfirmar);
+}
+
+// Función auxiliar para enviar la request de avance - adaptada de firma
+function enviarAvanceRequestOrden(data, btnConfirmar) {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestadoOrden'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Mostrar mensaje de éxito
+            let mensaje;
+            
+            if (siguienteSubestadoSeleccionadoOrden) {
+                // Sistema de Orden (botones rectangulares)
+                mensaje = `Avanzando a: ${siguienteSubestadoSeleccionadoOrden.nombre}`;
+            } else {
+                // Sistema original
+                const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-orden"]:checked');
+                mensaje = opcionSeleccionada.value === 'yo' ?
+                    'Avanzando al siguiente subestado...' :
+                    opcionSeleccionada.value === 'otro' ?
+                    `Solicitud asignada a ${window.usuarioSeleccionadoAvanceOrden?.nombre}` :
+                    'Solicitud devuelta a bandeja grupal';
+            }
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Redirigir según la respuesta
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+            
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error:', error);
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        
+        // Restaurar botón
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
+</script>
+
+<!-- Modal para Avanzar Subestado - Orden del Expediente -->
+<div class="modal fade" id="modalAvanzarSubestadoOrden" tabindex="-1" aria-labelledby="modalAvanzarSubestadoOrdenLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoOrdenLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud-orden">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual-orden">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado-orden">Seleccione un subestado</span>
+        </div>
+
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>
+            Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container-orden">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando subestados disponibles...</p>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Radio buttons para sistema de Orden del expediente (botones rectangulares) -->
+          <div id="opciones-asignacion-orden">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-yo-orden" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-orden" class="form-check-label">
+                <i class="fas fa-user me-2"></i>
+                <strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-otro-orden" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-orden" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i>
+                <strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-orden" id="opcion-bandeja-orden" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-orden" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i>
+                <strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (sistema de Orden) -->
+        <div id="seccion-asignar-usuario-orden" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-orden" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance-orden">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance-orden">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading-orden" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error-orden" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje-orden"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-orden" onclick="confirmarAvanceOrden()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modales -->
+{% include "workflow/partials/modal_devolver_oficial.html" %}
+
+{% endblock %}

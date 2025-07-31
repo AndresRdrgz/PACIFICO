@@ -1,0 +1,3614 @@
+{% extends "workflow/base.html" %}
+{% load static %}
+{% load workflow_filters %}
+
+{% block title %}Back Office - Captura - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'workflow/css/detalleSolicitud.css' %}" />
+{% include "workflow/partials/backoffice_styles.html" %}
+<style>
+/* Estilos específicos para la vista de Captura */
+.captura-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  border: 2px solid #2196f3;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
+
+
+
+.document-preview {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.document-preview:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+/* Estilos para el indicador de progreso */
+.process-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.step-indicator {
+  display: flex;
+  align-items: baseline;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 2rem;
+  color: #2196f3;
+  font-weight: 700;
+}
+
+.step-total {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-left: 2px;
+}
+
+.subestado-icon {
+  font-size: 2.5rem;
+  color: #2196f3;
+  opacity: 0.8;
+}
+
+.step-status .badge {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* Estilos para botones de acción */
+.action-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 0 15px 15px;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -2rem;
+}
+
+/* Estilos para botones de acción rectangulares */
+.btn-captura-action {
+  width: 200px;
+  height: 60px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-captura-action i {
+  font-size: 1.2rem;
+}
+
+.btn-captura-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Colores específicos siguiendo el patrón del proyecto */
+.btn-devolver {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529;
+}
+
+.btn-devolver:hover {
+  background: linear-gradient(135deg, #e0a800, #d39e00);
+  color: #212529;
+}
+
+.btn-avanzar {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+}
+
+.btn-avanzar:hover {
+  background: linear-gradient(135deg, #1e7e34, #155724);
+  color: white;
+}
+
+/* Estilos específicos para la sección de pendientes */
+.pendientes-card {
+  border: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pendientes-card .card-header {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  border: none;
+  color: #ffffff;
+}
+
+.filtros-pendientes .btn-check:checked + .btn {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: white;
+}
+
+.filtros-pendientes .btn-outline-danger:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.filtros-pendientes .btn-outline-warning:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+
+.filtros-pendientes .btn-outline-primary:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-primary {
+  background-color: #2196f3;
+  border-color: #2196f3;
+  color: #ffffff;
+}
+
+.filtros-pendientes .btn-outline-success:hover,
+.filtros-pendientes .btn-check:checked + .btn-outline-success {
+  background-color: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+.pendiente-item:hover {
+  background-color: #f8f9fa;
+}
+
+.estado-dropdown {
+  min-width: 120px;
+}
+
+#tabla-pendientes thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#tabla-pendientes tbody tr:hover {
+  background-color: rgba(0,123,255,0.05);
+}
+
+/* Estilos para el modal de agregar pendientes */
+#modalAgregarPendientes .modal-header {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: #ffffff;
+  border-bottom: none;
+}
+
+#modalAgregarPendientes .pendiente-item {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+#modalAgregarPendientes .pendiente-item:hover {
+  background-color: #e3f2fd;
+  transform: translateX(2px);
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #2196f3, #1976d2) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header de la Solicitud -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header processes-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <!-- Sección Izquierda: Icono y Títulos -->
+            <div class="d-flex align-items-center">
+              <div class="process-icon-container">
+                <i class="fas fa-tasks"></i>
+            </div>
+              <div class="ms-3">
+                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
+                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+              </div>
+            </div>
+
+            <!-- Sección Central: Información del Negocio -->
+            <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <span class="mini-badge mini-badge-primary">
+                <i class="fas fa-user"></i>
+                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+              </span>
+                {% endif %}
+              
+              {% if solicitud.cotizacion.montoPrestamo %}
+              <span class="mini-badge mini-badge-warning">
+                <i class="fas fa-dollar-sign"></i>
+                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+              </span>
+              {% endif %}
+              
+              {% if solicitud.cotizacion.tipoPrestamo %}
+              <span class="mini-badge mini-badge-info">
+                <i class="fas fa-briefcase"></i>
+                {{ solicitud.cotizacion.get_tipoPrestamo_display|default:solicitud.cotizacion.tipoPrestamo|title }}
+              </span>
+              {% endif %}
+              
+              <span class="mini-badge mini-badge-success">
+                <i class="fas fa-file-alt"></i>
+                {{ solicitud.codigo }}
+              </span>
+            </div>
+
+            <!-- Sección Derecha: Badge de Etapas -->
+            <div class="process-badge">
+              <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>
+                6 Etapas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {% csrf_token %}
+
+        <div class="card-body p-0">
+          <!-- Navegación entre Subestados -->
+          <div class="nav-tabs-container">
+            <ul class="nav nav-tabs nav-tabs-modern d-flex flex-column flex-md-row" id="backoffice-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Checklist' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">1</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Checklist</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Checklist' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Captura' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">2</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Captura</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Captura' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Firma' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">3</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Firma</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Firma' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">4</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Orden del expediente</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Orden del expediente' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">5</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Trámite</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="nav-item" role="presentation">
+                <div class="nav-link tab-modern {% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}active{% endif %}"
+                     style="cursor: default; pointer-events: none;">
+                  <div class="tab-content-wrapper">
+                    <div class="tab-number">6</div>
+                    <div class="tab-text">
+                      <span class="tab-title">Subsanación</span>
+                      <span class="tab-status">{% if solicitud.subestado_actual.nombre == 'Subsanación de pendientes Trámite' %}Activo{% else %}Disponible{% endif %}</span>
+                    </div>
+                    <div class="tab-arrow">
+                      <i class="fas fa-chevron-right"></i>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Contenido Principal - Captura -->
+          <div class="captura-container">
+            <!-- Indicador de Progreso -->
+            <div class="process-step-header">
+              <div class="step-indicator">
+                <span class="step-number">2</span>
+                <span class="step-total">/ 6</span>
+              </div>
+              <div class="subestado-icon">
+                <i class="fas fa-camera"></i>
+              </div>
+              <div class="step-status">
+                <span class="badge bg-primary">
+                  <i class="fas fa-cog me-1"></i>Procesando
+                </span>
+              </div>
+            </div>
+
+
+
+            <!-- Sección de Asociar Entrevista de Cliente -->
+            <div class="mt-4 mb-4">
+              {% if solicitud.entrevista_cliente %}
+                <!-- Mostrar entrevista ya asociada -->
+                <div class="alert alert-success">
+                  <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Entrevista Asociada</strong><br />
+                      <small>Cliente: {{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }} - {{ solicitud.entrevista_cliente.email }}</small>
+                    </div>
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="desasociarEntrevista()">
+                        <i class="fas fa-unlink me-1"></i> Desasociar
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Información adicional de la entrevista -->
+                  <div class="border-top pt-2 mt-2">
+                    <div class="row">
+                      <div class="col-md-4">
+                        <small class="text-muted">Cédula:</small><br>
+                        <strong>{{ solicitud.entrevista_cliente.provincia_cedula }}-{{ solicitud.entrevista_cliente.tipo_letra }}-{{ solicitud.entrevista_cliente.tomo_cedula }}-{{ solicitud.entrevista_cliente.partida_cedula }}</strong>
+                      </div>
+                      <div class="col-md-4">
+                        <small class="text-muted">Teléfono:</small><br>
+                        <strong>{{ solicitud.entrevista_cliente.telefono|default:"Sin teléfono" }}</strong>
+                      </div>
+                      <div class="col-md-4">
+                        <small class="text-muted">Producto:</small><br>
+                        <strong>{{ solicitud.entrevista_cliente.tipo_producto|default:"Sin especificar" }}</strong>
+                      </div>
+                    </div>
+                    <!-- Botones de acciones para la entrevista -->
+                    <div class="d-flex gap-2 flex-wrap mt-2">
+                      <a href="{% url 'descargar_entrevista_excel' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en Excel">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        <span>Excel</span>
+                      </a>
+                      <a href="{% url 'entrevista_admin' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         target="_blank" 
+                         title="Modo Administrador - Control de Calidad">
+                        <i class="fa-solid fa-user-gear me-1"></i>
+                        <span>Admin</span>
+                      </a>
+                      <button onclick="enviarAAAPX({{ solicitud.entrevista_cliente.id }}, '{{ solicitud.entrevista_cliente.primer_nombre }} {{ solicitud.entrevista_cliente.primer_apellido }}')" 
+                              class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center" 
+                              style="min-width: 80px; height: 32px;"
+                              title="Enviar al Sistema Core APPX">
+                        <i class="fa-solid fa-paper-plane me-1"></i>
+                        <span>APPX</span>
+                      </button>
+                      <a href="{% url 'descargar_entrevista_pdf' solicitud.entrevista_cliente.id %}" 
+                         class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center" 
+                         style="min-width: 80px; height: 32px;"
+                         title="Descargar entrevista en PDF">
+                        <i class="fa-solid fa-file-pdf me-1"></i>
+                        <span>PDF</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% else %}
+                <!-- Mostrar opción para asociar -->
+                <div class="alert alert-info">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user-edit text-info me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                      <strong>Asociar Entrevista de Cliente</strong><br>
+                      <small>Vincule los datos generales del cliente con esta solicitud.</small>
+                    </div>
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-outline-info btn-sm" onclick="mostrarModalEntrevista()">
+                        <i class="fas fa-link me-1"></i> Asociar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Sección de Pendientes Antes de Firma -->
+            <div class="mt-4 mb-4">
+              <div class="card pendientes-card">
+                <div class="card-header bg-gradient-primary text-white">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-clipboard-list me-2" style="font-size: 1.2rem;"></i>
+                      <div>
+                        <h6 class="mb-0 fw-bold">Pendientes Antes de Firma</h6>
+                        <small class="opacity-75">Gestión de tareas pendientes para esta solicitud</small>
+                        </div>
+                      </div>
+                    <button type="button" class="btn btn-light btn-sm" onclick="mostrarModalAgregarPendientes()">
+                      <i class="fas fa-plus me-1"></i> Agregar Pendientes
+                    </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                  <!-- Filtros de la tabla -->
+                  <div class="px-3 py-2 border-bottom">
+                    <div class="row align-items-center">
+                      <div class="col-md-6">
+                        <div class="btn-group btn-group-sm filtros-pendientes" role="group">
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-todos" value="todos" checked>
+                          <label class="btn btn-outline-secondary" for="filtro-todos">
+                            <i class="fas fa-list me-1"></i>Todos
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-por-hacer" value="por_hacer">
+                          <label class="btn btn-outline-danger" for="filtro-por-hacer">
+                            <i class="fas fa-circle me-1"></i>Por Hacer
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-haciendo" value="haciendo">
+                          <label class="btn btn-outline-warning" for="filtro-haciendo">
+                            <i class="fas fa-circle me-1"></i>Haciendo
+                          </label>
+                          
+                          <input type="radio" class="btn-check" name="filtro-estado" id="filtro-listo" value="listo">
+                          <label class="btn btn-outline-success" for="filtro-listo">
+                            <i class="fas fa-circle me-1"></i>Listo
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-md-6 text-end">
+                        <span class="badge bg-info" id="contador-pendientes">0 pendientes</span>
+                  </div>
+                </div>
+              </div>
+
+                  <!-- Tabla de pendientes -->
+                  <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-sm mb-0" id="tabla-pendientes">
+                      <thead class="table-light sticky-top">
+                        <tr>
+                          <th style="width: 35%;">Pendiente</th>
+                          <th style="width: 15%;">Estado</th>
+                          <th style="width: 20%;">Agregado Por</th>
+                          <th style="width: 15%;">Fecha</th>
+                          <th style="width: 15%;">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lista-pendientes">
+                        <!-- Los pendientes se cargarán aquí dinámicamente -->
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <!-- Mensaje cuando no hay pendientes -->
+                  <div id="mensaje-sin-pendientes" class="text-center p-4 text-muted" style="display: none;">
+                    <i class="fas fa-clipboard-check fa-2x mb-2 opacity-50"></i>
+                    <p class="mb-0">No hay pendientes asignados a esta solicitud</p>
+                    <small>Utilice el botón "Agregar Pendientes" para comenzar</small>
+                  </div>
+                </div>
+                </div>
+              </div>
+
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+              <!-- Botón Devolver a Oficial -->
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="CapturaWorkflow.mostrarModalDevolucion()">
+                <i class="fas fa-arrow-left me-2"></i>
+                <span>Devolver a Oficial</span>
+              </button>
+              
+              <!-- Botón de avance -->
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2" onclick="mostrarModalAvanzarSubestadoCaptura()">
+                <i class="fas fa-arrow-right me-2"></i>
+                <span id="btn-avanzar-texto">Avanzar</span>
+              </button>
+            </div>
+
+                    </div>
+                  </div>
+                      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts específicos para Captura -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Vista de Captura cargada para solicitud:', '{{ solicitud.id }}');
+});
+
+  // =======================================================
+  // FUNCIONALIDAD PARA ASOCIAR ENTREVISTA DE CLIENTE
+  // =======================================================
+
+  let entrevistaSeleccionadaId = null;
+
+  // Función para mostrar modal de entrevista
+  function mostrarModalEntrevista() {
+    // Obtener datos del cliente de la solicitud actual
+    const clienteNombre = "{{ solicitud.cliente_nombre_completo|default:'Cliente' }}";
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    // Actualizar el encabezado del modal con los datos del cliente
+    document.getElementById('clienteNombreModal').textContent = clienteNombre;
+    document.getElementById('clienteCedulaModal').textContent = clienteCedula;
+    document.getElementById('filteredByCedula').textContent = clienteCedula;
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
+    modal.show();
+    
+    // Limpiar búsqueda anterior y configurarla con la cédula del cliente
+    const inputBusqueda = document.getElementById('buscarEntrevista');
+    inputBusqueda.value = '';
+    inputBusqueda.placeholder = `Buscar por nombre o email (ya filtrado por cédula)`;
+    
+    // Automáticamente buscar entrevistas con la misma cédula
+    buscarEntrevistasPorCedula(clienteCedula);
+    document.getElementById('resultadosEntrevistas').innerHTML = '';
+    document.getElementById('entrevistaSeleccionada').style.display = 'none';
+    document.getElementById('btnConfirmarAsociacion').disabled = true;
+    entrevistaSeleccionadaId = null;
+  }
+
+  function buscarEntrevistasPorCedula(cedula) {
+    if (!cedula || cedula === 'No disponible') {
+      document.getElementById('resultadosEntrevistas').innerHTML = 
+        '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No se puede buscar entrevistas porque la solicitud no tiene un número de cédula asociado.</div>';
+      return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('resultadosEntrevistas').innerHTML = 
+      '<div class="text-center p-3"><i class="fas fa-spinner fa-spin me-2"></i> Buscando entrevistas para la cédula ' + cedula + '...</div>';
+    
+    // Realizar búsqueda AJAX filtrando por cédula
+    fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
+      .then(response => response.json())
+      .then(data => {
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
+        // Mostrar mensaje sobre la búsqueda flexible
+        const mensajeFlexible = `
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500"></i>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                  <strong>Búsqueda inteligente:</strong> El sistema busca entrevistas que tengan una cédula similar a <strong>${cedula}</strong>, 
+                  incluso si el formato de escritura es diferente.
+                </p>
+                <p class="text-sm text-blue-700 mt-1">
+                  <i class="fas fa-shield-alt text-blue-600 me-1"></i>
+                <div class="d-flex align-items-center">
+                  <strong>Nota:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-info p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                        </button>
+                      </div>
+                </p>
+                    </div>
+                  </div>
+                </div>
+        `;
+        
+        const container = document.getElementById('resultadosEntrevistas');
+        container.innerHTML = mensajeFlexible;
+        mostrarResultadosEntrevistas(data.entrevistas || [], cedula);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+          '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+      });
+  }
+
+  function buscarEntrevistas() {
+    const termino = document.getElementById('buscarEntrevista').value.trim();
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    if (termino.length < 3) {
+      // Si no hay término de búsqueda, volvemos a la búsqueda por cédula
+      buscarEntrevistasPorCedula(clienteCedula);
+      return;
+    }
+    
+    // Mostrar loading
+    document.getElementById('resultadosEntrevistas').innerHTML = 
+      '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i> Buscando...</div>';
+    
+    // Realizar búsqueda AJAX con filtro adicional de cédula
+    fetch(`/workflow/buscar-entrevistas/?q=${encodeURIComponent(termino)}&cedula=${encodeURIComponent(clienteCedula)}`)
+      .then(response => response.json())
+      .then(data => {
+        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+        if (!data.success) {
+          throw new Error(data.error || 'Error en la respuesta del servidor');
+        }
+        
+        mostrarResultadosEntrevistas(data.entrevistas || [], clienteCedula);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+          '<div class="alert alert-danger">Error al buscar entrevistas</div>';
+      });
+  }
+
+  function mostrarResultadosEntrevistas(entrevistas, cedula) {
+    const container = document.getElementById('resultadosEntrevistas');
+    
+    // ✅ VALIDACIÓN: Asegurar que entrevistas sea un array válido
+    if (!entrevistas || !Array.isArray(entrevistas)) {
+      console.warn('Entrevistas no es un array válido:', entrevistas);
+      entrevistas = []; // Usar array vacío como fallback
+    }
+    
+    // Función para comparar similitud entre cédulas
+    function compararCedulas(cedula1, cedula2) {
+      // 1. Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
+      
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
+      
+      // 2. Extraer números y letras por separado
+      const numerosYLetras1 = normalizada1.match(/[0-9A-Z]/g) || [];
+      const numerosYLetras2 = normalizada2.match(/[0-9A-Z]/g) || [];
+      
+      // Verificar si las versiones sin caracteres especiales coinciden
+      if (numerosYLetras1.join('') === numerosYLetras2.join('')) return 'exacta';
+      
+      // 3. Extraer solo números para comparación numérica
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      // Si ambas tienen números
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // 4. Comparar primeros dígitos (entre 3-4 dígitos iniciales)
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        
+        // 5. Comparar últimos dígitos (6-8 dígitos finales)
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        // Si coinciden los primeros o últimos dígitos significativos
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+        
+        // 6. Calcular distancia de Levenshtein para detectar errores de tipografía
+        // Solo si las longitudes son similares (diferencia máxima de 2 caracteres)
+        if (Math.abs(numeros1.length - numeros2.length) <= 2) {
+          const distancia = levenshteinDistance(numeros1, numeros2);
+          // Si la distancia es pequeña en relación al tamaño de la cédula (máximo 2 caracteres diferentes)
+          if (distancia <= 2) {
+            return 'parcial';
+          }
+        }
+        
+        // 7. Verificar si al menos la mitad de los caracteres coinciden (para cédulas de longitud similar)
+        if (Math.abs(normalizada1.length - normalizada2.length) <= 3) {
+          let coincidencias = 0;
+          const minLength = Math.min(normalizada1.length, normalizada2.length);
+          
+          // Contar caracteres coincidentes en las mismas posiciones
+          for (let i = 0; i < minLength; i++) {
+            if (normalizada1[i] === normalizada2[i]) {
+              coincidencias++;
+            }
+          }
+          
+          // Si coinciden más del 70% de los caracteres
+          if (coincidencias >= 0.7 * minLength) {
+            return 'parcial';
+          }
+        }
+      }
+      
+      // 8. Comparar letras (importante para extranjeros)
+      const letras1 = normalizada1.replace(/[^A-Z]/g, '');
+      const letras2 = normalizada2.replace(/[^A-Z]/g, '');
+      
+      // Si ambas tienen la misma letra de extranjero y algunos dígitos coinciden
+      if (letras1 && letras2 && letras1 === letras2) {
+        // Verificar si al menos algunos dígitos coinciden
+        if (numeros1 && numeros2 && 
+            (numeros1.includes(numeros2.slice(-4)) || numeros2.includes(numeros1.slice(-4)))) {
+          return 'parcial';
+        }
+      }
+      
+      return 'ninguna';
+    }
+    
+    // Función para calcular distancia de Levenshtein (para comparación fuzzy)
+    function levenshteinDistance(a, b) {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      
+      const matrix = [];
+      
+      // Inicializar matriz
+      for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+      }
+      
+      // Rellenar matriz
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          const costo = a[j - 1] === b[i - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,      // eliminación
+            matrix[i][j - 1] + 1,      // inserción
+            matrix[i - 1][j - 1] + costo  // sustitución
+          );
+        }
+      }
+      
+      return matrix[b.length][a.length];
+    }
+    
+    if (entrevistas.length === 0) {
+      const mensajeNoEntrevistas = `
+        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-3">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <i class="fas fa-info-circle text-yellow-500"></i>
+              </div>
+            <div class="ml-3">
+              <p class="text-sm text-yellow-700">
+                No se encontraron entrevistas para la cédula <strong>${cedula}</strong>
+              </p>
+            </div>
+          </div>
+        </div>`;
+      
+      // Agregamos el mensaje al contenido existente (no reemplazamos)
+      container.innerHTML += mensajeNoEntrevistas;
+      return;
+    }
+    
+    let html = `
+      <div class="divide-y divide-gray-200 max-h-[50vh] overflow-y-auto px-1 py-2 rounded-md shadow-inner bg-gray-50">`;
+    
+    entrevistas.forEach(entrevista => {
+      const coincidencia = compararCedulas(entrevista.cedula, cedula);
+      let rowClass, badgeClass, badgeText;
+      
+      let cursorStyle, onclickAttr;
+      
+      if (coincidencia === 'exacta') {
+        rowClass = 'bg-green-50 border border-green-200 shadow-sm hover:shadow-md';
+        badgeClass = 'bg-green-100 text-green-800';
+        badgeText = '<i class="fas fa-check-circle mr-1"></i>Coincidencia exacta';
+        cursorStyle = 'cursor-pointer';
+        onclickAttr = `onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')"`;
+      } else if (coincidencia === 'parcial') {
+        rowClass = 'bg-blue-50 border border-blue-200 shadow-sm hover:shadow-md'; 
+        badgeClass = 'bg-blue-100 text-blue-800';
+        badgeText = '<i class="fas fa-check mr-1"></i>Coincidencia parcial';
+        cursorStyle = 'cursor-pointer';
+        onclickAttr = `onclick="seleccionarEntrevista(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}')"`;
+      } else {
+        rowClass = 'bg-gray-50 opacity-70'; // Gris claro para mostrar que está deshabilitado
+        badgeClass = 'bg-red-100 text-red-800';
+        badgeText = '<i class="fas fa-times-circle mr-1"></i>Sin coincidencia';
+        cursorStyle = 'cursor-not-allowed';
+        onclickAttr = `onclick="mostrarMensajeCoincidencia('${entrevista.cedula}', '${cedula}')"`;
+      }
+      
+      html += `
+        <div class="p-4 hover:bg-gray-100 rounded-md ${cursorStyle} transition-all duration-300 ${rowClass} mb-2" 
+             ${onclickAttr}>
+          <div class="flex justify-between items-start">
+                      <div>
+              <h6 class="font-medium text-gray-900 mb-1">${entrevista.nombre_completo}</h6>
+              <p class="text-gray-800 font-mono mb-1">
+                <strong class="text-gray-600">Cédula:</strong> ${entrevista.cedula}
+                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+                  ${badgeText}
+                </span>
+              </p>
+              <p class="text-gray-600 text-sm">
+                <strong>Email:</strong> ${entrevista.email || 'No disponible'} | 
+                <strong>Teléfono:</strong> ${entrevista.telefono || 'No disponible'}
+              </p>
+                      </div>
+            <div class="flex flex-col items-end">
+              <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${entrevista.tipo_producto || 'Sin producto'}</span>
+              <small class="text-gray-500 mt-2">${entrevista.fecha_entrevista || 'Fecha no disponible'}</small>
+                    </div>
+                    </div>
+                  </div>
+      `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+  
+  // Función para mostrar detalles sobre las coincidencias
+  function mostrarInfoCoincidencias() {
+    Swal.fire({
+      title: 'Criterios de Coincidencia de Cédulas',
+      html: `
+        <div class="text-left">
+          <h5 class="font-weight-bold mb-3">Coincidencia Exacta:</h5>
+          <ul class="pl-4">
+            <li>Cédulas idénticas después de normalizar (eliminar guiones y espacios)</li>
+            <li>Mismos caracteres alfanuméricos en el mismo orden</li>
+          </ul>
+          
+          <h5 class="font-weight-bold mb-3 mt-4">Coincidencia Parcial:</h5>
+          <ul class="pl-4">
+            <li>Coinciden los primeros 3-4 dígitos <strong>o</strong> los últimos 4-8 dígitos</li>
+            <li>Cédulas que difieren en máximo 2 caracteres (errores tipográficos)</li>
+            <li>Más del 70% de caracteres coinciden en las mismas posiciones</li>
+            <li>Misma letra para extranjeros con algunos dígitos coincidentes</li>
+          </ul>
+          
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-lightbulb mr-2"></i>
+            <strong>Ejemplos de coincidencia parcial:</strong>
+            <ul class="mb-0 mt-1">
+              <li>"8-123-456" y "8123456" (mismos dígitos, formato diferente)</li>
+              <li>"1-E-234-567" y "E234567" (letra de extranjero igual)</li>
+              <li>"9-876-5432" y "9-876-5431" (error tipográfico en un dígito)</li>
+              <li>"10-123-456" y "123-456" (últimos 6 dígitos iguales)</li>
+            </ul>
+                </div>
+              </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Entendido'
+    });
+  }
+
+  function seleccionarEntrevista(id, nombre, cedula) {
+    const clienteCedula = "{{ solicitud.cliente_cedula_completa|default:'No disponible' }}";
+    
+    // Función para comparar coincidencia entre cédulas (versión simplificada para esta función)
+    function compararCedulas(cedula1, cedula2) {
+      if (!cedula1 || !cedula2 || cedula1 === 'No disponible' || cedula2 === 'No disponible') return 'ninguna';
+      
+      // Normalizar cedulas para comparación (mantener números y letras, quitar guiones y espacios)
+      const normalizada1 = cedula1.replace(/[-\s]/g, '').toUpperCase();
+      const normalizada2 = cedula2.replace(/[-\s]/g, '').toUpperCase();
+      
+      // Coincidencia exacta después de normalizar
+      if (normalizada1 === normalizada2) return 'exacta';
+      
+      // Verificación básica de coincidencia parcial para esta función
+      const numeros1 = normalizada1.replace(/[^0-9]/g, '');
+      const numeros2 = normalizada2.replace(/[^0-9]/g, '');
+      
+      if (numeros1.length > 0 && numeros2.length > 0) {
+        // Comparar primeros y últimos dígitos
+        const primerDigitos1 = numeros1.substring(0, Math.min(4, numeros1.length));
+        const primerDigitos2 = numeros2.substring(0, Math.min(4, numeros2.length));
+        const ultimosDigitos1 = numeros1.length > 6 ? numeros1.slice(-8) : numeros1;
+        const ultimosDigitos2 = numeros2.length > 6 ? numeros2.slice(-8) : numeros2;
+        
+        if ((primerDigitos1 === primerDigitos2 && primerDigitos1.length >= 3) || 
+            (ultimosDigitos1 === ultimosDigitos2 && ultimosDigitos1.length >= 4)) {
+          return 'parcial';
+        }
+      }
+      
+      return 'ninguna';
+    }
+    
+    // Verificar el tipo de coincidencia entre cédulas
+    const coincidencia = compararCedulas(cedula, clienteCedula);
+    
+    // Solo permitir seleccionar si hay coincidencia exacta o parcial
+    if (coincidencia === 'ninguna') {
+      Swal.fire({
+        title: 'No se puede asociar',
+        html: `<p>La cédula de esta entrevista <strong>(${cedula})</strong> no coincide con la cédula del cliente de la solicitud <strong>(${clienteCedula})</strong>.</p>
+              <p class="mt-2">Por motivos de seguridad, solo puede asociar entrevistas con coincidencia exacta o parcial de cédula.</p>`,
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+    
+    entrevistaSeleccionadaId = id;
+    
+    // Animar el scroll hacia la sección de entrevista seleccionada
+    const entrevistaSeleccionadaEl = document.getElementById('entrevistaSeleccionada');
+    
+    // Mostrar entrevista seleccionada con animación
+    document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
+    document.getElementById('cedulaEntrevistaSeleccionada').textContent = cedula;
+    
+    // Aplicar animación
+    entrevistaSeleccionadaEl.style.opacity = '0';
+    entrevistaSeleccionadaEl.style.transform = 'translateY(20px)';
+    entrevistaSeleccionadaEl.style.display = 'block';
+    
+    // Efecto de aparición
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.style.opacity = '1';
+      entrevistaSeleccionadaEl.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Scroll suave hasta la sección
+    setTimeout(() => {
+      entrevistaSeleccionadaEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
+    
+    // Habilitar botón de confirmación
+    document.getElementById('btnConfirmarAsociacion').disabled = false;
+    
+    // Resaltar selección con animación
+    document.querySelectorAll('.p-4[onclick]').forEach(item => {
+      item.classList.remove('ring-2', 'ring-green-500', 'bg-green-100');
+    });
+    
+    const selectedItem = event.target.closest('.p-4');
+    if (selectedItem) {
+      selectedItem.classList.add('ring-2', 'ring-green-500', 'bg-green-100');
+    }
+  }
+
+  function mostrarMensajeCoincidencia(cedulaEntrevista, cedulaSolicitud) {
+    // Muestra un mensaje de error cuando intentan seleccionar una entrevista sin coincidencia
+    Swal.fire({
+      title: 'No se puede asociar',
+      html: `<p>La cédula de esta entrevista <strong>(${cedulaEntrevista})</strong> no coincide con la cédula del cliente de la solicitud <strong>(${cedulaSolicitud})</strong>.</p>
+             <p class="mt-2">Por motivos de seguridad, solo puede asociar entrevistas con coincidencia exacta o parcial de cédula.</p>`,
+      icon: 'error',
+      confirmButtonText: 'Entendido'
+    });
+  }
+
+  function confirmarAsociacion() {
+    console.log('🔍 DEBUG - Iniciando confirmarAsociacion');
+    console.log('  - entrevistaSeleccionadaId:', entrevistaSeleccionadaId);
+    
+    if (!entrevistaSeleccionadaId) {
+      console.log('❌ No hay entrevista seleccionada');
+      return;
+    }
+    
+    const solicitudId = {{ solicitud.id }};
+    console.log('  - solicitudId:', solicitudId);
+    
+    // Mostrar loading en el botón
+    const btn = document.getElementById('btnConfirmarAsociacion');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
+    btn.disabled = true;
+    
+    // Obtener token CSRF
+    const csrfToken = getCsrfToken();
+    console.log('  - CSRF Token:', csrfToken ? 'Presente' : 'AUSENTE');
+    
+    const requestData = {
+      solicitud_id: solicitudId,
+      entrevista_id: entrevistaSeleccionadaId,
+      accion: 'asociar'
+    };
+    console.log('  - Datos a enviar:', requestData);
+    
+    // Realizar asociación AJAX
+    console.log('🚀 Enviando fetch request...');
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalAsociarEntrevista')).hide();
+        
+        // Mostrar mensaje de éxito
+        mostrarMensaje('Entrevista asociada correctamente', 'success');
+        
+        // Recargar la página para mostrar la entrevista asociada
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+        
+      } else {
+        // Manejo específico para entrevistas ya asociadas a esta solicitud
+        if (data.ya_asociada) {
+          mostrarMensaje('Esta entrevista ya está asociada a esta solicitud', 'warning');
+        } else {
+          mostrarMensaje(data.error || 'Error al asociar entrevista', 'error');
+        }
+      }
+    })
+    .catch(error => {
+      console.error('❌ Fetch error completo:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+      mostrarMensaje(`Error al asociar entrevista: ${error.message}`, 'error');
+    })
+    .finally(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+  }
+
+  function desasociarEntrevista() {
+    const solicitudId = {{ solicitud.id }};
+    
+    if (!confirm('¿Está seguro de que desea desasociar la entrevista de esta solicitud?')) {
+      return;
+    }
+    
+    fetch('/workflow/asociar-entrevista/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        accion: 'desasociar'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarMensaje('Entrevista desasociada correctamente', 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      } else {
+        mostrarMensaje(data.error || 'Error al desasociar entrevista', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      mostrarMensaje('Error al desasociar entrevista', 'error');
+    });
+  }
+
+  // ✅ Función de reasociación removida - Ya no es necesaria porque se permiten múltiples asociaciones
+
+  // Función para enviar entrevista a APPX
+  function enviarAAAPX(entrevistaId, nombreCliente) {
+    // Confirmar antes de enviar
+    if (confirm(`¿Está seguro que desea enviar la entrevista de ${nombreCliente} al sistema APPX Core?\n\nEsta acción enviará todos los datos de la entrevista al sistema central.`)) {
+      
+      // Deshabilitar el botón mientras se procesa
+      const boton = event.target.closest('button');
+      const textoOriginal = boton.innerHTML;
+      boton.disabled = true;
+      boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+      
+      // Obtener el token CSRF
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                       getCookie('csrftoken');
+      
+      // Hacer la petición AJAX
+      fetch(`/workflow/api/entrevistas/${entrevistaId}/enviar-appx/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'Accept': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Éxito
+          alert(`✅ ÉXITO: ${data.message}\n\nTimestamp: ${data.timestamp}`);
+          
+          // Opcional: Marcar visualmente la entrevista como enviada
+          boton.innerHTML = '<i class="fa-solid fa-check"></i> ENVIADO';
+          boton.classList.remove('btn-outline-warning');
+          boton.classList.add('btn-success');
+          boton.disabled = true;
+          
+        } else {
+          // Error
+          alert(`❌ ERROR: ${data.message}\n\nDetalles: ${data.error_details || 'No disponible'}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert(`❌ ERROR DE CONEXIÓN: No se pudo enviar la entrevista.\n\nError técnico: ${error.message}`);
+      })
+      .finally(() => {
+        // Solo restaurar el botón si no fue exitoso
+        if (!boton.classList.contains('btn-success')) {
+          boton.disabled = false;
+          boton.innerHTML = textoOriginal;
+        }
+      });
+    }
+  }
+
+  function verDetallesEntrevista(entrevistaId) {
+    // Abrir modal o página con detalles de la entrevista
+    window.open(`/workflow/entrevista/${entrevistaId}/`, '_blank');
+  }
+
+  // Función para obtener el token CSRF
+  function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value || 
+           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+           getCookie('csrftoken');
+  }
+
+  // Función auxiliar para obtener cookies
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Función para mostrar mensajes toast
+  function mostrarMensaje(mensaje, tipo) {
+    // Crear un toast simple si no existe sistema más avanzado
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+      <div class="d-flex align-items-center">
+        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+        ${mensaje}
+            </div>
+    `;
+    document.body.appendChild(toast);
+    
+    // Auto-remover después de 3 segundos
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+
+// Funciones para botones de acción
+// Función para validar documentos consultando la base de datos
+function validarDocumentosYAvanzar() {
+  console.log('🔍 Validando documentos contra la base de datos...');
+  
+  const solicitudId = {{ solicitud.id }};
+  
+  // Mostrar indicador de carga
+  const btnAvanzar = document.getElementById('btn-avanzar-subestado');
+  const textoOriginal = btnAvanzar.innerHTML;
+  btnAvanzar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validando...';
+  btnAvanzar.disabled = true;
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/validar-documentos/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCsrfToken(),
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📊 Respuesta de validación:', data);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    if (data.success) {
+      if (data.puede_avanzar) {
+        console.log('✅ Validación exitosa - Abriendo modal');
+        cargarInformacionAvance();
+        const modal = new bootstrap.Modal(document.getElementById('modalAvanzarSubestado'));
+        modal.show();
+      } else {
+        console.log('❌ Validación fallida:', data.documentos_problematicos);
+        
+        // Verificar si hay transiciones negativas disponibles
+        if (transicionesNegativas.length > 0) {
+          // Si hay documentos obligatorios malos Y hay transiciones negativas, ofrecer devolución
+          const tieneObligatoriosMalos = data.documentos_problematicos && 
+            data.documentos_problematicos.some(doc => doc.problema === 'mal_calificado' && doc.estado_actual === 'malo');
+          
+          if (tieneObligatoriosMalos) {
+            console.log('📋 Documentos obligatorios malos detectados - ofreciendo devolución');
+            
+            // Mostrar mensaje con opción de devolución
+            const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
+            
+            if (confirm(mensaje)) {
+              CapturaWorkflow.mostrarModalDevolucion();
+              return; // No continuar con el resto de la lógica
+            }
+          }
+        }
+        
+        // Mostrar mensaje detallado normal
+        let mensajeCompleto = data.mensaje + '\n\n';
+        if (data.detalle && data.detalle.length > 0) {
+          mensajeCompleto += data.detalle.join('\n');
+        }
+        
+        alert(mensajeCompleto);
+        
+        // Resaltar documentos problemáticos en la interfaz
+        if (data.documentos_problematicos) {
+          data.documentos_problematicos.forEach(doc => {
+            const cards = document.querySelectorAll('.archivo-card-mejorada-backoffice');
+            cards.forEach(card => {
+              const nombre = card.querySelector('.archivo-nombre-backoffice')?.textContent?.trim();
+              if (nombre && nombre.includes(doc.nombre)) {
+                card.style.border = '2px solid #dc3545';
+                card.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                  card.style.border = '';
+                  card.style.backgroundColor = '';
+                }, 8000);
+              }
+            });
+          });
+        }
+      }
+    } else {
+      console.error('❌ Error en validación:', data.error);
+      alert(`Error al validar documentos: ${data.error}`);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error de red:', error);
+    
+    // Restaurar botón
+    btnAvanzar.innerHTML = textoOriginal;
+    btnAvanzar.disabled = false;
+    
+    alert('Error de conexión al validar documentos. Verifica tu conexión e intenta de nuevo.');
+  });
+}
+
+// ✅ Función mostrarModalDevolucion movida al namespace CapturaWorkflow
+
+// =======================================================
+// FUNCIONALIDAD PARA PENDIENTES ANTES DE FIRMA
+// =======================================================
+
+let pendientesSeleccionados = [];
+let todosLosPendientes = [];
+
+// Función para mostrar modal de agregar pendientes
+function mostrarModalAgregarPendientes() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAgregarPendientes'));
+    modal.show();
+    
+    // Limpiar estado al abrir modal
+    pendientesSeleccionados = [];
+    actualizarVistaSeleccionados();
+    
+    // Cargar pendientes automáticamente
+    buscarPendientesEnCatalogo();
+}
+
+// Función para buscar pendientes en el catálogo
+function buscarPendientesEnCatalogo() {
+    const query = document.getElementById('buscarPendientes').value.trim();
+    const loadingElement = document.getElementById('loading-pendientes');
+    const resultadosElement = document.getElementById('resultados-pendientes');
+    
+    // Mostrar loading
+    resultadosElement.innerHTML = '<div class="text-center p-4 text-muted" id="loading-pendientes"><i class="fas fa-spinner fa-spin me-2"></i>Buscando pendientes...</div>';
+    
+    // Realizar búsqueda
+    const url = query ? `/workflow/api/pendientes/catalogo/?q=${encodeURIComponent(query)}` : '/workflow/api/pendientes/catalogo/';
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                todosLosPendientes = data.pendientes;
+                mostrarResultadosPendientes(data.pendientes);
+                document.getElementById('contador-resultados').textContent = `${data.pendientes.length} resultado${data.pendientes.length !== 1 ? 's' : ''}`;
+            } else {
+                resultadosElement.innerHTML = `<div class="text-center p-4 text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultadosElement.innerHTML = '<div class="text-center p-4 text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al cargar pendientes</div>';
+        });
+}
+
+// Función para mostrar los resultados de pendientes
+function mostrarResultadosPendientes(pendientes) {
+    const container = document.getElementById('resultados-pendientes');
+    
+    if (pendientes.length === 0) {
+        container.innerHTML = '<div class="text-center p-4 text-muted"><i class="fas fa-inbox me-2"></i>No se encontraron pendientes</div>';
+        return;
+    }
+    
+    let html = '';
+    pendientes.forEach(pendiente => {
+        const yaSeleccionado = pendientesSeleccionados.some(p => p.id === pendiente.id);
+                 const claseBoton = yaSeleccionado ? 'btn-outline-success disabled' : 'btn-outline-primary';
+        const textoBoton = yaSeleccionado ? '<i class="fas fa-check me-1"></i>Seleccionado' : '<i class="fas fa-plus me-1"></i>Seleccionar';
+        
+        html += `
+            <div class="border-bottom p-3 pendiente-item" data-pendiente-id="${pendiente.id}">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-dark">${pendiente.nombre}</h6>
+                        ${pendiente.descripcion ? `<p class="mb-2 text-muted small">${pendiente.descripcion}</p>` : ''}
+                        <div class="d-flex align-items-center text-muted small">
+                            <span class="badge bg-light text-dark me-2">
+                                <i class="fas fa-sort-numeric-up me-1"></i>Orden: ${pendiente.orden}
+                            </span>
+            </div>
+          </div>
+                    <div class="ms-3">
+                        <button type="button" class="btn btn-sm ${claseBoton}" 
+                                onclick="seleccionarPendiente(${pendiente.id}, '${pendiente.nombre.replace(/'/g, "\\'")}', '${(pendiente.descripcion || '').replace(/'/g, "\\'")}')"
+                                ${yaSeleccionado ? 'disabled' : ''}>
+                            ${textoBoton}
+                        </button>
+        </div>
+      </div>
+    </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Función para seleccionar un pendiente
+function seleccionarPendiente(id, nombre, descripcion) {
+    // Verificar si ya está seleccionado
+    if (pendientesSeleccionados.some(p => p.id === id)) {
+        return;
+    }
+    
+    // Agregar al array de seleccionados
+    pendientesSeleccionados.push({
+        id: id,
+        nombre: nombre,
+        descripcion: descripcion
+    });
+    
+    // Actualizar vistas
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(todosLosPendientes); // Refrescar lista para mostrar como seleccionado
+}
+
+// Función para quitar un pendiente seleccionado
+function quitarPendienteSeleccionado(id) {
+    pendientesSeleccionados = pendientesSeleccionados.filter(p => p.id !== id);
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(todosLosPendientes); // Refrescar lista
+}
+
+// Función para limpiar todos los seleccionados
+function limpiarSeleccionados() {
+    pendientesSeleccionados = [];
+    actualizarVistaSeleccionados();
+    mostrarResultadosPendientes(todosLosPendientes); // Refrescar lista
+}
+
+// Función para actualizar la vista de seleccionados
+function actualizarVistaSeleccionados() {
+    const seccionSeleccionados = document.getElementById('seccion-seleccionados');
+    const listaSeleccionados = document.getElementById('lista-seleccionados');
+    const contadorSeleccionados = document.getElementById('contador-seleccionados');
+    const btnConfirmar = document.getElementById('btn-confirmar-pendientes');
+    
+    if (pendientesSeleccionados.length === 0) {
+        seccionSeleccionados.style.display = 'none';
+        btnConfirmar.disabled = true;
+        return;
+    }
+    
+    seccionSeleccionados.style.display = 'block';
+    btnConfirmar.disabled = false;
+    contadorSeleccionados.textContent = `${pendientesSeleccionados.length} seleccionado${pendientesSeleccionados.length !== 1 ? 's' : ''}`;
+    
+    let html = '';
+    pendientesSeleccionados.forEach(pendiente => {
+        html += `
+            <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-white border rounded">
+                <div>
+                    <span class="fw-bold text-success">${pendiente.nombre}</span>
+                    ${pendiente.descripcion ? `<br><small class="text-muted">${pendiente.descripcion}</small>` : ''}
+  </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="quitarPendienteSeleccionado(${pendiente.id})">
+                    <i class="fas fa-times"></i>
+                </button>
+</div>
+        `;
+    });
+    
+    listaSeleccionados.innerHTML = html;
+}
+
+// Función para confirmar agregar pendientes
+function confirmarAgregarPendientes() {
+    if (pendientesSeleccionados.length === 0) {
+        return;
+    }
+    
+    const solicitudId = {{ solicitud.id }};
+    const pendientesIds = pendientesSeleccionados.map(p => p.id);
+    const btnConfirmar = document.getElementById('btn-confirmar-pendientes');
+    
+    // Mostrar loading
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agregando...';
+    btnConfirmar.disabled = true;
+    
+    // Realizar petición
+    fetch(`/workflow/api/solicitudes/${solicitudId}/pendientes/agregar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            pendientes_ids: pendientesIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('modalAgregarPendientes')).hide();
+            
+            // Mostrar mensaje de éxito
+            mostrarMensaje(data.message, 'success');
+            
+            // Recargar lista de pendientes
+            cargarPendientesSolicitud();
+        } else {
+            mostrarMensaje(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al agregar pendientes', 'error');
+    })
+    .finally(() => {
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+}
+
+// Función para cargar pendientes de la solicitud
+function cargarPendientesSolicitud() {
+    const solicitudId = {{ solicitud.id }};
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/pendientes/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarPendientesEnTabla(data.pendientes);
+                actualizarContadorPendientes(data.pendientes);
+            } else {
+                console.error('Error al cargar pendientes:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+// Función para mostrar pendientes en la tabla
+function mostrarPendientesEnTabla(pendientes) {
+    const tbody = document.getElementById('lista-pendientes');
+    const mensajeSinPendientes = document.getElementById('mensaje-sin-pendientes');
+    
+    if (pendientes.length === 0) {
+        tbody.innerHTML = '';
+        mensajeSinPendientes.style.display = 'block';
+        return;
+    }
+    
+    mensajeSinPendientes.style.display = 'none';
+    
+    let html = '';
+    pendientes.forEach(pendiente => {
+        // Determinar clases CSS para el estado
+        let estadoClass, estadoIcon;
+        switch (pendiente.estado) {
+            case 'por_hacer':
+                estadoClass = 'text-danger';
+                estadoIcon = 'fas fa-circle';
+                break;
+            case 'haciendo':
+                estadoClass = 'text-warning';
+                estadoIcon = 'fas fa-circle';
+                break;
+            case 'listo':
+                estadoClass = 'text-success';
+                estadoIcon = 'fas fa-check-circle';
+                break;
+            default:
+                estadoClass = 'text-muted';
+                estadoIcon = 'fas fa-question-circle';
+        }
+        
+        html += `
+            <tr data-pendiente-id="${pendiente.id}" data-estado="${pendiente.estado}">
+                <td>
+                    <div>
+                        <span class="fw-bold">${pendiente.pendiente.nombre}</span>
+                        ${pendiente.pendiente.descripcion ? `<br><small class="text-muted">${pendiente.pendiente.descripcion}</small>` : ''}
+                    </div>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm estado-dropdown" onchange="cambiarEstadoPendiente(${pendiente.id}, this.value)">
+                        <option value="por_hacer" ${pendiente.estado === 'por_hacer' ? 'selected' : ''}>Por Hacer</option>
+                        <option value="haciendo" ${pendiente.estado === 'haciendo' ? 'selected' : ''}>Haciendo</option>
+                        <option value="listo" ${pendiente.estado === 'listo' ? 'selected' : ''}>Listo</option>
+                    </select>
+                </td>
+                <td>
+                    <div>
+                        <span class="fw-bold">${pendiente.agregado_por.nombre_completo}</span>
+                        <br><small class="text-muted">@${pendiente.agregado_por.username}</small>
+                    </div>
+                </td>
+                <td>
+                    <span class="small">${pendiente.fecha_agregado_display}</span>
+                    ${pendiente.fecha_completado_display ? `<br><small class="text-success"><i class="fas fa-check me-1"></i>${pendiente.fecha_completado_display}</small>` : ''}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                onclick="eliminarPendiente(${pendiente.id}, '${pendiente.pendiente.nombre.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Función para cambiar estado de pendiente
+function cambiarEstadoPendiente(pendienteId, nuevoEstado) {
+    const dropdown = event.target;
+    const estadoOriginal = dropdown.dataset.estadoOriginal || dropdown.value;
+    
+    // Deshabilitar dropdown mientras se procesa
+    dropdown.disabled = true;
+    
+    fetch(`/workflow/api/pendientes/${pendienteId}/cambiar-estado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            estado: nuevoEstado
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje(data.message, 'success');
+            dropdown.dataset.estadoOriginal = nuevoEstado;
+            
+            // Actualizar la fila visualmente si es necesario
+            const fila = dropdown.closest('tr');
+            fila.dataset.estado = nuevoEstado;
+            
+            // Aplicar filtro actual
+            aplicarFiltroPendientes();
+        } else {
+            // Revertir al estado original
+            dropdown.value = estadoOriginal;
+            mostrarMensaje(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        dropdown.value = estadoOriginal;
+        mostrarMensaje('Error al cambiar estado', 'error');
+    })
+    .finally(() => {
+        dropdown.disabled = false;
+    });
+}
+
+// Función para eliminar pendiente
+function eliminarPendiente(pendienteId, nombrePendiente) {
+    if (!confirm(`¿Está seguro de que desea eliminar el pendiente "${nombrePendiente}"?`)) {
+        return;
+    }
+    
+    fetch(`/workflow/api/pendientes/${pendienteId}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje(data.message, 'success');
+            cargarPendientesSolicitud(); // Recargar lista
+        } else {
+            mostrarMensaje(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al eliminar pendiente', 'error');
+    });
+}
+
+// Función para actualizar contador de pendientes
+function actualizarContadorPendientes(pendientes) {
+    const contador = document.getElementById('contador-pendientes');
+    const total = pendientes.length;
+    
+    if (total === 0) {
+        contador.textContent = 'Sin pendientes';
+        contador.className = 'badge bg-secondary';
+    } else {
+        const porHacer = pendientes.filter(p => p.estado === 'por_hacer').length;
+        const haciendo = pendientes.filter(p => p.estado === 'haciendo').length;
+        const listo = pendientes.filter(p => p.estado === 'listo').length;
+        
+        contador.innerHTML = `
+            <i class="fas fa-clipboard-list me-1"></i>
+            ${porHacer} por hacer, ${haciendo} haciendo, ${listo} listo
+        `;
+        contador.className = 'badge bg-info';
+    }
+}
+
+// Función para aplicar filtros a la tabla
+function aplicarFiltroPendientes() {
+    const filtroSeleccionado = document.querySelector('input[name="filtro-estado"]:checked').value;
+    const filas = document.querySelectorAll('#lista-pendientes tr');
+    let filasMostradas = 0;
+    
+    filas.forEach(fila => {
+        const estadoFila = fila.dataset.estado;
+        
+        if (filtroSeleccionado === 'todos' || estadoFila === filtroSeleccionado) {
+            fila.style.display = '';
+            filasMostradas++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+    
+    // Actualizar contador
+    const total = filas.length;
+    const contadorElement = document.getElementById('contador-pendientes');
+    if (filtroSeleccionado === 'todos') {
+        contadorElement.textContent = `${total} pendientes`;
+    } else {
+        const estadoTexto = {
+            'por_hacer': 'Por Hacer',
+            'haciendo': 'Haciendo',
+            'listo': 'Listo'
+        };
+        contadorElement.textContent = `${filasMostradas} ${estadoTexto[filtroSeleccionado]}`;
+    }
+}
+
+// Event listeners para filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar pendientes al cargar la página
+    cargarPendientesSolicitud();
+    
+    // 🆕 CARGAR TRANSICIONES NEGATIVAS PARA BOTÓN "DEVOLVER A OFICIAL"
+    CapturaWorkflow.cargarTransicionesNegativas();
+    
+    // 🆕 CONFIGURAR EVENT LISTENERS PARA MODALES DE AVANCE
+    const modalAvanzar = document.getElementById('modalAvanzarSubestado');
+    if (modalAvanzar) {
+        modalAvanzar.addEventListener('show.bs.modal', function () {
+            console.log('🚀 Abriendo modal de avance...');
+            // La función cargarInformacionAvance() se llama desde validarDocumentosYAvanzar()
+        });
+
+        modalAvanzar.addEventListener('hidden.bs.modal', function () {
+            // Reset estado del modal
+            opcionAvanceSeleccionada = null;
+            usuarioSeleccionadoAvance = null;
+            siguientePaso = null;
+
+            const seccionAsignar = document.getElementById('seccion-asignar-usuario');
+            const btnConfirmar = document.getElementById('btn-confirmar-avance');
+            const avanceLoading = document.getElementById('avance-loading');
+            const avanceError = document.getElementById('avance-error');
+            
+            if (seccionAsignar) seccionAsignar.style.display = 'none';
+            if (btnConfirmar) btnConfirmar.disabled = true;
+            if (avanceLoading) avanceLoading.style.display = 'none';
+            if (avanceError) avanceError.style.display = 'none';
+        });
+    }
+    
+    // Event listeners para filtros
+    document.querySelectorAll('input[name="filtro-estado"]').forEach(radio => {
+        radio.addEventListener('change', aplicarFiltroPendientes);
+    });
+});
+
+// ========================================
+// VARIABLES GLOBALES PARA AVANCE
+// ========================================
+
+// Variables globales específicas para el nuevo modal de Captura
+const SOLICITUD_ID = {{ solicitud.id }};
+let siguienteSubestadoSeleccionadoCaptura = null;
+window.usuarioSeleccionadoAvanceCaptura = null;
+let opcionAvanceSeleccionada = null;
+let usuarioSeleccionadoAvance = null;
+let siguientePaso = null;
+
+// ========================================
+// FUNCIONES DE AVANCE - ADAPTADAS PARA CAPTURA
+// ========================================
+
+// Función para validar documentos consultando la base de datos (duplicada - para evitar conflictos)
+function validarDocumentosYAvanzarDuplicada() {
+    // Esta función duplicada se mantiene para compatibilidad, pero usa la función principal
+    validarDocumentosYAvanzar();
+}
+
+// Función para cargar información del modal cuando se abre
+function cargarInformacionAvance() {
+    console.log('🔄 Cargando información de avance...');
+    
+    const SOLICITUD_ID = {{ solicitud.id }};
+    
+    // Mostrar loading
+    document.getElementById('avance-loading').style.display = 'block';
+    document.getElementById('avance-error').style.display = 'none';
+    document.getElementById('estado-documentos').style.display = 'none';
+    
+    // Solo cargar siguiente subestado (sin validación de documentos)
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/siguiente-subestado/`)
+        .then(response => response.json())
+        .then(subestadoData => {
+            console.log('📊 Información de subestado:', subestadoData);
+            
+            // Actualizar información del siguiente paso
+            if (subestadoData.success) {
+                window.siguientePaso = subestadoData;
+                
+                if (subestadoData.siguiente_subestado) {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_subestado.nombre;
+                } else if (subestadoData.siguiente_etapa) {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = subestadoData.siguiente_etapa.nombre;
+                } else {
+                    document.getElementById('avanzar-siguiente-subestado').textContent = 'Firma';
+                }
+            } else {
+                document.getElementById('avanzar-siguiente-subestado').textContent = 'Error al cargar';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('avanzar-siguiente-subestado').textContent = 'Error de conexión';
+        })
+        .finally(() => {
+            document.getElementById('avance-loading').style.display = 'none';
+        });
+    
+    // Cargar usuarios disponibles
+    cargarUsuariosDisponiblesAvance();
+}
+
+// Función para cargar usuarios disponibles
+function cargarUsuariosDisponiblesAvance() {
+    return fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTabla(data.usuarios);
+                return Promise.resolve();
+            } else {
+                throw new Error(data.error || 'Error al cargar usuarios');
+            }
+        });
+}
+
+// Función para mostrar usuarios en la tabla
+function mostrarUsuariosEnTabla(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance');
+    const contador = document.getElementById('contador-usuarios-avance');
+    
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.className = 'usuario-item';
+        row.setAttribute('data-usuario-id', usuario.id);
+        row.setAttribute('data-usuario-nombre', usuario.nombre || usuario.username || 'Usuario');
+        row.setAttribute('data-usuario-email', usuario.email || '');
+        
+        const avatar = usuario.profile_picture ?
+            `<img src="${usuario.profile_picture}" alt="${usuario.nombre || usuario.username || 'Usuario'}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;">` :
+            `<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+            </div>`;
+        
+        const badges = [];
+        if (usuario.is_staff) badges.push('<span class="badge bg-info ms-1">Staff</span>');
+        if (usuario.is_superuser) badges.push('<span class="badge bg-danger ms-1">Admin</span>');
+        
+        const grupos = usuario.grupos && usuario.grupos.length > 0 ?
+            usuario.grupos.map(grupo => `<span class="badge bg-light text-dark me-1">${grupo}</span>`).join('') :
+            '<span class="text-muted">Sin grupos</span>';
+        
+        row.innerHTML = `
+            <td class="text-center">
+                <span class="badge bg-secondary">${index + 1}</span>
+            </td>
+            <td class="text-center">${avatar}</td>
+            <td>
+                <div>
+                    <strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong>
+                    ${badges.join('')}
+                </div>
+            </td>
+            <td>
+                <small class="text-muted">${usuario.email || ''}</small>
+            </td>
+            <td>${grupos}</td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance" 
+                        data-usuario-id="${usuario.id}" 
+                        data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Asignar
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    // Agregar event listeners a los botones de asignar
+    document.querySelectorAll('.asignar-usuario-avance').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const usuarioId = this.getAttribute('data-usuario-id');
+            const usuarioNombre = this.getAttribute('data-usuario-nombre');
+            seleccionarUsuarioAvance(usuarioId, usuarioNombre);
+        });
+    });
+    
+    // Configurar funcionalidad de búsqueda
+    configurarBusquedaUsuarios();
+}
+
+// Función para configurar la búsqueda de usuarios
+function configurarBusquedaUsuarios() {
+    const inputBusqueda = document.getElementById('buscar-usuario-avance');
+    const btnLimpiar = document.getElementById('limpiar-busqueda-avance');
+    
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', function () {
+            filtrarUsuarios(this.value.toLowerCase());
+        });
+    }
+    
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function () {
+            inputBusqueda.value = '';
+            filtrarUsuarios('');
+        });
+    }
+}
+
+// Función para filtrar usuarios en la tabla
+function filtrarUsuarios(termino) {
+    const filas = document.querySelectorAll('#lista-usuarios-avance .usuario-item');
+    const contador = document.getElementById('contador-usuarios-avance');
+    let usuariosVisibles = 0;
+    
+    filas.forEach(fila => {
+        const nombre = fila.getAttribute('data-usuario-nombre').toLowerCase();
+        const email = fila.getAttribute('data-usuario-email').toLowerCase();
+        const grupos = fila.querySelector('td:nth-child(5)').textContent.toLowerCase();
+        
+        // Buscar en nombre, email o grupos
+        const coincide = termino === '' ||
+            nombre.includes(termino) ||
+            email.includes(termino) ||
+            grupos.includes(termino);
+        
+        if (coincide) {
+            fila.style.display = '';
+            usuariosVisibles++;
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+    
+    if (contador) {
+        contador.textContent = usuariosVisibles;
+    }
+}
+
+// Función para seleccionar opción de avance (yo vs otro)
+function seleccionarOpcionAvance(opcion) {
+    console.log('👤 Opción seleccionada:', opcion);
+    
+    opcionAvanceSeleccionada = opcion;
+    
+    const btnContinuarYo = document.getElementById('btn-continuar-yo');
+    const btnAsignarOtro = document.getElementById('btn-asignar-otro');
+    const btnBandejaGrupal = document.getElementById('btn-bandeja-grupal');
+    const seccionAsignar = document.getElementById('seccion-asignar-usuario');
+    const btnConfirmar = document.getElementById('btn-confirmar-avance');
+    
+    // Resetear estilos
+    btnContinuarYo.classList.remove('btn-primary', 'btn-outline-primary');
+    btnAsignarOtro.classList.remove('btn-success', 'btn-outline-success');
+    btnBandejaGrupal.classList.remove('btn-warning', 'btn-outline-warning');
+    
+    if (opcion === 'yo') {
+        btnContinuarYo.classList.add('btn-primary');
+        btnAsignarOtro.classList.add('btn-outline-success');
+        btnBandejaGrupal.classList.add('btn-outline-warning');
+        seccionAsignar.style.display = 'none';
+        btnConfirmar.disabled = false;
+        usuarioSeleccionadoAvance = null;
+    } else if (opcion === 'otro') {
+        btnContinuarYo.classList.add('btn-outline-primary');
+        btnAsignarOtro.classList.add('btn-success');
+        btnBandejaGrupal.classList.add('btn-outline-warning');
+        seccionAsignar.style.display = 'block';
+        btnConfirmar.disabled = true; // Se habilitará cuando seleccione usuario
+        usuarioSeleccionadoAvance = null;
+    } else if (opcion === 'bandeja') {
+        btnContinuarYo.classList.add('btn-outline-primary');
+        btnAsignarOtro.classList.add('btn-outline-success');
+        btnBandejaGrupal.classList.add('btn-warning');
+        seccionAsignar.style.display = 'none';
+        btnConfirmar.disabled = false;
+        usuarioSeleccionadoAvance = null;
+    }
+}
+
+// Función para seleccionar usuario para asignar
+function seleccionarUsuarioAvance(usuarioId, usuarioNombre) {
+    console.log('👥 Usuario seleccionado:', usuarioNombre);
+    
+    // Asignar a la variable global
+    window.usuarioSeleccionadoAvance = {
+        id: usuarioId,
+        nombre: usuarioNombre
+    };
+    
+    // Actualizar estilos de botones
+    document.querySelectorAll('.asignar-usuario-avance').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"]`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    // Validar formulario para habilitar/deshabilitar botón
+    validarFormularioAvanceCaptura();
+}
+
+// Función para confirmar el avance
+function confirmarAvance() {
+    console.log('✅ Confirmando avance...');
+    
+    const SOLICITUD_ID = {{ solicitud.id }};
+    
+    if (!opcionAvanceSeleccionada) {
+        mostrarMensaje('Debe seleccionar una opción de avance', 'error');
+        return;
+    }
+    
+    if (opcionAvanceSeleccionada === 'otro' && !usuarioSeleccionadoAvance) {
+        mostrarMensaje('Debe seleccionar un usuario para asignar', 'error');
+        return;
+    }
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-avance');
+    
+    // Deshabilitar botón y mostrar loading
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    const data = {
+        opcion: opcionAvanceSeleccionada,
+        usuario_id: usuarioSeleccionadoAvance?.id || null,
+        siguiente_subestado_id: siguientePaso?.siguiente_subestado?.id || null
+    };
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestado'));
+            modal.hide();
+            
+            // Mostrar mensaje de éxito
+            const mensaje = opcionAvanceSeleccionada === 'yo' ?
+                'Avanzando al siguiente subestado...' :
+                opcionAvanceSeleccionada === 'otro' ?
+                `Solicitud asignada a ${usuarioSeleccionadoAvance.nombre}` :
+                'Solicitud devuelta a bandeja grupal';
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Redirigir según la opción
+            setTimeout(() => {
+                if (opcionAvanceSeleccionada === 'yo') {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = '/workflow/bandeja-mixta/';
+                }
+            }, 1500);
+            
+        } else {
+            throw new Error(data.error || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al procesar el avance: ' + error.message, 'error');
+        
+        // Restaurar botón
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
+// ========================================
+// FUNCIONES DE DEVOLUCIÓN A OFICIAL
+// ========================================
+
+// Namespace específico para Captura para evitar conflictos con backoffice.js
+const CapturaWorkflow = {
+  transicionesNegativas: [],
+
+  // Función para mostrar modal de devolución
+  mostrarModalDevolucion: function() {
+    console.log('📋 Mostrando modal de devolución...');
+    
+    if (CapturaWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = CapturaWorkflow.transicionesNegativas[0]; // Por ahora tomamos la primera
+    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+    
+    // En Captura no hay documentos problemáticos, mostrar mensaje genérico
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    listaContainer.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Devolución desde Captura</strong>
+            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
+        </div>
+    `;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+    modal.show();
+  },
+
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO (CORREGIDA)
+  confirmarDevolucion: function() {
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    const SOLICITUD_ID = {{ solicitud.id }};
+    
+    if (!motivo) {
+        mostrarMensaje('Debes proporcionar un motivo para la devolución', 'error');
+        return;
+    }
+    
+    if (CapturaWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles', 'error');
+        return;
+    }
+    
+    // Usar la primera transición negativa disponible
+    const transicion = CapturaWorkflow.transicionesNegativas[0];
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+    btnConfirmar.disabled = true;
+    
+    console.log(`🚨 Devolviendo solicitud ${SOLICITUD_ID} desde CAPTURA a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+    
+    // 🚨 USAR API DE DEVOLUCIÓN CON CORREO (CORREGIDA)
+    fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            solicitud_id: SOLICITUD_ID,
+            transicion_id: transicion.id,
+            motivo: motivo,
+            etapa_origen: 'captura'  // ✅ Identificar que viene de captura
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Mostrar mensaje de éxito con información del correo
+            const mensaje = `✅ Solicitud devuelta exitosamente desde CAPTURA a ${data.data.nueva_etapa}
+            
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Captura
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+            modal.hide();
+            
+            // Redirigir según la URL proporcionada por la API
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+            }, 2000);
+        } else {
+            mostrarMensaje(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error en devolución desde Captura:', error);
+        mostrarMensaje('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
+    })
+    .finally(() => {
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+  },
+
+  // Función para cargar transiciones negativas al inicializar
+  cargarTransicionesNegativas: function() {
+    const SOLICITUD_ID = {{ solicitud.id }};
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                CapturaWorkflow.transicionesNegativas = data.transiciones_negativas || [];
+                
+                // Mostrar/ocultar botón "Devolver a Oficial"
+                const btnDevolver = document.getElementById('btn-devolver-oficial');
+                if (btnDevolver) {
+                    if (data.tiene_transiciones_negativas) {
+                        btnDevolver.style.display = 'inline-block';
+                    } else {
+                        btnDevolver.style.display = 'none';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar transiciones negativas:', error);
+        });
+  }
+};
+
+// Función global para compatibilidad con modal reutilizable
+function confirmarDevolucionModal() {
+  CapturaWorkflow.confirmarDevolucion();
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Función auxiliar para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', function () {
+        this.remove();
+    });
+}
+
+// Función auxiliar para crear contenedor de toast
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1055';
+    document.body.appendChild(container);
+    return container;
+}
+
+// ========================================
+// FUNCIONES ESPECIALIZADAS PARA CAPTURA
+// 2 BOTONES RECTANGULARES: Devolver a Oficial (modal original) + Avanzar Subestado (modal especializado)
+// ========================================
+
+// Variables para el modal Avanzar Subestado
+let subestadosDisponiblesCaptura = [];
+let siguienteSubestadoSeleccionado = null;
+
+// 1. MODAL DEVOLVER A OFICIAL (usar el modal original que ya funciona)
+function mostrarModalDevolverOficial() {
+    console.log('🔄 Abriendo modal Devolver a Oficial (original)');
+    
+    // Usar el modal original que ya tiene toda la lógica correcta
+    CapturaWorkflow.mostrarModalDevolucion();
+}
+
+// Las funciones duplicadas fueron eliminadas - se usa el modal original
+
+// 2. MODAL AVANZAR SUBESTADO  
+function mostrarModalAvanzarSubestado() {
+    console.log('🔄 Abriendo modal Avanzar Subestado');
+    
+    // Obtener modal element
+    const modalElement = document.getElementById('modalCapturaAvanzar');
+    
+    // Remover aria-hidden antes de mostrar (fix accesibilidad)
+    modalElement.removeAttribute('aria-hidden');
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Event listener para restaurar aria-hidden cuando se cierre
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+    
+    // Cargar información necesaria
+    cargarSiguientesSubestadosCaptura();
+    
+    // Configurar eventos con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        configurarEventosAsignacionCaptura();
+    }, 100);
+}
+
+function cargarSiguientesSubestadosCaptura() {
+    const container = document.getElementById('siguiente-subestado-container');
+    
+    fetch(`/workflow/api/subestados-disponibles/{{ solicitud.id }}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.subestados) {
+                subestadosDisponiblesCaptura = data.subestados;
+                mostrarSiguientesSubestados(container);
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No se pudieron cargar los subestados disponibles.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando subestados:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar los subestados disponibles.
+                </div>
+            `;
+        });
+}
+
+function mostrarSiguientesSubestados(container) {
+    // Filtrar solo los 6 subestados legítimos de Back Office
+    const subestadosBackOffice = [
+        'checklist', 'captura', 'firma', 'orden del expediente', 
+        'trámite', 'subsanación de pendientes trámite'
+    ];
+    
+    const subestadosLegitimos = subestadosDisponiblesCaptura.filter(subestado => {
+        const nombreLimpio = subestado.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(nombreValido => 
+            nombreLimpio.includes(nombreValido) || nombreValido.includes(nombreLimpio)
+        );
+    });
+    
+    console.log('🔍 Subestados originales:', subestadosDisponiblesCaptura.length);
+    console.log('🔍 Subestados filtrados (Back Office):', subestadosLegitimos.length);
+    console.log('✅ Subestados legítimos:', subestadosLegitimos.map(s => s.nombre));
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay subestados de Back Office disponibles en este momento.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    
+    subestadosLegitimos.forEach((subestado, index) => {
+        const esActual = subestado.es_actual;
+        const puedeAvanzar = subestado.puede_avanzar;
+        const esCompletado = subestado.es_completado;
+        
+        // Determinar estilo y estado - TODAS las subetapas son seleccionables
+        let borderClass = 'border-success';
+        let descripcion = 'Disponible para avanzar';
+        let disabled = '';
+        
+        if (esActual) {
+            borderClass = 'border-primary';
+            descripcion = 'Subestado actual';
+            // NO deshabilitar - permitir permanecer en el mismo subestado
+        } else if (esCompletado) {
+            borderClass = 'border-info';
+            descripcion = 'Ya completado - puede regresar';
+        } else if (puedeAvanzar) {
+            borderClass = 'border-success';
+            descripcion = 'Disponible para avanzar';
+        } else {
+            borderClass = 'border-warning';
+            descripcion = 'Avance directo disponible';
+            // NO deshabilitar - permitir saltos de subestado
+        }
+        
+        html += `
+            <div class="col-md-6">
+                <div class="card ${borderClass}">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado" id="subestado-${index}" 
+                               value="${subestado.id}" class="form-check-input me-2" 
+                               onchange="seleccionarSiguienteSubestado(${subestado.id}, '${subestado.nombre}')"
+                               ${disabled}>
+                        <label for="subestado-${index}" class="form-check-label">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">${descripcion}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function seleccionarSiguienteSubestado(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionado = { 
+        id: parseInt(subestadoId), // Asegurar que sea número
+        nombre: subestadoNombre 
+    };
+    console.log('🎯 Subestado seleccionado:', siguienteSubestadoSeleccionado);
+    validarFormularioAvanceCaptura();
+}
+
+function configurarEventosAsignacionCaptura() {
+    console.log('⚙️ Configurando eventos de asignación...');
+    
+    // Verificar que los radio buttons existen
+    const radios = document.querySelectorAll('input[name="opcion-asignacion"]');
+    console.log(`📻 Encontrados ${radios.length} radio buttons de asignación`);
+    
+    // Verificar que la sección de usuarios existe
+    const seccionUsuarios = document.getElementById('seccion-asignar-usuario');
+    console.log('🔍 Sección asignar-usuario:', seccionUsuarios ? 'ENCONTRADA' : 'NO ENCONTRADA');
+    
+    if (radios.length === 0) {
+        console.error('❌ No se encontraron radio buttons de asignación');
+        return;
+    }
+    
+    if (!seccionUsuarios) {
+        console.error('❌ No se encontró la sección seccion-asignar-usuario');
+        return;
+    }
+    
+    // Configurar radio buttons de asignación
+    radios.forEach((radio, index) => {
+        console.log(`📻 Radio ${index + 1}: ID=${radio.id}, Value=${radio.value}`);
+        
+        radio.addEventListener('change', function() {
+            console.log(`🔘 Opción de asignación cambiada a: ${this.value}`);
+            
+            if (this.value === 'otro') {
+                console.log('👥 Mostrando selector de usuarios...');
+                seccionUsuarios.style.display = 'block';
+                console.log('✅ Sección asignar-usuario mostrada');
+                
+                // CLAVE: Llamar la función que carga los usuarios
+                console.log('🔄 Cargando usuarios disponibles...');
+                cargarUsuariosDisponiblesAvance()
+                    .then(() => {
+                        console.log('✅ Usuarios cargados exitosamente');
+                    })
+                    .catch(error => {
+                        console.error('❌ Error cargando usuarios:', error);
+                    });
+            } else {
+                console.log('🚫 Ocultando selector de usuarios...');
+                seccionUsuarios.style.display = 'none';
+                // Limpiar selección existente
+                window.usuarioSeleccionadoAvance = null;
+                console.log('🗑️ Usuario seleccionado limpiado');
+            }
+            
+            validarFormularioAvanceCaptura();
+        });
+    });
+    
+    console.log('✅ Eventos de asignación configurados correctamente');
+}
+
+// Función de debugging temporal para probar la funcionalidad
+function debugAsignacion() {
+    console.log('🐛 === DEBUGGING ASIGNACIÓN ===');
+    
+    // 1. Verificar radio buttons
+    const radios = document.querySelectorAll('input[name="opcion-asignacion"]');
+    console.log(`📻 Radio buttons encontrados: ${radios.length}`);
+    radios.forEach((radio, i) => {
+        console.log(`  ${i+1}. ID: ${radio.id}, Value: ${radio.value}, Checked: ${radio.checked}`);
+    });
+    
+    // 2. Verificar sección de usuarios
+    const seccionUsuarios = document.getElementById('seccion-asignar-usuario');
+    console.log(`👥 Sección usuarios: ${seccionUsuarios ? 'ENCONTRADA' : 'NO ENCONTRADA'}`);
+    if (seccionUsuarios) {
+        console.log(`   Display: ${seccionUsuarios.style.display}`);
+    }
+    
+    // 3. Probar manualmente mostrar sección
+    if (seccionUsuarios) {
+        seccionUsuarios.style.display = 'block';
+        console.log('✅ Sección mostrada manualmente');
+        
+        // 4. Cargar usuarios
+        console.log('🔄 Cargando usuarios...');
+        cargarUsuariosDisponiblesAvance()
+            .then(() => {
+                console.log('✅ Usuarios cargados exitosamente via debug');
+            })
+            .catch(error => {
+                console.error('❌ Error cargando usuarios via debug:', error);
+            });
+    }
+    
+    // 5. Marcar automáticamente "Asignar a otro"
+    const radioOtro = document.getElementById('opcion-otro');
+    if (radioOtro) {
+        radioOtro.checked = true;
+        radioOtro.dispatchEvent(new Event('change'));
+        console.log('✅ Radio "Asignar a otro" marcado automáticamente');
+    }
+    
+    console.log('🐛 === FIN DEBUG ===');
+}
+
+// NOTA: Usamos el sistema existente de seccion-asignar-usuario 
+// con sus funciones seleccionarUsuarioAvance() y usuarioSeleccionadoAvance
+
+function validarFormularioAvanceCaptura() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion"]:checked');
+    
+    let valido = true;
+    
+    // Verificar que hay un subestado seleccionado
+    if (!siguienteSubestadoSeleccionado) {
+        valido = false;
+    }
+    
+    // Verificar que hay una opción de asignación seleccionada
+    if (!opcionSeleccionada) {
+        valido = false;
+    }
+    
+    // Si seleccionó "otro", verificar que hay un usuario seleccionado
+    if (opcionSeleccionada && opcionSeleccionada.value === 'otro' && !window.usuarioSeleccionadoAvance) {
+        valido = false;
+    }
+    
+    btnConfirmar.disabled = !valido;
+}
+
+function confirmarAvanceCaptura() {
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion"]:checked');
+    
+    if (!siguienteSubestadoSeleccionado || !opcionSeleccionada) {
+        showToast('Complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    console.log('🔍 DEBUG - Datos para enviar:');
+    console.log('  - Siguiente subestado:', siguienteSubestadoSeleccionado);
+    console.log('  - Opción seleccionada:', opcionSeleccionada.value);
+    console.log('  - Usuario seleccionado:', window.usuarioSeleccionadoAvance);
+    
+    const data = {
+        opcion: opcionSeleccionada.value,
+        siguiente_subestado_id: siguienteSubestadoSeleccionado.id
+    };
+    
+    if (opcionSeleccionada.value === 'otro' && window.usuarioSeleccionadoAvance) {
+        data.usuario_id = parseInt(window.usuarioSeleccionadoAvance.id);
+    }
+    
+    console.log('📤 Enviando datos:', JSON.stringify(data, null, 2));
+    
+    // Deshabilitar botón mientras se procesa
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/{{ solicitud.id }}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Subestado avanzado exitosamente', 'success');
+            
+            // Redirigir según la opción seleccionada
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else if (opcionSeleccionada.value === 'yo') {
+                    // Recargar la página para mostrar el nuevo subestado
+                    window.location.reload();
+                } else {
+                    // Ir a bandeja mixta
+                    window.location.href = '/workflow/bandeja-mixta/';
+                }
+            }, 1500);
+        } else {
+            showToast('Error: ' + (data.error || data.mensaje), 'error');
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-arrow-right me-1"></i> Confirmar Avance';
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error avanzando subestado:', error);
+        showToast('Error al avanzar el subestado', 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-arrow-right me-1"></i> Confirmar Avance';
+    });
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+    const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenInput) {
+        return tokenInput.value;
+    }
+    
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    return '';
+}
+
+// ========================================
+// FUNCIONES PARA NUEVO MODAL AVANZAR SUBESTADO - CAPTURA
+// ========================================
+
+// Función para mostrar modal Avanzar Subestado
+function mostrarModalAvanzarSubestadoCaptura() {
+    console.log('🚀 Abriendo modal Avanzar Subestado - Captura');
+    
+    const modalElement = document.getElementById('modalAvanzarSubestadoCaptura');
+    if (!modalElement) {
+        console.error('❌ Modal Avanzar Subestado Captura no encontrado');
+        showToast('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Cargar subestados disponibles
+    cargarSiguientesSubestadosCaptura();
+    
+    // Configurar eventos
+    setTimeout(() => {
+        configurarEventosAsignacionCaptura();
+    }, 100);
+}
+
+function cargarSiguientesSubestadosCaptura() {
+    const container = document.getElementById('siguiente-subestado-container-captura');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando subestados...</p></div>';
+    
+    fetch(`/workflow/api/subestados-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarSubestadosCaptura(data.subestados);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function mostrarSubestadosCaptura(subestados) {
+    const container = document.getElementById('siguiente-subestado-container-captura');
+    const subestadosBackOffice = ['checklist', 'captura', 'firma', 'orden del expediente', 'trámite', 'subsanación de pendientes trámite'];
+    const subestadosLegitimos = subestados.filter(s => {
+        const nombre = s.nombre.toLowerCase().trim();
+        return subestadosBackOffice.some(valido => nombre.includes(valido) || valido.includes(nombre));
+    });
+    
+    if (subestadosLegitimos.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No hay subestados disponibles.</div>';
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    subestadosLegitimos.forEach((subestado, index) => {
+        const colClass = subestadosLegitimos.length <= 4 ? 'col-md-6' : 'col-md-4';
+        html += `
+            <div class="${colClass}">
+                <div class="card subestado-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" name="siguiente-subestado-captura" id="subestado-captura-${index}" value="${subestado.id}" class="form-check-input me-2">
+                        <label for="subestado-captura-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${subestado.nombre}</strong>
+                            <br><small class="text-muted">Disponible para avanzar</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Event listeners
+    setTimeout(() => {
+        document.querySelectorAll('.subestado-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const subestado = subestadosLegitimos[cardIndex];
+            
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarSiguienteSubestadoCaptura(subestado.id, subestado.nombre);
+                }
+            });
+            
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }, 100);
+}
+
+function seleccionarSiguienteSubestadoCaptura(subestadoId, subestadoNombre) {
+    siguienteSubestadoSeleccionadoCaptura = { id: parseInt(subestadoId), nombre: subestadoNombre };
+    const siguienteSpan = document.getElementById('avanzar-siguiente-subestado-captura');
+    if (siguienteSpan) siguienteSpan.textContent = subestadoNombre;
+    validarFormularioAvanceCaptura();
+}
+
+function configurarEventosAsignacionCaptura() {
+    document.querySelectorAll('input[name="opcion-asignacion-captura"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const seccionUsuarios = document.getElementById('seccion-asignar-usuario-captura');
+            if (this.value === 'otro') {
+                seccionUsuarios.style.display = 'block';
+                if (!window.usuariosCapturasCargados) {
+                    cargarUsuariosDisponiblesAvanceCaptura();
+                    window.usuariosCapturasCargados = true;
+                }
+            } else {
+                seccionUsuarios.style.display = 'none';
+            }
+            validarFormularioAvanceCaptura();
+        });
+    });
+    
+    const opcionYo = document.getElementById('opcion-yo-captura');
+    if (opcionYo && !document.querySelector('input[name="opcion-asignacion-captura"]:checked')) {
+        opcionYo.checked = true;
+        opcionYo.dispatchEvent(new Event('change'));
+    }
+}
+
+function cargarUsuariosDisponiblesAvanceCaptura() {
+    fetch('/workflow/api/usuarios/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarUsuariosEnTablaCaptura(data.usuarios);
+            }
+        });
+}
+
+function mostrarUsuariosEnTablaCaptura(usuarios) {
+    const tbody = document.getElementById('lista-usuarios-avance-captura');
+    const contador = document.getElementById('contador-usuarios-avance-captura');
+    tbody.innerHTML = '';
+    
+    usuarios.forEach((usuario, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="text-center"><span class="badge bg-secondary">${index + 1}</span></td>
+            <td class="text-center">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 auto;">
+                    ${(usuario.nombre || usuario.username || 'U').charAt(0).toUpperCase()}
+                </div>
+            </td>
+            <td><strong class="fw-bold">${usuario.nombre || usuario.username || 'Usuario'}</strong></td>
+            <td><small class="text-muted">${usuario.email || ''}</small></td>
+            <td><span class="text-muted">Sin grupos</span></td>
+            <td class="text-center">
+                <button class="btn btn-success btn-sm asignar-usuario-avance-captura" data-usuario-id="${usuario.id}" data-usuario-nombre="${usuario.nombre || usuario.username || 'Usuario'}">
+                    <i class="fas fa-user-plus me-1"></i>Asignar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    contador.textContent = usuarios.length;
+    
+    document.querySelectorAll('.asignar-usuario-avance-captura').forEach(btn => {
+        btn.addEventListener('click', function () {
+            seleccionarUsuarioAvanceCaptura(this.getAttribute('data-usuario-id'), this.getAttribute('data-usuario-nombre'));
+        });
+    });
+}
+
+function seleccionarUsuarioAvanceCaptura(usuarioId, usuarioNombre) {
+    window.usuarioSeleccionadoAvanceCaptura = { id: usuarioId, nombre: usuarioNombre };
+    
+    // SELECCIÓN ÚNICA - resetear todos los botones
+    document.querySelectorAll('.asignar-usuario-avance-captura').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-success');
+        btn.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asignar';
+    });
+    
+    // Marcar solo el seleccionado
+    const btnSeleccionado = document.querySelector(`[data-usuario-id="${usuarioId}"].asignar-usuario-avance-captura`);
+    if (btnSeleccionado) {
+        btnSeleccionado.classList.remove('btn-success');
+        btnSeleccionado.classList.add('btn-primary');
+        btnSeleccionado.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+    }
+    
+    validarFormularioAvanceCaptura();
+}
+
+function validarFormularioAvanceCaptura() {
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-captura"]:checked');
+    
+    let valido = !!siguienteSubestadoSeleccionadoCaptura && !!opcionSeleccionada;
+    if (opcionSeleccionada?.value === 'otro') {
+        valido = valido && !!window.usuarioSeleccionadoAvanceCaptura;
+    }
+    
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    
+    return valido;
+}
+
+// Función actualizada para usar el nuevo modal (reemplaza la función existente)
+function confirmarAvanceCaptura() {
+    if (!validarFormularioAvanceCaptura()) {
+        showToast('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const opcionSeleccionada = document.querySelector('input[name="opcion-asignacion-captura"]:checked');
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        opcion: opcionSeleccionada.value,
+        usuario_id: window.usuarioSeleccionadoAvanceCaptura?.id || null,
+        siguiente_subestado_id: siguienteSubestadoSeleccionadoCaptura?.id || null
+    };
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-avance-captura');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/avanzar-subestado/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAvanzarSubestadoCaptura'));
+            if (modal) modal.hide();
+            
+            showToast(`Avanzando a: ${siguienteSubestadoSeleccionadoCaptura.nombre}`, 'success');
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el avance');
+        }
+    })
+    .catch(error => {
+        showToast('Error al procesar el avance: ' + error.message, 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
+    });
+}
+
+</script>
+
+<!-- Modal para Asociar Entrevista -->
+<div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-b p-4 sticky-top shadow-sm">
+        <div>
+          <h5 class="modal-title text-lg font-medium mb-2" id="modalAsociarEntrevistaLabel">
+            <i class="fas fa-user-edit me-2 text-blue-600"></i>Asociar Entrevista de Cliente
+          </h5>
+          <div class="flex flex-col bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-sm">
+            <div class="text-gray-800 mb-1">
+              <i class="fas fa-user me-1 text-blue-600"></i>
+              <strong>Cliente:</strong> <span id="clienteNombreModal" class="font-semibold ml-1">Cargando...</span>
+            </div>
+            <div class="text-gray-800">
+              <i class="fas fa-id-card me-1 text-blue-600"></i>
+              <strong>Cédula:</strong> <span id="clienteCedulaModal" class="font-mono font-semibold ml-1">Cargando...</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" style="max-height: 60vh; overflow-y: auto;">
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 sticky top-0 z-10">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fas fa-shield-alt text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+              <div class="d-flex align-items-center">
+                <p class="text-sm text-yellow-700 mb-0">
+                  <strong>Seguridad:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-yellow-700 p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-4 sticky top-20 z-10 pt-2 pb-2 bg-white">
+          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="form-control pl-10" id="buscarEntrevista" 
+                   placeholder="Refinar búsqueda por nombre o email (opcional)..."
+                   onkeyup="buscarEntrevistas()">
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            <i class="fas fa-filter me-1"></i>Ya filtrado por cédula: <span id="filteredByCedula" class="font-mono">Cargando...</span>
+          </div>
+        </div>
+        
+        <div id="resultadosEntrevistas" class="mt-4 transition-all duration-300">
+          <!-- Aquí se cargarán los resultados -->
+        </div>
+        
+        <div id="entrevistaSeleccionada" class="mt-4 p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm transition-all duration-300" style="display: none;">
+          <div class="flex items-center mb-2">
+            <div class="flex-shrink-0">
+              <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <div class="mb-1">
+                <strong class="text-gray-700">Entrevista seleccionada:</strong>
+                <span id="nombreEntrevistaSeleccionada" class="font-medium"></span>
+              </div>
+              <div class="text-sm">
+                <strong class="text-gray-700">Cédula:</strong>
+                <span id="cedulaEntrevistaSeleccionada" class="font-mono font-medium"></span>
+                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <i class="fas fa-shield-alt mr-1"></i>Verificada
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white p-3 rounded-md border border-gray-200 mt-2 text-sm">
+            <p class="text-gray-700 mb-0">
+              <i class="fas fa-info-circle text-blue-600 mr-1"></i>
+              Esta acción vinculará los datos de la entrevista seleccionada con la solicitud actual.
+              <br>Solo se asocian entrevistas del mismo cliente por motivos de seguridad.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-gray-50 p-3 sticky-bottom shadow-sm">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
+          <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Agregar Pendientes Antes de Firma -->
+<div class="modal fade" id="modalAgregarPendientes" tabindex="-1" aria-labelledby="modalAgregarPendientesLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <div>
+          <h5 class="modal-title fw-bold" id="modalAgregarPendientesLabel">
+            <i class="fas fa-clipboard-list me-2"></i>Agregar Pendientes Antes de Firma
+          </h5>
+          <small class="d-block mt-1 opacity-75">Seleccione uno o varios pendientes para agregar a esta solicitud</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Buscador de pendientes -->
+        <div class="mb-4">
+          <label for="buscarPendientes" class="form-label fw-bold">
+            <i class="fas fa-search me-1"></i>Buscar Pendientes
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control" id="buscarPendientes" 
+                   placeholder="Escriba el nombre del pendiente que desea buscar..."
+                   oninput="buscarPendientesEnCatalogo()">
+          </div>
+          <small class="form-text text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Los resultados se actualizan automáticamente mientras escribe
+          </small>
+        </div>
+
+        <!-- Resultados de la búsqueda -->
+        <div class="mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-bold text-secondary">
+              <i class="fas fa-list me-1"></i>Pendientes Disponibles
+            </h6>
+            <span class="badge bg-info" id="contador-resultados">0 resultados</span>
+          </div>
+          
+          <!-- Lista de pendientes disponibles -->
+          <div id="resultados-pendientes" class="border rounded" style="max-height: 300px; overflow-y: auto;">
+            <div class="text-center p-4 text-muted" id="loading-pendientes">
+              <i class="fas fa-spinner fa-spin me-2"></i>Cargando pendientes...
+            </div>
+          </div>
+        </div>
+
+        <!-- Pendientes seleccionados -->
+        <div id="seccion-seleccionados" style="display: none;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-bold text-success">
+              <i class="fas fa-check-square me-1"></i>Pendientes Seleccionados
+            </h6>
+            <div>
+              <span class="badge bg-success" id="contador-seleccionados">0 seleccionados</span>
+              <button type="button" class="btn btn-outline-danger btn-sm ms-2" onclick="limpiarSeleccionados()">
+                <i class="fas fa-trash me-1"></i>Limpiar
+              </button>
+            </div>
+          </div>
+          
+          <div id="lista-seleccionados" class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
+            <!-- Los pendientes seleccionados aparecerán aquí -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-confirmar-pendientes" onclick="confirmarAgregarPendientes()" disabled>
+          <i class="fas fa-plus me-1"></i>Agregar Pendientes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Avanzar Subestado -->
+<div class="modal fade" id="modalAvanzarSubestado" tabindex="-1" aria-labelledby="modalAvanzarSubestadoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado">Cargando...</span>
+        </div>
+
+        <!-- Estado de documentos (oculto para Captura) -->
+        <div id="estado-documentos" class="mb-4" style="display: none;">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Estado de Documentos
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              
+              <!-- Resumen de documentos -->
+              <div class="row text-center mb-3">
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                      <i class="fas fa-check" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #059669;" id="documentos-buenos-count">0</div>
+                    <small class="text-muted">Buenos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                      <i class="fas fa-times" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #dc2626;" id="documentos-malos-count">0</div>
+                    <small class="text-muted">Malos</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                      <i class="fas fa-clock" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #d97706;" id="documentos-pendientes-count">0</div>
+                    <small class="text-muted">Pendientes</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                      <i class="fas fa-file-alt" style="font-size: 18px;"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size: 1.25rem; color: #4b5563;" id="documentos-total-count">0</div>
+                    <small class="text-muted">Total</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lista de documentos pendientes -->
+              <div id="lista-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2" style="color: #d97706;"></i>
+                    <div>
+                      <strong>Documentos Pendientes Detectados</strong>
+                      <br>
+                      <small>Los siguientes documentos opcionales están marcados como pendientes y avanzarán en este estado:</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="documentos-pendientes-lista" class="mb-3">
+                  <!-- Los documentos pendientes se insertarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Mensaje cuando no hay pendientes -->
+              <div id="sin-documentos-pendientes" style="display: none;">
+                <div class="alert" style="background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%); color: #065f46; border: 1px solid #10b981; border-radius: 8px;">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2" style="color: #10b981;"></i>
+                    <div>
+                      <strong>Todos los documentos están procesados</strong>
+                      <br>
+                      <small>No hay documentos pendientes. Puedes continuar con confianza.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <!-- Botones de opción -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary flex-fill" id="btn-continuar-yo" onclick="seleccionarOpcionAvance('yo')">
+              <i class="fas fa-user me-2"></i>
+              Continuar Yo
+            </button>
+            <button type="button" class="btn btn-outline-success flex-fill" id="btn-asignar-otro" onclick="seleccionarOpcionAvance('otro')">
+              <i class="fas fa-user-plus me-2"></i>
+              Asignar a Otro Usuario
+            </button>
+            <button type="button" class="btn btn-outline-warning flex-fill" id="btn-bandeja-grupal" onclick="seleccionarOpcionAvance('bandeja')">
+              <i class="fas fa-inbox me-2"></i>
+              Devolver a Bandeja Grupal
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario (inicialmente oculta) -->
+        <div id="seccion-asignar-usuario" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <!-- Barra de búsqueda -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none;">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" class="form-control" id="buscar-usuario-avance" placeholder="Buscar por nombre, email, grupos o roles..." style="border-left: none;">
+              <button class="btn btn-outline-secondary" type="button" id="limpiar-busqueda-avance">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Busca por nombre, email, grupos o roles (Staff/Admin)
+            </small>
+          </div>
+
+          <!-- Tabla de usuarios -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Contador de resultados -->
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+
+        <!-- Estados de carga y error -->
+        <div id="avance-loading" class="text-center" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información...</p>
+        </div>
+        
+        <div id="avance-error" class="alert alert-danger" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span id="avance-error-mensaje"></span>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <!-- Botón de debugging temporal -->
+        <button type="button" class="btn btn-info btn-sm" onclick="debugAsignacion()" title="Debug: Probar asignación">
+          <i class="fas fa-bug me-1"></i>Debug
+        </button>
+        
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance" onclick="confirmarAvance()" disabled>
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Devolver a Oficial -->
+<div class="modal fade" id="modalDevolverOficial" tabindex="-1" aria-labelledby="modalDevolverOficialLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: #fff;">
+        <h5 class="modal-title" id="modalDevolverOficialLabel">
+          <i class="fas fa-arrow-left me-2"></i>
+          Devolver a Oficial
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%); color: #dc2626; border: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Solicitud:</strong> <span>{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span>{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Se devolverá a:</strong> <span id="devolver-etapa-destino">Cargando...</span>
+        </div>
+
+        <!-- Resumen de documentos problemáticos -->
+        <div id="documentos-problematicos" class="mb-4">
+          <div class="card" style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-bottom: 1px solid #e5e7eb; padding: 12px 16px;">
+              <h6 class="mb-0" style="color: #374151; font-weight: 600;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Información de Devolución
+              </h6>
+            </div>
+            <div class="card-body" style="padding: 16px;">
+              <div id="lista-documentos-problematicos">
+                <!-- Se llenará dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de devolución -->
+        <div class="mb-3">
+          <label for="motivo-devolucion" class="form-label fw-bold">
+            <i class="fas fa-comment-alt me-2"></i>
+            Motivo de la devolución
+          </label>
+          <textarea id="motivo-devolucion" class="form-control" rows="3" placeholder="Describe el motivo de la devolución..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="CapturaWorkflow.confirmarDevolucion()">
+          <i class="fas fa-arrow-left me-1"></i>
+          Confirmar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALES ESPECIALIZADOS PARA CAPTURA -->
+<!-- ========================================== -->
+
+<!-- Modal Devolver a Oficial eliminado - se usa el modal original modalDevolverOficial -->
+
+<!-- Modal Enviar a Bandeja Grupal eliminado por petición del usuario -->
+
+<!-- Modal para Avanzar Subestado - Captura -->
+<div class="modal fade" id="modalAvanzarSubestadoCaptura" tabindex="-1" aria-labelledby="modalAvanzarSubestadoCapturaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalAvanzarSubestadoCapturaLabel">
+          <i class="fas fa-arrow-right me-2"></i>
+          Avanzar al Siguiente Subestado
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="avanzar-codigo-solicitud-captura">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="avanzar-subestado-actual-captura">{{ solicitud.subestado_actual.nombre }}</span>
+          <br>
+          <strong>Siguiente Subestado:</strong> <span id="avanzar-siguiente-subestado-captura">Seleccione un subestado</span>
+        </div>
+
+        <!-- Selección de siguiente subestado -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>
+            Seleccionar siguiente subestado:
+          </h6>
+          <div id="siguiente-subestado-container-captura">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando subestados disponibles...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opciones de asignación -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-user-check me-2"></i>
+            ¿Quién continuará con el siguiente subestado?
+          </h6>
+          
+          <div id="opciones-asignacion-captura">
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-captura" id="opcion-yo-captura" value="yo" class="form-check-input mb-2">
+              <label for="opcion-yo-captura" class="form-check-label">
+                <i class="fas fa-user me-2"></i><strong>Continuar Yo</strong>
+                <br><small class="text-muted">Seguiré trabajando en el siguiente subestado</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-captura" id="opcion-otro-captura" value="otro" class="form-check-input mb-2">
+              <label for="opcion-otro-captura" class="form-check-label">
+                <i class="fas fa-user-plus me-2"></i><strong>Asignar a Otro Usuario</strong>
+                <br><small class="text-muted">Seleccionar un usuario específico</small>
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input type="radio" name="opcion-asignacion-captura" id="opcion-bandeja-captura" value="bandeja" class="form-check-input mb-2">
+              <label for="opcion-bandeja-captura" class="form-check-label">
+                <i class="fas fa-inbox me-2"></i><strong>Devolver a Bandeja Grupal</strong>
+                <br><small class="text-muted">La solicitud estará disponible para cualquier usuario</small>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de asignación a otro usuario -->
+        <div id="seccion-asignar-usuario-captura" style="display: none;">
+          <h6 class="fw-bold" style="color: #009c3c;">
+            <i class="fas fa-users me-2"></i>
+            Usuarios Disponibles:
+          </h6>
+
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-hover table-striped" id="tabla-usuarios-avance-captura" style="border-radius: 8px; overflow: hidden;">
+              <thead style="background: linear-gradient(90deg, #22a650 0%, #009c3c 100%); color: #fff;">
+                <tr>
+                  <th scope="col" style="width: 50px;">#</th>
+                  <th scope="col" style="width: 60px;">Avatar</th>
+                  <th scope="col">Usuario</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Grupos</th>
+                  <th scope="col" style="width: 120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="lista-usuarios-avance-captura">
+                <!-- Los usuarios se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-2">
+            <small class="text-muted">
+              <i class="fas fa-users me-1"></i>
+              <span id="contador-usuarios-avance-captura">0</span> usuarios encontrados
+            </small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-avance-captura" onclick="confirmarAvanceCaptura()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>
+          Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

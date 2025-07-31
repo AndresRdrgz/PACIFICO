@@ -14,9 +14,13 @@ class DetalleSolicitud {
     }
 
     init() {
+        console.log('🔄 init() called');
         this.setupEventListeners();
+        console.log('✅ Event listeners setup completed');
         this.loadSolicitudData();
+        console.log('✅ loadSolicitudData() called');
         this.initializeComponents();
+        console.log('✅ initializeComponents() completed');
     }
 
     /**
@@ -112,30 +116,35 @@ class DetalleSolicitud {
      */
     async loadSolicitudData() {
         try {
-            console.log('Loading solicitud data for ID:', this.solicitudId);
+            console.log('🔄 loadSolicitudData() called for ID:', this.solicitudId);
+            console.log('🔗 Making API call to:', `/workflow/api/solicitudes/${this.solicitudId}/detalle/`);
             this.showLoadingOverlay();
             
             const response = await fetch(`/workflow/api/solicitudes/${this.solicitudId}/detalle/`);
+            console.log('📡 API Response status:', response.status);
+            console.log('📡 API Response headers:', response.headers);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const data = await response.json();
-            console.log('Received solicitud data:', data);
+            console.log('📊 Received solicitud data:', data);
+            console.log('📋 Requisitos count:', data.requisitos ? data.requisitos.length : 'undefined');
             
             if (!data.success) {
                 throw new Error(data.error || 'Error al cargar los datos');
             }
             
             this.solicitudData = data;
+            console.log('💾 Stored solicitudData:', this.solicitudData);
             this.renderSolicitudData();
             
             // Cargar comentarios por separado
             await this.loadComentarios();
             
         } catch (error) {
-            console.error('Error loading solicitud data:', error);
+            console.error('❌ Error loading solicitud data:', error);
             this.showError('Error al cargar los datos de la solicitud: ' + error.message);
         } finally {
             this.hideLoadingOverlay();
@@ -170,35 +179,85 @@ class DetalleSolicitud {
      * Renderiza todos los datos de la solicitud
      */
     renderSolicitudData() {
+        console.log('🔄 renderSolicitudData called');
+        console.log('📊 solicitudData:', this.solicitudData);
+        
+        console.log('🎨 Rendering header...');
         this.renderHeader();
+        
+        console.log('🎨 Rendering info cards...');
         this.renderInfoCards();
+        
+        console.log('🎨 Rendering historial...');
         this.renderHistorial();
+        
+        console.log('🎨 Rendering datos personales...');
         this.renderDatosPersonales();
+        
+        console.log('🎨 Rendering documentos...');
+        this.renderDocumentos();
+        
+        console.log('🎨 Updating button states...');
         this.updateButtonStates();
+        
+        // Hide all loading states
+        console.log('🎨 Hiding loading states...');
+        this.hideAllLoadingStates();
+        
+        console.log('✅ renderSolicitudData completed');
+    }
+
+    /**
+     * Hide all loading states
+     */
+    hideAllLoadingStates() {
+        console.log('🔄 hideAllLoadingStates called');
+        const loadingElements = [
+            'documentosLoading',
+            'comentariosAnalistaLoading',
+            'resultadoConsultaLoading',
+            'resultadoComiteLoading'
+        ];
+        
+        loadingElements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                console.log(`✅ Hiding loading element: ${id}`);
+                element.style.display = 'none';
+            } else {
+                console.log(`❌ Loading element not found: ${id}`);
+            }
+        });
     }
 
     /**
      * Renderiza el header de la solicitud
      */
     renderHeader() {
-        const data = this.solicitudData;
-        
-        // Código de solicitud
-        const codigoElement = document.getElementById('solicitudCodigo');
-        if (codigoElement) {
-            codigoElement.textContent = data.general.codigo || 'N/A';
-        }
+        try {
+            console.log('🎨 renderHeader: Starting...');
+            const data = this.solicitudData;
+            
+            // Código de solicitud
+            const codigoElement = document.getElementById('solicitudCodigo');
+            if (codigoElement) {
+                codigoElement.textContent = data.general?.codigo || 'N/A';
+            }
 
-        // Información del cliente
-        const clienteElement = document.getElementById('solicitudCliente');
-        if (clienteElement && data.cliente) {
-            const nombre = data.cliente.nombre || 'N/A';
-            const cedula = data.cliente.cedula || 'N/A';
-            clienteElement.textContent = `${nombre} - CI: ${cedula}`;
-        } else if (clienteElement && data.cotizacion) {
-            const nombre = data.cotizacion.nombre_cliente || 'N/A';
-            const cedula = data.cotizacion.cedula_cliente || 'N/A';
-            clienteElement.textContent = `${nombre} - CI: ${cedula}`;
+            // Información del cliente
+            const clienteElement = document.getElementById('solicitudCliente');
+            if (clienteElement && data.cliente) {
+                const nombre = data.cliente.nombre || 'N/A';
+                const cedula = data.cliente.cedula || 'N/A';
+                clienteElement.textContent = `${nombre} - CI: ${cedula}`;
+            } else if (clienteElement && data.cotizacion) {
+                const nombre = data.cotizacion.nombre_cliente || 'N/A';
+                const cedula = data.cotizacion.cedula_cliente || 'N/A';
+                clienteElement.textContent = `${nombre} - CI: ${cedula}`;
+            }
+            console.log('✅ renderHeader: Completed');
+        } catch (error) {
+            console.error('❌ renderHeader: Error:', error);
         }
     }
 
@@ -206,58 +265,64 @@ class DetalleSolicitud {
      * Renderiza las cards de información general
      */
     renderInfoCards() {
-        const data = this.solicitudData;
-        
-        // Etapa actual
-        const etapaElement = document.getElementById('solicitudEtapa');
-        if (etapaElement && data.general.etapa_actual) {
-            etapaElement.textContent = data.general.etapa_actual.nombre;
-        }
-
-        // Monto solicitado
-        const montoElement = document.getElementById('solicitudMonto');
-        if (montoElement && data.cotizacion) {
-            const monto = data.cotizacion.monto_prestamo || 0;
-            montoElement.textContent = this.formatCurrency(monto);
-        }
-
-        // Producto/Pipeline
-        const productoElement = document.getElementById('solicitudProducto');
-        if (productoElement && data.general.pipeline) {
-            productoElement.textContent = data.general.pipeline.nombre;
-        }
-
-        // Progreso
-        this.renderProgreso(data.progreso || 0);
-
-        // Propietario
-        const propietarioElement = document.getElementById('solicitudPropietario');
-        if (propietarioElement && data.general.creada_por) {
-            propietarioElement.textContent = data.general.creada_por.nombre_completo;
-        }
-
-        // Asignado a
-        const asignadoElement = document.getElementById('solicitudAsignado');
-        if (asignadoElement) {
-            if (data.general.asignada_a) {
-                asignadoElement.textContent = data.general.asignada_a.nombre_completo;
-            } else {
-                asignadoElement.textContent = 'Sin asignar';
-                asignadoElement.classList.add('text-muted');
+        try {
+            console.log('🎨 renderInfoCards: Starting...');
+            const data = this.solicitudData;
+            
+            // Etapa actual
+            const etapaElement = document.getElementById('solicitudEtapa');
+            if (etapaElement && data.general?.etapa_actual) {
+                etapaElement.textContent = data.general.etapa_actual.nombre;
             }
-        }
 
-        // Fecha de inicio
-        const fechaInicioElement = document.getElementById('solicitudFechaInicio');
-        if (fechaInicioElement && data.general.fecha_creacion) {
-            const fecha = new Date(data.general.fecha_creacion);
-            fechaInicioElement.textContent = this.formatDate(fecha);
-        }
+            // Monto solicitado
+            const montoElement = document.getElementById('solicitudMonto');
+            if (montoElement && data.cotizacion) {
+                const monto = data.cotizacion.monto_prestamo || 0;
+                montoElement.textContent = this.formatCurrency(monto);
+            }
 
-        // SLA
-        const slaElement = document.getElementById('solicitudSLA');
-        if (slaElement && data.general.sla) {
-            this.renderSLA(slaElement, data.general.sla);
+            // Producto/Pipeline
+            const productoElement = document.getElementById('solicitudProducto');
+            if (productoElement && data.general?.pipeline) {
+                productoElement.textContent = data.general.pipeline.nombre;
+            }
+
+            // Progreso
+            this.renderProgreso(data.progreso || 0);
+
+            // Propietario
+            const propietarioElement = document.getElementById('solicitudPropietario');
+            if (propietarioElement && data.general?.creada_por) {
+                propietarioElement.textContent = data.general.creada_por.nombre_completo;
+            }
+
+            // Asignado a
+            const asignadoElement = document.getElementById('solicitudAsignado');
+            if (asignadoElement) {
+                if (data.general?.asignada_a) {
+                    asignadoElement.textContent = data.general.asignada_a.nombre_completo;
+                } else {
+                    asignadoElement.textContent = 'Sin asignar';
+                    asignadoElement.classList.add('text-muted');
+                }
+            }
+
+            // Fecha de inicio
+            const fechaInicioElement = document.getElementById('solicitudFechaInicio');
+            if (fechaInicioElement && data.general?.fecha_creacion) {
+                const fecha = new Date(data.general.fecha_creacion);
+                fechaInicioElement.textContent = this.formatDate(fecha);
+            }
+
+            // SLA
+            const slaElement = document.getElementById('solicitudSLA');
+            if (slaElement && data.general?.sla) {
+                this.renderSLA(slaElement, data.general.sla);
+            }
+            console.log('✅ renderInfoCards: Completed');
+        } catch (error) {
+            console.error('❌ renderInfoCards: Error:', error);
         }
     }
 
@@ -301,82 +366,96 @@ class DetalleSolicitud {
      * Renderiza el historial de actividades
      */
     renderHistorial() {
-        const historialElement = document.getElementById('solicitudHistorial');
-        if (!historialElement || !this.solicitudData.historial) return;
+        try {
+            console.log('🎨 renderHistorial: Starting...');
+            const historialElement = document.getElementById('solicitudHistorial');
+            if (!historialElement || !this.solicitudData.historial) {
+                console.log('⚠️ renderHistorial: Element or data not found, skipping');
+                return;
+            }
 
-        const historial = this.solicitudData.historial;
-        
-        if (historial.length === 0) {
-            historialElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay actividades registradas</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '<div class="timeline">';
-        
-        historial.forEach((item, index) => {
-            const isCompleted = item.fecha_fin !== null;
-            const isActive = index === 0 && !isCompleted;
+            const historial = this.solicitudData.historial;
             
-            html += `
-                <div class="timeline-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
-                    <div class="timeline-marker">
-                        <i class="fas ${isCompleted ? 'fa-check' : (isActive ? 'fa-clock' : 'fa-circle')}"></i>
+            if (historial.length === 0) {
+                historialElement.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay actividades registradas</p>
                     </div>
-                    <div class="timeline-content">
-                        <h6 class="timeline-title">${item.etapa ? item.etapa.nombre : 'Sin etapa'}</h6>
-                        <p class="timeline-description">
-                            ${item.usuario_responsable ? item.usuario_responsable.nombre_completo : 'Sistema'}
-                        </p>
-                        <small class="timeline-time text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>
-                            ${this.formatDate(new Date(item.fecha_inicio))}
-                            ${item.fecha_fin ? ' - ' + this.formatDate(new Date(item.fecha_fin)) : ''}
-                        </small>
-                        ${item.comentarios ? `<p class="timeline-comments mt-2">${item.comentarios}</p>` : ''}
+                `;
+                return;
+            }
+
+            let html = '<div class="timeline">';
+            
+            historial.forEach((item, index) => {
+                const isCompleted = item.fecha_fin !== null;
+                const isActive = index === 0 && !isCompleted;
+                
+                html += `
+                    <div class="timeline-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+                        <div class="timeline-marker">
+                            <i class="fas ${isCompleted ? 'fa-check' : (isActive ? 'fa-clock' : 'fa-circle')}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">${item.etapa ? item.etapa.nombre : 'Sin etapa'}</h6>
+                            <p class="timeline-description">
+                                ${item.usuario_responsable ? item.usuario_responsable.nombre_completo : 'Sistema'}
+                            </p>
+                            <small class="timeline-time text-muted">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                ${this.formatDate(new Date(item.fecha_inicio))}
+                                ${item.fecha_fin ? ' - ' + this.formatDate(new Date(item.fecha_fin)) : ''}
+                            </small>
+                            ${item.comentarios ? `<p class="timeline-comments mt-2">${item.comentarios}</p>` : ''}
+                        </div>
                     </div>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        historialElement.innerHTML = html;
+                `;
+            });
+            
+            html += '</div>';
+            historialElement.innerHTML = html;
+            console.log('✅ renderHistorial: Completed');
+        } catch (error) {
+            console.error('❌ renderHistorial: Error:', error);
+        }
     }
 
     /**
      * Renderiza los datos personales
      */
     renderDatosPersonales() {
-        const contentElement = document.getElementById('datosPersonalesContent');
-        if (!contentElement) return;
+        try {
+            console.log('🎨 renderDatosPersonales: Starting...');
+            const contentElement = document.getElementById('datosPersonalesContent');
+            if (!contentElement) {
+                console.log('⚠️ renderDatosPersonales: Element not found, skipping');
+                return;
+            }
 
-        const data = this.solicitudData;
-        let cliente = data.cliente;
-        
-        // Si no hay cliente, usar datos de cotización
-        if (!cliente && data.cotizacion) {
-            cliente = {
-                nombre: data.cotizacion.nombre_cliente,
-                cedula: data.cotizacion.cedula_cliente,
-                telefono: null,
-                email: null,
-                direccion: null
-            };
-        }
+            const data = this.solicitudData;
+            let cliente = data.cliente;
+            
+            // Si no hay cliente, usar datos de cotización
+            if (!cliente && data.cotizacion) {
+                cliente = {
+                    nombre: data.cotizacion.nombre_cliente,
+                    cedula: data.cotizacion.cedula_cliente,
+                    telefono: null,
+                    email: null,
+                    direccion: null
+                };
+            }
 
-        if (!cliente) {
-            contentElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay datos personales disponibles</p>
-                </div>
-            `;
-            return;
-        }
+            if (!cliente) {
+                contentElement.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay datos personales disponibles</p>
+                    </div>
+                `;
+                return;
+            }
 
         const html = `
             <div class="row g-4">
@@ -414,32 +493,42 @@ class DetalleSolicitud {
         `;
 
         contentElement.innerHTML = html;
+        console.log('✅ renderDatosPersonales: Completed');
+    } catch (error) {
+        console.error('❌ renderDatosPersonales: Error:', error);
+    }
     }
 
     /**
      * Renderiza el resultado de la consulta
      */
     renderResultadoConsulta() {
-        const comentariosElement = document.getElementById('comentariosAnalistaContent');
-        const comiteElement = document.getElementById('resultadoComiteContent');
-        
-        // Por ahora renderizar placeholders
-        if (comentariosElement) {
-            comentariosElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Comentarios del analista no disponibles</p>
-                </div>
-            `;
-        }
-        
-        if (comiteElement) {
-            comiteElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">Resultado del comité no disponible</p>
-                </div>
-            `;
+        try {
+            console.log('🎨 renderResultadoConsulta: Starting...');
+            const comentariosElement = document.getElementById('comentariosAnalistaContent');
+            const comiteElement = document.getElementById('resultadoComiteContent');
+            
+            // Por ahora renderizar placeholders
+            if (comentariosElement) {
+                comentariosElement.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Comentarios del analista no disponibles</p>
+                    </div>
+                `;
+            }
+            
+            if (comiteElement) {
+                comiteElement.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Resultado del comité no disponible</p>
+                    </div>
+                `;
+            }
+            console.log('✅ renderResultadoConsulta: Completed');
+        } catch (error) {
+            console.error('❌ renderResultadoConsulta: Error:', error);
         }
     }
 
@@ -447,65 +536,203 @@ class DetalleSolicitud {
      * Renderiza las referencias
      */
     renderReferencias() {
-        const contentElement = document.getElementById('referenciasContent');
-        if (!contentElement) return;
+        try {
+            console.log('🎨 renderReferencias: Starting...');
+            const contentElement = document.getElementById('referenciasContent');
+            if (!contentElement) {
+                console.log('⚠️ renderReferencias: Element not found, skipping');
+                return;
+            }
 
-        // Por ahora renderizar placeholder
-        contentElement.innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-address-book fa-3x text-muted mb-3"></i>
-                <p class="text-muted">Referencias no disponibles</p>
-            </div>
-        `;
+            // Por ahora renderizar placeholder
+            contentElement.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-address-book fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Referencias no disponibles</p>
+                </div>
+            `;
+            console.log('✅ renderReferencias: Completed');
+        } catch (error) {
+            console.error('❌ renderReferencias: Error:', error);
+        }
     }
 
     /**
      * Renderiza los documentos/requisitos
      */
     renderDocumentos() {
-        const contentElement = document.getElementById('documentosContent');
-        if (!contentElement) return;
+        try {
+            console.log('📄 renderDocumentos called');
+            const contentElement = document.getElementById('documentosContent');
+            if (!contentElement) {
+                console.error('❌ documentosContent element not found');
+                return;
+            }
 
-        const requisitos = this.solicitudData.requisitos;
-        
-        if (!requisitos || requisitos.length === 0) {
-            contentElement.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay documentos requeridos</p>
+            const requisitos = this.solicitudData.requisitos;
+            console.log('📋 Requisitos data:', requisitos);
+            
+            if (!requisitos || requisitos.length === 0) {
+                console.log('⚠️ No requisitos found, showing empty state');
+                contentElement.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="inline-flex items-center justify-center w-20 h-20 mb-4 bg-gray-100 rounded-full">
+                            <i class="fas fa-file-alt fa-2x text-gray-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">No hay requisitos</h3>
+                        <p class="text-gray-500">Esta solicitud no tiene requisitos asignados.</p>
+                    </div>
+                `;
+                return;
+            }
+
+        // Calculate statistics
+        const totalRequisitos = requisitos.length;
+        const completedRequisitos = requisitos.filter(req => req.cumplido).length;
+        const pendingRequisitos = totalRequisitos - completedRequisitos;
+        const completionPercentage = totalRequisitos > 0 ? Math.round((completedRequisitos / totalRequisitos) * 100) : 0;
+
+        let html = `
+            <!-- Summary Section -->
+            <div class="requisitos-summary">
+                <div class="requisitos-summary-header">
+                    <div class="requisitos-summary-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <h3 class="requisitos-summary-title">Resumen de Requisitos</h3>
                 </div>
-            `;
-            return;
-        }
+                <div class="requisitos-summary-stats">
+                    <div class="requisito-stat">
+                        <div class="requisito-stat-number">${totalRequisitos}</div>
+                        <div class="requisito-stat-label">Total</div>
+                    </div>
+                    <div class="requisito-stat completed">
+                        <div class="requisito-stat-number">${completedRequisitos}</div>
+                        <div class="requisito-stat-label">Completados</div>
+                    </div>
+                    <div class="requisito-stat pending">
+                        <div class="requisito-stat-number">${pendingRequisitos}</div>
+                        <div class="requisito-stat-label">Pendientes</div>
+                    </div>
+                    <div class="requisito-stat">
+                        <div class="requisito-stat-number">${completionPercentage}%</div>
+                        <div class="requisito-stat-label">Progreso</div>
+                    </div>
+                </div>
+            </div>
 
-        let html = '<div class="list-group list-group-flush">';
+            <!-- Requisitos List -->
+            <div class="requisitos-grid">
+        `;
         
-        requisitos.forEach(req => {
-            const estado = req.cumplido ? 'success' : 'warning';
-            const icono = req.cumplido ? 'fa-check-circle' : 'fa-clock';
+        requisitos.forEach((req, index) => {
+            const statusClass = req.cumplido ? 'completed' : 'pending';
+            const statusIcon = req.cumplido ? 'fa-check-circle' : 'fa-clock';
+            const statusText = req.cumplido ? 'Completado' : 'Pendiente';
             
             html += `
-                <div class="list-group-item d-flex justify-content-between align-items-start">
-                    <div class="ms-2 me-auto">
-                        <div class="fw-bold">${req.requisito.nombre}</div>
-                        <p class="mb-1 text-muted">${req.requisito.descripcion || ''}</p>
-                        ${req.observaciones ? `<small class="text-muted">${req.observaciones}</small>` : ''}
-                    </div>
-                    <div class="d-flex flex-column align-items-end">
-                        <span class="badge bg-${estado} mb-2">
-                            <i class="fas ${icono} me-1"></i>
-                            ${req.cumplido ? 'Cumplido' : 'Pendiente'}
+                <div class="requisito-item" data-requisito-id="${req.id}">
+                    <div class="requisito-header">
+                        <h4 class="requisito-title">${req.requisito.nombre}</h4>
+                        <span class="requisito-status ${statusClass}">
+                            <i class="fas ${statusIcon}"></i>
+                            ${statusText}
                         </span>
-                        ${req.archivo ? `<a href="${req.archivo}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download me-1"></i>Ver archivo
-                        </a>` : ''}
                     </div>
+                    
+                    ${req.requisito.descripcion ? `
+                        <div class="requisito-description">
+                            ${req.requisito.descripcion}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="requisito-actions">
+                        ${!req.cumplido ? `
+                            <button class="requisito-upload-btn" onclick="detalleSolicitud.uploadRequisito(${req.id})">
+                                <i class="fas fa-upload"></i>
+                                Subir Documento
+                            </button>
+                        ` : ''}
+                        
+                        ${req.archivo ? `
+                            <a href="${req.archivo}" target="_blank" class="requisito-view-btn">
+                                <i class="fas fa-eye"></i>
+                                Ver Documento
+                            </a>
+                        ` : ''}
+                    </div>
+                    
+                    ${req.observaciones ? `
+                        <div class="requisito-observations">
+                            <div class="requisito-observations-label">Observaciones</div>
+                            <div class="requisito-observations-text">${req.observaciones}</div>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         });
         
         html += '</div>';
         contentElement.innerHTML = html;
+        console.log('✅ renderDocumentos completed successfully');
+    } catch (error) {
+        console.error('❌ renderDocumentos: Error:', error);
+    }
+    }
+
+    /**
+     * Upload requisito functionality
+     */
+    uploadRequisito(requisitoId) {
+        // Create file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                await this.submitRequisitoFile(requisitoId, file);
+            } catch (error) {
+                console.error('Error uploading requisito:', error);
+                this.showError('Error al subir el documento. Intente nuevamente.');
+            }
+            
+            // Clean up
+            document.body.removeChild(fileInput);
+        });
+        
+        document.body.appendChild(fileInput);
+        fileInput.click();
+    }
+
+    /**
+     * Submit requisito file to server
+     */
+    async submitRequisitoFile(requisitoId, file) {
+        const formData = new FormData();
+        formData.append('archivo', file);
+        formData.append('observaciones', 'Documento subido desde detalle de solicitud');
+        
+        const response = await fetch(`/workflow/solicitud/${this.solicitudId}/requisito/${requisitoId}/actualizar/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': this.getCSRFToken()
+            }
+        });
+        
+        if (response.ok) {
+            this.showSuccess('Documento subido exitosamente');
+            // Refresh the data
+            await this.refreshData();
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al subir el documento');
+        }
     }
 
     /**
