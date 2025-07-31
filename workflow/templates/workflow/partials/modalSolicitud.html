@@ -301,6 +301,11 @@
                                         <i class="fas fa-redo mb-3 text-muted" style="font-size: 3rem;"></i>
                                         <p class="text-muted">No hay reconsideraciones para esta solicitud</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Documentos Pendientes Tab -->
                     <div class="tab-pane fade" id="documentos-pendientes" role="tabpanel" aria-labelledby="documentos-pendientes-tab">
                         <div class="documentos-pendientes-section">
@@ -7800,6 +7805,35 @@
                 console.log('Notas tab activated');
                 cargarNotasRecordatorios();
             });
+        }
+        
+        // Event listener for documentos pendientes tab activation
+        const documentosPendientesTab = document.getElementById('documentos-pendientes-tab');
+        if (documentosPendientesTab) {
+            documentosPendientesTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('Documentos Pendientes tab activated');
+                console.log('Tab event target:', event.target);
+                console.log('Current modal data available:', !!window.currentModalData);
+                
+                // Ensure the container is visible
+                const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
+                if (pendientesContainer) {
+                    console.log('Documentos pendientes container found');
+                    console.log('Container visibility:', getComputedStyle(pendientesContainer).display);
+                } else {
+                    console.error('Documentos pendientes container not found!');
+                }
+                
+                // Refresh documentos pendientes data if needed
+                if (window.currentModalData && window.currentModalData.documentos) {
+                    console.log('Repopulating documentos pendientes with', window.currentModalData.documentos.length, 'documentos');
+                    populateDocumentosPendientesTab(window.currentModalData.documentos);
+                } else {
+                    console.warn('No modal data available for documentos pendientes');
+                }
+            });
+        } else {
+            console.error('Documentos pendientes tab not found!');
         }
     });
 

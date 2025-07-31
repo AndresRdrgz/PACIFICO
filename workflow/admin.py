@@ -1023,33 +1023,6 @@ class ReconsideracionSolicitudAdmin(admin.ModelAdmin):
         'usar_nueva_cotizacion',
         'fecha_solicitud',
         'fecha_analisis',
-# ==========================================================
-# ADMIN PARA AGENDA DE FIRMA
-# ==========================================================
-
-@admin.register(AgendaFirma)
-class AgendaFirmaAdmin(admin.ModelAdmin):
-    """
-    Configuración del admin para AgendaFirma.
-    Permite gestionar las citas de firma desde el panel de administración.
-    """
-    
-    list_display = (
-        'id',
-        'solicitud_codigo_display',
-        'cliente_nombre_display', 
-        'fecha_hora_display',
-        'lugar_firma_display',
-        'creado_por',
-        'tiene_pendientes_display',
-        'fecha_creacion'
-    )
-    
-    list_filter = (
-        'lugar_firma',
-        'fecha_hora',
-        'creado_por',
-        'fecha_creacion'
     )
     
     search_fields = (
@@ -1108,6 +1081,58 @@ class AgendaFirmaAdmin(admin.ModelAdmin):
                 'actualizado_en',
             ),
             'classes': ('collapse',),
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'solicitud',
+            'solicitada_por',
+            'analizada_por',
+            'cotizacion_original',
+            'cotizacion_nueva'
+        )
+    
+    def has_change_permission(self, request, obj=None):
+        # Solo permitir cambios a usuarios con permisos específicos
+        return request.user.is_superuser or request.user.groups.filter(name__in=['Administradores', 'Consulta']).exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Solo superusuarios pueden eliminar reconsideraciones
+        return request.user.is_superuser
+
+
+# ==========================================================
+# ADMIN PARA AGENDA DE FIRMA
+# ==========================================================
+
+@admin.register(AgendaFirma)
+class AgendaFirmaAdmin(admin.ModelAdmin):
+    """
+    Configuración del admin para AgendaFirma.
+    Permite gestionar las citas de firma desde el panel de administración.
+    """
+    
+    list_display = (
+        'id',
+        'solicitud_codigo_display',
+        'cliente_nombre_display', 
+        'fecha_hora_display',
+        'lugar_firma_display',
+        'creado_por',
+        'tiene_pendientes_display',
+        'fecha_creacion'
+    )
+    
+    list_filter = (
+        'lugar_firma',
+        'fecha_hora',
+        'creado_por',
+        'fecha_creacion'
+    )
+    
+    search_fields = (
+        'solicitud__codigo',
         'solicitud__cliente__nombreCliente',
         'solicitud__cotizacion__nombreCliente',
         'solicitud__cliente__cedula',
@@ -1115,7 +1140,7 @@ class AgendaFirmaAdmin(admin.ModelAdmin):
         'comentarios'
     )
     
-    ordering = ('-fecha_hora',)
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
     
     fieldsets = (
         ('Información de la Cita', {
@@ -1130,7 +1155,7 @@ class AgendaFirmaAdmin(admin.ModelAdmin):
         })
     )
     
-    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    ordering = ('-fecha_hora',)
     
     # Métodos personalizados para list_display
     def solicitud_codigo_display(self, obj):
@@ -1229,20 +1254,6 @@ class OrdenExpedienteAdmin(admin.ModelAdmin):
     )
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'solicitud',
-            'solicitada_por',
-            'analizada_por',
-            'cotizacion_original',
-            'cotizacion_nueva'
-        )
-    
-    def has_change_permission(self, request, obj=None):
-        # Solo permitir cambios a usuarios con permisos específicos
-        return request.user.is_superuser or request.user.groups.filter(name__in=['Administradores', 'Consulta']).exists()
-    
-    def has_delete_permission(self, request, obj=None):
-        # Solo superusuarios pueden eliminar reconsideraciones
         """Optimizar consultas con select_related"""
         return super().get_queryset(request).select_related('solicitud', 'calificado_por')
 

@@ -161,26 +161,81 @@
         .sidebar-nav {
             padding: 1rem 0;
             flex: 1;
-            overflow-y: auto;
+            overflow-y: auto !important;
             overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.1);
+            scroll-behavior: smooth !important;
         }
 
+        /* Webkit scrollbar styling */
         .sidebar-nav::-webkit-scrollbar {
-            width: 6px;
+            width: 10px;
         }
 
         .sidebar-nav::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
+            border-radius: 5px;
+            margin: 4px 0;
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
 
         .sidebar-nav::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:active {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Firefox scrollbar styling */
+        .sidebar-nav {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+        }
+
+        /* Ensure scrollbar is always visible when content overflows */
+        .sidebar-nav:hover {
+            overflow-y: auto;
+        }
+
+        /* Additional scrollbar styling for better visibility */
+        .sidebar-nav.has-scrollbar {
+            padding-right: 4px;
+        }
+
+        /* Custom scrollbar for different states */
+        .sidebar-nav.has-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar-nav.has-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin: 4px 0;
+        }
+
+        .sidebar-nav.has-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-nav.has-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Ensure proper spacing when scrollbar is present */
+        .sidebar-nav:has(.nav-section:last-child) {
+            padding-bottom: 1rem;
         }
 
         .nav-section {
@@ -1114,6 +1169,74 @@
             }
         }
 
+        // Enhanced sidebar scrollbar functionality
+        function initializeSidebarScrollbar() {
+            const sidebarNav = document.querySelector('.sidebar-nav');
+            
+            if (sidebarNav) {
+                // Check if content overflows
+                function checkOverflow() {
+                    const hasOverflow = sidebarNav.scrollHeight > sidebarNav.clientHeight;
+                    
+                    if (hasOverflow) {
+                        sidebarNav.style.overflowY = 'auto';
+                        sidebarNav.classList.add('has-scrollbar');
+                    } else {
+                        sidebarNav.style.overflowY = 'hidden';
+                        sidebarNav.classList.remove('has-scrollbar');
+                    }
+                }
+                
+                // Check on load
+                checkOverflow();
+                
+                // Check on window resize
+                window.addEventListener('resize', checkOverflow);
+                
+                // Check when content changes (for dynamic content)
+                const observer = new MutationObserver(checkOverflow);
+                observer.observe(sidebarNav, {
+                    childList: true,
+                    subtree: true
+                });
+                
+                // Add smooth scrolling behavior
+                sidebarNav.style.scrollBehavior = 'smooth';
+                
+                // Add keyboard navigation support
+                sidebarNav.addEventListener('keydown', function(e) {
+                    const scrollAmount = 50;
+                    
+                    switch(e.key) {
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            sidebarNav.scrollTop += scrollAmount;
+                            break;
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            sidebarNav.scrollTop -= scrollAmount;
+                            break;
+                        case 'PageDown':
+                            e.preventDefault();
+                            sidebarNav.scrollTop += sidebarNav.clientHeight;
+                            break;
+                        case 'PageUp':
+                            e.preventDefault();
+                            sidebarNav.scrollTop -= sidebarNav.clientHeight;
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            sidebarNav.scrollTop = 0;
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            sidebarNav.scrollTop = sidebarNav.scrollHeight;
+                            break;
+                    }
+                });
+            }
+        }
+
         // Función para mostrar loading (backward compatibility)
         function showLoading(element) {
             if (typeof element === 'string' || !element) {
@@ -1165,6 +1288,9 @@
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+            
+            // Initialize sidebar scrollbar functionality
+            initializeSidebarScrollbar();
             
             // Session monitoring and error handling
             initializeSessionMonitoring();

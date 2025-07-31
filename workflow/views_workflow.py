@@ -15001,7 +15001,15 @@ def api_solicitudes_procesadas(request):
             'por_pagina': por_pagina,
             'filtro_aplicado': filtro,
             'timestamp': timezone.now().isoformat()
-            
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
 def api_cambiar_subestado_backoffice(request, solicitud_id):
     """API para cambiar el subestado actual en Back Office"""
     if request.method != 'POST':
@@ -16561,8 +16569,6 @@ def generar_pdf_resultado_comite(pdf_data):
     buffer.seek(0)
     
     return buffer
-            'error': f'Error al obtener transiciones negativas: {str(e)}'
-        }, status=500)
 
 
 # ==========================================================
