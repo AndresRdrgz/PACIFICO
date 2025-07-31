@@ -3,13 +3,15 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F, Count, Avg, ExpressionWrapper, fields
 from django.db.models.functions import Now, Extract
 from django.utils import timezone
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from datetime import datetime, timedelta
 from .modelsWorkflow import (
     Solicitud, HistorialSolicitud, Pipeline, Etapa, RequisitoSolicitud,
-    ParticipacionComite, SolicitudEscalamientoComite, NivelComite
+    ParticipacionComite, SolicitudEscalamientoComite, NivelComite,
+    PermisoEtapa, PermisoBandeja, NotaRecordatorio
 )
 from .models import CalificacionCampo
+from pacifico.models import Cotizacion
 
 
 @login_required
@@ -1217,5 +1219,551 @@ def dashboard_comite(request):
             'nivel_id': nivel_id,
         }
     }
+    
+    return render(request, 'workflow/dashboard_comite.html', context)
+
+
+# ==========================================
+# ROUTER DASHBOARD PRINCIPAL
+# ==========================================
+
+@login_required
+def dashboard_router(request):
+    """
+    Dashboard principal que redirige según el rol del usuario
+    """
+    user = request.user
+    
+    # Superuser puede elegir el dashboard
+    if user.is_superuser:
+        dashboard_type = request.GET.get('type', 'operativo')
+        
+        if dashboard_type == 'negocios':
+            return dashboard_negocios(request)
+        elif dashboard_type == 'comite':
+            return dashboard_comite(request)
+        elif dashboard_type == 'bandeja':
+            return dashboard_bandeja_trabajo(request)
+        else:
+            return dashboard_operativo(request)
+    
+    # Verificar si es Oficial de Negocio
+    if user.groups.filter(name='Oficial de Negocio').exists():
+        return dashboard_negocios(request)
+    
+    # Verificar si es miembro del Comité de Crédito
+    if user.groups.filter(name__icontains='Comité').exists() or user.groups.filter(name__icontains='Comite').exists():
+        return dashboard_comite(request)
+    
+    # Verificar si tiene acceso a bandejas grupales
+    bandeja_permisos = PermisoBandeja.objects.filter(
+        Q(usuario=user) | Q(grupo__in=user.groups.all()),
+        etapa__es_bandeja_grupal=True,
+        puede_ver=True
+    ).exists()
+    
+    if bandeja_permisos:
+        return dashboard_bandeja_trabajo(request)
+    
+    # Por defecto, dashboard operativo
+    return dashboard_operativo(request)
+
+
+# ==========================================
+# DASHBOARD DE NEGOCIOS
+# ==========================================
+
+@login_required
+def dashboard_negocios(request):
+    """
+    Dashboard específico para Oficiales de Negocio
+    """
+    user = request.user
+    
+    # Verificar permisos (excepto superuser)
+    if not user.is_superuser and not user.groups.filter(name='Oficial de Negocio').exists():
+        # Redirigir al dashboard apropiado
+        return dashboard_router(request)
+    
+    # Filtros de fecha
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    
+    # Base queryset - solicitudes creadas por el usuario
+    queryset_solicitudes = Solicitud.objects.filter(
+        creada_por=user
+    ).select_related('pipeline', 'etapa_actual', 'cliente', 'cotizacion')
+    
+    # Base queryset - cotizaciones creadas por el usuario
+    queryset_cotizaciones = Cotizacion.objects.filter(
+        creada_por=user
+    ).select_related('cliente')
+    
+    # Aplicar filtros de fecha
+    if fecha_inicio:
+        try:
+            fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+            queryset_solicitudes = queryset_solicitudes.filter(fecha_creacion__gte=fecha_inicio_dt)
+            queryset_cotizaciones = queryset_cotizaciones.filter(fecha_creacion__gte=fecha_inicio_dt)
+        except ValueError:
+            pass
+    
+    if fecha_fin:
+        try:
+            fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
+            queryset_solicitudes = queryset_solicitudes.filter(fecha_creacion__lte=fecha_fin_dt)
+            queryset_cotizaciones = queryset_cotizaciones.filter(fecha_creacion__lte=fecha_fin_dt)
+        except ValueError:
+            pass
+    
+    # ==========================================
+    # KPIs PRINCIPALES - SOLICITUDES
+    # ==========================================
+    
+    total_solicitudes = queryset_solicitudes.count()
+    solicitudes_activas = queryset_solicitudes.filter(etapa_actual__isnull=False).count()
+    solicitudes_completadas = queryset_solicitudes.filter(etapa_actual__isnull=True).count()
+    
+    # Solicitudes por etapa
+    solicitudes_por_etapa = queryset_solicitudes.filter(
+        etapa_actual__isnull=False
+    ).values(
+        'etapa_actual__nombre'
+    ).annotate(
+        total=Count('id')
+    ).order_by('-total')
+    
+    # ==========================================
+    # KPIs PRINCIPALES - COTIZACIONES
+    # ==========================================
+    
+    total_cotizaciones = queryset_cotizaciones.count()
+    cotizaciones_activas = queryset_cotizaciones.filter(activa=True).count()
+    cotizaciones_por_estado = queryset_cotizaciones.values(
+        'estado'
+    ).annotate(
+        total=Count('id')
+    ).order_by('-total')
+    
+    # ==========================================
+    # NOTAS Y RECORDATORIOS
+    # ==========================================
+    
+    # Obtener notas y recordatorios de las solicitudes del usuario
+    notas_recordatorios = NotaRecordatorio.objects.filter(
+        solicitud__creada_por=user,
+        fecha_vencimiento__gte=timezone.now()
+    ).select_related('solicitud').order_by('fecha_vencimiento')[:10]
+    
+    # ==========================================
+    # RENDIMIENTO TEMPORAL
+    # ==========================================
+    
+    # Solicitudes creadas por mes en los últimos 6 meses
+    hace_6_meses = timezone.now() - timedelta(days=180)
+    solicitudes_por_mes = queryset_solicitudes.filter(
+        fecha_creacion__gte=hace_6_meses
+    ).extra(
+        select={'mes': "strftime('%%Y-%%m', fecha_creacion)"}
+    ).values('mes').annotate(
+        total=Count('id')
+    ).order_by('mes')
+    
+    # Cotizaciones creadas por mes
+    cotizaciones_por_mes = queryset_cotizaciones.filter(
+        fecha_creacion__gte=hace_6_meses
+    ).extra(
+        select={'mes': "strftime('%%Y-%%m', fecha_creacion)"}
+    ).values('mes').annotate(
+        total=Count('id')
+    ).order_by('mes')
+    
+    # ==========================================
+    # HISTORIAL DE RENDIMIENTO
+    # ==========================================
+    
+    # Tiempo promedio en completar solicitudes
+    historiales_completados = HistorialSolicitud.objects.filter(
+        solicitud__creada_por=user,
+        fecha_fin__isnull=False
+    ).select_related('solicitud')
+    
+    tiempo_promedio_completion = 0
+    if historiales_completados.exists():
+        total_duracion = timedelta()
+        count = 0
+        for historial in historiales_completados:
+            if historial.fecha_fin and historial.fecha_inicio:
+                total_duracion += historial.fecha_fin - historial.fecha_inicio
+                count += 1
+        
+        if count > 0:
+            tiempo_promedio_completion = total_duracion.total_seconds() / (count * 24 * 3600)  # En días
+    
+    context = {
+        'dashboard_type': 'negocios',
+        'user_name': user.get_full_name() or user.username,
+        
+        # KPIs Solicitudes
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_activas': solicitudes_activas,
+        'solicitudes_completadas': solicitudes_completadas,
+        'solicitudes_por_etapa': list(solicitudes_por_etapa),
+        
+        # KPIs Cotizaciones
+        'total_cotizaciones': total_cotizaciones,
+        'cotizaciones_activas': cotizaciones_activas,
+        'cotizaciones_por_estado': list(cotizaciones_por_estado),
+        
+        # Notas y recordatorios
+        'notas_recordatorios': notas_recordatorios,
+        
+        # Rendimiento temporal
+        'solicitudes_por_mes': list(solicitudes_por_mes),
+        'cotizaciones_por_mes': list(cotizaciones_por_mes),
+        'tiempo_promedio_completion': round(tiempo_promedio_completion, 2),
+        
+        # Filtros
+        'filtros_aplicados': {
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+        }
+    }
+    
+    return render(request, 'workflow/dashboard_negocios.html', context)
+
+
+# ==========================================
+# DASHBOARD DE BANDEJA DE TRABAJO
+# ==========================================
+
+@login_required
+def dashboard_bandeja_trabajo(request):
+    """
+    Dashboard para usuarios con acceso a bandejas grupales
+    """
+    user = request.user
+    
+    # Obtener etapas a las que el usuario tiene acceso
+    if user.is_superuser:
+        etapas_acceso = Etapa.objects.filter(es_bandeja_grupal=True)
+    else:
+        etapas_acceso = Etapa.objects.filter(
+            Q(permisos_bandeja__usuario=user) | Q(permisos_bandeja__grupo__in=user.groups.all()),
+            es_bandeja_grupal=True,
+            permisos_bandeja__puede_ver=True
+        ).distinct()
+    
+    # Filtros
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    etapa_id = request.GET.get('etapa_id')
+    
+    # Queryset base - solicitudes en las etapas accesibles
+    queryset = Solicitud.objects.filter(
+        etapa_actual__in=etapas_acceso
+    ).select_related('pipeline', 'etapa_actual', 'creada_por', 'asignada_a')
+    
+    # Aplicar filtros
+    if fecha_inicio:
+        try:
+            fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+            queryset = queryset.filter(fecha_creacion__gte=fecha_inicio_dt)
+        except ValueError:
+            pass
+    
+    if fecha_fin:
+        try:
+            fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
+            queryset = queryset.filter(fecha_creacion__lte=fecha_fin_dt)
+        except ValueError:
+            pass
+    
+    if etapa_id:
+        queryset = queryset.filter(etapa_actual_id=etapa_id)
+    
+    # ==========================================
+    # KPIs PRINCIPALES
+    # ==========================================
+    
+    total_solicitudes_bandeja = queryset.count()
+    solicitudes_sin_asignar = queryset.filter(asignada_a__isnull=True).count()
+    solicitudes_asignadas = queryset.filter(asignada_a__isnull=False).count()
+    
+    # Solicitudes vencidas (cálculo en Python)
+    solicitudes_vencidas = 0
+    for solicitud in queryset:
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            tiempo_actual = timezone.now() - solicitud.fecha_ultima_actualizacion
+            if tiempo_actual > solicitud.etapa_actual.sla:
+                solicitudes_vencidas += 1
+    
+    # ==========================================
+    # DISTRIBUCIÓN POR ETAPA
+    # ==========================================
+    
+    solicitudes_por_etapa = {}
+    for solicitud in queryset:
+        etapa_nombre = solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin Etapa'
+        if etapa_nombre not in solicitudes_por_etapa:
+            solicitudes_por_etapa[etapa_nombre] = {
+                'total': 0,
+                'sin_asignar': 0,
+                'vencidas': 0
+            }
+        
+        solicitudes_por_etapa[etapa_nombre]['total'] += 1
+        if not solicitud.asignada_a:
+            solicitudes_por_etapa[etapa_nombre]['sin_asignar'] += 1
+        
+        # Verificar si está vencida
+        if solicitud.etapa_actual and solicitud.etapa_actual.sla:
+            tiempo_actual = timezone.now() - solicitud.fecha_ultima_actualizacion
+            if tiempo_actual > solicitud.etapa_actual.sla:
+                solicitudes_por_etapa[etapa_nombre]['vencidas'] += 1
+    
+    # Convertir a lista para el template
+    solicitudes_por_etapa_list = [
+        {
+            'etapa': etapa,
+            'total': data['total'],
+            'sin_asignar': data['sin_asignar'],
+            'vencidas': data['vencidas']
+        }
+        for etapa, data in solicitudes_por_etapa.items()
+    ]
+    
+    # ==========================================
+    # PRODUCTIVIDAD DEL EQUIPO
+    # ==========================================
+    
+    # Solicitudes procesadas en las etapas (historial)
+    hace_30_dias = timezone.now() - timedelta(days=30)
+    solicitudes_procesadas = HistorialSolicitud.objects.filter(
+        etapa__in=etapas_acceso,
+        fecha_fin__gte=hace_30_dias,
+        fecha_fin__isnull=False
+    ).count()
+    
+    # Tiempo promedio de procesamiento por etapa
+    promedios_por_etapa = []
+    for etapa in etapas_acceso:
+        historiales = HistorialSolicitud.objects.filter(
+            etapa=etapa,
+            fecha_fin__isnull=False,
+            fecha_fin__gte=hace_30_dias
+        )
+        
+        if historiales.exists():
+            total_duracion = timedelta()
+            count = 0
+            for historial in historiales:
+                if historial.fecha_fin and historial.fecha_inicio:
+                    total_duracion += historial.fecha_fin - historial.fecha_inicio
+                    count += 1
+            
+            if count > 0:
+                promedio_horas = total_duracion.total_seconds() / (count * 3600)
+                promedios_por_etapa.append({
+                    'etapa': etapa.nombre,
+                    'promedio_horas': round(promedio_horas, 2),
+                    'casos_procesados': count
+                })
+    
+    # ==========================================
+    # USUARIOS MÁS ACTIVOS EN LAS BANDEJAS
+    # ==========================================
+    
+    usuarios_activos = queryset.filter(
+        asignada_a__isnull=False
+    ).values(
+        'asignada_a__username',
+        'asignada_a__first_name',
+        'asignada_a__last_name'
+    ).annotate(
+        total_asignadas=Count('id')
+    ).order_by('-total_asignadas')[:10]
+    
+    # Convertir a lista y agregar nombres completos
+    usuarios_activos_list = []
+    for usuario_data in usuarios_activos:
+        usuario_data['full_name'] = f"{usuario_data['asignada_a__first_name'] or ''} {usuario_data['asignada_a__last_name'] or ''}".strip() or usuario_data['asignada_a__username']
+        usuarios_activos_list.append(usuario_data)
+    
+    context = {
+        'dashboard_type': 'bandeja',
+        'etapas_acceso': etapas_acceso,
+        
+        # KPIs principales
+        'total_solicitudes_bandeja': total_solicitudes_bandeja,
+        'solicitudes_sin_asignar': solicitudes_sin_asignar,
+        'solicitudes_asignadas': solicitudes_asignadas,
+        'solicitudes_vencidas': solicitudes_vencidas,
+        
+        # Distribución
+        'solicitudes_por_etapa': solicitudes_por_etapa_list,
+        
+        # Productividad
+        'solicitudes_procesadas_30_dias': solicitudes_procesadas,
+        'promedios_por_etapa': promedios_por_etapa,
+        'usuarios_activos': usuarios_activos_list,
+        
+        # Filtros
+        'filtros_aplicados': {
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'etapa_id': etapa_id,
+        },
+        'etapas_disponibles': etapas_acceso,
+    }
+    
+    return render(request, 'workflow/dashboard_bandeja.html', context)
+
+
+# ==========================================
+# DASHBOARD DE COMITÉ (ENHANCED)
+# ==========================================
+
+@login_required
+def dashboard_comite_enhanced(request):
+    """
+    Dashboard mejorado específico para miembros del Comité de Crédito
+    """
+    user = request.user
+    
+    # Verificar permisos
+    if not user.is_superuser and not (user.groups.filter(name__icontains='Comité').exists() or user.groups.filter(name__icontains='Comite').exists()):
+        return dashboard_router(request)
+    
+    # Filtros
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    nivel_id = request.GET.get('nivel_id')
+    
+    # Base queryset - solicitudes escaladas al comité
+    queryset = SolicitudEscalamientoComite.objects.select_related(
+        'solicitud', 'nivel_comite', 'usuario_escalamiento'
+    )
+    
+    # Aplicar filtros
+    if fecha_inicio:
+        try:
+            fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+            queryset = queryset.filter(fecha_escalamiento__gte=fecha_inicio_dt)
+        except ValueError:
+            pass
+    
+    if fecha_fin:
+        try:
+            fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
+            queryset = queryset.filter(fecha_escalamiento__lte=fecha_fin_dt)
+        except ValueError:
+            pass
+    
+    if nivel_id:
+        queryset = queryset.filter(nivel_comite_id=nivel_id)
+    
+    # ==========================================
+    # KPIs PRINCIPALES DEL COMITÉ
+    # ==========================================
+    
+    total_escalamientos = queryset.count()
+    escalamientos_pendientes = queryset.filter(
+        resultado__isnull=True,
+        fecha_resolucion__isnull=True
+    ).count()
+    escalamientos_aprobados = queryset.filter(resultado='aprobado').count()
+    escalamientos_rechazados = queryset.filter(resultado='rechazado').count()
+    
+    # ==========================================
+    # PARTICIPACIÓN DEL USUARIO ACTUAL
+    # ==========================================
+    
+    if not user.is_superuser:
+        # Participaciones del usuario actual
+        participaciones_usuario = ParticipacionComite.objects.filter(
+            usuario=user
+        ).select_related('escalamiento', 'escalamiento__solicitud')
+        
+        participaciones_pendientes = participaciones_usuario.filter(
+            voto__isnull=True
+        ).count()
+        
+        participaciones_completadas = participaciones_usuario.filter(
+            voto__isnull=False
+        ).count()
+    else:
+        # Para superuser, mostrar estadísticas generales
+        participaciones_pendientes = ParticipacionComite.objects.filter(
+            voto__isnull=True
+        ).count()
+        participaciones_completadas = ParticipacionComite.objects.filter(
+            voto__isnull=False
+        ).count()
+    
+    # ==========================================
+    # TIEMPO DE RESPUESTA DEL COMITÉ
+    # ==========================================
+    
+    escalamientos_resueltos = queryset.filter(
+        fecha_resolucion__isnull=False
+    )
+    
+    tiempo_promedio_resolucion = 0
+    if escalamientos_resueltos.exists():
+        total_duracion = timedelta()
+        count = 0
+        for escalamiento in escalamientos_resueltos:
+            if escalamiento.fecha_resolucion and escalamiento.fecha_escalamiento:
+                total_duracion += escalamiento.fecha_resolucion - escalamiento.fecha_escalamiento
+                count += 1
+        
+        if count > 0:
+            tiempo_promedio_resolucion = total_duracion.total_seconds() / (count * 24 * 3600)  # En días
+    
+    # ==========================================
+    # DISTRIBUCIÓN POR NIVEL
+    # ==========================================
+    
+    escalamientos_por_nivel = queryset.values(
+        'nivel_comite__nombre',
+        'nivel_comite__orden'
+    ).annotate(
+        total=Count('id'),
+        pendientes=Count('id', filter=Q(resultado__isnull=True)),
+        aprobados=Count('id', filter=Q(resultado='aprobado')),
+        rechazados=Count('id', filter=Q(resultado='rechazado'))
+    ).order_by('nivel_comite__orden')
+    
+    context = {
+        'dashboard_type': 'comite',
+        'user_name': user.get_full_name() or user.username,
+        
+        # KPIs principales
+        'total_escalamientos': total_escalamientos,
+        'escalamientos_pendientes': escalamientos_pendientes,
+        'escalamientos_aprobados': escalamientos_aprobados,
+        'escalamientos_rechazados': escalamientos_rechazados,
+        
+        # Participación del usuario
+        'participaciones_pendientes': participaciones_pendientes,
+        'participaciones_completadas': participaciones_completadas,
+        
+        # Tiempos
+        'tiempo_promedio_resolucion': round(tiempo_promedio_resolucion, 2),
+        
+        # Distribución
+        'escalamientos_por_nivel': list(escalamientos_por_nivel),
+        
+        # Filtros
+        'filtros_aplicados': {
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'nivel_id': nivel_id,
+        },
+        'niveles_disponibles': NivelComite.objects.all().order_by('orden'),
+    }
+    
+    return render(request, 'workflow/dashboard_comite_enhanced.html', context)
     
     return render(request, 'workflow/dashboard_comite.html', context) 

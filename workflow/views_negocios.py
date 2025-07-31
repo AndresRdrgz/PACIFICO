@@ -5,6 +5,13 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
 from django.urls import reverse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils import timezone
+from django.urls import reverse
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, Solicitud, HistorialSolicitud,
     PermisoPipeline, PermisoEtapa, NotaRecordatorio
@@ -316,8 +323,6 @@ def negocios_view(request):
         pipelines_disponibles = Pipeline.objects.all()
         print(f"🔍 DEBUG: Superuser {request.user} accessing pipelines")
         print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines total")
-        for p in pipelines_disponibles:
-            print(f"    - {p.nombre} (ID: {p.pk})")
     else:
         # Obtener pipelines basado en permisos
         pipelines_disponibles = Pipeline.objects.filter(
@@ -326,6 +331,21 @@ def negocios_view(request):
         ).distinct()
         print(f"🔍 DEBUG: Regular user {request.user} accessing pipelines")
         print(f"🔍 DEBUG: Found {pipelines_disponibles.count()} pipelines with permissions")
+    
+    # Enriquecer pipelines con conteo de solicitudes del usuario
+    pipelines_enriched = []
+    for pipeline in pipelines_disponibles:
+        if request.user.is_superuser:
+            user_solicitudes_count = pipeline.solicitud_set.count()
+        else:
+            user_solicitudes_count = pipeline.solicitud_set.filter(
+                Q(asignada_a=request.user) | Q(creada_por=request.user)
+            ).count()
+        
+        # Agregar el conteo como atributo del pipeline
+        pipeline.user_solicitudes_count = user_solicitudes_count
+        pipelines_enriched.append(pipeline)
+        print(f"    - {pipeline.nombre}: {user_solicitudes_count} solicitudes para usuario {request.user.username}")
     
     # Obtener etapas para filtros
     etapas_disponibles = Etapa.objects.all()
@@ -396,8 +416,8 @@ def negocios_view(request):
         'solicitudes_por_etapa': solicitudes_por_etapa,  # For Kanban view
         'total_solicitudes': total_solicitudes,
         'solicitudes_pendientes': solicitudes_pendientes,
-        'pipelines_disponibles': pipelines_disponibles,
-        'pipelines': pipelines_disponibles,  # Template compatibility
+        'pipelines_disponibles': pipelines_enriched,
+        'pipelines': pipelines_enriched,  # Template compatibility
         'pipeline': current_pipeline,  # Current selected pipeline
         'etapas_disponibles': etapas_disponibles,
         'subestados_disponibles': subestados_disponibles,

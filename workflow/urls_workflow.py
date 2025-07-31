@@ -31,12 +31,22 @@ urlpatterns = [
 
 # Vistas principales
 urlpatterns += [
-    path('', views_workflow.dashboard_workflow, name='dashboard'),
+    # Dashboard router - punto de entrada principal
+    path('', dashboard_views.dashboard_router, name='dashboard'),
+    path('dashboard/', dashboard_views.dashboard_router, name='dashboard_router'),
+    
+    # Dashboards específicos
     path('dashboard-operativo/', dashboard_views.dashboard_operativo, name='dashboard_operativo'),
     path('dashboard-usuario/', dashboard_views.dashboard_usuario, name='dashboard_usuario'),
     path('dashboard-cumplimiento/', dashboard_views.dashboard_cumplimiento, name='dashboard_cumplimiento'),
     path('dashboard-flujo/', dashboard_views.dashboard_flujo, name='dashboard_flujo'),
     path('dashboard-comite/', dashboard_views.dashboard_comite, name='dashboard_comite'),
+    
+    # Nuevos dashboards por rol
+    path('dashboard-negocios/', dashboard_views.dashboard_negocios, name='dashboard_negocios'),
+    path('dashboard-bandeja/', dashboard_views.dashboard_bandeja_trabajo, name='dashboard_bandeja'),
+    path('dashboard-comite-enhanced/', dashboard_views.dashboard_comite_enhanced, name='dashboard_comite_enhanced'),
+    
     path('bandeja/', views_workflow.bandeja_trabajo, name='bandeja_trabajo'),
     path('bandeja-mixta/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='bandejas'),

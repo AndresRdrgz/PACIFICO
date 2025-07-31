@@ -1,0 +1,423 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Negocios - Sistema de Workflow{% endblock %}
+
+{% block extra_css %}
+{% include 'workflow/partials/dashboard_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header Moderno con Gradient -->
+    <div class="gradient-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="header-icon">
+                            <i class="fas fa-briefcase fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="h2 mb-1 text-white">Dashboard de Negocios</h1>
+                            <p class="mb-0 text-white-50">Panel de control para {{ user_name }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
+                            </a>
+                            {% if user.is_superuser %}
+                            <div class="dropdown">
+                                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog me-2"></i>Cambiar Vista
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=operativo">📊 Operativo</a></li>
+                                    <li><a class="dropdown-item active" href="{% url 'workflow:dashboard' %}?type=negocios">💼 Negocios</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=comite">🏛️ Comité</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=bandeja">📋 Bandeja</a></li>
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    FILTROS
+    ========================================== -->
+    <div class="dashboard-block">
+        <div class="search-section">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-3">
+                        <i class="fas fa-filter me-2"></i>Filtros de Análisis
+                    </h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="submit" form="filtros-form" class="btn btn-pacifico btn-sm">
+                            <i class="fas fa-search me-2"></i>Aplicar Filtros
+                        </button>
+                        <a href="{% url 'workflow:dashboard_negocios' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-2"></i>Limpiar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="GET" id="filtros-form" class="row g-3">
+                <div class="col-md-4">
+                    <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio" 
+                           value="{{ filtros_aplicados.fecha_inicio|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                    <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin" 
+                           value="{{ filtros_aplicados.fecha_fin|default:'' }}">
+                </div>
+            </form>
+        </div>
+
+        <!-- ==========================================
+        KPIs PRINCIPALES
+        ========================================== -->
+        <div class="row mb-4">
+            <!-- Total Solicitudes -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card primary">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Mis Solicitudes</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ total_solicitudes }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-primary" style="width: 100%"></div>
+                                </div>
+                                <small class="text-muted">Total creadas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Activas -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card warning">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">En Proceso</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ solicitudes_activas }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    {% widthratio solicitudes_activas total_solicitudes 100 as porcentaje_activas %}
+                                    <div class="progress-bar bg-warning" style="width: {{ porcentaje_activas|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_activas|default:0 }}% del total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solicitudes Completadas -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card success">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Completadas</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ solicitudes_completadas }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    {% widthratio solicitudes_completadas total_solicitudes 100 as porcentaje_completadas %}
+                                    <div class="progress-bar bg-success" style="width: {{ porcentaje_completadas|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_completadas|default:0 }}% del total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Cotizaciones -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card info">
+                    <div class="metric-content">
+                        <div class="metric-header">
+                            <h6 class="metric-title">Mis Cotizaciones</h6>
+                            <div class="metric-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                        </div>
+                        <div class="metric-body">
+                            <h3 class="metric-number">{{ total_cotizaciones }}</h3>
+                            <div class="metric-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" style="width: 100%"></div>
+                                </div>
+                                <small class="text-muted">{{ cotizaciones_activas }} activas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        GRÁFICAS Y ANÁLISIS
+        ========================================== -->
+        <div class="row">
+            <!-- Distribución por Etapa -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Solicitudes por Etapa
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if solicitudes_por_etapa %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Etapa</th>
+                                            <th>Cantidad</th>
+                                            <th>%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for etapa in solicitudes_por_etapa %}
+                                        <tr>
+                                            <td>{{ etapa.etapa_actual__nombre }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ etapa.total }}</span>
+                                            </td>
+                                            <td>
+                                                {% widthratio etapa.total total_solicitudes 100 as porcentaje %}
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar bg-primary" style="width: {{ porcentaje }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ porcentaje }}%</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No hay solicitudes por etapa</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cotizaciones por Estado -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>Cotizaciones por Estado
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if cotizaciones_por_estado %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Estado</th>
+                                            <th>Cantidad</th>
+                                            <th>%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for estado in cotizaciones_por_estado %}
+                                        <tr>
+                                            <td>{{ estado.estado|default:"Sin Estado" }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ estado.total }}</span>
+                                            </td>
+                                            <td>
+                                                {% widthratio estado.total total_cotizaciones 100 as porcentaje %}
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar bg-info" style="width: {{ porcentaje }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ porcentaje }}%</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-calculator fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No hay cotizaciones registradas</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        NOTAS Y RECORDATORIOS
+        ========================================== -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Notas y Recordatorios Próximos
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if notas_recordatorios %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Solicitud</th>
+                                            <th>Nota</th>
+                                            <th>Fecha Vencimiento</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for nota in notas_recordatorios %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'workflow:detalle_solicitud' nota.solicitud.id %}" class="text-decoration-none">
+                                                    {{ nota.solicitud.codigo|default:"N/A" }}
+                                                </a>
+                                            </td>
+                                            <td>{{ nota.titulo|truncatechars:50 }}</td>
+                                            <td>
+                                                <small class="text-muted">{{ nota.fecha_vencimiento|date:"d/m/Y H:i" }}</small>
+                                            </td>
+                                            <td>
+                                                {% if nota.fecha_vencimiento < today %}
+                                                    <span class="badge bg-danger">Vencido</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pendiente</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No tienes notas o recordatorios próximos</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+        RENDIMIENTO TEMPORAL
+        ========================================== -->
+        {% if solicitudes_por_mes or cotizaciones_por_mes %}
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Evolución Temporal (Últimos 6 meses)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Solicitudes por Mes</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Mes</th>
+                                                <th>Cantidad</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for mes_data in solicitudes_por_mes %}
+                                            <tr>
+                                                <td>{{ mes_data.mes }}</td>
+                                                <td><span class="badge bg-primary">{{ mes_data.total }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Cotizaciones por Mes</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Mes</th>
+                                                <th>Cantidad</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for mes_data in cotizaciones_por_mes %}
+                                            <tr>
+                                                <td>{{ mes_data.mes }}</td>
+                                                <td><span class="badge bg-info">{{ mes_data.total }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if tiempo_promedio_completion > 0 %}
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6 class="mb-2">
+                                <i class="fas fa-stopwatch me-2"></i>Tiempo Promedio de Completado
+                            </h6>
+                            <p class="mb-0">
+                                <strong>{{ tiempo_promedio_completion }} días</strong> en promedio para completar solicitudes
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
