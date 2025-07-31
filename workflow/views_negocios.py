@@ -67,7 +67,7 @@ def enrich_solicitud_data(solicitud):
     
     # Enriquecer datos de usuarios
     propietario_avatar = get_user_avatar_data(getattr(solicitud, 'propietario_user', None))
-    asignado_avatar = get_user_avatar_data(getattr(solicitud, 'asignado_a_user', None))
+    asignada_avatar = get_user_avatar_data(getattr(solicitud, 'asignada_a', None))
     
     # Datos enriquecidos
     enriched_data = {
@@ -85,8 +85,8 @@ def enrich_solicitud_data(solicitud):
         
         # Datos de usuarios
         'propietario_avatar': propietario_avatar,
-        'asignado_avatar': asignado_avatar,
-        'is_unassigned': getattr(solicitud, 'asignado_a', '') == 'Sin asignar' or not getattr(solicitud, 'asignado_a', ''),
+        'asignada_avatar': asignada_avatar,
+        'is_unassigned': not getattr(solicitud, 'asignada_a', None),
         
         # Datos de etiquetas
         'show_digital_badge': getattr(solicitud, 'origen', '') == 'Canal Digital',

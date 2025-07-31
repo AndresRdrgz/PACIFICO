@@ -448,34 +448,16 @@ def detalle_solicitud(request, solicitud_id):
         solicitud.etapa_actual.nombre == "Back Office" and 
         solicitud.etapa_actual.es_bandeja_grupal):
         
-        # Obtener transiciones de salida desde la etapa actual
-        transiciones_salida = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_origen=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
-        
-        # NUEVO: También obtener transiciones de entrada hacia la etapa actual
+        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
+        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
+        # (no en las de salida, que son para la siguiente etapa)
         transiciones_entrada = TransicionEtapa.objects.filter(
             pipeline=solicitud.pipeline,
             etapa_destino=solicitud.etapa_actual
         ).prefetch_related('requisitos_obligatorios__requisito')
         
-        # Obtener todos los requisitos necesarios (tanto de entrada como de salida)
+        # Obtener todos los requisitos necesarios (solo de entrada)
         requisitos_necesarios = {}
-        
-        # Procesar requisitos de transiciones de salida
-        for transicion in transiciones_salida:
-            for req_transicion in transicion.requisitos_obligatorios.all():
-                req_id = req_transicion.requisito.id
-                if req_id not in requisitos_necesarios:
-                    requisitos_necesarios[req_id] = {
-                        'requisito': req_transicion.requisito,
-                        'obligatorio': req_transicion.obligatorio,
-                        'mensaje_personalizado': req_transicion.mensaje_personalizado,
-                        'archivo_actual': None,
-                        'esta_cumplido': False,
-                        'tipo_transicion': 'salida'
-                    }
         
         # Procesar requisitos de transiciones de entrada
         for transicion in transiciones_entrada:
@@ -11863,12 +11845,16 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         documentos_buenos = 0
         documentos_malos = 0
         
-        # Validar documentos - Solo "malo" bloquea el avance
+        # Validar documentos - Solo documentos OBLIGATORIOS calificados como "malo" bloquean el avance
         for req_sol in requisitos_solicitud:
             # Buscar la calificación más reciente
             calificacion = CalificacionDocumentoBackoffice.objects.filter(
                 requisito_solicitud=req_sol
             ).order_by('-fecha_calificacion').first()
+            
+            # Obtener información de obligatoriedad desde RequisitoTransicion
+            req_id = req_sol.requisito.id
+            es_obligatorio = requisitos_definidos.get(req_id, {}).get('obligatorio', False)
             
             if calificacion:
                 estado = calificacion.estado
@@ -11878,22 +11864,27 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                     documentos_buenos += 1
                 elif estado == 'malo':
                     documentos_malos += 1
-                    # Solo documentos "malo" bloquean el avance
-                    documentos_problematicos.append({
-                        'nombre': req_sol.requisito.nombre,
-                        'problema': 'calificado_como_malo',
-                        'estado_actual': estado
-                    })
+                    # ✅ CORREGIDO: Solo documentos OBLIGATORIOS + "malo" bloquean el avance
+                    if es_obligatorio:
+                        documentos_problematicos.append({
+                            'nombre': req_sol.requisito.nombre,
+                            'problema': 'calificado_como_malo',
+                            'estado_actual': estado,
+                            'es_obligatorio': True
+                        })
+                    # Los documentos opcionales "malo" NO bloquean el avance
                 elif estado == 'pendiente':
                     documentos_pendientes.append({
                         'nombre': req_sol.requisito.nombre,
-                        'estado': 'pendiente'
+                        'estado': 'pendiente',
+                        'es_obligatorio': es_obligatorio
                     })
             else:
                 # Sin calificación = pendiente automático (permite avanzar)
                 documentos_pendientes.append({
                     'nombre': req_sol.requisito.nombre,
-                    'estado': 'pendiente'
+                    'estado': 'pendiente',
+                    'es_obligatorio': es_obligatorio
                 })
                 
                 # Crear calificación automática como "pendiente"
@@ -11920,12 +11911,12 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                     'mensaje_personalizado': req_info['mensaje_personalizado']
                 })
         
-        # Verificar si puede avanzar (solo "malo" bloquea)
+        # Verificar si puede avanzar (solo documentos OBLIGATORIOS + "malo" bloquean)
         if len(documentos_problematicos) == 0:
             return JsonResponse({
                 'success': True,
                 'puede_avanzar': True,
-                'mensaje': 'No hay documentos calificados como "Malo". Puede avanzar. (Documentos "Pendientes" permiten continuar)',
+                'mensaje': 'No hay documentos obligatorios calificados como "Malo". Puede avanzar. (Documentos opcionales "Malo" y documentos "Pendientes" permiten continuar)',
                 'documentos_pendientes': documentos_pendientes,
                 'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
@@ -11933,11 +11924,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'documentos_pendientes_count': len(documentos_pendientes)
             })
         else:
-            # Construir mensaje detallado para documentos "malo"
+            # Construir mensaje detallado para documentos obligatorios "malo"
             mensajes_detalle = []
             for doc in documentos_problematicos:
                 if doc['problema'] == 'calificado_como_malo':
-                    mensajes_detalle.append(f"• {doc['nombre']}: Calificado como 'Malo' - debe cambiar a 'Bueno' o 'Pendiente'")
+                    mensajes_detalle.append(f"• {doc['nombre']}: Documento OBLIGATORIO calificado como 'Malo' - debe cambiar a 'Bueno' o 'Pendiente'")
                 elif doc['problema'] == 'sin_calificar':
                     mensajes_detalle.append(f"• {doc['nombre']}: Sin calificar")
                 elif doc['problema'] == 'mal_calificado':
@@ -11948,7 +11939,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'puede_avanzar': False,
                 'documentos_problematicos': documentos_problematicos,
                 'documentos_pendientes': documentos_pendientes,
-                'mensaje': f'No puede avanzar: {len(documentos_problematicos)} documento(s) calificado(s) como "Malo"',
+                'mensaje': f'No puede avanzar: {len(documentos_problematicos)} documento(s) OBLIGATORIO(S) calificado(s) como "Malo"',
                 'detalle': mensajes_detalle,
                 'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,

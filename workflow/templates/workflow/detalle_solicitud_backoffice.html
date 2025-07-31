@@ -699,6 +699,15 @@
                             <span class="badge bg-success me-2">
                               <i class="fas fa-check me-1"></i>Completo
                             </span>
+                            {% if archivo_info.obligatorio %}
+                            <span class="badge bg-danger me-2">
+                              <i class="fas fa-exclamation-circle me-1"></i>Obligatorio
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary me-2">
+                              <i class="fas fa-info-circle me-1"></i>Opcional
+                            </span>
+                            {% endif %}
                             <small class="text-muted">
                               Archivo: {{ archivo_info.archivo_actual.archivo.name|slice:"10:" }}
                             </small>
@@ -757,7 +766,7 @@
                         <!-- Botones de Calificación Optimizados para Checklist -->
                         <div class="botones-calificacion-backoffice botones-checklist-optimizado">
                           {% if archivo_info.archivo_actual.archivo %}
-                            <!-- Si tiene archivo: Bueno/Malo/Pendiente -->
+                            <!-- Si tiene archivo: Solo Bueno/Malo (sin Pendiente para ningún tipo) -->
                             <!-- Bueno -->
                             <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'bueno' %}activo{% endif %}" data-estado="bueno"
                               data-requisito="{{ archivo_info.archivo_actual.id }}"
@@ -774,13 +783,7 @@
                               <span>Malo</span>
                             </button>
                             
-                            <!-- 🆕 PENDIENTE - NUEVO BOTÓN -->
-                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'pendiente' %}activo{% endif %}" data-estado="pendiente"
-                              data-requisito="{{ archivo_info.archivo_actual.id }}"
-                              title="Marcar como pendiente">
-                              <i class="fas fa-clock"></i>
-                              <span>Pendiente</span>
-                            </button>
+                            <!-- PENDIENTE - Eliminado: Con archivo no se permite Pendiente -->
                             
                             <!-- Comentarios -->
                             <button type="button" class="btn comentario-btn-backoffice"
@@ -791,7 +794,7 @@
                               <span class="badge">{{ archivo_info.comentarios_backoffice|length }}</span>
                             </button>
                           {% else %}
-                            <!-- Si NO tiene archivo: Mostrar botones con "Pendiente" automáticamente activo -->
+                            <!-- Si NO tiene archivo: Comportamiento según obligatoriedad -->
                             <!-- Bueno - Deshabilitado -->
                             <button type="button" class="btn calificar-btn-backoffice" data-estado="bueno"
                               disabled title="Debe subir archivo para calificar como bueno">
@@ -806,7 +809,8 @@
                               <span>Malo</span>
                             </button>
                             
-                            <!-- Pendiente - AUTOMÁTICAMENTE ACTIVO -->
+                            <!-- Pendiente - Solo para documentos opcionales -->
+                            {% if not archivo_info.obligatorio %}
                             <button type="button" class="btn calificar-btn-backoffice activo" data-estado="pendiente"
                               data-requisito="{{ archivo_info.archivo_actual.id }}"
                               title="Pendiente (Sin archivo)"
@@ -815,6 +819,7 @@
                               <i class="fas fa-clock"></i>
                               <span>Pendiente</span>
                             </button>
+                            {% endif %}
                             
                             <!-- Comentarios -->
                             <button type="button" class="btn comentario-btn-backoffice"
@@ -827,11 +832,13 @@
                             
                             <!-- Información adicional -->
                             <div class="mt-2">
-                              <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sin archivo - Marcado automáticamente como pendiente</small>
-                              <br>
                               {% if not archivo_info.obligatorio %}
+                                <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sin archivo - Marcado automáticamente como pendiente</small>
+                                <br>
                                 <small class="text-muted">Documento opcional</small>
                               {% else %}
+                                <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Sin archivo - Requiere subir documento</small>
+                                <br>
                                 <small class="text-danger">Documento requerido</small>
                               {% endif %}
                             </div>
@@ -1013,7 +1020,7 @@
                   </div>
                   <div class="member-details">
                     <div class="member-name">
-                      {{ solicitud.asignado_a|default:"Sin asignar" }}
+                      {{ solicitud.asignada_a|default:"Sin asignar" }}
                     </div>
                     <div class="member-role">Analista Back Office</div>
                   </div>
@@ -3591,11 +3598,8 @@ function confirmarDevolucion() {
       const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
       modal.hide();
       
-      if (data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else {
-        window.location.reload();
-      }
+      // ✅ SIEMPRE redireccionar a la vista de bandeja mixta después de devolución
+      window.location.href = '/workflow/bandeja-mixta/';
     } else {
       alert(`Error al devolver solicitud: ${data.message || data.error}`);
       
