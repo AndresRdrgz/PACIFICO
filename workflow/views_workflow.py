@@ -2139,6 +2139,10 @@ def api_solicitudes(request):
             'apc_tipo_documento': solicitud.apc_tipo_documento or '',
             'apc_status': solicitud.apc_status or '',
             
+            # Status fields for all services
+            'sura_status': solicitud.sura_status or '',
+            'debida_diligencia_status': solicitud.debida_diligencia_status or '',
+            
             # Información de cotización
             **cotizacion_data,
         })
@@ -7365,14 +7369,20 @@ def api_solicitar_sura_makito(request, solicitud_id):
         primer_apellido = ""
         
         if hasattr(solicitud, 'cliente') and solicitud.cliente:
-            documento_cliente = solicitud.cliente.cedula or solicitud.cliente.ruc
-            primer_nombre = solicitud.cliente.primer_nombre or ""
-            primer_apellido = solicitud.cliente.primer_apellido or ""
+            documento_cliente = solicitud.cliente.cedulaCliente
+            # Intentar extraer nombres del campo nombreCliente
+            if solicitud.cliente.nombreCliente:
+                nombres = solicitud.cliente.nombreCliente.split()
+                if len(nombres) >= 2:
+                    primer_nombre = nombres[0]
+                    primer_apellido = nombres[-1]
+                elif len(nombres) == 1:
+                    primer_nombre = nombres[0]
         elif hasattr(solicitud, 'cotizacion') and solicitud.cotizacion:
-            documento_cliente = solicitud.cotizacion.cedula
+            documento_cliente = solicitud.cotizacion.cedulaCliente
             # Intentar extraer nombres de la cotización si están disponibles
-            if solicitud.cotizacion.cliente_nombre:
-                nombres = solicitud.cotizacion.cliente_nombre.split()
+            if solicitud.cotizacion.nombreCliente:
+                nombres = solicitud.cotizacion.nombreCliente.split()
                 if len(nombres) >= 2:
                     primer_nombre = nombres[0]
                     primer_apellido = nombres[-1]
@@ -7389,10 +7399,11 @@ def api_solicitar_sura_makito(request, solicitud_id):
         solicitud.sura_no_documento = documento_cliente
         solicitud.sura_status = 'pending'
         solicitud.sura_fecha_solicitud = timezone.now()
+        solicitud.cotizar_sura_makito = True  # CRITICAL: This field is required for tracking
         
         solicitud.save(update_fields=[
             'sura_primer_nombre', 'sura_primer_apellido', 'sura_no_documento',
-            'sura_status', 'sura_fecha_solicitud'
+            'sura_status', 'sura_fecha_solicitud', 'cotizar_sura_makito'
         ])
         
         # Enviar correo a Makito RPA

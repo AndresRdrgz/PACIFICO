@@ -1216,7 +1216,7 @@
             <div>
                 <h1 class="header-title">
                     <i class="fas {% if tracking_type == 'sura' %}fa-file-contract{% elif tracking_type == 'unified' %}fa-tasks{% else %}fa-download{% endif %} me-3"></i>
-                    Tracking {{ tracking_type|title }} Makito
+                    Solicitudes Makito RPA
                 </h1>
                 <p class="header-subtitle">
                     {% if tracking_type == 'sura' %}
@@ -2601,7 +2601,27 @@ async function loadAvailableSolicitudes() {
         // Filter solicitudes that don't already have the selected service type processed
         const filteredSolicitudes = availableSolicitudes.filter(solicitud => {
             // Only show active solicitudes (not completed)
-            return solicitud.etapa_actual && solicitud.etapa_actual !== 'Completado';
+            if (!solicitud.etapa_actual || solicitud.etapa_actual === 'Completado') {
+                return false;
+            }
+            
+            // Filter based on selected service type status
+            switch (selectedServiceType) {
+                case 'apc':
+                    // Don't show if APC is already pending, in_progress, or completed
+                    return !solicitud.apc_status || solicitud.apc_status === '' || solicitud.apc_status === 'no_iniciado';
+                    
+                case 'sura':
+                    // Don't show if SURA is already pending, in_progress, or completed
+                    return !solicitud.sura_status || solicitud.sura_status === '' || solicitud.sura_status === 'no_iniciado';
+                    
+                case 'debida_diligencia':
+                    // Don't show if Debida Diligencia is already pending, in_progress, or completed
+                    return !solicitud.debida_diligencia_status || solicitud.debida_diligencia_status === '' || solicitud.debida_diligencia_status === 'no_iniciado';
+                    
+                default:
+                    return true;
+            }
         });
         
         loadingElement.style.display = 'none';

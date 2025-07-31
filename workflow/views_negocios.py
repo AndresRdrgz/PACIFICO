@@ -821,6 +821,10 @@ def api_solicitudes(request):
                 'apc_tipo_documento': solicitud.apc_tipo_documento or '',
                 'apc_status': solicitud.apc_status or '',
                 
+                # Status fields for all services
+                'sura_status': solicitud.sura_status or '',
+                'debida_diligencia_status': solicitud.debida_diligencia_status or '',
+                
                 # Información de cotización
                 **cotizacion_data,
                 
