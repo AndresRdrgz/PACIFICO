@@ -5578,6 +5578,569 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         # Registrar el error pero no romper el flujo
         print(f"❌ Error al enviar correo del comité para solicitud {solicitud.codigo}: {str(e)}")
 
+def enviar_correo_pdf_resultado_consulta(solicitud):
+    """
+    Envía un correo con PDF adjunto al propietario cuando la etapa cambia a 'Resultado Consulta'
+    """
+    try:
+        # Validar que la solicitud tenga propietario con email válido
+        if not solicitud.propietario or not solicitud.propietario.email:
+            print(f"❌ No se puede enviar correo para solicitud {solicitud.codigo}: propietario sin email válido")
+            return
+
+        # Importar aquí para evitar dependencias circulares
+        from io import BytesIO
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+
+        # Generar el PDF en memoria
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        styles = getSampleStyleSheet()
+        content = []
+
+        # Título
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.darkblue,
+            spaceAfter=20,
+            alignment=1  # Center
+        )
+        content.append(Paragraph(f"RESULTADO CONSULTA - SOLICITUD {solicitud.codigo}", title_style))
+        content.append(Spacer(1, 20))
+
+        # Información del cliente
+        if hasattr(solicitud, 'cliente') and solicitud.cliente:
+            cliente_info = [
+                ['Cliente:', getattr(solicitud, 'cliente_nombre_completo', 'No disponible')],
+                ['Cédula:', getattr(solicitud, 'cliente_cedula_completa', 'No disponible')],
+                ['Fecha de Solicitud:', solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible']
+            ]
+        else:
+            cliente_info = [
+                ['Cliente:', 'No disponible'],
+                ['Cédula:', 'No disponible'],
+                ['Fecha de Solicitud:', solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible']
+            ]
+
+        cliente_table = Table(cliente_info, colWidths=[2*72, 4*72])
+        cliente_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        content.append(cliente_table)
+        content.append(Spacer(1, 20))
+
+        # Resumen Completo (usar motivo_consulta)
+        content.append(Paragraph("RESUMEN COMPLETO", styles['Heading2']))
+        resumen_text = solicitud.motivo_consulta if solicitud.motivo_consulta else "No disponible"
+        content.append(Paragraph(resumen_text, styles['Normal']))
+        content.append(Spacer(1, 15))
+
+        # Análisis General (usar comentarios de analista)
+        from workflow.modelsWorkflow import SolicitudComentario
+        comentarios_analista = SolicitudComentario.objects.filter(
+            solicitud=solicitud,
+            tipo="analista_credito"
+        ).order_by("-fecha_creacion")
+        
+        if comentarios_analista.exists():
+            content.append(Paragraph("ANÁLISIS GENERAL", styles['Heading2']))
+            for comentario in comentarios_analista:
+                analisis_text = comentario.comentario if comentario.comentario else "No disponible"
+                content.append(Paragraph(analisis_text, styles['Normal']))
+                content.append(Spacer(1, 10))
+        else:
+            content.append(Paragraph("ANÁLISIS GENERAL", styles['Heading2']))
+            content.append(Paragraph("No disponible", styles['Normal']))
+        content.append(Spacer(1, 15))
+
+        # Comentarios por ítem
+        from workflow.models import ComentarioDocumentoBackoffice
+        comentarios = ComentarioDocumentoBackoffice.objects.filter(requisito_solicitud__solicitud=solicitud).order_by('requisito_solicitud__requisito__nombre')
+        
+        if comentarios.exists():
+            content.append(Paragraph("COMENTARIOS POR ÍTEM", styles['Heading2']))
+            
+            for comentario in comentarios:
+                item_name = comentario.requisito_solicitud.requisito.nombre if comentario.requisito_solicitud and comentario.requisito_solicitud.requisito else "Ítem sin nombre"
+                comentario_text = comentario.comentario if comentario.comentario else "Sin comentario"
+                
+                content.append(Paragraph(f"<b>{item_name}:</b>", styles['Normal']))
+                content.append(Paragraph(comentario_text, styles['Normal']))
+                content.append(Spacer(1, 10))
+
+        # Construir el PDF
+        doc.build(content)
+        buffer.seek(0)
+        pdf_content = buffer.getvalue()
+        buffer.close()
+
+        # Determinar colores basados en el subestado
+        subestado_nombre = solicitud.subestado_actual.nombre.lower() if solicitud.subestado_actual else ""
+        
+        # Configuración de colores según subestado
+        if 'aprobado' in subestado_nombre or 'aprueba' in subestado_nombre or 'autorizado' in subestado_nombre:
+            header_color = "linear-gradient(135deg, #28a745 0%, #20c997 100%)"  # Verde
+            status_color = "#28a745"
+            status_color_rgb = "40, 167, 69"  # Verde en RGB
+            status_icon = "fas fa-check-circle"
+            status_text = "Aprobado"
+        elif 'alternativa' in subestado_nombre:
+            header_color = "linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)"  # Amarillo/Naranja
+            status_color = "#ffc107"
+            status_color_rgb = "255, 193, 7"  # Amarillo en RGB
+            status_icon = "fas fa-exclamation-triangle"
+            status_text = "Alternativa"
+        elif 'rechazado' in subestado_nombre or 'rechaza' in subestado_nombre or 'negado' in subestado_nombre:
+            header_color = "linear-gradient(135deg, #dc3545 0%, #c82333 100%)"  # Rojo
+            status_color = "#dc3545"
+            status_color_rgb = "220, 53, 69"  # Rojo en RGB
+            status_icon = "fas fa-times-circle"
+            status_text = "Rechazado"
+        else:
+            header_color = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"  # Azul por defecto
+            status_color = "#667eea"
+            status_color_rgb = "102, 126, 234"  # Azul en RGB
+            status_icon = "fas fa-info-circle"
+            status_text = "En Proceso"
+
+        # Preparar secciones dinámicas ANTES del template
+        analisis_section = ""
+        if comentarios_analista.exists():
+            analisis_section = """
+            <div class="analisis-section">
+                <h4><i class="fas fa-chart-line"></i> Análisis General</h4>
+            """
+            for comentario in comentarios_analista:
+                analisis_text = comentario.comentario if comentario.comentario else "No disponible"
+                analisis_section += f'<p style="line-height: 1.6; margin-bottom: 15px;">{analisis_text}</p>'
+            analisis_section += "</div>"
+        else:
+            analisis_section = """
+            <div class="analisis-section">
+                <h4><i class="fas fa-chart-line"></i> Análisis General</h4>
+                <p style="line-height: 1.6; color: #6c757d;">No hay análisis general disponible.</p>
+            </div>
+            """
+
+        comentarios_section = ""
+        if comentarios.exists():
+            comentarios_section = f"""
+            <div class="comentarios-section">
+                <h4><i class="fas fa-comments"></i> Comentarios por Ítem</h4>
+            """
+            for comentario in comentarios:
+                item_name = comentario.requisito_solicitud.requisito.nombre if comentario.requisito_solicitud and comentario.requisito_solicitud.requisito else "Ítem sin nombre"
+                comentario_text = comentario.comentario if comentario.comentario else "Sin comentario"
+                comentarios_section += f"""
+                <div class="comentario-item">
+                    <div style="font-weight: 600; color: {status_color}; margin-bottom: 8px;">{item_name}</div>
+                    <div style="color: #495057; line-height: 1.5;">{comentario_text}</div>
+                </div>
+                """
+            comentarios_section += "</div>"
+
+        # Preparar el correo
+        asunto = f"Resultado Consulta - Solicitud {solicitud.codigo}"
+        mensaje_html = f"""
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Resultado de Consulta - Solicitud {solicitud.codigo}</title>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background-color: #f8f9fa;
+                    color: #333;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{
+                    background: {header_color};
+                    padding: 30px 40px;
+                    text-align: center;
+                    position: relative;
+                }}
+                .header::before {{
+                    content: '';
+                    position: absolute;
+                    top: -20px;
+                    right: -20px;
+                    width: 80px;
+                    height: 80px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 50%;
+                    transform: rotate(45deg);
+                }}
+                .logo {{
+                    width: 60px;
+                    height: 60px;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                    backdrop-filter: blur(10px);
+                }}
+                .logo i {{
+                    font-size: 2rem;
+                    color: white;
+                }}
+                .header h1 {{
+                    color: white;
+                    margin: 0;
+                    font-size: 1.8rem;
+                    font-weight: 700;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                }}
+                .header p {{
+                    color: rgba(255, 255, 255, 0.9);
+                    margin: 8px 0 0;
+                    font-size: 1rem;
+                }}
+                .content {{
+                    padding: 40px;
+                }}
+                .alert-box {{
+                    background: linear-gradient(135deg, rgba({status_color_rgb}, 0.1) 0%, rgba({status_color_rgb}, 0.05) 100%);
+                    border: 1px solid {status_color};
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-bottom: 30px;
+                    text-align: center;
+                }}
+                .alert-box h3 {{
+                    color: {status_color};
+                    margin: 0 0 10px 0;
+                    font-size: 1.3rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }}
+                .alert-box p {{
+                    color: #424242;
+                    margin: 5px 0;
+                    font-size: 0.95rem;
+                }}
+                .solicitud-info {{
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    padding: 25px;
+                    margin-bottom: 30px;
+                }}
+                .solicitud-info h4 {{
+                    color: #495057;
+                    margin: 0 0 20px 0;
+                    font-size: 1.2rem;
+                    display: flex;
+                    align-items: center;
+                }}
+                .solicitud-info h4 i {{
+                    margin-right: 10px;
+                    color: {status_color};
+                }}
+                .info-grid {{
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 15px;
+                }}
+                .info-item {{
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 12px;
+                    background: white;
+                    border-radius: 8px;
+                    border: 1px solid #e9ecef;
+                }}
+                .info-item i {{
+                    color: {status_color};
+                    font-size: 1.1rem;
+                    width: 20px;
+                    text-align: center;
+                }}
+                .info-item span {{
+                    color: #495057;
+                    font-size: 0.9rem;
+                }}
+                .btn-container {{
+                    text-align: center;
+                    margin: 30px 0;
+                }}
+                .btn-primary {{
+                    background: {header_color};
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 25px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba({status_color_rgb}, 0.3);
+                }}
+                .btn-primary:hover {{
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba({status_color_rgb}, 0.4);
+                    color: white;
+                    text-decoration: none;
+                }}
+                .analisis-section {{
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    padding: 25px;
+                    margin-bottom: 30px;
+                }}
+                .analisis-section h4 {{
+                    color: #495057;
+                    margin: 0 0 15px 0;
+                    font-size: 1.1rem;
+                    display: flex;
+                    align-items: center;
+                }}
+                .analisis-section h4 i {{
+                    margin-right: 10px;
+                    color: {status_color};
+                }}
+                .comentarios-section {{
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    padding: 25px;
+                    margin-bottom: 30px;
+                }}
+                .comentarios-section h4 {{
+                    color: #495057;
+                    margin: 0 0 20px 0;
+                    font-size: 1.2rem;
+                    display: flex;
+                    align-items: center;
+                }}
+                .comentarios-section h4 i {{
+                    margin-right: 10px;
+                    color: {status_color};
+                }}
+                .comentario-item {{
+                    background: white;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    border-left: 4px solid {status_color};
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                }}
+                .footer {{
+                    background: #f8f9fa;
+                    padding: 20px 40px;
+                    text-align: center;
+                    border-top: 1px solid #e9ecef;
+                }}
+                .footer p {{
+                    margin: 5px 0;
+                    color: #6c757d;
+                    font-size: 0.85rem;
+                }}
+                .footer strong {{
+                    color: #495057;
+                }}
+                @media (max-width: 600px) {{
+                    .container {{
+                        margin: 10px;
+                        border-radius: 8px;
+                    }}
+                    .content {{
+                        padding: 25px 20px;
+                    }}
+                    .header {{
+                        padding: 25px 20px;
+                    }}
+                    .info-grid {{
+                        grid-template-columns: 1fr;
+                    }}
+                    .btn-primary {{
+                        padding: 12px 25px;
+                        font-size: 0.9rem;
+                    }}
+                }}
+            </style>
+            <!-- Font Awesome for icons -->
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+        </head>
+        <body>
+            <div class="container">
+                <!-- Header -->
+                <div class="header">
+                    <div class="logo">
+                        <i class="{status_icon}"></i>
+                    </div>
+                    <h1>Resultado de Consulta</h1>
+                    <p>Solicitud {solicitud.codigo} - {status_text}</p>
+                </div>
+                
+                <!-- Content -->
+                <div class="content">
+                    <!-- Alert Box -->
+                    <div class="alert-box">
+                        <h3><i class="{status_icon}"></i> {status_text}</h3>
+                        <p>Su solicitud ha completado el proceso de análisis y consulta.</p>
+                        <p>Encontrará adjunto el reporte completo con todos los detalles y conclusiones.</p>
+                    </div>
+                    
+                    <!-- Solicitud Info -->
+                    <div class="solicitud-info">
+                        <h4><i class="fas fa-file-alt"></i> Información de la Solicitud</h4>
+                        
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <i class="fas fa-hashtag"></i>
+                                <span><strong>Código:</strong> {solicitud.codigo}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-user"></i>
+                                <span><strong>Cliente:</strong> {getattr(solicitud, 'cliente_nombre_completo', 'No disponible')}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-calendar"></i>
+                                <span><strong>Fecha:</strong> {solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible'}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-flag"></i>
+                                <span><strong>Estado:</strong> {status_text}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-layer-group"></i>
+                                <span><strong>Pipeline:</strong> {solicitud.pipeline.nombre if solicitud.pipeline else 'No disponible'}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span><strong>Etapa:</strong> {solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'No disponible'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Análisis General -->
+                    {analisis_section}
+                    
+                    <!-- Comentarios por Ítem -->
+                    {comentarios_section}
+                    
+                    <!-- Action Button -->
+                    <div class="btn-container">
+                        <a href="#" class="btn-primary">
+                            <i class="fas fa-download"></i>
+                            Ver Reporte Completo (PDF Adjunto)
+                        </a>
+                    </div>
+                    
+                    <p style="color: #6c757d; font-size: 0.9rem; text-align: center; margin-top: 30px;">
+                        <i class="fas fa-info-circle"></i>
+                        Este correo incluye el reporte completo de su consulta como archivo adjunto en formato PDF.
+                    </p>
+                </div>
+                
+                <!-- Footer -->
+                <div class="footer">
+                    <p><strong>Equipo de Análisis</strong></p>
+                    <p>📧 Financiera Pacífico</p>
+                    <p>⚠️ Este es un correo automático, por favor no responder a esta dirección.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        mensaje_texto = f"""
+        Resultado de Consulta - Solicitud {solicitud.codigo} - {status_text}
+        
+        Estimado/a {solicitud.propietario.get_full_name() or solicitud.propietario.username},
+        
+        Su solicitud {solicitud.codigo} ha completado el proceso de análisis y consulta con resultado: {status_text}
+        
+        INFORMACIÓN DE LA SOLICITUD:
+        - Código: {solicitud.codigo}
+        - Cliente: {getattr(solicitud, 'cliente_nombre_completo', 'No disponible')}
+        - Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible'}
+        - Estado: {status_text}
+        - Pipeline: {solicitud.pipeline.nombre if solicitud.pipeline else 'No disponible'}
+        - Etapa: {solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'No disponible'}
+        
+        ADJUNTO:
+        Encontrará el reporte completo con todos los detalles del análisis en formato PDF.
+        
+        El documento incluye:
+        - Análisis general de la solicitud
+        - Comentarios específicos por cada ítem evaluado
+        - Conclusiones del proceso de consulta
+        
+        Si tiene alguna consulta sobre este resultado, no dude en contactarnos.
+        
+        Saludos cordiales,
+        Equipo de Análisis
+        Financiera Pacífico
+        
+        ---
+        Este es un correo automático, por favor no responder a esta dirección.
+        """
+
+        # Crear y enviar el email
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=mensaje_texto,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[solicitud.propietario.email]
+        )
+        
+        email.attach_alternative(mensaje_html, "text/html")
+        
+        # Adjuntar el PDF
+        filename = f"resultado_consulta_solicitud_{solicitud.codigo}.pdf"
+        email.attach(filename, pdf_content, 'application/pdf')
+
+        # Enviar email con manejo de SSL
+        try:
+            email.send()
+        except Exception as ssl_error:
+            print(f"⚠️ Error detectado, intentando con contexto SSL personalizado: {ssl_error}")
+            # Crear contexto SSL que no verifica certificados
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Reenviar con contexto SSL personalizado
+            from django.core.mail import get_connection
+            connection = get_connection()
+            connection.ssl_context = ssl_context
+            email.connection = connection
+            email.send()
+        
+        print(f"✅ Correo con PDF de Resultado Consulta enviado correctamente para solicitud {solicitud.codigo} a {solicitud.propietario.email}")
+        
+    except Exception as e:
+        print(f"❌ Error al enviar correo de Resultado Consulta para solicitud {solicitud.codigo}: {str(e)}")
+
 
 def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None):
     """
@@ -6901,6 +7464,14 @@ def api_cambiar_etapa(request, solicitud_id):
                 request.user,
                 request
             )
+            
+            # Enviar correo especial con PDF para etapa "Resultado Consulta"
+            if nueva_etapa.nombre == "Resultado Consulta":
+                print(f"📧 Enviando correo con PDF de Resultado Consulta para solicitud {solicitud.codigo}")
+                try:
+                    enviar_correo_pdf_resultado_consulta(solicitud)
+                except Exception as e:
+                    print(f"⚠️ Error al enviar correo con PDF de Resultado Consulta: {e}")
         except Exception as e:
             print(f"⚠️ Error al enviar correo al propietario: {e}")
         
@@ -13573,3 +14144,799 @@ def api_remover_usuario_canal_digital(request):
             'success': False,
             'error': str(e)
         })
+
+# ==========================================
+# API PARA SOLICITUDES PROCESADAS
+# ==========================================
+
+@login_required
+def api_solicitudes_procesadas(request):
+    """API para obtener solicitudes procesadas por el usuario actual"""
+    try:
+        # Obtener parámetros de filtro y paginación
+        filtro = request.GET.get('filtro', 'todas')
+        pagina = int(request.GET.get('pagina', 1))
+        por_pagina = 10
+        
+        # Construir query base según el tipo de usuario
+        if request.user.is_staff or request.user.is_superuser:
+            # Supervisores y superusuarios pueden ver TODAS las solicitudes procesadas
+            base_query = Solicitud.objects.exclude(
+                # Excluir solicitudes activas (que aún están en progreso)
+                etapa_actual__nombre__in=['En Proceso', 'Pendiente', 'En Revisión']
+            ).distinct()
+        else:
+            # Usuarios regulares - solo solicitudes donde participaron
+            base_query = Solicitud.objects.filter(
+                Q(creada_por=request.user) |
+                Q(historial__usuario=request.user) |
+                Q(asignada_a=request.user)
+            ).exclude(
+                # Excluir solicitudes activas (que aún están en progreso)
+                etapa_actual__nombre__in=['En Proceso', 'Pendiente', 'En Revisión']
+            ).distinct()
+        
+        # Aplicar filtros específicos
+        if filtro == 'ultima_semana':
+            fecha_limite = timezone.now() - timedelta(days=7)
+            base_query = base_query.filter(fecha_ultima_actualizacion__gte=fecha_limite)
+        elif filtro == 'ultimo_mes':
+            fecha_limite = timezone.now() - timedelta(days=30)
+            base_query = base_query.filter(fecha_ultima_actualizacion__gte=fecha_limite)
+        elif filtro == 'completadas':
+            base_query = base_query.filter(
+                etapa_actual__nombre__in=['Completada', 'Aprobada', 'Finalizada']
+            )
+        elif filtro == 'rechazadas':
+            base_query = base_query.filter(
+                etapa_actual__nombre__in=['Rechazada', 'Denegada', 'Cancelada']
+            )
+        
+        # Ordenar por fecha más reciente
+        base_query = base_query.order_by('-fecha_ultima_actualizacion')
+        
+        # Paginación
+        total_solicitudes = base_query.count()
+        total_paginas = (total_solicitudes + por_pagina - 1) // por_pagina
+        inicio = (pagina - 1) * por_pagina
+        fin = inicio + por_pagina
+        
+        solicitudes_paginadas = base_query[inicio:fin]
+        
+        # Serializar datos
+        solicitudes_data = []
+        for solicitud in solicitudes_paginadas:
+            # Determinar el estado final basado en la etapa actual
+            estado_final = 'completada'  # Por defecto
+            if solicitud.etapa_actual:
+                etapa_nombre = solicitud.etapa_actual.nombre.lower()
+                if any(word in etapa_nombre for word in ['rechaz', 'deneg', 'cancel']):
+                    estado_final = 'rechazada'
+                elif any(word in etapa_nombre for word in ['cancel', 'anula']):
+                    estado_final = 'cancelada'
+            
+            # Verificar si el usuario puede ver los detalles
+            if request.user.is_staff or request.user.is_superuser:
+                # Supervisores y superusuarios pueden ver todos los detalles
+                puede_ver_detalle = True
+            else:
+                # Usuarios regulares - solo si participaron en la solicitud
+                puede_ver_detalle = (
+                    solicitud.creada_por == request.user or
+                    solicitud.asignada_a == request.user or
+                    HistorialSolicitud.objects.filter(
+                        solicitud=solicitud, 
+                        usuario=request.user
+                    ).exists()
+                )
+            
+            # Obtener el nombre del cliente
+            cliente_nombre = 'Cliente no especificado'
+            if solicitud.cliente:
+                cliente_nombre = f"{solicitud.cliente.primer_nombre} {solicitud.cliente.primer_apellido}"
+            elif solicitud.cliente_nombre:
+                cliente_nombre = solicitud.cliente_nombre
+            
+            # Obtener información del usuario que procesó la solicitud (último historial)
+            ultimo_historial = HistorialSolicitud.objects.filter(
+                solicitud=solicitud
+            ).order_by('-fecha_inicio').first()
+            
+            procesado_por = 'Sistema'
+            if ultimo_historial and ultimo_historial.usuario:
+                procesado_por = ultimo_historial.usuario.get_full_name() or ultimo_historial.usuario.username
+            elif solicitud.asignada_a:
+                procesado_por = solicitud.asignada_a.get_full_name() or solicitud.asignada_a.username
+            elif solicitud.creada_por:
+                procesado_por = solicitud.creada_por.get_full_name() or solicitud.creada_por.username
+            
+            solicitud_data = {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente_nombre,
+                'etapa_final': solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa',
+                'fecha_procesada': solicitud.fecha_ultima_actualizacion.isoformat(),
+                'estado_final': estado_final,
+                'puede_ver_detalle': puede_ver_detalle,
+                'pipeline': solicitud.pipeline.nombre if solicitud.pipeline else 'Sin pipeline',
+                'procesado_por': procesado_por,
+                'creado_por': solicitud.creada_por.get_full_name() or solicitud.creada_por.username if solicitud.creada_por else 'Desconocido',
+                'es_supervisor_view': request.user.is_staff or request.user.is_superuser,
+            }
+            
+            solicitudes_data.append(solicitud_data)
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes': solicitudes_data,
+            'total_solicitudes': total_solicitudes,
+            'total_paginas': total_paginas,
+            'pagina_actual': pagina,
+            'por_pagina': por_pagina,
+            'filtro_aplicado': filtro,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        })
+
+# ==========================================
+# PDF RESULTADO CONSULTA API
+# ==========================================
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_pdf_resultado_consulta(request, solicitud_id):
+    """
+    API para generar PDF con el resultado de la consulta de análisis
+    """
+    try:
+        # Obtener solicitud
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Parsear datos del request
+        data = json.loads(request.body) if request.body else {}
+        
+        # Obtener calificaciones existentes de la base de datos
+        calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
+        
+        # Obtener comentarios de analista
+        comentarios_analista = SolicitudComentario.objects.filter(
+            solicitud=solicitud,
+            tipo="analista_credito"
+        ).order_by("-fecha_creacion")
+        
+        # Preparar datos para el PDF
+        pdf_data = {
+            "solicitud": solicitud,
+            "calificaciones": calificaciones,
+            "comentarios_analista": comentarios_analista,
+            "analyst_comment": data.get("analyst_comment", ""),
+            "compliance_ratings": data.get("compliance_ratings", []),
+            "field_values": data.get("field_values", {}),
+            "usuario_generador": request.user,
+            "fecha_generacion": timezone.now(),
+        }
+        
+        # Generar PDF
+        pdf_buffer = generar_pdf_resultado_consulta(pdf_data)
+        
+        # Preparar respuesta
+        response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+        filename = f"Resultado_Consulta_{solicitud.codigo}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
+        
+        return response
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Solicitud no encontrada"
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "error": "Datos JSON inválidos"
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": f"Error interno: {str(e)}"
+        }, status=500)
+
+
+def generar_pdf_resultado_consulta(pdf_data):
+    """
+    Genera el PDF con el resultado de la consulta de análisis
+    """
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from django.conf import settings
+    import os
+    
+    buffer = io.BytesIO()
+    
+    # Crear documento PDF
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Heading1"],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.darkblue
+    )
+    
+    document_title_style = ParagraphStyle(
+        "DocumentTitle",
+        parent=styles["Heading1"],
+        fontSize=14,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.darkgreen
+    )
+    
+    subtitle_style = ParagraphStyle(
+        "CustomSubtitle",
+        parent=styles["Heading2"],
+        fontSize=14,
+        spaceAfter=12,
+        textColor=colors.darkgreen
+    )
+    
+    normal_style = ParagraphStyle(
+        "CustomNormal",
+        parent=styles["Normal"],
+        fontSize=10,
+        spaceAfter=6,
+        alignment=TA_JUSTIFY
+    )
+    
+    # Elementos del documento
+    elements = []
+    
+    # Logo de la empresa
+    try:
+        # Buscar el logo en diferentes ubicaciones posibles
+        logo_paths = [
+            os.path.join(settings.STATICFILES_DIRS[0], 'logoColor.png') if settings.STATICFILES_DIRS else None,
+            os.path.join(settings.STATIC_ROOT, 'logoColor.png') if settings.STATIC_ROOT else None,
+            os.path.join(settings.BASE_DIR, 'staticfiles', 'logoColor.png'),
+            os.path.join(settings.BASE_DIR, 'static', 'images', 'logoColor.png'),
+            os.path.join(settings.BASE_DIR, 'staticfiles', 'images', 'logoColor.png'),
+        ]
+        
+        logo_path = None
+        for path in logo_paths:
+            if path and os.path.exists(path):
+                logo_path = path
+                break
+        
+        if logo_path:
+            # Crear imagen del logo
+            logo = Image(logo_path, width=2*inch, height=1*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+            elements.append(Spacer(1, 20))
+        else:
+            # Si no se encuentra el logo, agregar el nombre de la empresa
+            company_name = Paragraph("Financiera Pacífico", title_style)
+            elements.append(company_name)
+            elements.append(Spacer(1, 20))
+            
+    except Exception as e:
+        # Fallback en caso de error con el logo
+        company_name = Paragraph("Financiera Pacífico", title_style)
+        elements.append(company_name)
+        elements.append(Spacer(1, 20))
+    
+    # Título principal
+    solicitud = pdf_data["solicitud"]
+    title = Paragraph(f"Resultado de Consulta - Análisis de Solicitud {solicitud.codigo}", document_title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+    
+    # Información general de la solicitud
+    elements.append(Paragraph("Resumen Completo de la Solicitud", subtitle_style))
+    
+    # Crear tabla con información básica
+    solicitud_info = [
+        ["Código de Solicitud:", solicitud.codigo or "-"],
+        ["Pipeline:", solicitud.pipeline.nombre if solicitud.pipeline else "-"],
+        ["Etapa Actual:", solicitud.etapa_actual.nombre if solicitud.etapa_actual else "-"],
+        ["Cliente:", (solicitud.cliente.nombreCliente or '') if solicitud.cliente else "-"],
+        ["Cédula/Documento:", solicitud.cliente.cedulaCliente if solicitud.cliente else "-"],
+        ["Fecha de Creación:", solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else "-"],
+        ["Asignado a:", f"{solicitud.asignada_a.first_name} {solicitud.asignada_a.last_name}" if solicitud.asignada_a else "Sin asignar"],
+        ["Prioridad:", solicitud.prioridad or "-"],
+    ]
+    
+    # Agregar información de cotización si existe
+    if solicitud.cotizacion:
+        solicitud_info.extend([
+            ["Monto Préstamo:", f"B/. {solicitud.cotizacion.montoPrestamo:,.2f}" if solicitud.cotizacion.montoPrestamo else "-"],
+            ["Plazo:", f"{solicitud.cotizacion.plazoPago} meses" if solicitud.cotizacion.plazoPago else "-"],
+            ["Tasa:", f"{solicitud.cotizacion.tasaInteres}%" if solicitud.cotizacion.tasaInteres else "-"],
+        ])
+    
+    info_table = Table(solicitud_info, colWidths=[2*inch, 3*inch])
+    info_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+    
+    # Motivo de la consulta
+    if solicitud.motivo_consulta:
+        elements.append(Paragraph("Motivo de la Consulta", subtitle_style))
+        motivo_text = Paragraph(solicitud.motivo_consulta, normal_style)
+        elements.append(motivo_text)
+        elements.append(Spacer(1, 15))
+    
+    # Comentarios de campos (calificaciones)
+    calificaciones = pdf_data["calificaciones"]
+    if calificaciones:
+        elements.append(Paragraph("Comentarios de Campos (Auto-generados)", subtitle_style))
+        
+        for cal in calificaciones:
+            campo_name = obtener_nombre_campo_legible(cal.campo, solicitud)
+            estado_text = "✓ Bueno" if cal.estado == "bueno" else "✗ Malo"
+            estado_color = colors.green if cal.estado == "bueno" else colors.red
+            
+            # Crear párrafo con el campo y estado
+            campo_paragraph = Paragraph(
+                f"<b>{campo_name}:</b> <font color=\"{estado_color.hexval()}\">{estado_text}</font>",
+                normal_style
+            )
+            elements.append(campo_paragraph)
+            
+            # Agregar comentario si existe
+            if cal.comentario:
+                comentario_paragraph = Paragraph(
+                    f"&nbsp;&nbsp;&nbsp;&nbsp;<i>Comentario: {cal.comentario}</i>",
+                    normal_style
+                )
+                elements.append(comentario_paragraph)
+        
+        elements.append(Spacer(1, 15))
+    
+    # Análisis General del Analista
+    elementos_analisis = []
+    
+    # Comentario del analista desde el formulario
+    if pdf_data.get("analyst_comment"):
+        elementos_analisis.append(("Análisis Actual:", pdf_data["analyst_comment"]))
+    
+    # Comentarios históricos del analista
+    comentarios_analista = pdf_data["comentarios_analista"]
+    if comentarios_analista:
+        for i, comentario in enumerate(comentarios_analista[:3]):  # Últimos 3 comentarios
+            fecha_str = comentario.fecha_creacion.strftime('%d/%m/%Y %H:%M')
+            usuario_str = f"{comentario.usuario.first_name} {comentario.usuario.last_name}"
+            elementos_analisis.append((
+                f"Comentario {i+1} ({fecha_str} - {usuario_str}):",
+                comentario.contenido
+            ))
+    
+    if elementos_analisis:
+        elements.append(Paragraph("Análisis General", subtitle_style))
+        
+        for titulo, contenido in elementos_analisis:
+            elements.append(Paragraph(f"<b>{titulo}</b>", normal_style))
+            elements.append(Paragraph(contenido, normal_style))
+            elements.append(Spacer(1, 8))
+    
+    # Información del generador del reporte
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Información del Reporte", subtitle_style))
+    
+    usuario_generador = pdf_data["usuario_generador"]
+    fecha_generacion = pdf_data["fecha_generacion"]
+    
+    info_reporte = [
+        ["Generado por:", f"{usuario_generador.first_name} {usuario_generador.last_name} ({usuario_generador.username})"],
+        ["Fecha de Generación:", fecha_generacion.strftime('%d/%m/%Y %H:%M:%S')],
+        ["Sistema:", "PACIFICO - Sistema de Workflow"]
+    ]
+    
+    reporte_table = Table(info_reporte, colWidths=[2*inch, 3*inch])
+    reporte_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.lightblue),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    
+    elements.append(reporte_table)
+    
+    # Construir PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return buffer
+
+
+# ==========================================
+# PDF RESULTADO COMITÉ API
+# ==========================================
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_pdf_resultado_comite(request, solicitud_id):
+    """
+    API para generar PDF con el resultado del comité de análisis
+    """
+    try:
+        # Obtener solicitud
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Parsear datos del request
+        data = json.loads(request.body) if request.body else {}
+        
+        # Obtener calificaciones existentes de la base de datos
+        calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
+        
+        # Obtener comentarios de analista
+        comentarios_analista = SolicitudComentario.objects.filter(
+            solicitud=solicitud,
+            tipo="analista_credito"
+        ).order_by("-fecha_creacion")
+        
+        # Obtener participaciones del comité
+        from .modelsWorkflow import ParticipacionComite, NivelComite
+        participaciones_comite = ParticipacionComite.objects.filter(
+            solicitud=solicitud
+        ).select_related('usuario', 'nivel').order_by('nivel__orden', 'fecha_modificacion')
+        
+        # Preparar datos para el PDF
+        pdf_data = {
+            "solicitud": solicitud,
+            "calificaciones": calificaciones,
+            "comentarios_analista": comentarios_analista,
+            "participaciones_comite": participaciones_comite,
+            "analyst_comment": data.get("analyst_comment", ""),
+            "compliance_ratings": data.get("compliance_ratings", []),
+            "field_values": data.get("field_values", {}),
+            "usuario_generador": request.user,
+            "fecha_generacion": timezone.now(),
+        }
+        
+        # Generar PDF
+        pdf_buffer = generar_pdf_resultado_comite(pdf_data)
+        
+        # Preparar respuesta
+        response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+        filename = f"Resultado_Comite_{solicitud.codigo}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
+        
+        return response
+        
+    except Solicitud.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Solicitud no encontrada"
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "success": False,
+            "error": "Datos JSON inválidos"
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": f"Error interno: {str(e)}"
+        }, status=500)
+
+
+def generar_pdf_resultado_comite(pdf_data):
+    """
+    Genera el PDF con el resultado del comité de análisis
+    """
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.lib.units import inch
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from django.conf import settings
+    import os
+    
+    buffer = io.BytesIO()
+    
+    # Crear documento PDF
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Heading1"],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.darkblue
+    )
+    
+    document_title_style = ParagraphStyle(
+        "DocumentTitle",
+        parent=styles["Heading1"],
+        fontSize=14,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.darkgreen
+    )
+    
+    subtitle_style = ParagraphStyle(
+        "CustomSubtitle",
+        parent=styles["Heading2"],
+        fontSize=14,
+        spaceAfter=12,
+        textColor=colors.darkgreen
+    )
+    
+    normal_style = ParagraphStyle(
+        "CustomNormal",
+        parent=styles["Normal"],
+        fontSize=10,
+        spaceAfter=6,
+        alignment=TA_JUSTIFY
+    )
+    
+    # Elementos del documento
+    elements = []
+    
+    # Logo de la empresa
+    try:
+        # Buscar el logo en diferentes ubicaciones posibles
+        logo_paths = [
+            os.path.join(settings.STATICFILES_DIRS[0], 'logoColor.png') if settings.STATICFILES_DIRS else None,
+            os.path.join(settings.STATIC_ROOT, 'logoColor.png') if settings.STATIC_ROOT else None,
+            os.path.join(settings.BASE_DIR, 'staticfiles', 'logoColor.png'),
+            os.path.join(settings.BASE_DIR, 'static', 'images', 'logoColor.png'),
+            os.path.join(settings.BASE_DIR, 'staticfiles', 'images', 'logoColor.png'),
+        ]
+        
+        logo_path = None
+        for path in logo_paths:
+            if path and os.path.exists(path):
+                logo_path = path
+                break
+        
+        if logo_path:
+            # Crear imagen del logo
+            logo = Image(logo_path, width=2*inch, height=1*inch)
+            logo.hAlign = 'CENTER'
+            elements.append(logo)
+            elements.append(Spacer(1, 20))
+        else:
+            # Si no se encuentra el logo, agregar el nombre de la empresa
+            company_name = Paragraph("Financiera Pacífico", title_style)
+            elements.append(company_name)
+            elements.append(Spacer(1, 20))
+            
+    except Exception as e:
+        # Fallback en caso de error con el logo
+        company_name = Paragraph("Financiera Pacífico", title_style)
+        elements.append(company_name)
+        elements.append(Spacer(1, 20))
+    
+    # Título principal
+    solicitud = pdf_data["solicitud"]
+    title = Paragraph(f"Resultado de Comité - Análisis de Solicitud {solicitud.codigo}", document_title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+    
+    # Información general de la solicitud
+    elements.append(Paragraph("Resumen Completo de la Solicitud", subtitle_style))
+    
+    # Crear tabla con información básica
+    solicitud_info = [
+        ["Código de Solicitud:", solicitud.codigo or "-"],
+        ["Pipeline:", solicitud.pipeline.nombre if solicitud.pipeline else "-"],
+        ["Etapa Actual:", solicitud.etapa_actual.nombre if solicitud.etapa_actual else "-"],
+        ["Cliente:", (solicitud.cliente.nombreCliente or '') if solicitud.cliente else "-"],
+        ["Cédula/Documento:", solicitud.cliente.cedulaCliente if solicitud.cliente else "-"],
+        ["Fecha de Creación:", solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else "-"],
+        ["Asignado a:", f"{solicitud.asignada_a.first_name} {solicitud.asignada_a.last_name}" if solicitud.asignada_a else "Sin asignar"],
+        ["Prioridad:", solicitud.prioridad or "-"],
+    ]
+    
+    # Agregar información de cotización si existe
+    if solicitud.cotizacion:
+        solicitud_info.extend([
+            ["Monto Préstamo:", f"B/. {solicitud.cotizacion.montoPrestamo:,.2f}" if solicitud.cotizacion.montoPrestamo else "-"],
+            ["Plazo:", f"{solicitud.cotizacion.plazoPago} meses" if solicitud.cotizacion.plazoPago else "-"],
+            ["Tasa:", f"{solicitud.cotizacion.tasaInteres}%" if solicitud.cotizacion.tasaInteres else "-"],
+        ])
+    
+    info_table = Table(solicitud_info, colWidths=[2*inch, 3*inch])
+    info_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+    
+    # Motivo de la consulta
+    if solicitud.motivo_consulta:
+        elements.append(Paragraph("Motivo de la Consulta", subtitle_style))
+        motivo_text = Paragraph(solicitud.motivo_consulta, normal_style)
+        elements.append(motivo_text)
+        elements.append(Spacer(1, 15))
+    
+    # Comentarios de campos (calificaciones)
+    calificaciones = pdf_data["calificaciones"]
+    if calificaciones:
+        elements.append(Paragraph("Comentarios de Campos (Auto-generados)", subtitle_style))
+        
+        for cal in calificaciones:
+            campo_name = obtener_nombre_campo_legible(cal.campo, solicitud)
+            estado_text = "✓ Bueno" if cal.estado == "bueno" else "✗ Malo"
+            estado_color = colors.green if cal.estado == "bueno" else colors.red
+            
+            # Crear párrafo con el campo y estado
+            campo_paragraph = Paragraph(
+                f"<b>{campo_name}:</b> <font color=\"{estado_color.hexval()}\">{estado_text}</font>",
+                normal_style
+            )
+            elements.append(campo_paragraph)
+            
+            # Agregar comentario si existe
+            if cal.comentario:
+                comentario_paragraph = Paragraph(
+                    f"&nbsp;&nbsp;&nbsp;&nbsp;<i>Comentario: {cal.comentario}</i>",
+                    normal_style
+                )
+                elements.append(comentario_paragraph)
+        
+        elements.append(Spacer(1, 15))
+    
+    # Análisis General del Analista
+    elementos_analisis = []
+    
+    # Comentario del analista desde el formulario
+    if pdf_data.get("analyst_comment"):
+        elementos_analisis.append(("Análisis Actual:", pdf_data["analyst_comment"]))
+    
+    # Comentarios históricos del analista
+    comentarios_analista = pdf_data["comentarios_analista"]
+    if comentarios_analista:
+        for i, comentario in enumerate(comentarios_analista[:3]):  # Últimos 3 comentarios
+            fecha_str = comentario.fecha_creacion.strftime('%d/%m/%Y %H:%M')
+            usuario_str = f"{comentario.usuario.first_name} {comentario.usuario.last_name}"
+            elementos_analisis.append((
+                f"Comentario {i+1} ({fecha_str} - {usuario_str}):",
+                comentario.contenido
+            ))
+    
+    if elementos_analisis:
+        elements.append(Paragraph("Análisis General", subtitle_style))
+        
+        for titulo, contenido in elementos_analisis:
+            elements.append(Paragraph(f"<b>{titulo}</b>", normal_style))
+            elements.append(Paragraph(contenido, normal_style))
+            elements.append(Spacer(1, 8))
+    
+    # NUEVA SECCIÓN: Participaciones del Comité
+    participaciones_comite = pdf_data["participaciones_comite"]
+    if participaciones_comite:
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("Participaciones del Comité de Crédito", subtitle_style))
+        
+        # Agrupar participaciones por nivel
+        niveles_participacion = {}
+        for participacion in participaciones_comite:
+            nivel_nombre = participacion.nivel.nombre
+            if nivel_nombre not in niveles_participacion:
+                niveles_participacion[nivel_nombre] = []
+            niveles_participacion[nivel_nombre].append(participacion)
+        
+        # Mostrar participaciones por cada nivel
+        for nivel_nombre, participaciones in niveles_participacion.items():
+            elements.append(Paragraph(f"<b>Nivel: {nivel_nombre}</b>", normal_style))
+            
+            # Crear tabla con las participaciones del nivel
+            participacion_data = [["Participante", "Resultado", "Comentario", "Fecha"]]
+            
+            for participacion in participaciones:
+                usuario_nombre = f"{participacion.usuario.first_name} {participacion.usuario.last_name}"
+                resultado = participacion.resultado or "Sin resultado"
+                comentario = participacion.comentario[:100] + "..." if participacion.comentario and len(participacion.comentario) > 100 else participacion.comentario or "Sin comentario"
+                fecha = participacion.fecha_modificacion.strftime('%d/%m/%Y %H:%M') if participacion.fecha_modificacion else "Sin fecha"
+                
+                participacion_data.append([usuario_nombre, resultado, comentario, fecha])
+            
+            # Crear tabla para este nivel
+            participacion_table = Table(participacion_data, colWidths=[1.5*inch, 1*inch, 2*inch, 1*inch])
+            participacion_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ]))
+            
+            elements.append(participacion_table)
+            elements.append(Spacer(1, 10))
+    
+    # Información del generador del reporte
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Información del Reporte", subtitle_style))
+    
+    usuario_generador = pdf_data["usuario_generador"]
+    fecha_generacion = pdf_data["fecha_generacion"]
+    
+    info_reporte = [
+        ["Generado por:", f"{usuario_generador.first_name} {usuario_generador.last_name} ({usuario_generador.username})"],
+        ["Fecha de Generación:", fecha_generacion.strftime('%d/%m/%Y %H:%M:%S')],
+        ["Sistema:", "PACIFICO - Sistema de Workflow"]
+    ]
+    
+    reporte_table = Table(info_reporte, colWidths=[2*inch, 3*inch])
+    reporte_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, -1), colors.lightblue),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    
+    elements.append(reporte_table)
+    
+    # Construir PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return buffer
+

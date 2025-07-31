@@ -82,6 +82,9 @@ urlpatterns += [
     path('api/check-updates/', views_workflow.api_check_updates, name='api_check_updates'),
     path('api/get-updated-solicitudes/', views_workflow.api_get_updated_solicitudes, name='api_get_updated_solicitudes'),
     
+    # API para solicitudes procesadas
+    path('api/solicitudes-procesadas/', views_workflow.api_solicitudes_procesadas, name='api_solicitudes_procesadas'),
+    
     # Comments API URLs
     path('api/solicitudes/<int:solicitud_id>/comentarios/', views_workflow.api_obtener_comentarios, name='api_obtener_comentarios'),
     path('api/solicitudes/<int:solicitud_id>/comentarios/crear/', views_workflow.api_crear_comentario, name='api_crear_comentario'),
@@ -234,6 +237,9 @@ urlpatterns += [
     # APIs para comentarios de analista de crédito
     path('api/solicitudes/<int:solicitud_id>/comentario-analista-credito/', api.api_comentario_analista_credito, name='api_comentario_analista_credito'),
     path('api/solicitudes/<int:solicitud_id>/comentarios-analista-credito/', api.api_obtener_comentarios_analista_credito, name='api_obtener_comentarios_analista_credito'),
+    
+    # API para PDF resultado consulta
+    path('api/solicitudes/<int:solicitud_id>/pdf-resultado-consulta/', views_workflow.api_pdf_resultado_consulta, name='api_pdf_resultado_consulta'),
     
     # APIs para asignación de solicitudes
     path('api/solicitudes/<int:solicitud_id>/usuarios-disponibles/', api.api_usuarios_disponibles, name='api_usuarios_disponibles'),

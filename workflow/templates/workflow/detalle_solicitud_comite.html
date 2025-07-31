@@ -147,6 +147,28 @@
         transform: none;
     }
     
+    /* PDF resultado comité button specific styling */
+    #btn-pdf-resultado-comite {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    #btn-pdf-resultado-comite:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+
+    #btn-pdf-resultado-comite:disabled {
+        opacity: 0.6;
+        transform: none;
+        cursor: not-allowed;
+    }
+    
     .section-header {
         cursor: pointer;
         display: flex;
@@ -1217,6 +1239,11 @@
                                     <span id="analisis-fecha"></span>
                                 </div>
                             </div>
+                            <div>
+                                <button type="button" class="btn btn-success btn-sm" id="btn-pdf-resultado-comite">
+                                    <i class="fas fa-file-pdf me-1"></i>PDF resultado comité
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body">
@@ -2156,6 +2183,106 @@
         return div.innerHTML;
     }
     
+    // PDF Resultado Comité functionality
+    const generatePdfResultadoComite = async () => {
+        const btnPdf = document.getElementById('btn-pdf-resultado-comite');
+        const originalContent = btnPdf.innerHTML;
+        
+        try {
+            // Show loading state
+            btnPdf.disabled = true;
+            btnPdf.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando reporte...';
+            
+            // Get solicitud ID from global variable
+            if (!solicitudId) {
+                throw new Error('No se pudo obtener el ID de la solicitud');
+            }
+            
+            console.log('Generating PDF resultado comité for solicitud:', solicitudId);
+            
+            // Collect current committee data from the page
+            const comiteData = collectComiteData();
+            
+            // Make API call to generate PDF
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/pdf-resultado-comite/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(comiteData),
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                // Try to get error message from response
+                let errorMessage = 'Error al generar el PDF';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            // Check if response is PDF
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/pdf')) {
+                throw new Error('La respuesta no es un archivo PDF válido');
+            }
+            
+            // Get filename from response headers or use default
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = `Resultado_Comite_${solicitudId}.pdf`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            // Create blob and download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Show success message
+            mostrarToast('Reporte PDF comité generado y descargado exitosamente', 'success');
+            
+        } catch (error) {
+            console.error('Error generating PDF resultado comité:', error);
+            mostrarToast(`Error: ${error.message}`, 'error');
+        } finally {
+            // Restore button state
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = originalContent;
+        }
+    };
+
+    // Collect committee data from the current page
+    const collectComiteData = () => {
+        const data = {
+            committee_comment: '',
+            field_values: {}
+        };
+        
+        // Get any committee comment if available
+        const comiteTextarea = document.querySelector('#comentario-comite');
+        if (comiteTextarea) {
+            data.committee_comment = comiteTextarea.value.trim();
+        }
+        
+        return data;
+    };
+    
     // Función para descargar PDF consolidado
     const downloadMergedPDF = async () => {
         const btnDownload = document.getElementById('btn-download-merged-pdf');
@@ -2237,6 +2364,12 @@
         const btnDownloadPDF = document.getElementById('btn-download-merged-pdf');
         if (btnDownloadPDF) {
             btnDownloadPDF.addEventListener('click', downloadMergedPDF);
+        }
+        
+        // Add event listener for PDF resultado comité button
+        const btnPdfResultadoComite = document.getElementById('btn-pdf-resultado-comite');
+        if (btnPdfResultadoComite) {
+            btnPdfResultadoComite.addEventListener('click', generatePdfResultadoComite);
         }
         
         // Habilitar/deshabilitar botón de avanzar etapa según el resultado seleccionado
