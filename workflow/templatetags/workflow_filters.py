@@ -311,3 +311,8 @@ def sla_bg_class(sla_color):
     if sla_color == 'text-danger':
         return 'bg-danger bg-opacity-10'
     return ''
+
+@register.filter
+def has_group(user, group_name):
+    """Verifica si un usuario pertenece a un grupo específico"""
+    return user.groups.filter(name=group_name).exists()

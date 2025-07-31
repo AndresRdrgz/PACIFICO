@@ -1,5 +1,6 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
+{% load workflow_filters %}
 
 {% block title %}Dashboard Operativo - Sistema de Workflow{% endblock %}
 
@@ -8,6 +9,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="fade-in-up">
     <!-- Header Moderno con Gradient -->
     <div class="gradient-header">
@@ -19,7 +21,7 @@
                             <i class="fas fa-tachometer-alt fa-2x text-white"></i>
                         </div>
                         <div>
-                            <h1 class="h2 mb-1 text-white">Dashboard Operativo</h1>
+                            <h1 class="h2 mb-1 text-white">Dashboard de Negocios</h1>
                             <p class="mb-0 text-white-50">Análisis detallado y métricas del sistema de workflow</p>
                             {% if user.is_superuser %}
                             <small class="text-white-50">
@@ -31,27 +33,19 @@
                 </div>
                 <div class="col-md-4">
                     <div class="d-flex align-items-center justify-content-end gap-3">
-                        <div class="d-flex gap-2">
-                            <a href="{% url 'workflow:nueva_solicitud' %}" class="btn btn-light btn-sm">
-                                <i class="fas fa-plus me-2"></i>Nueva Solicitud
-                            </a>
-                            <a href="{% url 'workflow:bandeja_trabajo' %}" class="btn btn-outline-light btn-sm">
-                                <i class="fas fa-inbox me-2"></i>Ver Bandeja
-                            </a>
-                            {% if user.is_superuser %}
-                            <div class="dropdown">
-                                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-cog me-2"></i>Cambiar Vista
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item active" href="{% url 'workflow:dashboard' %}?type=operativo">📊 Operativo</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=negocios">💼 Negocios</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=comite">🏛️ Comité</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=bandeja">📋 Bandeja</a></li>
-                                </ul>
-                            </div>
-                            {% endif %}
+                        {% if user.is_superuser %}
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-2"></i>Cambiar Vista
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item active" href="{% url 'workflow:dashboard' %}?type=operativo">📊 Operativo</a></li>
+                                <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=negocios">💼 Negocios</a></li>
+                                <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=comite">🏛️ Comité</a></li>
+                                <li><a class="dropdown-item" href="{% url 'workflow:dashboard' %}?type=bandeja">📋 Bandeja</a></li>
+                            </ul>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -61,6 +55,7 @@
     <!-- ==========================================
     CONTENEDOR DE NAVEGACIÓN HORIZONTAL
     ========================================== -->
+    {% if not user|has_group:"Oficial de Negocio" %}
     <div class="dashboard-nav-horizontal">
         <div class="container">
             <div class="row">
@@ -93,6 +88,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- ==========================================
     DASHBOARD OPERATIVO
@@ -313,109 +309,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        TABLAS DE ANÁLISIS
-        ========================================== -->
-        <div class="row mb-4">
-            <!-- Top 5 Usuarios -->
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-users me-2"></i>Top 5 Usuarios
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        {% if top_usuarios %}
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Usuario</th>
-                                            <th>Total</th>
-                                            <th>Vencidas</th>
-                                            <th>% Vencidas</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for usuario in top_usuarios %}
-                                            <tr>
-                                                <td>
-                                                    <strong>{{ usuario.full_name }}</strong>
-                                                </td>
-                                                <td>{{ usuario.total_solicitudes }}</td>
-                                                <td>
-                                                    <span class="badge bg-danger">{{ usuario.solicitudes_vencidas }}</span>
-                                                </td>
-                                                <td>
-                                                    {% if usuario.total_solicitudes > 0 %}
-                                                        {% widthratio usuario.solicitudes_vencidas usuario.total_solicitudes 100 %}%
-                                                    {% else %}
-                                                        0%
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <p class="text-muted text-center">No hay datos disponibles</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Calificaciones de Compliance -->
-            <div class="col-lg-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-shield-alt me-2"></i>Calificaciones Compliance
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        {% if calificaciones_compliance %}
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Estado</th>
-                                            <th>Cantidad</th>
-                                            <th>Porcentaje</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for cal in calificaciones_compliance %}
-                                            <tr>
-                                                <td>
-                                                    <span class="badge 
-                                                        {% if cal.estado == 'bueno' %}bg-success
-                                                        {% elif cal.estado == 'malo' %}bg-danger
-                                                        {% else %}bg-warning{% endif %}">
-                                                        {{ cal.estado|title }}
-                                                    </span>
-                                                </td>
-                                                <td>{{ cal.total }}</td>
-                                                <td>
-                                                    {% if cal.total > 0 %}
-                                                        {{ cal.total|floatformat:1 }}%
-                                                    {% else %}
-                                                        0%
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <p class="text-muted text-center">No hay calificaciones disponibles</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- ==========================================
         TIEMPO POR ETAPA - NUEVA SECCIÓN
@@ -654,6 +548,133 @@
                 {% else %}
                     <p class="text-muted text-center">No hay solicitudes que coincidan con los filtros aplicados</p>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SECCIÓN DE RECORDATORIOS Y NOTAS
+    ========================================== -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-sticky-note me-2"></i>Recordatorios y Notas
+                <span class="badge bg-info ms-2" id="total-notas">0</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Filtros para recordatorios -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm" id="filtro-tipo-nota">
+                        <option value="">Todos los tipos</option>
+                        <option value="nota">Notas</option>
+                        <option value="recordatorio">Recordatorios</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm" id="filtro-estado-recordatorio">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="completado">Completado</option>
+                        <option value="vencido">Vencido</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm" id="filtro-prioridad">
+                        <option value="">Todas las prioridades</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Media">Media</option>
+                        <option value="Baja">Baja</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm" id="btn-nueva-nota">
+                        <i class="fas fa-plus me-2"></i>Nueva Nota
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenedor de notas y recordatorios -->
+            <div id="contenedor-notas" class="row">
+                <!-- Las notas se cargarán dinámicamente aquí -->
+            </div>
+
+            <!-- Mensaje cuando no hay notas -->
+            <div id="mensaje-sin-notas" class="text-center text-muted" style="display: none;">
+                <i class="fas fa-sticky-note fa-3x mb-3"></i>
+                <p>No hay notas o recordatorios para mostrar</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para crear/editar nota -->
+    <div class="modal fade" id="modalNota" tabindex="-1" aria-labelledby="modalNotaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalNotaLabel">
+                        <i class="fas fa-sticky-note me-2"></i>Nueva Nota
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNota">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tipoNota" class="form-label">Tipo</label>
+                                    <select class="form-select" id="tipoNota" name="tipo" required>
+                                        <option value="nota">Nota</option>
+                                        <option value="recordatorio">Recordatorio</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="prioridadNota" class="form-label">Prioridad</label>
+                                    <select class="form-select" id="prioridadNota" name="prioridad" required>
+                                        <option value="Baja">Baja</option>
+                                        <option value="Media" selected>Media</option>
+                                        <option value="Alta">Alta</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tituloNota" class="form-label">Título</label>
+                            <input type="text" class="form-control" id="tituloNota" name="titulo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contenidoNota" class="form-label">Contenido</label>
+                            <textarea class="form-control" id="contenidoNota" name="contenido" rows="4" required></textarea>
+                        </div>
+                        <div class="row" id="camposRecordatorio" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fechaVencimiento" class="form-label">Fecha de Vencimiento</label>
+                                    <input type="datetime-local" class="form-control" id="fechaVencimiento" name="fecha_vencimiento">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="estadoRecordatorio" class="form-label">Estado</label>
+                                    <select class="form-select" id="estadoRecordatorio" name="estado">
+                                        <option value="pendiente" selected>Pendiente</option>
+                                        <option value="completado">Completado</option>
+                                        <option value="vencido">Vencido</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarNota">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -945,6 +966,399 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // ==========================================
+    // FUNCIONALIDAD DE RECORDATORIOS Y NOTAS
+    // ==========================================
+    
+    // Variables globales
+    let todasLasNotas = [];
+    let solicitudActual = null;
+    
+    // Función para cargar notas de todas las solicitudes
+    async function cargarNotasTodasSolicitudes() {
+        try {
+            // Obtener todas las solicitudes del dashboard
+            const solicitudes = {{ solicitudes|safe }};
+            let todasLasNotas = [];
+            
+            for (const solicitud of solicitudes) {
+                try {
+                    const response = await fetch(`/workflow/api/solicitudes/${solicitud.id}/notas-recordatorios/`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            // Agregar información de la solicitud a cada nota
+                            const notasConSolicitud = data.notas.map(nota => ({
+                                ...nota,
+                                solicitud_codigo: solicitud.codigo,
+                                solicitud_id: solicitud.id
+                            }));
+                            todasLasNotas = todasLasNotas.concat(notasConSolicitud);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error cargando notas para solicitud ${solicitud.id}:`, error);
+                }
+            }
+            
+            // Ordenar por fecha de creación (más recientes primero)
+            todasLasNotas.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
+            
+            // Actualizar el contador
+            document.getElementById('total-notas').textContent = todasLasNotas.length;
+            
+            // Renderizar las notas
+            renderizarNotas(todasLasNotas);
+            
+        } catch (error) {
+            console.error('Error cargando notas:', error);
+        }
+    }
+    
+    // Función para renderizar las notas
+    function renderizarNotas(notas) {
+        const contenedor = document.getElementById('contenedor-notas');
+        const mensajeSinNotas = document.getElementById('mensaje-sin-notas');
+        
+        if (notas.length === 0) {
+            contenedor.innerHTML = '';
+            mensajeSinNotas.style.display = 'block';
+            return;
+        }
+        
+        mensajeSinNotas.style.display = 'none';
+        
+        const notasHTML = notas.map(nota => crearTarjetaNota(nota)).join('');
+        contenedor.innerHTML = notasHTML;
+    }
+    
+    // Función para crear una tarjeta de nota
+    function crearTarjetaNota(nota) {
+        const fechaCreacion = new Date(nota.fecha_creacion).toLocaleString('es-ES');
+        const fechaVencimiento = nota.fecha_vencimiento ? new Date(nota.fecha_vencimiento).toLocaleString('es-ES') : null;
+        
+        // Determinar el color de la tarjeta basado en el tipo y estado
+        let cardClass = 'border-left-primary';
+        let iconClass = 'fas fa-sticky-note';
+        
+        if (nota.tipo === 'recordatorio') {
+            if (nota.estado === 'vencido') {
+                cardClass = 'border-left-danger';
+                iconClass = 'fas fa-exclamation-triangle';
+            } else if (nota.estado === 'completado') {
+                cardClass = 'border-left-success';
+                iconClass = 'fas fa-check-circle';
+            } else {
+                cardClass = 'border-left-warning';
+                iconClass = 'fas fa-clock';
+            }
+        }
+        
+        // Determinar el color de la prioridad
+        let prioridadClass = 'bg-secondary';
+        if (nota.prioridad === 'Alta') prioridadClass = 'bg-danger';
+        else if (nota.prioridad === 'Media') prioridadClass = 'bg-warning';
+        else if (nota.prioridad === 'Baja') prioridadClass = 'bg-success';
+        
+        return `
+            <div class="col-lg-6 col-xl-4 mb-3">
+                <div class="card ${cardClass} h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="${iconClass} me-2 text-primary"></i>
+                                <h6 class="card-title mb-0">${nota.titulo}</h6>
+                            </div>
+                            <span class="badge ${prioridadClass}">${nota.prioridad}</span>
+                        </div>
+                        
+                        <p class="card-text small text-muted mb-2">${nota.contenido}</p>
+                        
+                        <div class="row small text-muted mb-2">
+                            <div class="col-6">
+                                <i class="fas fa-user me-1"></i>${nota.usuario_nombre}
+                            </div>
+                            <div class="col-6">
+                                <i class="fas fa-file-alt me-1"></i>${nota.solicitud_codigo}
+                            </div>
+                        </div>
+                        
+                        <div class="row small text-muted mb-2">
+                            <div class="col-6">
+                                <i class="fas fa-calendar me-1"></i>${fechaCreacion}
+                            </div>
+                            ${nota.tipo === 'recordatorio' ? `
+                                <div class="col-6">
+                                    <i class="fas fa-clock me-1"></i>${fechaVencimiento || 'Sin fecha'}
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${nota.tipo === 'recordatorio' ? `
+                            <div class="mb-2">
+                                <span class="badge 
+                                    ${nota.estado === 'pendiente' ? 'bg-warning' : 
+                                      nota.estado === 'completado' ? 'bg-success' : 'bg-danger'}">
+                                    ${nota.estado.charAt(0).toUpperCase() + nota.estado.slice(1)}
+                                </span>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editarNota(${nota.id}, ${nota.solicitud_id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarNota(${nota.id}, ${nota.solicitud_id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            ${nota.tipo === 'recordatorio' && nota.estado === 'pendiente' ? `
+                                <button class="btn btn-sm btn-outline-success" onclick="marcarCompletado(${nota.id}, ${nota.solicitud_id})">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Función para filtrar notas
+    function filtrarNotas() {
+        const tipoFiltro = document.getElementById('filtro-tipo-nota').value;
+        const estadoFiltro = document.getElementById('filtro-estado-recordatorio').value;
+        const prioridadFiltro = document.getElementById('filtro-prioridad').value;
+        
+        let notasFiltradas = todasLasNotas;
+        
+        if (tipoFiltro) {
+            notasFiltradas = notasFiltradas.filter(nota => nota.tipo === tipoFiltro);
+        }
+        
+        if (estadoFiltro) {
+            notasFiltradas = notasFiltradas.filter(nota => nota.estado === estadoFiltro);
+        }
+        
+        if (prioridadFiltro) {
+            notasFiltradas = notasFiltradas.filter(nota => nota.prioridad === prioridadFiltro);
+        }
+        
+        renderizarNotas(notasFiltradas);
+    }
+    
+    // Función para abrir modal de nueva nota
+    function abrirModalNuevaNota() {
+        document.getElementById('modalNotaLabel').textContent = 'Nueva Nota';
+        document.getElementById('formNota').reset();
+        document.getElementById('camposRecordatorio').style.display = 'none';
+        
+        // Establecer fecha mínima para recordatorios
+        const fechaMinima = new Date().toISOString().slice(0, 16);
+        document.getElementById('fechaVencimiento').min = fechaMinima;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalNota'));
+        modal.show();
+    }
+    
+    // Función para editar nota
+    async function editarNota(notaId, solicitudId) {
+        try {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/notas-recordatorios/${notaId}/`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    const nota = data.nota;
+                    
+                    document.getElementById('modalNotaLabel').textContent = 'Editar Nota';
+                    document.getElementById('tipoNota').value = nota.tipo;
+                    document.getElementById('prioridadNota').value = nota.prioridad;
+                    document.getElementById('tituloNota').value = nota.titulo;
+                    document.getElementById('contenidoNota').value = nota.contenido;
+                    
+                    if (nota.tipo === 'recordatorio') {
+                        document.getElementById('camposRecordatorio').style.display = 'block';
+                        if (nota.fecha_vencimiento) {
+                            document.getElementById('fechaVencimiento').value = nota.fecha_vencimiento_local;
+                        }
+                        document.getElementById('estadoRecordatorio').value = nota.estado;
+                    } else {
+                        document.getElementById('camposRecordatorio').style.display = 'none';
+                    }
+                    
+                    // Guardar IDs para la actualización
+                    document.getElementById('formNota').dataset.notaId = notaId;
+                    document.getElementById('formNota').dataset.solicitudId = solicitudId;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('modalNota'));
+                    modal.show();
+                }
+            }
+        } catch (error) {
+            console.error('Error cargando nota para editar:', error);
+        }
+    }
+    
+    // Función para guardar nota
+    async function guardarNota() {
+        const form = document.getElementById('formNota');
+        const formData = new FormData(form);
+        
+        const notaId = form.dataset.notaId;
+        const solicitudId = form.dataset.solicitudId;
+        
+        const data = {
+            tipo: formData.get('tipo'),
+            titulo: formData.get('titulo'),
+            contenido: formData.get('contenido'),
+            prioridad: formData.get('prioridad'),
+            fecha_vencimiento: formData.get('fecha_vencimiento'),
+            estado: formData.get('estado') || 'pendiente'
+        };
+        
+        try {
+            const url = notaId ? 
+                `/workflow/api/solicitudes/${solicitudId}/notas-recordatorios/${notaId}/` :
+                `/workflow/api/solicitudes/${solicitudId}/notas-recordatorios/`;
+            
+            const method = notaId ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    // Cerrar modal y recargar notas
+                    bootstrap.Modal.getInstance(document.getElementById('modalNota')).hide();
+                    await cargarNotasTodasSolicitudes();
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarMensaje('Nota guardada exitosamente', 'success');
+                }
+            } else {
+                const error = await response.json();
+                mostrarMensaje(error.error || 'Error al guardar la nota', 'error');
+            }
+        } catch (error) {
+            console.error('Error guardando nota:', error);
+            mostrarMensaje('Error al guardar la nota', 'error');
+        }
+    }
+    
+    // Función para eliminar nota
+    async function eliminarNota(notaId, solicitudId) {
+        if (!confirm('¿Está seguro de que desea eliminar esta nota?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/notas-recordatorios/${notaId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    await cargarNotasTodasSolicitudes();
+                    mostrarMensaje('Nota eliminada exitosamente', 'success');
+                }
+            } else {
+                const error = await response.json();
+                mostrarMensaje(error.error || 'Error al eliminar la nota', 'error');
+            }
+        } catch (error) {
+            console.error('Error eliminando nota:', error);
+            mostrarMensaje('Error al eliminar la nota', 'error');
+        }
+    }
+    
+    // Función para marcar recordatorio como completado
+    async function marcarCompletado(notaId, solicitudId) {
+        try {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/notas-recordatorios/${notaId}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    estado: 'completado'
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    await cargarNotasTodasSolicitudes();
+                    mostrarMensaje('Recordatorio marcado como completado', 'success');
+                }
+            } else {
+                const error = await response.json();
+                mostrarMensaje(error.error || 'Error al actualizar el recordatorio', 'error');
+            }
+        } catch (error) {
+            console.error('Error marcando recordatorio como completado:', error);
+            mostrarMensaje('Error al actualizar el recordatorio', 'error');
+        }
+    }
+    
+    // Función para mostrar mensajes
+    function mostrarMensaje(mensaje, tipo) {
+        // Crear toast o alert temporal
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Remover después de 5 segundos
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cargar notas al iniciar
+        cargarNotasTodasSolicitudes();
+        
+        // Filtros
+        document.getElementById('filtro-tipo-nota').addEventListener('change', filtrarNotas);
+        document.getElementById('filtro-estado-recordatorio').addEventListener('change', filtrarNotas);
+        document.getElementById('filtro-prioridad').addEventListener('change', filtrarNotas);
+        
+        // Botón nueva nota
+        document.getElementById('btn-nueva-nota').addEventListener('click', abrirModalNuevaNota);
+        
+        // Botón guardar nota
+        document.getElementById('btnGuardarNota').addEventListener('click', guardarNota);
+        
+        // Cambio de tipo de nota en el modal
+        document.getElementById('tipoNota').addEventListener('change', function() {
+            const camposRecordatorio = document.getElementById('camposRecordatorio');
+            if (this.value === 'recordatorio') {
+                camposRecordatorio.style.display = 'block';
+            } else {
+                camposRecordatorio.style.display = 'none';
+            }
+        });
+    });
 });
 </script>
 {% endblock %} 
