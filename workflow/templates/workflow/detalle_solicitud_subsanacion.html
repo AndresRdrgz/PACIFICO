@@ -556,6 +556,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar filtros
     configurarFiltrosPendientes();
+    
+    // ✅ CARGAR TRANSICIONES NEGATIVAS PARA HABILITAR FUNCIONALIDAD DE DEVOLUCIÓN
+    SubsanacionWorkflow.cargarTransicionesNegativas();
 });
 
 // =======================================================
@@ -941,11 +944,31 @@ function validarDocumentosYAvanzar() {
   });
 }
 
+// ✅ FUNCIÓN MEJORADA PARA MOSTRAR MODAL DE DEVOLUCIÓN (ADAPTADA DE CHECKLIST)
 function mostrarModalDevolucion() {
-    // Cargar documentos problemáticos (opcional para esta etapa)
-    // cargarDocumentosProblematicos();
+    console.log('📋 Mostrando modal de devolución desde SUBSANACIÓN...');
     
-    // Mostrar modal
+    if (transicionesNegativas.length === 0) {
+        mostrarMensajeSubsanacion('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
+    const spanDestino = document.getElementById('devolver-etapa-destino');
+    if (spanDestino) {
+        spanDestino.textContent = transicion.etapa_destino.nombre;
+    }
+    
+    // Limpiar el textarea del motivo
+    const motivoTextarea = document.getElementById('motivo-devolucion');
+    if (motivoTextarea) {
+        motivoTextarea.value = '';
+    }
+    
+    console.log(`📤 Modal configurado para devolver a: ${transicion.etapa_destino.nombre}`);
+    
+    // Mostrar modal (los documentos problemáticos se cargan automáticamente por el evento shown.bs.modal en el include)
     const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
     modal.show();
 }
@@ -1211,6 +1234,143 @@ function confirmarAvanceSubsanacion() {
         btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Avance';
     });
 }
+
+// ========================================
+// FUNCIONES PARA DEVOLUCIÓN A OFICIAL 
+// ========================================
+
+// Namespace específico para Subsanación para evitar conflictos con backoffice.js
+const SubsanacionWorkflow = {
+  transicionesNegativas: [],
+  
+  // Función para cargar transiciones negativas al cargar la página
+  cargarTransicionesNegativas: function() {
+  const solicitudId = {{ solicitud.id }};
+  
+  fetch(`/workflow/api/solicitudes/${solicitudId}/transiciones-negativas/`)
+    .then(response => response.json())
+    .then(data => {
+      console.log('🔄 Transiciones negativas en SUBSANACIÓN:', data);
+      
+      if (data.success && data.tiene_transiciones_negativas) {
+        SubsanacionWorkflow.transicionesNegativas = data.transiciones_negativas;
+        
+        // Mostrar botón de devolver
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          btnDevolver.style.display = 'inline-block';
+          
+          // Actualizar texto del botón si hay múltiples transiciones
+          if (SubsanacionWorkflow.transicionesNegativas.length === 1) {
+            btnDevolver.querySelector('span').textContent = `Devolver a ${SubsanacionWorkflow.transicionesNegativas[0].etapa_destino.nombre}`;
+          }
+          
+          console.log(`✅ Botón devolver habilitado - ${SubsanacionWorkflow.transicionesNegativas.length} transición(es) disponible(s)`);
+        }
+        
+        // Cargar información de destino en el modal
+        const spanDestino = document.getElementById('devolver-etapa-destino');
+        if (spanDestino && SubsanacionWorkflow.transicionesNegativas.length > 0) {
+          spanDestino.textContent = SubsanacionWorkflow.transicionesNegativas[0].etapa_destino.nombre;
+        }
+        
+      } else {
+        console.log('ℹ️ No hay transiciones negativas disponibles en Subsanación');
+        
+        // Ocultar botón si no hay transiciones
+        const btnDevolver = document.getElementById('btn-devolver-oficial');
+        if (btnDevolver) {
+          btnDevolver.style.display = 'none';
+        }
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error cargando transiciones negativas en Subsanación:', error);
+    });
+  },
+
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO (ADAPTADA DE CHECKLIST)
+  confirmarDevolucion: function() {
+  const motivo = document.getElementById('motivo-devolucion').value.trim();
+  
+  if (!motivo) {
+    mostrarMensajeSubsanacion('Por favor, ingresa el motivo de la devolución.', 'warning');
+    document.getElementById('motivo-devolucion').focus();
+    return;
+  }
+  
+  // Verificar que haya transiciones negativas disponibles
+  if (typeof SubsanacionWorkflow.transicionesNegativas === 'undefined' || SubsanacionWorkflow.transicionesNegativas.length === 0) {
+    mostrarMensajeSubsanacion('No hay transiciones negativas disponibles.', 'error');
+    return;
+  }
+  
+  const transicion = SubsanacionWorkflow.transicionesNegativas[0];
+  const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+  const textoOriginal = btnConfirmar.innerHTML;
+  
+  // Mostrar loading
+  btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+  btnConfirmar.disabled = true;
+  
+  console.log(`🚨 Devolviendo solicitud {{ solicitud.id }} desde SUBSANACIÓN a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+  
+  // 🚨 USAR API DE DEVOLUCIÓN CON CORREO (MISMO ENDPOINT QUE CHECKLIST)
+  fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify({
+      solicitud_id: {{ solicitud.id }},
+      transicion_id: transicion.id,
+      motivo: motivo,
+      etapa_origen: 'subsanacion'  // ✅ Identificar que viene de subsanación
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // ✅ Mostrar mensaje de éxito con información del correo
+      const mensaje = `✅ Solicitud devuelta exitosamente desde SUBSANACIÓN a ${data.data.nueva_etapa}
+      
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Subsanación
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+      
+      mostrarMensajeSubsanacion(mensaje, 'success');
+      
+      // Cerrar modal y redirigir
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+      modal.hide();
+      
+      // Redirigir según la URL proporcionada por la API
+      setTimeout(() => {
+        window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+      }, 2000);
+      
+    } else {
+      mostrarMensajeSubsanacion(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
+      
+      // Restaurar botón
+      btnConfirmar.innerHTML = textoOriginal;
+      btnConfirmar.disabled = false;
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error en devolución desde Subsanación:', error);
+    mostrarMensajeSubsanacion('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
+    
+    // Restaurar botón
+    btnConfirmar.innerHTML = textoOriginal;
+    btnConfirmar.disabled = false;
+  });
+  }
+};
 
 </script>
 

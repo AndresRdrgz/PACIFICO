@@ -573,7 +573,7 @@
             <!-- Botones de Acción -->
             <div class="action-buttons">
               <!-- Botón Devolver a Oficial -->
-              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="mostrarModalDevolucion()">
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="CapturaWorkflow.mostrarModalDevolucion()">
                 <i class="fas fa-arrow-left me-2"></i>
                 <span>Devolver a Oficial</span>
               </button>
@@ -1322,7 +1322,7 @@ function validarDocumentosYAvanzar() {
             const mensaje = `${data.mensaje}\n\n${data.detalle ? data.detalle.join('\n') : ''}\n\n¿Deseas devolver la solicitud al oficial para corrección?`;
             
             if (confirm(mensaje)) {
-              mostrarModalDevolucion();
+              CapturaWorkflow.mostrarModalDevolucion();
               return; // No continuar con el resto de la lógica
             }
           }
@@ -1370,32 +1370,7 @@ function validarDocumentosYAvanzar() {
   });
 }
 
-function mostrarModalDevolucion() {
-    console.log('📋 Mostrando modal de devolución...');
-    
-    if (transicionesNegativas.length === 0) {
-        mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
-        return;
-    }
-    
-    // Cargar información de la transición
-    const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
-    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
-    
-    // En Captura no hay documentos problemáticos, mostrar mensaje genérico
-    const listaContainer = document.getElementById('lista-documentos-problematicos');
-    listaContainer.innerHTML = `
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Devolución desde Captura</strong>
-            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
-        </div>
-    `;
-    
-    // Mostrar modal
-    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
-    modal.show();
-}
+// ✅ Función mostrarModalDevolucion movida al namespace CapturaWorkflow
 
 // =======================================================
 // FUNCIONALIDAD PARA PENDIENTES ANTES DE FIRMA
@@ -1833,7 +1808,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarPendientesSolicitud();
     
     // 🆕 CARGAR TRANSICIONES NEGATIVAS PARA BOTÓN "DEVOLVER A OFICIAL"
-    cargarTransicionesNegativas();
+    CapturaWorkflow.cargarTransicionesNegativas();
     
     // 🆕 CONFIGURAR EVENT LISTENERS PARA MODALES DE AVANCE
     const modalAvanzar = document.getElementById('modalAvanzarSubestado');
@@ -1871,15 +1846,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // VARIABLES GLOBALES PARA AVANCE
 // ========================================
 
-let transicionesNegativas = [];
-let opcionAvanceSeleccionada = null;
-let usuarioSeleccionadoAvance = null;
-let siguientePaso = null;
-
 // Variables globales específicas para el nuevo modal de Captura
 const SOLICITUD_ID = {{ solicitud.id }};
 let siguienteSubestadoSeleccionadoCaptura = null;
 window.usuarioSeleccionadoAvanceCaptura = null;
+let opcionAvanceSeleccionada = null;
+let usuarioSeleccionadoAvance = null;
+let siguientePaso = null;
 
 // ========================================
 // FUNCIONES DE AVANCE - ADAPTADAS PARA CAPTURA
@@ -2217,17 +2190,21 @@ function confirmarAvance() {
 // FUNCIONES DE DEVOLUCIÓN A OFICIAL
 // ========================================
 
-// Función para mostrar modal de devolución
-function mostrarModalDevolucion() {
+// Namespace específico para Captura para evitar conflictos con backoffice.js
+const CapturaWorkflow = {
+  transicionesNegativas: [],
+
+  // Función para mostrar modal de devolución
+  mostrarModalDevolucion: function() {
     console.log('📋 Mostrando modal de devolución...');
     
-    if (transicionesNegativas.length === 0) {
+    if (CapturaWorkflow.transicionesNegativas.length === 0) {
         mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
         return;
     }
     
     // Cargar información de la transición
-    const transicion = transicionesNegativas[0]; // Por ahora tomamos la primera
+    const transicion = CapturaWorkflow.transicionesNegativas[0]; // Por ahora tomamos la primera
     document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
     
     // En Captura no hay documentos problemáticos, mostrar mensaje genérico
@@ -2243,10 +2220,10 @@ function mostrarModalDevolucion() {
     // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
     modal.show();
-}
+  },
 
-// Función para confirmar la devolución
-function confirmarDevolucion() {
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO (CORREGIDA)
+  confirmarDevolucion: function() {
     const motivo = document.getElementById('motivo-devolucion').value.trim();
     const SOLICITUD_ID = {{ solicitud.id }};
     
@@ -2255,21 +2232,23 @@ function confirmarDevolucion() {
         return;
     }
     
-    if (transicionesNegativas.length === 0) {
+    if (CapturaWorkflow.transicionesNegativas.length === 0) {
         mostrarMensaje('No hay transiciones negativas disponibles', 'error');
         return;
     }
     
     // Usar la primera transición negativa disponible
-    const transicion = transicionesNegativas[0];
+    const transicion = CapturaWorkflow.transicionesNegativas[0];
     
     const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
     const textoOriginal = btnConfirmar.innerHTML;
-    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
     btnConfirmar.disabled = true;
     
-    // Ejecutar transición
-    fetch(`/workflow/api/ejecutar-transicion/`, {
+    console.log(`🚨 Devolviendo solicitud ${SOLICITUD_ID} desde CAPTURA a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+    
+    // 🚨 USAR API DE DEVOLUCIÓN CON CORREO (CORREGIDA)
+    fetch('/workflow/api/solicitudes/devolver-backoffice/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2278,43 +2257,56 @@ function confirmarDevolucion() {
         body: JSON.stringify({
             solicitud_id: SOLICITUD_ID,
             transicion_id: transicion.id,
-            comentario: `Devuelto desde Captura: ${motivo}`
+            motivo: motivo,
+            etapa_origen: 'captura'  // ✅ Identificar que viene de captura
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            mostrarMensaje('Solicitud devuelta al oficial exitosamente', 'success');
+            // ✅ Mostrar mensaje de éxito con información del correo
+            const mensaje = `✅ Solicitud devuelta exitosamente desde CAPTURA a ${data.data.nueva_etapa}
+            
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Captura
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+            
+            mostrarMensaje(mensaje, 'success');
             
             // Cerrar modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
             modal.hide();
             
-            // Redirigir inmediatamente a bandeja mixta
-            window.location.href = '/workflow/bandeja-mixta/';
+            // Redirigir según la URL proporcionada por la API
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+            }, 2000);
         } else {
-            mostrarMensaje(`Error al devolver solicitud: ${data.message || data.error}`, 'error');
+            mostrarMensaje(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
         }
     })
     .catch(error => {
-        console.error('Error al devolver solicitud:', error);
-        mostrarMensaje('Error al devolver solicitud', 'error');
+        console.error('❌ Error en devolución desde Captura:', error);
+        mostrarMensaje('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
     })
     .finally(() => {
         btnConfirmar.innerHTML = textoOriginal;
         btnConfirmar.disabled = false;
     });
-}
+  },
 
-// Función para cargar transiciones negativas al inicializar
-function cargarTransicionesNegativas() {
+  // Función para cargar transiciones negativas al inicializar
+  cargarTransicionesNegativas: function() {
     const SOLICITUD_ID = {{ solicitud.id }};
     
     fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                transicionesNegativas = data.transiciones_negativas || [];
+                CapturaWorkflow.transicionesNegativas = data.transiciones_negativas || [];
                 
                 // Mostrar/ocultar botón "Devolver a Oficial"
                 const btnDevolver = document.getElementById('btn-devolver-oficial');
@@ -2330,7 +2322,8 @@ function cargarTransicionesNegativas() {
         .catch(error => {
             console.error('Error al cargar transiciones negativas:', error);
         });
-}
+  }
+};
 
 // Función auxiliar para obtener CSRF token
 function getCsrfToken() {
@@ -2389,7 +2382,7 @@ function mostrarModalDevolverOficial() {
     console.log('🔄 Abriendo modal Devolver a Oficial (original)');
     
     // Usar el modal original que ya tiene toda la lógica correcta
-    mostrarModalDevolucion();
+    CapturaWorkflow.mostrarModalDevolucion();
 }
 
 // Las funciones duplicadas fueron eliminadas - se usa el modal original
@@ -3476,7 +3469,7 @@ function confirmarAvanceCaptura() {
           <i class="fas fa-times me-1"></i>
           Cancelar
         </button>
-        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="confirmarDevolucion()">
+        <button type="button" class="btn btn-danger" id="btn-confirmar-devolucion" onclick="CapturaWorkflow.confirmarDevolucion()">
           <i class="fas fa-arrow-left me-1"></i>
           Confirmar Devolución
         </button>
