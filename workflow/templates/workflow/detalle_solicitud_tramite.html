@@ -556,6 +556,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar filtros
     configurarFiltrosPendientes();
+    
+    // ✅ CARGAR TRANSICIONES NEGATIVAS PARA HABILITAR FUNCIONALIDAD DE DEVOLUCIÓN
+    TramiteWorkflow.cargarTransicionesNegativas();
 });
 
 // =======================================================
@@ -939,13 +942,177 @@ function validarDocumentosYAvanzar() {
   });
 }
 
-function mostrarModalDevolucion() {
-    // Cargar documentos problemáticos (opcional para esta etapa)
-    // cargarDocumentosProblematicos();
+// ========================================
+// FUNCIONES DE DEVOLUCIÓN A OFICIAL
+// ========================================
+
+// Namespace específico para Trámite para evitar conflictos con backoffice.js
+const TramiteWorkflow = {
+  transicionesNegativas: [],
+
+  // Función para cargar transiciones negativas al inicializar
+  cargarTransicionesNegativas: function() {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('🔄 Transiciones negativas en TRÁMITE:', data);
+        
+        if (data.success && data.tiene_transiciones_negativas) {
+          TramiteWorkflow.transicionesNegativas = data.transiciones_negativas;
+          
+          // Mostrar botón de devolver
+          const btnDevolver = document.getElementById('btn-devolver-oficial');
+          if (btnDevolver) {
+            btnDevolver.style.display = 'inline-block';
+            
+            // Actualizar texto del botón si hay múltiples transiciones
+            if (TramiteWorkflow.transicionesNegativas.length === 1) {
+              btnDevolver.querySelector('span').textContent = `Devolver a ${TramiteWorkflow.transicionesNegativas[0].etapa_destino.nombre}`;
+            }
+            
+            console.log(`✅ Botón devolver habilitado - ${TramiteWorkflow.transicionesNegativas.length} transición(es) disponible(s)`);
+          }
+          
+          // Cargar información de destino en el modal
+          const spanDestino = document.getElementById('devolver-etapa-destino');
+          if (spanDestino && TramiteWorkflow.transicionesNegativas.length > 0) {
+            spanDestino.textContent = TramiteWorkflow.transicionesNegativas[0].etapa_destino.nombre;
+          }
+          
+        } else {
+          console.log('ℹ️ No hay transiciones negativas disponibles en Trámite');
+          
+          // Ocultar botón si no hay transiciones
+          const btnDevolver = document.getElementById('btn-devolver-oficial');
+          if (btnDevolver) {
+            btnDevolver.style.display = 'none';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error cargando transiciones negativas en Trámite:', error);
+      });
+  },
+
+  // Función para mostrar modal de devolución
+  mostrarModalDevolucion: function() {
+    console.log('📋 Mostrando modal de devolución...');
+    
+    if (TramiteWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensajeTramite('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = TramiteWorkflow.transicionesNegativas[0]; // Por ahora tomamos la primera
+    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+    
+    // En Trámite no hay documentos problemáticos, mostrar mensaje genérico
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    listaContainer.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Devolución desde Trámite</strong>
+            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
+        </div>
+    `;
     
     // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
     modal.show();
+  },
+
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO
+  confirmarDevolucion: function() {
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    
+    if (!motivo) {
+        mostrarMensajeTramite('Por favor, ingresa el motivo de la devolución.', 'warning');
+        document.getElementById('motivo-devolucion').focus();
+        return;
+    }
+    
+    // Verificar que haya transiciones negativas disponibles
+    if (typeof TramiteWorkflow.transicionesNegativas === 'undefined' || TramiteWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensajeTramite('No hay transiciones negativas disponibles.', 'error');
+        return;
+    }
+    
+    const transicion = TramiteWorkflow.transicionesNegativas[0];
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    
+    // Mostrar loading
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+    btnConfirmar.disabled = true;
+    
+    console.log(`🚨 Devolviendo solicitud ${SOLICITUD_ID} desde TRÁMITE a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+    
+    // 🚨 USAR API DE DEVOLUCIÓN CON CORREO (MISMO ENDPOINT QUE OTRAS ETAPAS)
+    fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify({
+        solicitud_id: SOLICITUD_ID,
+        transicion_id: transicion.id,
+        motivo: motivo,
+        etapa_origen: 'tramite'  // ✅ Identificar que viene de trámite
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // ✅ Mostrar mensaje de éxito con información del correo
+        const mensaje = `✅ Solicitud devuelta exitosamente desde TRÁMITE a ${data.data.nueva_etapa}
+        
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Trámite
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+        
+        mostrarMensajeTramite(mensaje, 'success');
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+        modal.hide();
+        
+        // Redirigir según la URL proporcionada por la API
+        setTimeout(() => {
+          window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+        }, 2000);
+        
+      } else {
+        mostrarMensajeTramite(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
+        
+        // Restaurar botón
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+      }
+    })
+    .catch(error => {
+      console.error('❌ Error en devolución desde Trámite:', error);
+      mostrarMensajeTramite('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
+      
+      // Restaurar botón
+      btnConfirmar.innerHTML = textoOriginal;
+      btnConfirmar.disabled = false;
+    });
+  }
+};
+
+// Función global para compatibilidad con modal reutilizable
+function confirmarDevolucionModal() {
+  TramiteWorkflow.confirmarDevolucion();
+}
+
+function mostrarModalDevolucion() {
+    // Usar la nueva funcionalidad del namespace
+    TramiteWorkflow.mostrarModalDevolucion();
 }
 
 // Función para obtener CSRF token

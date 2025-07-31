@@ -168,6 +168,50 @@
   margin-bottom: -2rem;
 }
 
+/* Estilos para el buscador de documentos */
+#buscador-documentos {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+#buscador-documentos:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  outline: 0;
+}
+
+#limpiar-busqueda {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+#limpiar-busqueda:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+}
+
+.document-item {
+  transition: opacity 0.3s ease;
+}
+
+.document-item[style*="display: none"] {
+  opacity: 0;
+}
+
+#resultado-busqueda {
+  font-size: 0.875rem;
+}
+
+.seccion-header {
+  transition: opacity 0.3s ease;
+}
+
+.seccion-header[style*="display: none"] {
+  opacity: 0;
+}
+
 /* Estilos para el indicador de progreso */
 .process-step-header {
   display: flex;
@@ -468,20 +512,51 @@
             <div class="row">
               <div class="col-12">
                 <div class="card">
-                  <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                      <i class="fas fa-list-ol me-2"></i>Orden de Documentos
-                    </h5>
-                    <div>
-                      <button class="btn btn-outline-success btn-sm me-2" id="marcar-todos" onclick="marcarTodosDocumentos(true)">
-                        <i class="fas fa-check-double me-1"></i>Marcar Todos
-                      </button>
-                      <button class="btn btn-outline-danger btn-sm me-2" id="desmarcar-todos" onclick="marcarTodosDocumentos(false)">
-                        <i class="fas fa-times me-1"></i>Desmarcar Todos
-                      </button>
-                      <span class="badge bg-info ms-2">
-                        Total: {{ total_documentos }} | Presentes: {{ documentos_presentes }} | Faltantes: {{ documentos_faltantes }}
-                      </span>
+                  <div class="card-header">
+                    <!-- Primera fila: Título y controles principales -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>Orden de Documentos
+                      </h5>
+                      <div>
+                        <button class="btn btn-outline-success btn-sm me-2" id="marcar-todos" onclick="marcarTodosDocumentos(true)">
+                          <i class="fas fa-check-double me-1"></i>Marcar Todos
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm me-2" id="desmarcar-todos" onclick="marcarTodosDocumentos(false)">
+                          <i class="fas fa-times me-1"></i>Desmarcar Todos
+                        </button>
+                        <span class="badge bg-info ms-2" id="contador-documentos">
+                          Total: {{ total_documentos }} | Presentes: {{ documentos_presentes }} | Faltantes: {{ documentos_faltantes }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <!-- Segunda fila: Buscador -->
+                    <div class="row align-items-center">
+                      <div class="col-md-6">
+                        <div class="position-relative">
+                          <input type="text" 
+                                 class="form-control form-control-sm" 
+                                 id="buscador-documentos" 
+                                 placeholder="🔍 Buscar documentos por nombre..."
+                                 onkeyup="filtrarDocumentos()"
+                                 style="padding-left: 35px;">
+                          <i class="fas fa-search position-absolute" 
+                             style="left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 0.875rem;"></i>
+                        </div>
+                      </div>
+                      <div class="col-md-6 text-end">
+                        <small class="text-muted" id="resultado-busqueda">
+                          <i class="fas fa-info-circle me-1"></i>
+                          Mostrando todos los documentos
+                        </small>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" 
+                                id="limpiar-busqueda" 
+                                onclick="limpiarBusqueda()" 
+                                style="display: none;">
+                          <i class="fas fa-times me-1"></i>Limpiar
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div class="card-body p-0">
@@ -897,8 +972,11 @@ function marcarTodosDocumentos(marcarTodos) {
             console.log('✅ Documentos actualizados masivamente');
             mostrarMensaje(data.message, 'success');
             
-            // Actualizar todos los checkboxes en la interfaz
-            document.querySelectorAll('.documento-checkbox').forEach(checkbox => {
+            // Actualizar todos los checkboxes en la interfaz (solo los visibles si hay filtro)
+            const terminoBusqueda = document.getElementById('buscador-documentos')?.value.toLowerCase().trim() || '';
+            const selector = terminoBusqueda === '' ? '.documento-checkbox' : '.document-item:not([style*="display: none"]) .documento-checkbox';
+            
+            document.querySelectorAll(selector).forEach(checkbox => {
                 checkbox.checked = marcarTodos;
                 
                 // Trigger change event para actualizar labels
@@ -906,8 +984,17 @@ function marcarTodosDocumentos(marcarTodos) {
                 checkbox.dispatchEvent(event);
             });
             
-            // Actualizar estadísticas
-            setTimeout(actualizarEstadisticas, 500);
+            // Actualizar estadísticas y contadores del buscador
+            setTimeout(() => {
+                if (typeof actualizarEstadisticas === 'function') {
+                    actualizarEstadisticas();
+                }
+                if (terminoBusqueda !== '') {
+                    filtrarDocumentos(); // Actualizar contadores filtrados
+                } else {
+                    recalcularContadores(); // Actualizar contadores totales
+                }
+            }, 500);
             
             } else {
             console.error('❌ Error al marcar documentos:', data.error);
@@ -1258,6 +1345,147 @@ function createToastContainer() {
     container.style.zIndex = '1056';
     document.body.appendChild(container);
     return container;
+}
+
+// ========================================
+// FUNCIONES DEL BUSCADOR DE DOCUMENTOS
+// ========================================
+
+function filtrarDocumentos() {
+    const terminoBusqueda = document.getElementById('buscador-documentos').value.toLowerCase().trim();
+    const documentosItems = document.querySelectorAll('.document-item');
+    const btnLimpiar = document.getElementById('limpiar-busqueda');
+    const resultadoBusqueda = document.getElementById('resultado-busqueda');
+    
+    let documentosVisibles = 0;
+    let documentosPresentes = 0;
+    let documentosFaltantes = 0;
+    
+    if (terminoBusqueda === '') {
+        // Mostrar todos los documentos
+        documentosItems.forEach(item => {
+            item.style.display = '';
+            
+            // Contar documentos
+            const checkbox = item.querySelector('.documento-checkbox');
+            if (checkbox && checkbox.checked) {
+                documentosPresentes++;
+            } else {
+                documentosFaltantes++;
+            }
+        });
+        
+        documentosVisibles = documentosItems.length;
+        btnLimpiar.style.display = 'none';
+        resultadoBusqueda.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mostrando todos los documentos';
+        
+    } else {
+        // Filtrar documentos
+        documentosItems.forEach(item => {
+            const nombreDocumento = item.querySelector('h6.fw-semibold');
+            if (nombreDocumento) {
+                const texto = nombreDocumento.textContent.toLowerCase();
+                const esVisible = texto.includes(terminoBusqueda);
+                
+                item.style.display = esVisible ? '' : 'none';
+                
+                if (esVisible) {
+                    documentosVisibles++;
+                    
+                    // Contar documentos visibles
+                    const checkbox = item.querySelector('.documento-checkbox');
+                    if (checkbox && checkbox.checked) {
+                        documentosPresentes++;
+                    } else {
+                        documentosFaltantes++;
+                    }
+                }
+            }
+        });
+        
+        btnLimpiar.style.display = 'inline-block';
+        
+        if (documentosVisibles === 0) {
+            resultadoBusqueda.innerHTML = '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>No se encontraron documentos';
+        } else {
+            resultadoBusqueda.innerHTML = `<i class="fas fa-filter me-1 text-primary"></i>Mostrando ${documentosVisibles} de ${documentosItems.length} documentos`;
+        }
+    }
+    
+    // Actualizar contador dinámico
+    actualizarContadorDocumentos(documentosVisibles, documentosPresentes, documentosFaltantes);
+    
+    // Mostrar/ocultar secciones vacías
+    actualizarVisibilidadSecciones();
+}
+
+function limpiarBusqueda() {
+    const buscador = document.getElementById('buscador-documentos');
+    const btnLimpiar = document.getElementById('limpiar-busqueda');
+    const resultadoBusqueda = document.getElementById('resultado-busqueda');
+    
+    buscador.value = '';
+    btnLimpiar.style.display = 'none';
+    resultadoBusqueda.innerHTML = '<i class="fas fa-info-circle me-1"></i>Mostrando todos los documentos';
+    
+    // Mostrar todos los documentos
+    document.querySelectorAll('.document-item').forEach(item => {
+        item.style.display = '';
+    });
+    
+    // Mostrar todas las secciones
+    document.querySelectorAll('.seccion-header, .seccion-contenido').forEach(seccion => {
+        seccion.style.display = '';
+    });
+    
+    // Restaurar contador original
+    recalcularContadores();
+    
+    // Enfocar el buscador
+    buscador.focus();
+}
+
+function actualizarContadorDocumentos(total, presentes, faltantes) {
+    const contador = document.getElementById('contador-documentos');
+    if (contador) {
+        contador.textContent = `Total: ${total} | Presentes: ${presentes} | Faltantes: ${faltantes}`;
+    }
+}
+
+function actualizarVisibilidadSecciones() {
+    const secciones = document.querySelectorAll('.seccion-header');
+    
+    secciones.forEach(seccionHeader => {
+        const seccionContenido = seccionHeader.nextElementSibling;
+        if (seccionContenido) {
+            const documentosVisibles = seccionContenido.querySelectorAll('.document-item[style=""], .document-item:not([style])');
+            
+            if (documentosVisibles.length === 0) {
+                seccionHeader.style.display = 'none';
+                seccionContenido.style.display = 'none';
+            } else {
+                seccionHeader.style.display = '';
+                seccionContenido.style.display = '';
+            }
+        }
+    });
+}
+
+function recalcularContadores() {
+    const documentosItems = document.querySelectorAll('.document-item');
+    let documentosPresentes = 0;
+    let documentosFaltantes = 0;
+    
+    documentosItems.forEach(item => {
+        const checkbox = item.querySelector('.documento-checkbox');
+        if (checkbox && checkbox.checked) {
+            documentosPresentes++;
+        } else {
+            documentosFaltantes++;
+        }
+    });
+    
+    actualizarContadorDocumentos(documentosItems.length, documentosPresentes, documentosFaltantes);
 }
 
 // Variables globales para Orden del expediente
