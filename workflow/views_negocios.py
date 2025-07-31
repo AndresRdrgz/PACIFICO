@@ -27,9 +27,20 @@ def get_user_pipeline_access(user):
     if user.is_superuser:
         # Superusers have full access to all pipelines
         pipelines = Pipeline.objects.all()
+        pipeline_permissions = {}
+        # Create permissions dict for all pipelines for superusers
+        for pipeline in pipelines:
+            pipeline_permissions[pipeline.id] = {
+                'can_create': True,
+                'can_edit': True,
+                'can_delete': True,
+                'can_admin': True,
+                'access_level': 'admin'
+            }
         return {
             'has_access': True,
             'pipelines': pipelines,
+            'pipeline_permissions': pipeline_permissions,
             'can_create': True,
             'can_edit': True,
             'can_delete': True,
