@@ -502,3 +502,193 @@ class ComentarioDocumentoBackoffice(models.Model):
     def __str__(self):
         return f"Comentario en {self.requisito_solicitud.requisito.nombre} por {self.comentario_por.username}"
 
+
+# --------------------------------------
+# HISTORIAL BACK OFFICE
+# --------------------------------------
+
+class HistorialBackoffice(models.Model):
+    """
+    Historial completo de eventos en Back Office para trazabilidad y auditoría
+    """
+    
+    TIPO_EVENTO_CHOICES = [
+        ('devolucion', 'Devolución a Negocio'),
+        ('calificacion', 'Cambio de Calificación'),
+        ('subestado', 'Cambio de Subestado'),
+        ('entrada_bandeja_grupal', 'Entrada a Bandeja Grupal'),
+        ('asignacion_desde_bandeja_grupal', 'Asignación desde Bandeja Grupal'),
+    ]
+    
+    # Campos principales
+    tipo_evento = models.CharField(
+        max_length=35,  # ✅ CORREGIDO: Aumentado para cubrir 'asignacion_desde_bandeja_grupal' (31 chars)
+        choices=TIPO_EVENTO_CHOICES,
+        verbose_name="Tipo de Evento"
+    )
+    solicitud = models.ForeignKey(
+        'workflow.Solicitud', 
+        on_delete=models.CASCADE, 
+        related_name='historial_backoffice',
+        verbose_name="Solicitud"
+    )
+    usuario = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.CASCADE,
+        verbose_name="Usuario Responsable"
+    )
+    fecha_evento = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha del Evento"
+    )
+    
+    # Campos para DEVOLUCIÓN
+    motivo_devolucion = models.TextField(
+        blank=True, 
+        null=True,
+        verbose_name="Motivo de Devolución"
+    )
+    
+    # Campos para CAMBIO DE SUBESTADO
+    subestado_origen = models.ForeignKey(
+        'workflow.SubEstado', 
+        on_delete=models.CASCADE,
+        related_name='historial_como_origen',
+        blank=True, 
+        null=True,
+        verbose_name="Subestado Origen"
+    )
+    subestado_destino = models.ForeignKey(
+        'workflow.SubEstado', 
+        on_delete=models.CASCADE,
+        related_name='historial_como_destino',
+        blank=True, 
+        null=True,
+        verbose_name="Subestado Destino"
+    )
+    fecha_entrada_subestado = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Fecha de Entrada al Subestado"
+    )
+    fecha_salida_subestado = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Fecha de Salida del Subestado"
+    )
+    tiempo_en_subestado = models.DurationField(
+        blank=True, 
+        null=True,
+        verbose_name="Tiempo en Subestado"
+    )
+    
+    # Campos para CAMBIO DE CALIFICACIÓN
+    documento_nombre = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        verbose_name="Nombre del Documento"
+    )
+    calificacion_anterior = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        verbose_name="Calificación Anterior"
+    )
+    calificacion_nueva = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        verbose_name="Calificación Nueva"
+    )
+    requisito_solicitud_id = models.PositiveIntegerField(
+        blank=True, 
+        null=True,
+        verbose_name="ID del Requisito de Solicitud"
+    )
+    
+    # Campos para BANDEJA GRUPAL
+    fecha_entrada_bandeja_grupal = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Fecha de Entrada a Bandeja Grupal"
+    )
+    fecha_asignacion_bandeja_grupal = models.DateTimeField(
+        blank=True, 
+        null=True,
+        verbose_name="Fecha de Asignación desde Bandeja Grupal"
+    )
+    tiempo_en_bandeja_grupal = models.DurationField(
+        blank=True, 
+        null=True,
+        verbose_name="Tiempo en Bandeja Grupal"
+    )
+    usuario_asignado = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.CASCADE,
+        related_name='asignaciones_backoffice',
+        blank=True, 
+        null=True,
+        verbose_name="Usuario Asignado (para eventos de asignación)"
+    )
+    
+    # Metadatos adicionales
+    observaciones = models.TextField(
+        blank=True, 
+        null=True,
+        verbose_name="Observaciones Adicionales"
+    )
+    
+    class Meta:
+        db_table = 'workflow_historial_backoffice'
+        verbose_name = 'Historial Back Office'
+        verbose_name_plural = 'Historial Back Office'
+        ordering = ['-fecha_evento']
+        indexes = [
+            models.Index(fields=['solicitud', 'tipo_evento']),
+            models.Index(fields=['fecha_evento']),
+            models.Index(fields=['usuario']),
+        ]
+    
+    def __str__(self):
+        if self.tipo_evento == 'devolucion':
+            return f"Devolución #{self.solicitud.codigo} por {self.usuario.username}"
+        elif self.tipo_evento == 'calificacion':
+            return f"Calificación {self.documento_nombre} por {self.usuario.username}"
+        elif self.tipo_evento == 'subestado':
+            return f"Subestado {self.subestado_origen} → {self.subestado_destino} por {self.usuario.username}"
+        elif self.tipo_evento == 'entrada_bandeja_grupal':
+            return f"Entrada a bandeja grupal #{self.solicitud.codigo} en {self.subestado_destino}"
+        elif self.tipo_evento == 'asignacion_desde_bandeja_grupal':
+            usuario_asignado = self.usuario_asignado.username if self.usuario_asignado else "Usuario desconocido"
+            return f"Asignación #{self.solicitud.codigo} a {usuario_asignado}"
+        return f"Evento {self.tipo_evento} por {self.usuario.username}"
+    
+    def get_tiempo_formateado(self):
+        """Retorna el tiempo en subestado formateado"""
+        if not self.tiempo_en_subestado:
+            return "N/A"
+        
+        total_seconds = int(self.tiempo_en_subestado.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+    
+    def get_tiempo_bandeja_grupal_formateado(self):
+        """Retorna el tiempo en bandeja grupal formateado"""
+        if not self.tiempo_en_bandeja_grupal:
+            return "N/A"
+        
+        total_seconds = int(self.tiempo_en_bandeja_grupal.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        else:
+            return f"{minutes}m"
+

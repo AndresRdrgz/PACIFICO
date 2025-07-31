@@ -10786,6 +10786,7 @@ def api_ejecutar_transicion(request):
         data = json.loads(request.body)
         solicitud_id = data.get('solicitud_id')
         transicion_id = data.get('transicion_id')
+        motivo = data.get('motivo', '')  # ✅ NUEVO: Obtener motivo de devolución
         
         if not solicitud_id or not transicion_id:
             return JsonResponse({
@@ -10817,6 +10818,22 @@ def api_ejecutar_transicion(request):
         if transicion.requiere_permiso:
             # Aquí podrías agregar lógica adicional de permisos
             pass
+        
+        # ✅ NUEVO: Registrar devolución en historial si viene desde Back Office
+        if (solicitud.etapa_actual and 
+            solicitud.etapa_actual.nombre == "Back Office" and
+            transicion.etapa_origen.nombre == "Back Office"):
+            
+            # Importar función de registro
+            from .signals_backoffice import registrar_devolucion_manual
+            
+            # Registrar la devolución en el historial
+            registrar_devolucion_manual(
+                solicitud=solicitud,
+                usuario=request.user,
+                motivo=motivo or "Devolución desde Back Office",
+                etapa_destino=transicion.etapa_destino
+            )
         
         # Cerrar el historial actual
         historial_actual = HistorialSolicitud.objects.filter(

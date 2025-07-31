@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice
+from .models import ClienteEntrevista, ReferenciaPersonal, ReferenciaComercial, OtroIngreso, OpcionDesplegable, CalificacionDocumentoBackoffice, ComentarioDocumentoBackoffice, HistorialBackoffice
 from .modelsWorkflow import Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, RequisitoSolicitud, CampoPersonalizado, ValorCampoSolicitud, RequisitoTransicion, PermisoPipeline, PermisoBandeja, CalificacionCampo, SolicitudComentario, NivelComite, UsuarioNivelComite, ParticipacionComite, SolicitudEscalamientoComite, ReportePersonalizado, EjecucionReporte, CatalogoPendienteAntesFirma, PendienteSolicitud, AgendaFirma, OrdenExpediente, PlantillaOrdenExpediente
 from .forms import SolicitudAdminForm
 
@@ -1103,3 +1103,161 @@ class PlantillaOrdenExpedienteAdmin(admin.ModelAdmin):
                 
         self.message_user(request, f'Plantillas aplicadas a {count} solicitudes.')
     aplicar_plantillas_a_solicitudes.short_description = "Aplicar plantillas a solicitudes del pipeline"
+
+
+# --------------------------------------
+# HISTORIAL BACK OFFICE ADMIN
+# --------------------------------------
+
+@admin.register(HistorialBackoffice)
+class HistorialBackofficeAdmin(admin.ModelAdmin):
+    """
+    Administración para el historial de Back Office con filtros avanzados
+    """
+    list_display = [
+        'fecha_evento', 
+        'solicitud_codigo', 
+        'tipo_evento', 
+        'usuario', 
+        'evento_descripcion',
+        'tiempo_formateado',
+        'tiempo_bandeja_grupal_formateado'
+    ]
+    
+    list_filter = [
+        'tipo_evento',
+        'fecha_evento',
+        ('usuario', admin.RelatedOnlyFieldListFilter),
+        ('usuario_asignado', admin.RelatedOnlyFieldListFilter),
+        ('solicitud__pipeline', admin.RelatedOnlyFieldListFilter),
+        ('solicitud__etapa_actual', admin.RelatedOnlyFieldListFilter),
+        ('subestado_destino', admin.RelatedOnlyFieldListFilter),
+    ]
+    
+    search_fields = [
+        'solicitud__codigo',
+        'usuario__username',
+        'usuario__first_name',
+        'usuario__last_name',
+        'usuario_asignado__username',
+        'usuario_asignado__first_name',
+        'usuario_asignado__last_name',
+        'motivo_devolucion',
+        'documento_nombre',
+        'observaciones'
+    ]
+    
+    readonly_fields = [
+        'fecha_evento', 
+        'tiempo_formateado',
+        'tiempo_bandeja_grupal_formateado',
+        'solicitud_link'
+    ]
+    
+    fieldsets = (
+        ('Información General', {
+            'fields': ('fecha_evento', 'tipo_evento', 'solicitud_link', 'usuario')
+        }),
+        ('Devolución', {
+            'fields': ('motivo_devolucion',),
+            'classes': ('collapse',),
+        }),
+        ('Cambio de Subestado', {
+            'fields': (
+                'subestado_origen', 
+                'subestado_destino',
+                'fecha_entrada_subestado',
+                'fecha_salida_subestado',
+                'tiempo_formateado'
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Cambio de Calificación', {
+            'fields': (
+                'documento_nombre',
+                'calificacion_anterior',
+                'calificacion_nueva',
+                'requisito_solicitud_id'
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Eventos de Bandeja Grupal', {
+            'fields': (
+                'usuario_asignado',
+                'fecha_entrada_bandeja_grupal',
+                'fecha_asignacion_bandeja_grupal',
+                'tiempo_bandeja_grupal_formateado'
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Metadatos', {
+            'fields': ('observaciones',),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    ordering = ['-fecha_evento']
+    date_hierarchy = 'fecha_evento'
+    
+    def solicitud_codigo(self, obj):
+        """Mostrar código de solicitud"""
+        return obj.solicitud.codigo if obj.solicitud else "N/A"
+    solicitud_codigo.short_description = 'Código Solicitud'
+    solicitud_codigo.admin_order_field = 'solicitud__codigo'
+    
+    def evento_descripcion(self, obj):
+        """Descripción resumida del evento"""
+        if obj.tipo_evento == 'devolucion':
+            return f"Devuelto por: {obj.motivo_devolucion[:50]}..." if obj.motivo_devolucion else "Devuelto"
+        elif obj.tipo_evento == 'calificacion':
+            return f"{obj.documento_nombre}: {obj.calificacion_anterior} → {obj.calificacion_nueva}"
+        elif obj.tipo_evento == 'subestado':
+            origen = obj.subestado_origen.nombre if obj.subestado_origen else "Inicio"
+            destino = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
+            return f"{origen} → {destino}"
+        elif obj.tipo_evento == 'entrada_bandeja_grupal':
+            subestado = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
+            return f"Entrada a bandeja grupal: {subestado}"
+        elif obj.tipo_evento == 'asignacion_desde_bandeja_grupal':
+            usuario_asignado = obj.usuario_asignado.username if obj.usuario_asignado else "Usuario desconocido"
+            subestado = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
+            tiempo = obj.get_tiempo_bandeja_grupal_formateado() if obj.tiempo_en_bandeja_grupal else "N/A"
+            return f"Asignado a {usuario_asignado} en {subestado} (Tiempo en bandeja: {tiempo})"
+        return "N/A"
+    evento_descripcion.short_description = 'Descripción del Evento'
+    
+    def tiempo_formateado(self, obj):
+        """Tiempo en subestado formateado"""
+        return obj.get_tiempo_formateado()
+    tiempo_formateado.short_description = 'Tiempo en Subestado'
+    
+    def tiempo_bandeja_grupal_formateado(self, obj):
+        """Tiempo en bandeja grupal formateado"""
+        return obj.get_tiempo_bandeja_grupal_formateado()
+    tiempo_bandeja_grupal_formateado.short_description = 'Tiempo en Bandeja Grupal'
+    
+    def solicitud_link(self, obj):
+        """Link a la solicitud"""
+        if obj.solicitud:
+            from django.urls import reverse
+            from django.utils.html import format_html
+            try:
+                url = reverse('admin:modelsWorkflow_solicitud_change', args=[obj.solicitud.pk])
+                return format_html('<a href="{}" target="_blank">{}</a>', url, obj.solicitud.codigo)
+            except:
+                return obj.solicitud.codigo
+        return "N/A"
+    solicitud_link.short_description = 'Solicitud'
+    solicitud_link.allow_tags = True
+    
+    def has_add_permission(self, request):
+        """Deshabilitar creación manual"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Solo lectura para preservar integridad del historial"""
+        return request.user.is_superuser
+    
+    def has_delete_permission(self, request, obj=None):
+        """Solo super usuarios pueden eliminar historial"""
+        return request.user.is_superuser
