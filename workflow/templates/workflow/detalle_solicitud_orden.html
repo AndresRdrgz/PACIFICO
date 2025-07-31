@@ -583,7 +583,7 @@
             <!-- Botones de Acción -->
             <div class="action-buttons">
               <!-- Botón Devolver a Oficial - se muestra solo si hay transiciones negativas -->
-              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="mostrarModalDevolucion()">
+              <button id="btn-devolver-oficial" type="button" class="btn btn-warning btn-lg" style="display: inline-block;" onclick="OrdenWorkflow.mostrarModalDevolucion()">
                 <i class="fas fa-arrow-left me-2"></i>
                 <span>Devolver a Oficial</span>
               </button>
@@ -654,15 +654,150 @@
 <script>
 // Variables globales
 let currentDocumentoId = null;
-let transicionesNegativas = [];
 const SOLICITUD_ID = {{ solicitud.id }};
+
+// ========================================
+// NAMESPACE DE DEVOLUCIÓN - DEFINIR PRIMERO
+// ========================================
+
+// Namespace específico para Orden para evitar conflictos con backoffice.js
+const OrdenWorkflow = {
+  transicionesNegativas: [],
+
+  // Función para cargar transiciones negativas al inicializar
+  cargarTransicionesNegativas: function() {
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          OrdenWorkflow.transicionesNegativas = data.transiciones_negativas || [];
+          const btnDevolver = document.getElementById('btn-devolver-oficial');
+          if (btnDevolver) {
+            btnDevolver.style.display = data.tiene_transiciones_negativas ? 'inline-block' : 'none';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error al cargar transiciones negativas:', error);
+      });
+  },
+
+  // Función para mostrar modal de devolución
+  mostrarModalDevolucion: function() {
+    console.log('📋 Mostrando modal de devolución...');
+    
+    if (OrdenWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'warning');
+        return;
+    }
+    
+    // Cargar información de la transición
+    const transicion = OrdenWorkflow.transicionesNegativas[0];
+    document.getElementById('devolver-etapa-destino').textContent = transicion.etapa_destino.nombre;
+    
+    // En Orden no hay documentos problemáticos específicos, mostrar mensaje genérico
+    const listaContainer = document.getElementById('lista-documentos-problematicos');
+    listaContainer.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Devolución desde Orden del Expediente</strong>
+            <p class="mb-0 mt-2">Se está solicitando devolver la solicitud al oficial para revisión adicional.</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
+    modal.show();
+  },
+
+  // ✅ FUNCIÓN PARA CONFIRMAR DEVOLUCIÓN CON CORREO AUTOMÁTICO
+  confirmarDevolucion: function() {
+    const motivo = document.getElementById('motivo-devolucion').value.trim();
+    
+    if (!motivo) {
+        mostrarMensaje('Por favor, ingresa el motivo de la devolución.', 'warning');
+        document.getElementById('motivo-devolucion').focus();
+        return;
+    }
+    
+    // Verificar que haya transiciones negativas disponibles
+    if (typeof OrdenWorkflow.transicionesNegativas === 'undefined' || OrdenWorkflow.transicionesNegativas.length === 0) {
+        mostrarMensaje('No hay transiciones negativas disponibles.', 'error');
+        return;
+    }
+    
+    const transicion = OrdenWorkflow.transicionesNegativas[0];
+    const btnConfirmar = document.getElementById('btn-confirmar-devolucion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    
+    // Mostrar loading
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando correo...';
+    btnConfirmar.disabled = true;
+    
+    console.log(`🚨 Devolviendo solicitud ${SOLICITUD_ID} desde ORDEN a ${transicion.etapa_destino.nombre} con motivo: ${motivo}`);
+    
+    // 🚨 USAR API DE DEVOLUCIÓN CON CORREO
+    fetch('/workflow/api/solicitudes/devolver-backoffice/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            solicitud_id: SOLICITUD_ID,
+            transicion_id: transicion.id,
+            motivo: motivo,
+            etapa_origen: 'orden'  // ✅ Identificar que viene de orden
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Mostrar mensaje de éxito con información del correo
+            const mensaje = `✅ Solicitud devuelta exitosamente desde ORDEN a ${data.data.nueva_etapa}
+            
+📧 Se ha enviado un correo automático al propietario con:
+• Lista de documentos problemáticos (${data.data.documentos_problematicos})
+• Motivo de devolución desde Orden del Expediente
+• Instrucciones para corrección
+
+Copias enviadas a: arodriguez@fpacifico.com y jacastillo@fpacifico.com`;
+            
+            mostrarMensaje(mensaje, 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevolverOficial'));
+            modal.hide();
+            
+            // Redirigir según la URL proporcionada por la API
+            setTimeout(() => {
+                window.location.href = data.redirect_url || '/workflow/bandeja-mixta/';
+            }, 2000);
+            
+        } else {
+            mostrarMensaje(`❌ Error al devolver solicitud: ${data.message || data.error}`, 'error');
+            
+            // Restaurar botón
+            btnConfirmar.innerHTML = textoOriginal;
+            btnConfirmar.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error en devolución desde Orden:', error);
+        mostrarMensaje('❌ Error de conexión al devolver solicitud. Inténtalo de nuevo.', 'error');
+        
+        // Restaurar botón
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+    });
+  }
+};
 
 // Inicialización  
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando Orden de Expediente para solicitud:', SOLICITUD_ID);
     
     // Inicializar funcionalidades
-    cargarTransicionesNegativas();
+    OrdenWorkflow.cargarTransicionesNegativas();
     
     console.log('✅ Orden de Expediente inicializado correctamente');
 });
@@ -987,23 +1122,6 @@ function validarDocumentosYAvanzar() {
     mostrarModalAvanzarSubestadoOrden();
 }
 
-function cargarTransicionesNegativas() {
-  fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/transiciones-negativas/`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        transicionesNegativas = data.transiciones_negativas || [];
-        const btnDevolver = document.getElementById('btn-devolver-oficial');
-        if (btnDevolver) {
-                    btnDevolver.style.display = data.tiene_transiciones_negativas ? 'inline-block' : 'none';
-        }
-      }
-    })
-    .catch(error => {
-      console.error('Error al cargar transiciones negativas:', error);
-    });
-}
-
 // Función para cargar información del modal cuando se abre - Adaptada para Orden
 function cargarInformacionAvance() {
     console.log('🔄 Cargando información de avance para Orden...');
@@ -1054,10 +1172,92 @@ function cargarInformacionAvance() {
         });
 }
 
-function mostrarModalDevolucion() {
-    console.log('📋 Mostrando modal de devolución...');
-    const modal = new bootstrap.Modal(document.getElementById('modalDevolverOficial'));
-    modal.show();
+// ========================================
+// FUNCIONES DE DEVOLUCIÓN (DEFINIDAS ARRIBA EN NAMESPACE)
+// ========================================
+
+// Función global para compatibilidad con modal reutilizable
+function confirmarDevolucionModal() {
+  OrdenWorkflow.confirmarDevolucion();
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Función auxiliar para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', function () {
+        toastContainer.removeChild(toast);
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Función auxiliar para mostrar mensajes
+function mostrarMensaje(mensaje, tipo) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${tipo === 'success' ? 'success' : tipo === 'error' ? 'danger' : 'info'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', function () {
+        toastContainer.removeChild(toast);
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
 }
 
 // Variables globales para Orden del expediente
@@ -1701,5 +1901,8 @@ function enviarAvanceRequestOrden(data, btnConfirmar) {
     </div>
   </div>
 </div>
+
+<!-- Modales -->
+{% include "workflow/partials/modal_devolver_oficial.html" %}
 
 {% endblock %}
