@@ -6961,15 +6961,62 @@ def api_solicitud_brief(request, solicitud_id):
             referencias.append({'nombre': 'APC', 'tipo': 'APC', 'relacion': '', 'telefono': '', 'descripcion': cotizacion.referenciasAPC})
         # TODO: Agregar referencias personales/comerciales si existen modelos relacionados
 
-        # Documentos (de requisitos)
+        # Documentos (de requisitos) - CON INFORMACIÓN DE CALIFICACIÓN
+        from .models import CalificacionDocumentoBackoffice, RequisitoTransicion
+        
         documentos = []
         for req in solicitud.requisitos.all():
+            # Obtener calificación más reciente si existe
+            calificacion = CalificacionDocumentoBackoffice.objects.filter(
+                requisito_solicitud=req
+            ).order_by('-fecha_calificacion').first()
+            
+            # Obtener información de obligatoriedad - MEJORADA PARA INCLUIR MÁS CASOS
+            es_obligatorio = False
+            
+            # 1. Primero verificar en RequisitoTransicion para la etapa actual
+            if solicitud.etapa_actual:
+                transiciones_entrada = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_destino=solicitud.etapa_actual
+                )
+                for transicion in transiciones_entrada:
+                    req_transicion = RequisitoTransicion.objects.filter(
+                        transicion=transicion,
+                        requisito=req.requisito
+                    ).first()
+                    if req_transicion:
+                        es_obligatorio = req_transicion.obligatorio
+                        break
+            
+            # 2. Si no se encontró en RequisitoTransicion, verificar en RequisitoPipeline
+            if not es_obligatorio:
+                from .modelsWorkflow import RequisitoPipeline
+                req_pipeline = RequisitoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    requisito=req.requisito
+                ).first()
+                if req_pipeline:
+                    es_obligatorio = req_pipeline.obligatorio
+            
+            # 3. Para efectos del tab "Documentos Pendientes", si no está definido
+            # en ningún lado, se considera NO obligatorio (opcional)
+            
             documento_info = {
                 'id': req.id,  # Add the RequisitoSolicitud ID
                 'nombre': req.requisito.nombre,
                 'url': req.archivo.url if req.archivo else '',
                 'cumplido': req.cumplido,
-                'observaciones': req.observaciones or ''
+                'observaciones': req.observaciones or '',
+                # Nuevos campos para calificación
+                'obligatorio': es_obligatorio,
+                'calificacion_estado': calificacion.estado if calificacion else None,
+                'motivo_calificacion': calificacion.opcion_desplegable.nombre if calificacion and calificacion.opcion_desplegable else None,
+                'calificado_por': calificacion.calificado_por.get_full_name() or calificacion.calificado_por.username if calificacion else None,
+                'fecha_calificacion': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if calificacion else None,
+                'subsanado': calificacion.subsanado if calificacion else False,
+                'subsanado_por': calificacion.subsanado_por.get_full_name() or calificacion.subsanado_por.username if calificacion and calificacion.subsanado_por else None,
+                'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M') if calificacion and calificacion.fecha_subsanado else None,
             }
             
             # Special handling for APC requisito

@@ -91,6 +91,7 @@ urlpatterns += [
     
     # Document Upload API URL
     path('api/upload-documento/', api_upload.api_upload_documento, name='api_upload_documento'),
+    path('api/upload-documento/<int:solicitud_id>/', api_upload.api_upload_documento_modal, name='api_upload_documento_modal'),
     
     # Document List API URL
     path('api/solicitud/<int:solicitud_id>/documentos/', api_documentos.api_obtener_documentos_solicitud, name='api_obtener_documentos_solicitud'),
