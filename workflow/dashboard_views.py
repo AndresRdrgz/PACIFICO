@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, F, Count, Avg, ExpressionWrapper, fields
-from django.db.models.functions import Now, Extract
+from django.db.models.functions import Now, Extract, TruncMonth
 from django.utils import timezone
 from django.contrib.auth.models import User, Group
 from datetime import datetime, timedelta
@@ -1359,8 +1359,8 @@ def dashboard_negocios(request):
     hace_6_meses = timezone.now() - timedelta(days=180)
     solicitudes_por_mes = queryset_solicitudes.filter(
         fecha_creacion__gte=hace_6_meses
-    ).extra(
-        select={'mes': "strftime('%%Y-%%m', fecha_creacion)"}
+    ).annotate(
+        mes=TruncMonth('fecha_creacion')
     ).values('mes').annotate(
         total=Count('id')
     ).order_by('mes')
@@ -1368,8 +1368,8 @@ def dashboard_negocios(request):
     # Cotizaciones creadas por mes
     cotizaciones_por_mes = queryset_cotizaciones.filter(
         created_at__gte=hace_6_meses
-    ).extra(
-        select={'mes': "strftime('%%Y-%%m', created_at)"}
+    ).annotate(
+        mes=TruncMonth('created_at')
     ).values('mes').annotate(
         total=Count('id')
     ).order_by('mes')
