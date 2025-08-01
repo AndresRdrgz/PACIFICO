@@ -27,7 +27,7 @@ urlpatterns = [
     #path('api/appx/verificar-conexion/', api_appx_conexion.verificar_conexion_appx, name='verificar_conexion_appx'),
     
     # Workflow URLs
-    path('', dashboard_views.dashboard_operativo, name='dashboard'),
+    path('', dashboard_views.dashboard_router, name='dashboard'),
     path('negocios/', views_negocios.negocios_view, name='negocios'),
     
     # Makito Tracking URLs

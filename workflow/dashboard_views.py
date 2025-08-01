@@ -1247,8 +1247,8 @@ def dashboard_router(request):
         else:
             return dashboard_operativo(request)
     
-    # Verificar si es Oficial de Negocio
-    if user.groups.filter(name='Oficial de Negocio').exists():
+    # Verificar si es Oficial de Negocio o miembro del grupo NEGOCIOS
+    if user.groups.filter(name='Oficial de Negocio').exists() or user.groups.filter(name='NEGOCIOS').exists():
         return dashboard_negocios(request)
     
     # Verificar si es miembro del Comité de Crédito
@@ -1281,7 +1281,7 @@ def dashboard_negocios(request):
     user = request.user
     
     # Verificar permisos (excepto superuser)
-    if not user.is_superuser and not user.groups.filter(name='Oficial de Negocio').exists():
+    if not user.is_superuser and not (user.groups.filter(name='Oficial de Negocio').exists() or user.groups.filter(name='NEGOCIOS').exists()):
         # Redirigir al dashboard apropiado
         return dashboard_router(request)
     
