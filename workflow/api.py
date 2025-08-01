@@ -11,6 +11,7 @@ from django.db.models import Q
 from .models import ClienteEntrevista
 from .modelsWorkflow import Solicitud, CalificacionCampo, HistorialSolicitud, PermisoEtapa, NotaRecordatorio, SolicitudComentario
 from .views_workflow import notify_solicitud_change
+from pacifico.models import Politicas
 import json
 import logging
 import traceback
@@ -1160,4 +1161,33 @@ def api_validate_cotizacion_duplicate(request):
         return JsonResponse({
             'success': False,
             'error': 'Error interno del servidor'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_politicas(request):
+    """
+    API para obtener todas las políticas disponibles
+    """
+    try:
+        politicas = Politicas.objects.all().order_by('titulo')
+        politicas_data = []
+        
+        for politica in politicas:
+            politicas_data.append({
+                'id': politica.id,
+                'titulo': politica.titulo
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'politicas': politicas_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading políticas: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error cargando políticas'
         }, status=500)
