@@ -9,6 +9,7 @@ def user_navigation_permissions(request):
         'can_access_comite': False,
         'can_access_bandejas_trabajo': False,
         'can_access_canal_digital': False,
+        'can_access_pendientes_errores': False,
     }
     
     if not request.user.is_authenticated:
@@ -20,6 +21,7 @@ def user_navigation_permissions(request):
             'can_access_comite': True,
             'can_access_bandejas_trabajo': True,
             'can_access_canal_digital': True,
+            'can_access_pendientes_errores': True,
         })
         return context
     
@@ -63,6 +65,13 @@ def user_navigation_permissions(request):
     try:
         if request.user.groups.filter(name="Canal Digital").exists():
             context['can_access_canal_digital'] = True
+    except:
+        pass
+    
+    # Verificar acceso a Pendientes y Errores
+    try:
+        if request.user.groups.filter(name__in=["NEGOCIOS", "BACK OFFICE"]).exists():
+            context['can_access_pendientes_errores'] = True
     except:
         pass
     
