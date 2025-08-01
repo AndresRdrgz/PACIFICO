@@ -261,6 +261,7 @@ urlpatterns += [
     
     # API para validación de cotización duplicada
     path('api/validate-cotizacion-duplicate/', api.api_validate_cotizacion_duplicate, name='api_validate_cotizacion_duplicate'),
+    path('api/politicas/', api.api_politicas, name='api_politicas'),
     
     # Unified Makito Tracking URL
     path('makito-tracking/', views_workflow.makito_tracking_view, name='makito_tracking'),

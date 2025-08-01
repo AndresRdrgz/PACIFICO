@@ -2543,6 +2543,9 @@ function resetNuevaSolicitudModal() {
     selectedSolicitudId = null;
     availableSolicitudes = [];
     
+    // Reset search listener flag
+    resetSearchListener();
+    
     // Reset UI
     document.querySelectorAll('.service-option').forEach(option => {
         option.classList.remove('selected');
@@ -2550,7 +2553,11 @@ function resetNuevaSolicitudModal() {
     
     document.getElementById('solicitudesSection').style.display = 'none';
     document.getElementById('procesarSolicitudBtn').style.display = 'none';
-    document.getElementById('searchSolicitudes').value = '';
+    
+    const searchInput = document.getElementById('searchSolicitudes');
+    if (searchInput) {
+        searchInput.value = '';
+    }
 }
 
 function setupServiceTypeSelector() {
@@ -2565,6 +2572,14 @@ function setupServiceTypeSelector() {
             this.classList.add('selected');
             selectedServiceType = this.dataset.type;
             
+            console.log('Selected service type:', selectedServiceType);
+            
+            // Clear search input when switching service types
+            const searchInput = document.getElementById('searchSolicitudes');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
             // Show solicitudes section and load data
             document.getElementById('solicitudesSection').style.display = 'block';
             loadAvailableSolicitudes();
@@ -2578,9 +2593,9 @@ async function loadAvailableSolicitudes() {
     const noDataElement = document.getElementById('noSolicitudesFound');
     
     // Show loading
-    loadingElement.style.display = 'block';
-    listElement.innerHTML = '';
-    noDataElement.style.display = 'none';
+    if (loadingElement) loadingElement.style.display = 'block';
+    if (listElement) listElement.innerHTML = '';
+    if (noDataElement) noDataElement.style.display = 'none';
     
     try {
         const response = await fetch('/workflow/api/solicitudes/', {
@@ -2592,16 +2607,27 @@ async function loadAvailableSolicitudes() {
         });
         
         if (!response.ok) {
-            throw new Error('Error al cargar solicitudes');
+            throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        availableSolicitudes = data.solicitudes || [];
+        console.log('Received solicitudes data:', data);
         
-        // Filter solicitudes that don't already have the selected service type processed
-        const filteredSolicitudes = availableSolicitudes.filter(solicitud => {
+        // Store the full list of available solicitudes
+        availableSolicitudes = (data.solicitudes || []).filter(solicitud => {
+            console.log('Filtering solicitud:', {
+                id: solicitud.id,
+                codigo: solicitud.codigo,
+                etapa_actual: solicitud.etapa_actual,
+                apc_status: solicitud.apc_status,
+                sura_status: solicitud.sura_status,
+                debida_diligencia_status: solicitud.debida_diligencia_status,
+                selectedServiceType: selectedServiceType
+            });
+            
             // Only show active solicitudes (not completed)
-            if (!solicitud.etapa_actual || solicitud.etapa_actual === 'Completado') {
+            if (!solicitud.etapa_actual || solicitud.etapa_actual.toLowerCase() === 'completado') {
+                console.log('Filtering out - solicitud completed');
                 return false;
             }
             
@@ -2609,35 +2635,51 @@ async function loadAvailableSolicitudes() {
             switch (selectedServiceType) {
                 case 'apc':
                     // Don't show if APC is already pending, in_progress, or completed
-                    return !solicitud.apc_status || solicitud.apc_status === '' || solicitud.apc_status === 'no_iniciado';
+                    const apcStatus = solicitud.apc_status || '';
+                    const apcAllowed = apcStatus === '' || apcStatus === 'no_iniciado' || apcStatus === 'none' || apcStatus === null || apcStatus === 'undefined';
+                    console.log('APC filter result:', apcAllowed, 'Status:', apcStatus);
+                    return apcAllowed;
                     
                 case 'sura':
                     // Don't show if SURA is already pending, in_progress, or completed
-                    return !solicitud.sura_status || solicitud.sura_status === '' || solicitud.sura_status === 'no_iniciado';
+                    const suraStatus = solicitud.sura_status || '';
+                    const suraAllowed = suraStatus === '' || suraStatus === 'no_iniciado' || suraStatus === 'none' || suraStatus === null || suraStatus === 'undefined';
+                    console.log('SURA filter result:', suraAllowed, 'Status:', suraStatus);
+                    return suraAllowed;
                     
                 case 'debida_diligencia':
                     // Don't show if Debida Diligencia is already pending, in_progress, or completed
-                    return !solicitud.debida_diligencia_status || solicitud.debida_diligencia_status === '' || solicitud.debida_diligencia_status === 'no_iniciado';
+                    const ddStatus = solicitud.debida_diligencia_status || '';
+                    const ddAllowed = ddStatus === '' || ddStatus === 'no_iniciado' || ddStatus === 'none' || ddStatus === null || ddStatus === 'undefined';
+                    console.log('DD filter result:', ddAllowed, 'Status:', ddStatus);
+                    return ddAllowed;
                     
                 default:
+                    console.log('Default filter - allowing all');
                     return true;
             }
         });
         
-        loadingElement.style.display = 'none';
+        console.log('Filtered solicitudes:', availableSolicitudes.length);
         
-        if (filteredSolicitudes.length === 0) {
-            noDataElement.style.display = 'block';
+        if (loadingElement) loadingElement.style.display = 'none';
+        
+        if (availableSolicitudes.length === 0) {
+            if (noDataElement) noDataElement.style.display = 'block';
             return;
         }
         
-        renderSolicitudesList(filteredSolicitudes);
-        setupSolicitudesSearch();
+        renderSolicitudesList(availableSolicitudes);
+        
+        // Set up search functionality after a small delay to ensure DOM is ready
+        setTimeout(() => {
+            setupSolicitudesSearch();
+        }, 100);
         
     } catch (error) {
         console.error('Error loading solicitudes:', error);
-        loadingElement.style.display = 'none';
-        noDataElement.style.display = 'block';
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (noDataElement) noDataElement.style.display = 'block';
         
         showAlert('Error al cargar las solicitudes. Intenta nuevamente.', 'error');
     }
@@ -2645,20 +2687,38 @@ async function loadAvailableSolicitudes() {
 
 function renderSolicitudesList(solicitudes) {
     const listElement = document.getElementById('solicitudesList');
+    const noDataElement = document.getElementById('noSolicitudesFound');
+    
+    if (!listElement) {
+        console.warn('Solicitudes list element not found');
+        return;
+    }
+    
+    if (!solicitudes || solicitudes.length === 0) {
+        listElement.innerHTML = '';
+        if (noDataElement) {
+            noDataElement.style.display = 'block';
+        }
+        return;
+    }
+    
+    if (noDataElement) {
+        noDataElement.style.display = 'none';
+    }
     
     listElement.innerHTML = solicitudes.map(solicitud => `
         <div class="solicitud-item" data-solicitud-id="${solicitud.id}" onclick="selectSolicitud(${solicitud.id})">
             <div class="solicitud-info">
                 <div class="solicitud-code">${solicitud.cliente_nombre || solicitud.nombreCliente || 'Sin cliente'}</div>
                 <div class="solicitud-details">
-                    <span><i class="fas fa-code me-1"></i>${solicitud.codigo}</span>
-                    <span><i class="fas fa-id-card me-1"></i>${solicitud.apc_no_cedula || solicitud.cedulaCliente || 'Sin documento'}</span>
+                    <span><i class="fas fa-code me-1"></i>${solicitud.codigo || 'N/A'}</span>
+                    <span><i class="fas fa-id-card me-1"></i>${solicitud.apc_no_cedula || solicitud.cedulaCliente || solicitud.cliente_documento || solicitud.documento || 'Sin documento'}</span>
                     <span><i class="fas fa-calendar me-1"></i>${formatDate(solicitud.fecha_creacion)}</span>
-                    <span><i class="fas fa-user-tag me-1"></i>${solicitud.creada_por}</span>
+                    <span><i class="fas fa-user-tag me-1"></i>${solicitud.creada_por || 'N/A'}</span>
                 </div>
             </div>
             <div class="solicitud-meta">
-                <span class="pipeline-badge">${solicitud.pipeline}</span>
+                <span class="pipeline-badge">${solicitud.pipeline || 'N/A'}</span>
                 <span class="etapa-badge">${solicitud.etapa_actual || 'Completada'}</span>
             </div>
         </div>
@@ -2666,6 +2726,8 @@ function renderSolicitudesList(solicitudes) {
 }
 
 function selectSolicitud(solicitudId) {
+    console.log('Selecting solicitud with ID:', solicitudId);
+    
     // Remove previous selection
     document.querySelectorAll('.solicitud-item').forEach(item => {
         item.classList.remove('selected');
@@ -2677,38 +2739,97 @@ function selectSolicitud(solicitudId) {
         selectedItem.classList.add('selected');
         selectedSolicitudId = solicitudId;
         
+        console.log('Solicitud selected successfully:', selectedSolicitudId);
+        
         // Show continue button instead of process button
-        document.getElementById('continuarValidacionBtn').style.display = 'inline-block';
-        document.getElementById('procesarSolicitudBtn').style.display = 'none';
+        const continuarBtn = document.getElementById('continuarValidacionBtn');
+        const procesarBtn = document.getElementById('procesarSolicitudBtn');
+        
+        if (continuarBtn) continuarBtn.style.display = 'inline-block';
+        if (procesarBtn) procesarBtn.style.display = 'none';
+    } else {
+        console.warn('Could not find solicitud item with ID:', solicitudId);
     }
 }
+
+// Global flag to prevent multiple search listeners
+let searchListenerAttached = false;
 
 function setupSolicitudesSearch() {
     const searchInput = document.getElementById('searchSolicitudes');
     
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase().trim();
+    if (!searchInput) {
+        console.warn('Search input element with ID "searchSolicitudes" not found');
+        return;
+    }
+    
+    console.log('Setting up solicitudes search... Available solicitudes:', availableSolicitudes.length);
+    
+    // Only attach listeners if not already attached
+    if (!searchListenerAttached) {
+        // Add the event listeners
+        searchInput.addEventListener('input', handleSearchInput);
+        searchInput.addEventListener('keyup', handleSearchInput);
+        searchListenerAttached = true;
+        console.log('Search event listeners attached successfully');
+    } else {
+        console.log('Search listeners already attached, skipping');
+    }
+}
+
+// Reset the flag when modal is closed
+function resetSearchListener() {
+    searchListenerAttached = false;
+}
+
+function handleSearchInput(event) {
+    const searchTerm = event.target.value.toLowerCase().trim();
+    
+    console.log('=== SEARCH INPUT HANDLER ===');
+    console.log('Search term:', searchTerm);
+    console.log('Available solicitudes count:', availableSolicitudes.length);
+    console.log('Selected service type:', selectedServiceType);
+    
+    if (searchTerm === '') {
+        console.log('Empty search term - showing all solicitudes');
+        renderSolicitudesList(availableSolicitudes);
+        return;
+    }
+    
+    const filteredSolicitudes = availableSolicitudes.filter(solicitud => {
+        // Create searchable text from all relevant fields
+        const searchableFields = [
+            solicitud.codigo || '',
+            solicitud.cliente_nombre || '',
+            solicitud.nombreCliente || '',
+            solicitud.apc_no_cedula || '',
+            solicitud.cedulaCliente || '',
+            solicitud.cliente_documento || '',
+            solicitud.documento || '',
+            solicitud.pipeline || '',
+            solicitud.creada_por || '',
+            solicitud.etapa_actual || '',
+            solicitud.subestado_actual || ''
+        ];
         
-        if (searchTerm === '') {
-            renderSolicitudesList(availableSolicitudes);
-            return;
+        const searchableText = searchableFields.join(' ').toLowerCase();
+        const matches = searchableText.includes(searchTerm);
+        
+        if (matches) {
+            console.log(`Match found for ${solicitud.codigo}:`, {
+                codigo: solicitud.codigo,
+                cliente: solicitud.cliente_nombre || solicitud.nombreCliente,
+                searchableText: searchableText.substring(0, 100) + '...'
+            });
         }
         
-        const filteredSolicitudes = availableSolicitudes.filter(solicitud => {
-            return (
-                solicitud.codigo.toLowerCase().includes(searchTerm) ||
-                (solicitud.cliente_nombre && solicitud.cliente_nombre.toLowerCase().includes(searchTerm)) ||
-                (solicitud.nombreCliente && solicitud.nombreCliente.toLowerCase().includes(searchTerm)) ||
-                (solicitud.apc_no_cedula && solicitud.apc_no_cedula.toLowerCase().includes(searchTerm)) ||
-                (solicitud.cedulaCliente && solicitud.cedulaCliente.toLowerCase().includes(searchTerm)) ||
-                (solicitud.pipeline && solicitud.pipeline.toLowerCase().includes(searchTerm)) ||
-                (solicitud.creada_por && solicitud.creada_por.toLowerCase().includes(searchTerm)) ||
-                (solicitud.etapa_actual && solicitud.etapa_actual.toLowerCase().includes(searchTerm))
-            );
-        });
-        
-        renderSolicitudesList(filteredSolicitudes);
+        return matches;
     });
+    
+    console.log(`Search results: ${filteredSolicitudes.length} matches for "${searchTerm}"`);
+    console.log('=== END SEARCH INPUT HANDLER ===');
+    
+    renderSolicitudesList(filteredSolicitudes);
 }
 
 async function procesarNuevaSolicitud() {
