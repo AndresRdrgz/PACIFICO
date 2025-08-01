@@ -1296,7 +1296,7 @@ def dashboard_negocios(request):
     
     # Base queryset - cotizaciones creadas por el usuario
     queryset_cotizaciones = Cotizacion.objects.filter(
-        creada_por=user
+        added_by=user
     ).select_related('cliente')
     
     # Aplicar filtros de fecha
@@ -1304,7 +1304,7 @@ def dashboard_negocios(request):
         try:
             fecha_inicio_dt = datetime.strptime(fecha_inicio, '%Y-%m-%d')
             queryset_solicitudes = queryset_solicitudes.filter(fecha_creacion__gte=fecha_inicio_dt)
-            queryset_cotizaciones = queryset_cotizaciones.filter(fecha_creacion__gte=fecha_inicio_dt)
+            queryset_cotizaciones = queryset_cotizaciones.filter(created_at__gte=fecha_inicio_dt)
         except ValueError:
             pass
     
@@ -1312,7 +1312,7 @@ def dashboard_negocios(request):
         try:
             fecha_fin_dt = datetime.strptime(fecha_fin, '%Y-%m-%d')
             queryset_solicitudes = queryset_solicitudes.filter(fecha_creacion__lte=fecha_fin_dt)
-            queryset_cotizaciones = queryset_cotizaciones.filter(fecha_creacion__lte=fecha_fin_dt)
+            queryset_cotizaciones = queryset_cotizaciones.filter(created_at__lte=fecha_fin_dt)
         except ValueError:
             pass
     
@@ -1338,12 +1338,8 @@ def dashboard_negocios(request):
     # ==========================================
     
     total_cotizaciones = queryset_cotizaciones.count()
-    cotizaciones_activas = queryset_cotizaciones.filter(activa=True).count()
-    cotizaciones_por_estado = queryset_cotizaciones.values(
-        'estado'
-    ).annotate(
-        total=Count('id')
-    ).order_by('-total')
+    cotizaciones_activas = total_cotizaciones  # All user's cotizaciones are considered active
+    cotizaciones_por_estado = []  # No estado field available in Cotizacion model
     
     # ==========================================
     # NOTAS Y RECORDATORIOS
@@ -1371,9 +1367,9 @@ def dashboard_negocios(request):
     
     # Cotizaciones creadas por mes
     cotizaciones_por_mes = queryset_cotizaciones.filter(
-        fecha_creacion__gte=hace_6_meses
+        created_at__gte=hace_6_meses
     ).extra(
-        select={'mes': "strftime('%%Y-%%m', fecha_creacion)"}
+        select={'mes': "strftime('%%Y-%%m', created_at)"}
     ).values('mes').annotate(
         total=Count('id')
     ).order_by('mes')
